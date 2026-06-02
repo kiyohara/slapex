@@ -14,7 +14,7 @@
 このルールが対象としない GitHub 操作は次のとおり(対応する別ルールに従う)。
 
 - `git commit`、`git tag -s`、GitHub の SSH remote を使う `git push` / `git fetch` / `git pull`: `doc/guidelines/git-operation-guidelines.md`。
-- merge、file push、release 作成、workflow dispatch、repository settings 変更、protected branch / secrets / org 管理など、初期 MCP 化対象に含めない高リスク write 操作: `doc/guidelines/github-cli-guidelines.md` に従い `gh` で実行する。
+- merge、file push(GitHub API/MCP 経由でファイル内容を commit する操作。例: `push_files` / `create_or_update_file`。SSH 経由の `git push` とは別物)、release 作成、workflow dispatch、repository settings 変更、protected branch / secrets / org 管理など、初期 MCP 化対象に含めない高リスク write 操作: `doc/guidelines/github-cli-guidelines.md` に従い `gh` で実行する。
 
 ## MCP 優先・`gh` fallback
 
@@ -44,7 +44,7 @@ MCP 化の目的は 1Password 承認ダイアログの頻度を下げること�
 ## tool allowlist の運用
 
 - 初期 allowlist は collaboration write を MCP 化することを目的とし、PR / issue / レビューコメント関連 tool に絞る。
-- merge、file push、release、workflow dispatch、repository settings 変更などは初期 allowlist に含めない。これらを MCP 化したい強い動機が出てきたら、別途レビューしてから allowlist を広げる。
+- merge、file push(API 経由のファイル内容 push: `push_files` / `create_or_update_file`。上記「適用範囲」参照)、release、workflow dispatch、repository settings 変更などは初期 allowlist に含めない。これらを MCP 化したい強い動機が出てきたら、別途レビューしてから allowlist を広げる。
 - allowlist の正確な tool 名は GitHub MCP Server の現行 README / release に従う。`.agents/mcp/github-op-integrated/` 配下の README と `<name>.env.example` を更新したときは、本ルール本文の対応関係も同期する。
 - CI / Actions の調査まで MCP 経由で行う必要が明確になった場合のみ、`actions` toolset または Actions 個別 tool を追加する。
 
