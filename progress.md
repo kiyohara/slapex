@@ -1,14 +1,15 @@
 # 進捗管理表
 
-このファイルには、プロダクト設計および実装作業の進捗を記録していく。
+このファイルには、設計および実装作業の進捗を記録していく。
 
 想定読者は、実装作業を行う人間、および AI agent である。
 
-今後は、作業項目、状態、担当、次にやること、検証状況、未解決のリスクやブロッカーを管理する。詳細な検討経緯は `decision-log/` に分け、このファイルでは現在の作業状況を把握しやすく保つ。
+今後は、作業項目、状態、担当、次にやること、検証状況、未解決のリスクやブロッカーを管理する。詳細な検討経緯は `doc/design/decision-log/` に分け、このファイルでは現在の作業状況を把握しやすく保つ。
 
 ## 運用メモ
 
 - このファイルは、プロダクト全体の進捗を見渡すための一覧として使う。
+- 仕様設計や decision log ではなく、横断的な作業状況の管理表として扱う。
 - `working-branch-notes/` はブランチ単位の作業目的、状況、判断、引き継ぎメモを扱う。
 - このファイルの 1 アイテムが、必ずしも 1 ブランチに対応するとは限らない。progress の item は小さめのマイルストーンとして扱い、そのサブセットを複数のブランチで進めることがある。
 - この運用は暫定であり、実際の作業に合わせて軽く更新していく。
@@ -19,4 +20,5 @@
 |---|---|---|
 | 設計ドキュメント基盤の整備 | in_progress | `setup_discussion_base` ブランチで作業中 |
 | AI agent 向け入口とガイドラインの整備 | in_progress | `AGENTS.md`、tool 別 rule、GitHub / Git / PR / working branch note 関連ルールを整備中 |
-| 試作プロジェクトとの関係整理 | done | `doc/product/decision-log/0001-relationship-to-prototype.md` に記録 |
+| 試作プロジェクトとの関係整理 | done | `doc/design/decision-log/0001-relationship-to-prototype.md` に記録 |
+| 利用者向け How to Use 素案 | in_progress | `draft-usage-flow-how-to` ブランチで、Slack App 準備、token 注入、取得実行、エラー案内、assets 保存対象の流れを整理中 |

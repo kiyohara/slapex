@@ -14,7 +14,7 @@
 
 ## レビュー対象
 
-- `doc/product/`（usage-flow / progress / decision-log）
+- `doc/design/`（usage-flow / decision-log）と `progress.md`
 - `doc/guidelines/`（agent-configuration-management / decision-log / working-branch-notes 2 種）
 - AI agent 入口（`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.claude/rules/`, `.github/copilot-instructions.md`）
 - `working-branch-notes/`（README / template / 主 note）
@@ -23,7 +23,7 @@
 
 ## 総評
 
-- 全体構成は良好。「共通正本は `doc/guidelines/` または `doc/product/`、各 tool 入口は薄い shim」という分離方針が一貫しており、類似の別プロジェクトの運用パターンを正しく踏襲できている。
+- 全体構成は良好。「共通正本は `doc/guidelines/` または `doc/design/`、各 tool 入口は薄い shim」という分離方針が一貫しており、類似の別プロジェクトの運用パターンを正しく踏襲できている。
 - 入口ファイル間の相互参照・相対リンクは概ね正しく、dead link は検出されなかった。
 - 一方で、(1) Cursor rule の発火条件、(2) ガイドラインが約束する範囲と実体の乖離、(3) 先行 prototype と進捗管理の活用、の 3 点に実質的な改善余地がある。実装着手前に潰しておくと後続 agent の事故と手戻りを減らせる。
 
@@ -41,7 +41,7 @@
   globs:
     - "working-branch-notes/**/*.md"
   ```
-  handling/security は `alwaysApply: false` のまま globs 併用で「Auto Attached」化する。`agent-configuration-management.mdc` は path 非依存なので現状（globs なし）で可。`decision-log-guidelines.mdc` は行為起点のため description のみでも可だが、`doc/product/decision-log/**` を編集中に効かせたいなら globs 追加を検討。
+  handling/security は `alwaysApply: false` のまま globs 併用で「Auto Attached」化する。`agent-configuration-management.mdc` は path 非依存なので現状（globs なし）で可。`decision-log-guidelines.mdc` は行為起点のため description のみでも可だが、`doc/design/decision-log/**` を編集中に効かせたいなら globs 追加を検討。
 
 ### [must] `agent-configuration-management` が「skill」を扱うと宣言しているが本文に skill 規定が無い
 

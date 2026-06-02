@@ -47,9 +47,9 @@
 ## 影響
 
 - `doc/guidelines/development-command-guidelines.md` の「Docker Compose 前提」を確定方針として裏づける。実装スタック固有のコマンド名を前提化しない方針はそのまま維持する。
-- `doc/product/usage-flow.md` や `README.md` の人間向け手順を整備する際は、Docker Compose を前提に記述する。
+- `doc/design/usage-flow.md` や `README.md` の人間向け手順を整備する際は、Docker Compose を前提に記述する。
 - 実装スタック確定時に、service 構成と具体コマンドを `development-command-guidelines.md` で更新する。
-- `doc/product/decision-log/index.md` の「現在有効な主要方針」に追加する。
+- `doc/design/decision-log/index.md` の「現在有効な主要方針」に追加する。
 
 ## 後から見直す条件
 

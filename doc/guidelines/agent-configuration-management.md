@@ -49,7 +49,7 @@
 ## 共通原則
 
 - AI と人間で別々の正本を作らない。
-- 恒久的なプロジェクト方針は `doc/guidelines/` または `.agents/skills/` の正本に置く。
+- 恒久的なプロジェクト方針は `doc/guidelines/`、`doc/design/`、または `.agents/skills/` の正本に置く。利用者向け help は `doc/help/` に置く。
 - `.cursor/**`、`.claude/**`、`.github/copilot-instructions.md` は tool 固有の入口として扱い、長い正本を複製しない。
 - Cursor / Claude Code / Codex のどれか一方だけが読める配置にしない。
 - 削除・rename 時は、正本だけでなく tool 固有入口も同じ変更で揃える。
