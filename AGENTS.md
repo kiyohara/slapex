@@ -12,7 +12,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - Git 操作ルール(1Password SSH agent / 署名(commit / tag) / GitHub SSH 通信): `doc/guidelines/git-operation-guidelines.md`
 - GitHub MCP 利用ルール(MCP 優先 / `gh` fallback / tool allowlist): `doc/guidelines/github-mcp-guidelines.md`
 - GitHub CLI 実行ルール(1Password op plugin 連携 / 実行環境制約 / MCP 不可時の fallback): `doc/guidelines/github-cli-guidelines.md`
-- 開発コマンド実行ルール(Docker Compose 優先 / host OS 側 bundle・npm・yarn 抑止): `doc/guidelines/development-command-guidelines.md`
+- 開発コマンド実行ルール(Docker Compose 優先 / host OS 上での開発環境の直接構築・実行を抑止): `doc/guidelines/development-command-guidelines.md`
 - Pull Request 作成ガイドライン: `doc/guidelines/pull-request-guidelines.md`
 - Decision log 記録ルール(方針決定ログの作成・更新・index 管理): `doc/guidelines/decision-log-guidelines.md`
 - Working branch notes 取り扱いルール(性質・整合性スコープ・ライフサイクル・メンテコスト判断): `doc/guidelines/working-branch-notes-handling.md`
@@ -50,7 +50,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - commit 作成、署名付き tag 作成、GitHub の SSH remote を使う push / fetch / pull など、署名または GitHub との SSH remote 通信を伴う `git` 操作の前に `doc/guidelines/git-operation-guidelines.md` に従う。
 - GitHub の PR / issue / レビューコメントなどを操作するときは `doc/guidelines/github-mcp-guidelines.md` に従い、MCP を優先する。
 - `gh` コマンドを実行するときは `doc/guidelines/github-cli-guidelines.md` に従う。GitHub MCP 利用ルールでも `gh` fallback の経路はこの正本を参照する。
-- Rails / Bundler / Node.js / Yarn などの開発コマンドを実行するときは `doc/guidelines/development-command-guidelines.md` に従い、Docker Compose 経由を優先する。
+- 依存 install / アプリ起動 / test / build など、開発環境を host OS 上に構築・実行する類のコマンドを実行するときは `doc/guidelines/development-command-guidelines.md` に従い、Docker Compose 経由を優先する。
 - PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
 - 設計判断、方針変更、重要な検討経緯を記録するときは `doc/guidelines/decision-log-guidelines.md` に従う。
 - Decision log を記録するときは、まず `doc/product/decision-log/index.md` を読み、必要に応じて個別ログを作成または更新する。

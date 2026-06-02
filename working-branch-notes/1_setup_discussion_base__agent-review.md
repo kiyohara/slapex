@@ -19,11 +19,11 @@
 - AI agent 入口（`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.claude/rules/`, `.github/copilot-instructions.md`）
 - `working-branch-notes/`（README / template / 主 note）
 
-参考: `../asahimaru`（最新の同型テンプレート）, [kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper)（同目的の先行 prototype）。
+参考: 類似の別プロジェクト(最新の同型テンプレート), [kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper)（同目的の先行 prototype）。
 
 ## 総評
 
-- 全体構成は良好。「共通正本は `doc/guidelines/` または `doc/product/`、各 tool 入口は薄い shim」という分離方針が一貫しており、asahimaru の運用パターンを正しく踏襲できている。
+- 全体構成は良好。「共通正本は `doc/guidelines/` または `doc/product/`、各 tool 入口は薄い shim」という分離方針が一貫しており、類似の別プロジェクトの運用パターンを正しく踏襲できている。
 - 入口ファイル間の相互参照・相対リンクは概ね正しく、dead link は検出されなかった。
 - 一方で、(1) Cursor rule の発火条件、(2) ガイドラインが約束する範囲と実体の乖離、(3) 先行 prototype と進捗管理の活用、の 3 点に実質的な改善余地がある。実装着手前に潰しておくと後続 agent の事故と手戻りを減らせる。
 
@@ -34,7 +34,7 @@
 - `.cursor/rules/working-branch-notes-handling.mdc` と `working-branch-notes-security.mdc` は `description` + `alwaysApply: false` のみで `globs:` が無い。
 - Cursor ではこの形は「Agent Requested」扱いとなり、AI が description から関連と判断したときだけロードされる。`working-branch-notes/**/*.md` を編集しても確定的には添付されない。
 - 一方 Claude 側 `.claude/rules/working-branch-notes-*.md` は `paths: ["working-branch-notes/**/*.md"]` を持ち path 自動ロードされる。**同一の情報統制ルールが tool によって発火条件が非対称**になっている。
-- 参考 asahimaru の同 rule は両方に `globs: ["working-branch-notes/**/*.md"]` を付与しており、本リポジトリはここを取りこぼしている（テンプレートからの劣化）。
+- 参考とした類似の別プロジェクトの同 rule は両方に `globs: ["working-branch-notes/**/*.md"]` を付与しており、本リポジトリはここを取りこぼしている（テンプレートからの劣化）。
 - 特に security（秘密情報・個人情報の禁則）は、AI の裁量任せではなく path で確定発火させるべき。
 - 提案: 両 `.mdc` に下記を追加する。
   ```yaml
@@ -46,11 +46,11 @@
 ### [must] `agent-configuration-management` が「skill」を扱うと宣言しているが本文に skill 規定が無い
 
 - `AGENTS.md` の共通正本一覧: 「Agent 設定管理ルール(**skill** / rule の作成・削除・rename・配置)」と skill を含めている。
-- しかし `doc/guidelines/agent-configuration-management.md` の本文は「rule と入口ファイル」のみが対象で、skill の配置・作成・削除 checklist が一切無い（asahimaru には `.agents/skills/` ↔ `.claude/skills/` symlink 運用などの詳細がある）。本リポジトリには `.agents/skills/` / `.claude/skills/` も未整備。
+- しかし `doc/guidelines/agent-configuration-management.md` の本文は「rule と入口ファイル」のみが対象で、skill の配置・作成・削除 checklist が一切無い（類似の別プロジェクトには `.agents/skills/` ↔ `.claude/skills/` symlink 運用などの詳細がある）。本リポジトリには `.agents/skills/` / `.claude/skills/` も未整備。
 - このままだと「skill を作って」と指示された agent が辿り着ける checklist が存在せず、宙に浮いた約束になる。
 - 提案（どちらか）:
   - (a) 当面 skill を使わないなら、`AGENTS.md` の当該ラベルから `skill /` を外し「rule の作成・削除・rename・配置」に絞る。
-  - (b) 将来使う前提なら、ガイドラインに「skill は未導入。導入時は asahimaru の `.agents/skills/` 方式に従う」の short stub だけ置き、実体を伴わせる。
+  - (b) 将来使う前提なら、ガイドラインに「skill は未導入。導入時は類似の別プロジェクトの `.agents/skills/` 方式に従う」の short stub だけ置き、実体を伴わせる。
 
 ### [imo] 先行 prototype [kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) の知見が設計ドキュメントから参照されていない
 
@@ -73,7 +73,7 @@
 
 ### [fyi] Copilot は instruction file を冒頭一定量しか反映しない制約が未記載
 
-- asahimaru の `AGENTS.md` は「Copilot は各 instruction file を先頭〜約 4,000 文字のみ反映」と明記している。現 `.github/copilot-instructions.md` は短く現状問題ないが、今後加筆する場合に備え制約を一言残すと安全。
+- 類似の別プロジェクトの `AGENTS.md` は「Copilot は各 instruction file を先頭〜約 4,000 文字のみ反映」と明記している。現 `.github/copilot-instructions.md` は短く現状問題ないが、今後加筆する場合に備え制約を一言残すと安全。
 
 ### [fyi] `.git-backup/` が作業ツリーに残存
 

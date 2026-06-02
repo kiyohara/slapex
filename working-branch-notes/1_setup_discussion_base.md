@@ -56,7 +56,7 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 ### 2026-06-02
 
 - ユーザーから、利用手順、進捗管理表、方針決定ログのファイル名と配置場所について相談を受けた。
-- `../seeos`、`../asahimaru`、[kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) を確認し、`doc/product/` 配下に設計ドキュメントを置く案を採用した。
+- 類似の別プロジェクトや、[kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) を確認し、`doc/product/` 配下に設計ドキュメントを置く案を採用した。
 - `doc/product/usage-flow.md`、`doc/product/progress.md`、`doc/product/decision-log/index.md`、`doc/product/decision-log/_template.md` を作成した。
 - decision log は単一ファイルではなく、`index.md` と個別ログファイルに分割する方針にした。
 - AI agent が decision log を記録できるよう、`doc/guidelines/decision-log-guidelines.md` と agent 向け入口を作成した。
