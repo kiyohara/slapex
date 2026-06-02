@@ -1,2 +1,8 @@
 .DS_Store
 .git-backup/
+.claude/settings.local.json
+.claude/worktrees/
+.agents/mcp/github-op-integrated/*.env
+.cursor/mcp.json
+.mcp.json
+.codex/config.toml

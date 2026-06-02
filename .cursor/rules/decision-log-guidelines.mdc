@@ -1,0 +1,13 @@
+---
+description: 設計判断、方針決定、検討経緯、未決事項を decision log に記録・更新するときに読む共通正本への入口
+globs:
+  - "doc/product/decision-log/**/*.md"
+alwaysApply: false
+---
+
+# Decision Log
+
+- 詳細は `doc/guidelines/decision-log-guidelines.md`
+- Decision log を記録する前に `doc/product/decision-log/index.md` を読む。
+- 詳細ログは `doc/product/decision-log/<連番>-<短い英語slug>.md` に 1 テーマ 1 ファイルで記録する。
+- `index.md` には現在有効な主要方針、未決事項、参照先だけを書く。

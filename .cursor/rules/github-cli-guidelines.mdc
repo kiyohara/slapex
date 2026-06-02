@@ -1,0 +1,10 @@
+---
+description: GitHub CLI(gh)を実行するときに読み込む 1Password op plugin 連携と実行環境制約のルール
+alwaysApply: true
+---
+
+# GitHub CLI 実行ルール
+
+- 詳細は `doc/guidelines/github-cli-guidelines.md`
+- `gh` コマンドを実行する前に共通正本を読む
+- tool 固有入口だけに恒久ルールを書かない
