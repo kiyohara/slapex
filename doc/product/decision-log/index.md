@@ -11,6 +11,7 @@
 | ID | 状態 | 主題 | 現在の結論 | 詳細 |
 |---|---|---|---|---|
 | 0001 | decided | 試作プロジェクトとの関係 | 既存の試作プロジェクトは参考資料として扱うが、そこでの方針を本リポジトリへ暗黙採用しない | [0001-relationship-to-prototype.md](0001-relationship-to-prototype.md) |
+| 0002 | decided | 開発基盤として Docker / Docker Compose を前提とする | サプライチェーン攻撃対策と環境再現性のため、開発コマンドは原則コンテナ経由とする(確定) | [0002-docker-compose-baseline.md](0002-docker-compose-baseline.md) |
 
 ## 未決事項
 
