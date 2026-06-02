@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: setup_discussion_base
-- PR:
+- PR: #1
 - 最終更新: 2026-06-02
 
 ## 目的
@@ -42,7 +42,7 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 - `git init -b main` を実行し、新しいリポジトリを作成した。
 - `.gitignore` の initial commit を作成した。
 - `git switch -c setup_discussion_base` で作業ブランチを作成した。
-- `working-branch-notes/draft_setup_discussion_base__agent-review.md` に Claude Code のレビュー結果が保存されたことを確認した。
+- `working-branch-notes/1_setup_discussion_base__agent-review.md` に Claude Code のレビュー結果が保存されたことを確認した。
 
 ## リスク・ブロッカー
 
@@ -65,7 +65,7 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 - 将来の GitHub Copilot Review 利用を見据えて、`.github/copilot-instructions.md` を作成した。
 - working branch notes を汎用作業メモとして取り込み、`working-branch-notes/README.md`、`working-branch-notes/_template.md`、`doc/guidelines/working-branch-notes-handling.md`、`doc/guidelines/working-branch-notes-security.md` と agent 入口を作成した。
 - ユーザーが既存 `.git` を `.git-backup` に退避した後、新しい Git 履歴を作成した。
-- Claude Code のレビュー結果を `working-branch-notes/draft_setup_discussion_base__agent-review.md` で確認した。
+- Claude Code のレビュー結果を `working-branch-notes/1_setup_discussion_base__agent-review.md` で確認した。
 - Cursor の working branch note rule に `globs` を追加し、decision log rule にも `doc/product/decision-log/**/*.md` の `globs` を追加した。
 - `number-working-branch-note` skill を `.agents/skills/number-working-branch-note/` に取り込み、`.claude/skills/number-working-branch-note` から symlink した。
 - `doc/guidelines/agent-configuration-management.md` を関連リポジトリの詳細版に寄せ、skill / MCP 共通資材の管理方法を含めた。

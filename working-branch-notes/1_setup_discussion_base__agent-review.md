@@ -1,9 +1,9 @@
 # 作業ブランチメモ（レビュー サブノート）
 
 - ブランチ: setup_discussion_base
-- PR:
+- PR: #1
 - 最終更新: 2026-06-02
-- 主 note: `working-branch-notes/draft_setup_discussion_base.md`
+- 主 note: `working-branch-notes/1_setup_discussion_base.md`
 - 種別: AI agent によるドキュメント基盤レビュー結果
 
 ## 目的
