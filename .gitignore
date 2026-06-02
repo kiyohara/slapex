@@ -1,2 +1,6 @@
 .DS_Store
 .git-backup/
+.agents/mcp/github-op-integrated/*.env
+.cursor/mcp.json
+.mcp.json
+.codex/config.toml

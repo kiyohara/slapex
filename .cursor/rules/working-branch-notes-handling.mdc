@@ -1,5 +1,7 @@
 ---
 description: working-branch-notes 配下の作業メモを作成・編集・レビューするときに読む共通正本への入口
+globs:
+  - "working-branch-notes/**/*.md"
 alwaysApply: false
 ---
 

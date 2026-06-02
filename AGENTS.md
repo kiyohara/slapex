@@ -8,7 +8,12 @@ index として利用し、これ自体を唯一の正本として扱わない�
 
 各 rule の本文はこの一覧の正本に置く。Codex は `AGENTS.md` 経由で正本に到達するため、新規 rule を作るときは必ずここに追加する。
 
-- Agent 設定管理ルール(skill / rule の作成・削除・rename・配置): `doc/guidelines/agent-configuration-management.md`
+- Agent 設定管理ルール(skill / rule / MCP 共通資材の作成・削除・rename・配置): `doc/guidelines/agent-configuration-management.md`
+- Git 操作ルール(1Password SSH agent / 署名(commit / tag) / GitHub SSH 通信): `doc/guidelines/git-operation-guidelines.md`
+- GitHub MCP 利用ルール(MCP 優先 / `gh` fallback / tool allowlist): `doc/guidelines/github-mcp-guidelines.md`
+- GitHub CLI 実行ルール(1Password op plugin 連携 / 実行環境制約 / MCP 不可時の fallback): `doc/guidelines/github-cli-guidelines.md`
+- 開発コマンド実行ルール(Docker Compose 優先 / host OS 側 bundle・npm・yarn 抑止): `doc/guidelines/development-command-guidelines.md`
+- Pull Request 作成ガイドライン: `doc/guidelines/pull-request-guidelines.md`
 - Decision log 記録ルール(方針決定ログの作成・更新・index 管理): `doc/guidelines/decision-log-guidelines.md`
 - Working branch notes 取り扱いルール(性質・整合性スコープ・ライフサイクル・メンテコスト判断): `doc/guidelines/working-branch-notes-handling.md`
 - Working branch notes 情報統制ルール(`working-branch-notes/**/*.md` のセキュリティ禁則): `doc/guidelines/working-branch-notes-security.md`
@@ -19,6 +24,9 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - 進捗管理表: `doc/product/progress.md`
 - 方針決定ログ index: `doc/product/decision-log/index.md`
 - 方針決定ログ template: `doc/product/decision-log/_template.md`
+
+## 作業プロセスドキュメント
+
 - 作業ブランチメモ: `working-branch-notes/README.md`
 
 ## Agent 固有の入口
@@ -34,10 +42,16 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - **Claude Code**: `.claude/rules/*.md` を `paths:` frontmatter に従ってロードする。
 - **Codex app**: `AGENTS.md` から `doc/guidelines/` の正本へ移動して読む。
 - **GitHub Copilot Review**: `.github/copilot-instructions.md` をレビュー時に読む。Copilot は `AGENTS.md` やリンク先正本を辿らないため、効かせたい要点は Copilot 用ファイル内に直接書く。
+  - `.github/instructions/*.instructions.md` を追加した場合、各 instruction file は先頭から約 4,000 文字のみ反映される前提で要点を絞る。
 
 ## AI Agent 向けルール
 
 - AI agent 用の設定ファイル、rule、skill、agent 固有入口を作成・削除・rename するときは `doc/guidelines/agent-configuration-management.md` に従う。
+- commit 作成、署名付き tag 作成、GitHub の SSH remote を使う push / fetch / pull など、署名または GitHub との SSH remote 通信を伴う `git` 操作の前に `doc/guidelines/git-operation-guidelines.md` に従う。
+- GitHub の PR / issue / レビューコメントなどを操作するときは `doc/guidelines/github-mcp-guidelines.md` に従い、MCP を優先する。
+- `gh` コマンドを実行するときは `doc/guidelines/github-cli-guidelines.md` に従う。GitHub MCP 利用ルールでも `gh` fallback の経路はこの正本を参照する。
+- Rails / Bundler / Node.js / Yarn などの開発コマンドを実行するときは `doc/guidelines/development-command-guidelines.md` に従い、Docker Compose 経由を優先する。
+- PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
 - 設計判断、方針変更、重要な検討経緯を記録するときは `doc/guidelines/decision-log-guidelines.md` に従う。
 - Decision log を記録するときは、まず `doc/product/decision-log/index.md` を読み、必要に応じて個別ログを作成または更新する。
 - `working-branch-notes/**/*.md` を作成・編集・レビューするときは `doc/guidelines/working-branch-notes-handling.md` と `doc/guidelines/working-branch-notes-security.md` の両方に従う。

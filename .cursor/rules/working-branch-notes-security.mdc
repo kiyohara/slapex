@@ -1,5 +1,7 @@
 ---
 description: working-branch-notes 配下の作業メモに秘密情報・個人情報・顧客固有情報を含めないための情報統制ルールへの入口
+globs:
+  - "working-branch-notes/**/*.md"
 alwaysApply: false
 ---
 

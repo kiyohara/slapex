@@ -19,7 +19,7 @@
 - AI agent 入口（`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.claude/rules/`, `.github/copilot-instructions.md`）
 - `working-branch-notes/`（README / template / 主 note）
 
-参考: `../asahimaru`（最新の同型テンプレート）, `../slack_posts_dumper`（同目的の先行 prototype）。
+参考: `../asahimaru`（最新の同型テンプレート）, [kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper)（同目的の先行 prototype）。
 
 ## 総評
 
@@ -52,9 +52,9 @@
   - (a) 当面 skill を使わないなら、`AGENTS.md` の当該ラベルから `skill /` を外し「rule の作成・削除・rename・配置」に絞る。
   - (b) 将来使う前提なら、ガイドラインに「skill は未導入。導入時は asahimaru の `.agents/skills/` 方式に従う」の short stub だけ置き、実体を伴わせる。
 
-### [imo] 先行 prototype `../slack_posts_dumper` の知見が設計ドキュメントから参照されていない
+### [imo] 先行 prototype [kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) の知見が設計ドキュメントから参照されていない
 
-- `../slack_posts_dumper` は同目的（Slack 投稿を Slack 風 HTML で保存）の実装済み prototype で、README / PROJECT_SPEC / PROGRESS と、bot token (`xoxb-`) の必要 scope（`channels:history` / `channels:read` / `users:read` / `files:read`）、emoji 置換・URL 変換・HTML sanitize・asset ローカル化・Unicode フォールバックといった設計判断が既に存在する。
+- [kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) は同目的（Slack 投稿を Slack 風 HTML で保存）の実装済み prototype で、README / PROJECT_SPEC / PROGRESS と、bot token (`xoxb-`) の必要 scope（`channels:history` / `channels:read` / `users:read` / `files:read`）、emoji 置換・URL 変換・HTML sanitize・asset ローカル化・Unicode フォールバックといった設計判断が既に存在する。
 - 現状の `usage-flow.md` / `decision-log/` はこの先行資産を一切参照せず白紙から始めており、(1) 既出の判断を再導出する手戻り、(2) usage-flow を prototype の README から seed できる機会の損失、が起きうる。
 - 提案: 早い段階で「prototype との関係 / どこを再利用しどこを作り直すか / 新リポジトリにした理由」を整理する。decision-log の最初の 1 件（例 `0001-relationship-to-prototype.md`）にするのが、template の end-to-end 検証も兼ねられて好適。
 

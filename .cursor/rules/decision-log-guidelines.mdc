@@ -1,5 +1,7 @@
 ---
 description: 設計判断、方針決定、検討経緯、未決事項を decision log に記録・更新するときに読む共通正本への入口
+globs:
+  - "doc/product/decision-log/**/*.md"
 alwaysApply: false
 ---
 

@@ -1,0 +1,6 @@
+# GitHub MCP 利用ルール
+
+- 詳細は `doc/guidelines/github-mcp-guidelines.md`
+- GitHub 操作は MCP 優先。MCP 未対応 / 未設定 / 失敗時は `doc/guidelines/github-cli-guidelines.md` に従い `gh` fallback
+- local git / SSH / commit signing は MCP に寄せず、`doc/guidelines/git-operation-guidelines.md` に従う
+- tool 固有入口だけに恒久ルールを書かない
