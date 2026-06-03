@@ -113,6 +113,8 @@ op run -- slapex <channel-keyword>
 Workspace: Example Workspace (example.slack.com, T012345...)
 ```
 
+`team_id` は `auth.test` の戻り値や workspace URL にも現れる非機密情報である。進捗の繰り返し表示では上記のように短縮してよいが、workspace 確定直後、完了 summary、生成 HTML の冒頭では full の `team_id` を表示し、利用者が照合や将来の guard option のために正確な値をコピーできるようにする。
+
 画面表示用の channel label は、channel 名に加えて channel ID、public/private、archived 状態、bot membership を含める。
 
 例:
@@ -400,7 +402,7 @@ See: https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-a
 3. CI では job ごとに渡している `SLACK_BOT_TOKEN` が正しいか確認する。
 4. Enterprise org-wide install の token を使っている場合は、初期対象外であることを表示し、単一 workspace install の bot token を使うよう案内する。
 
-通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。通常の export 実行でも、workspace 確定直後、channel 候補表示、channel 確定直後、完了 summary、生成 HTML に workspace / channel label を表示する。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。
+通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。通常の export 実行でも各タイミングで workspace / channel label を表示する(表示タイミングと内容は「処理対象の表示」を参照)。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。
 
 ### channel が見つからない
 

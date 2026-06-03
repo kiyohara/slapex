@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-06-03
 - 最終更新日: 2026-06-03
-- 関連: `../usage-flow.md`, `0003-workspace-selection.md`, `0013-output-directory-labels.md`
+- 関連: `../usage-flow.md`, `0003-workspace-selection.md`, `0004-channel-selection.md`, `0012-html-rendering-style.md`, `0013-output-directory-labels.md`
 
 ## 背景
 
@@ -44,7 +44,7 @@ CI で誤 token を必ず止めたい要件には、表示だけでは足りな�
 5. 完了時の summary では、出力先 path とあわせて workspace / channel label を表示する。
 6. 生成した `index.html` の冒頭にも、取得対象 workspace / channel と export 実行時刻を表示する。
 
-画面表示用 workspace label は、可能な限り workspace 名、workspace URL または domain、短い `team_id` を含める。画面表示用 channel label は、channel 名、channel ID、public/private、archived 状態、bot membership を含める。
+画面表示用 workspace label は、可能な限り workspace 名、workspace URL または domain、`team_id` を含める。`team_id` は非機密情報のため、進捗の繰り返し表示では短縮してよいが、確定直後・完了 summary・生成 HTML の冒頭では full を表示し、照合や将来の guard option で使えるようにする。画面表示用 channel label は、channel 名、channel ID、public/private、archived 状態、bot membership を含める。
 
 directory 用 label は画面表示用 label と同一である必要はなく、filesystem-safe な slug と衝突回避を優先する。
 

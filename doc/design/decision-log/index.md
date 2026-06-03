@@ -39,6 +39,7 @@
 | 差分取得と再実行 | open | 既存出力への上書き、差分取得、再実行時の扱い | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
 | CI artifact 化 | open | CI で生成した HTML / assets / cache を artifact として保存・共有する方法 | [0008-default-output-root.md](0008-default-output-root.md) |
 | thread replies を含む全体取得量 | open | 取得前の見込み表示、または親投稿と thread replies を合わせた全体上限を設けるか | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
+| workspace mismatch の guard option | open | CI 等で誤 token を強制停止する要件が出た場合に `--expect-team-id` / `--expect-workspace-domain` を追加するか | [0020-target-label-display.md](0020-target-label-display.md) |
 
 ## 運用メモ
 

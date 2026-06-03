@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-06-02
 - 最終更新日: 2026-06-02
-- 関連: `../usage-flow.md`
+- 関連: `../usage-flow.md`, `0020-target-label-display.md`
 
 ## 背景
 
@@ -33,6 +33,7 @@ style は HTML 内に固定的に埋め込まず、外部 CSS file として分�
 
 表示内容は次の方針にする。
 
+- 冒頭に取得対象 workspace / channel と export 実行時刻を表示する(詳細は `0020-target-label-display.md`)。
 - 投稿は channel timeline と同じく、上から oldest、下へ latest の順に並べる。
 - 日付と時刻は相対表現ではなく、絶対時刻として表示する。
 - thread replies は元の親投稿の下に、親投稿よりインデントを下げて表示する。
