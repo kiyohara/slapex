@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: prefer-github-op-integrated-first
-- PR:
+- PR: #4
 - 最終更新: 2026-06-03
 
 ## 目的
