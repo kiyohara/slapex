@@ -14,7 +14,7 @@ PR を作成した直後に `working-branch-notes/` 配下の `draft_...md` を 
 このリポジトリで PR を作成した後、ブランチ内に `working-branch-notes/draft_<escaped-branch>*.md` が残っているときの採番処理に限る。次のいずれかに該当する場合は、この skill の対象外として停止し、ユーザーに状況を報告する。
 
 - 現在ブランチが default branch(`main` または `master`)である。
-- 対応する PR を `gh pr view` で取得できない。
+- 対応する PR を `github-op-integrated` MCP tool で取得できない。
 - PR の `state` が `OPEN` ではない(`MERGED` / `CLOSED` は cleanup PR の領分)。
 - PR の `headRefName` が現在ブランチと一致しない。
 - `working-branch-notes/draft_<escaped-branch>*.md` が 1 件も存在しない(採番処理不要)。
@@ -26,13 +26,18 @@ PR を作成した直後に `working-branch-notes/` 配下の `draft_...md` を 
 
 - `doc/guidelines/working-branch-notes-handling.md` — note のファイル名規約、escape ルール、番号付き note と draft の優先関係。
 - `doc/guidelines/working-branch-notes-security.md` — push 前の情報統制チェック観点。
-- `doc/guidelines/github-cli-guidelines.md` — `gh` 実行時の `op plugin run -- gh ...` 形式と実行環境制約。
+- `doc/guidelines/github-mcp-guidelines.md` — GitHub 操作で `github-op-integrated` MCP tool を優先する方針。
+- `doc/guidelines/github-cli-guidelines.md` — MCP fallback として `gh` を実行する場合の `op plugin run -- gh ...` 形式と実行環境制約。
 - `doc/guidelines/git-operation-guidelines.md` — `git commit` / `git push` (SSH remote) の 1Password SSH agent 連携と実行環境制約。
 - `doc/guidelines/pull-request-guidelines.md` — PR title / description の書式(日本語、tool 名なし、既存表現の置換に留める)。
 
-## コマンド形式
+## GitHub 操作形式
 
-- `gh` は原則 `op plugin run -- gh ...` で実行する。`.op/` と `op` コマンドが利用できない場合だけ通常の `gh` にフォールバックする(github-cli-guidelines.md)。
+- PR の read / update は、必ず最初に `github-op-integrated` MCP tool を試す。
+- 必要な MCP tool が現在の tools に見えていない場合は、`gh` へ進む前に利用中 agent の tool discovery 機構(利用可能なら `tool_search`)で `github-op-integrated` を検索する。
+- `gh pr view`、`gh pr edit`、`gh auth status` などの `gh` preflight を、MCP tool の試行より先に実行しない。
+- `gh` は、MCP tool が利用できない、または MCP tool で対象操作を完結できない場合の fallback としてのみ使う。fallback 時は `doc/guidelines/github-cli-guidelines.md` に従い、`.op/` と `op` コマンドが利用できる場合は `op plugin run -- gh ...` を使う。
+- write 系(`update_pull_request` など)を `gh` に fallback する場合は、`doc/guidelines/github-mcp-guidelines.md` の write fallback 注意に従い、再実行前に read 系 tool で対象の現状(未反映かどうか)を確認してから実行する。
 - `git commit` / `git push` は commit signing と SSH agent を伴うため、socket 通信・承認プロンプトが阻害された場合は git-operation-guidelines.md に従い、制約のない実行環境で同じコマンドを再実行する。
 
 ## 手順
@@ -44,12 +49,13 @@ PR を作成した直後に `working-branch-notes/` 配下の `draft_...md` を 
 ```sh
 git branch --show-current
 ls working-branch-notes/draft_*.md 2>/dev/null
-op plugin run -- gh pr view --json number,title,body,headRefName,state,url
 ```
+
+そのうえで `github-op-integrated` MCP tool の `list_pull_requests` を使い、現在 branch を `head` に持つ open PR を取得する。現在の tool 一覧に `github-op-integrated` が無い場合は、先に利用中 agent の tool discovery 機構(利用可能なら `tool_search`)で MCP tool を探す。
 
 - 現在ブランチが `main` または `master` の場合は停止。
 - `draft_*.md` が 0 件なら停止(後処理不要であることをユーザーに伝える)。
-- `gh pr view` が PR を返さない、`state` が `OPEN` でない、`headRefName` が現在ブランチと一致しない場合は停止。
+- MCP tool が PR を返さない、`state` が `OPEN` でない、`headRefName` が現在ブランチと一致しない場合は停止。
 
 ### 2. 対象 note の特定
 
@@ -130,14 +136,14 @@ SSH 認証失敗・socket 通信エラーなどが出た場合は `git-operation
 
 ### 10. PR title / description 更新
 
-`op plugin run -- gh pr view --json title,body` の結果に対して次を行う。
+前提チェックで取得した PR title / description に対して次を行う。PR title / description を再取得する必要がある場合も、最初に `github-op-integrated` MCP tool を使う。
 
 - description 内の `draft_<escaped-branch>` 表記(`__suffix` 付き含む)を `<PR-number>_<escaped-branch>` に置換する。これは機械的に置換してよい。Step 5 と同じく、**具体的な escape branch 名を含む参照のみ** を機械的置換の対象とする。汎用 placeholder は触らない。
 - 「PR 未作成」「PR 作成後に更新」「working branch note が未確定」などの stale 表現を検出し、置換候補をユーザーに提示する。ユーザー合意後に書き換える。
 - title は通常触らない。明確に stale な記述が含まれる場合のみ、置換候補を提示してユーザー合意後に書き換える。
 - `doc/guidelines/pull-request-guidelines.md` に従い、日本語維持・tool 名なし・既存表現の置換に留める(新規セクションの追加はしない)。
 
-合意が取れたら、`op plugin run -- gh pr edit <number> --body-file <tmp>` などで反映する。body は必ずファイル経由で渡し、shell エスケープの取りこぼしを避ける。
+合意が取れたら、`github-op-integrated` MCP tool の `update_pull_request` で反映する。MCP tool が利用できず `gh` に fallback する場合だけ、`op plugin run -- gh pr edit <number> --body-file <tmp>` などを使う。body は必ずファイル経由で渡し、shell エスケープの取りこぼしを避ける。
 
 ## 終了時の報告
 

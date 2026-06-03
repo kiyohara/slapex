@@ -20,6 +20,8 @@
 
 `gh` 直接実行ごとに 1Password 承認ダイアログが必要になる頻度を下げるため、対象の GitHub 操作はまず GitHub MCP Server 経由で実行する。
 
+このとき、`gh auth status` や `gh pr view` などの `gh` preflight を MCP より先に実行せず、最初の試行先として MCP tool の利用可否を確認する。これは `gh` の廃止を意味するものではなく、利用できない場合の fallback は引き続き下記の優先順位に従う。
+
 優先順位:
 
 1. GitHub MCP Server が設定済みで、操作対象が allowlist 内の MCP tool で完結する場合は MCP を使う。
