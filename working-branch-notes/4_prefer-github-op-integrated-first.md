@@ -11,16 +11,18 @@ GitHub 操作では `gh` コマンドより先に `github-op-integrated` MCP too
 ## 現在の状況
 
 - `AGENTS.md`、`number-working-branch-note` skill、`github-op-integrated` README を更新済み。
-- ガイドライン本文には反映していない。
+- 正本 `doc/guidelines/github-mcp-guidelines.md` に「MCP を最初に試す / `gh` preflight を先に走らせない」点を最小追記済み。`.cursor` / `.claude` の rule shim も同じ強調に揃え済み。
+- `gh` の廃止には踏み込んでいない。
 
 ## 決定事項
 
-- `gh` コマンドの廃止は未確定であり、各種ガイドラインへは書かない。
-- GitHub 操作では、まず `github-op-integrated` MCP tool の利用可否を確認し、read / write ともに MCP tool を最初に試すことを強める。
+- `gh` コマンドの廃止は未確定であり、各種ガイドラインへ「廃止」は書かない。
+- ただし「MCP を最初に試す(`gh` preflight を先に走らせない)」は `gh` 廃止とは別軸として正本に明記する。元から正本にある「まず MCP を試してよい」方針の明確化に留める。
+- GitHub 操作では、まず `github-op-integrated` MCP tool の利用可否を確認し、read / write ともに MCP tool を最初に試すことを、入口・shim・skill・正本で揃えて強める。
 
 ## 次にやること
 
-- 差分を確認し、commit / push / PR 作成を行う。
+- レビュー指摘 (#4) 反映分を commit / push し、PR description の補足を更新する。
 
 ## 検証
 
@@ -37,3 +39,4 @@ GitHub 操作では `gh` コマンドより先に `github-op-integrated` MCP too
 
 - 2026-06-03: `main` から `prefer-github-op-integrated-first` ブランチを作成。
 - 2026-06-03: GitHub 操作の最初の試行先を `github-op-integrated` MCP tool に寄せる表現を、入口と skill に反映。
+- 2026-06-03: PR #4 レビュー指摘を反映。正本・rule shim へ MCP-first を明記し、skill に write fallback の安全弁を追記。

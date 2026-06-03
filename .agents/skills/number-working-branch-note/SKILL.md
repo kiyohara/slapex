@@ -37,6 +37,7 @@ PR を作成した直後に `working-branch-notes/` 配下の `draft_...md` を 
 - 必要な MCP tool が現在の tools に見えていない場合は、`gh` へ進む前に利用中 agent の tool discovery 機構(利用可能なら `tool_search`)で `github-op-integrated` を検索する。
 - `gh pr view`、`gh pr edit`、`gh auth status` などの `gh` preflight を、MCP tool の試行より先に実行しない。
 - `gh` は、MCP tool が利用できない、または MCP tool で対象操作を完結できない場合の fallback としてのみ使う。fallback 時は `doc/guidelines/github-cli-guidelines.md` に従い、`.op/` と `op` コマンドが利用できる場合は `op plugin run -- gh ...` を使う。
+- write 系(`update_pull_request` など)を `gh` に fallback する場合は、`doc/guidelines/github-mcp-guidelines.md` の write fallback 注意に従い、再実行前に read 系 tool で対象の現状(未反映かどうか)を確認してから実行する。
 - `git commit` / `git push` は commit signing と SSH agent を伴うため、socket 通信・承認プロンプトが阻害された場合は git-operation-guidelines.md に従い、制約のない実行環境で同じコマンドを再実行する。
 
 ## 手順
