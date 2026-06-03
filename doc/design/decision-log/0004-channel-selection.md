@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-06-02
 - 最終更新日: 2026-06-02
-- 関連: `../usage-flow.md`
+- 関連: `../usage-flow.md`, `0020-target-label-display.md`
 
 ## 背景
 
@@ -76,6 +76,7 @@ channel を positional argument にすると、ツールの主対象が CLI synt
 - non-TTY では候補と usage を出して非 0 exit code で終了する。
 - `--no-interactive` option を提供し、TTY がある script / 検証環境でも prompt を禁止できるようにする。
 - channel 候補の表示内容には channel ID、channel 名、public/private、archived 状態、bot membership を含める。
+- channel 候補を表示する前に workspace label を表示する(`0020-target-label-display.md`)。
 - interactive selection の対象は候補 10 件以下に制限する。
 
 ## 後から見直す条件

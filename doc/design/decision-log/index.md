@@ -29,6 +29,7 @@
 | 0017 | decided | uploaded image assets | ユーザーアップロード画像は thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする | [0017-uploaded-image-assets.md](0017-uploaded-image-assets.md) |
 | 0018 | decided | CLI help pages | Slack App セットアップ手順は GitHub 上で参照できる help ページに分離し、CLI エラーは短い診断と URL 案内に絞る | [0018-cli-help-pages.md](0018-cli-help-pages.md) |
 | 0019 | decided | document directory structure | 設計文書は `doc/design/`、利用者向け help は `doc/help/`、作業状況は root の `progress.md` に分ける | [0019-document-directory-structure.md](0019-document-directory-structure.md) |
+| 0020 | decided | 処理対象 workspace / channel の表示 | token から解決した workspace と確定した channel を実行中、完了時、生成 HTML に表示する。画面表示用 label と directory 用 label は役割を分ける | [0020-target-label-display.md](0020-target-label-display.md) |
 
 ## 未決事項
 
@@ -38,6 +39,7 @@
 | 差分取得と再実行 | open | 既存出力への上書き、差分取得、再実行時の扱い | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
 | CI artifact 化 | open | CI で生成した HTML / assets / cache を artifact として保存・共有する方法 | [0008-default-output-root.md](0008-default-output-root.md) |
 | thread replies を含む全体取得量 | open | 取得前の見込み表示、または親投稿と thread replies を合わせた全体上限を設けるか | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
+| workspace mismatch の guard option | open | CI 等で誤 token を強制停止する要件が出た場合に `--expect-team-id` / `--expect-workspace-domain` を追加するか | [0020-target-label-display.md](0020-target-label-display.md) |
 
 ## 運用メモ
 
