@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: workspace-target-labels
-- PR:
+- PR: #3
 - 最終更新: 2026-06-03
 
 ## 目的
