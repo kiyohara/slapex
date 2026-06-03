@@ -11,7 +11,7 @@ Decision log は、決定済みの方針だけでなく、どのような経緯�
 ## 配置
 
 ```text
-doc/product/decision-log/
+doc/design/decision-log/
 ├── index.md
 ├── _template.md
 └── <連番>-<短い英語slug>.md
@@ -28,16 +28,16 @@ doc/product/decision-log/
 - 以前の方針を変更、撤回、上書きするとき。
 - 後続の AI agent が判断理由を知らないと同じ議論を繰り返しそうなとき。
 
-小さな作業メモ、単純な TODO、実装中の一時的な試行錯誤は `doc/product/progress.md` に寄せ、decision log を肥大化させない。
+小さな作業メモ、単純な TODO、実装中の一時的な試行錯誤は `progress.md` に寄せ、decision log を肥大化させない。
 
 ## AI agent の記録手順
 
-1. まず `doc/product/decision-log/index.md` を読む。
+1. まず `doc/design/decision-log/index.md` を読む。
 2. 既存ログに同じ主題がないか確認する。
 3. 新規主題なら `_template.md` を元に `<連番>-<短い英語slug>.md` を作る。
 4. 既存主題の更新なら該当ログに追記する。決定が変わる場合は古いログを消さず、状態を `superseded` にして新しいログへリンクする。
 5. `index.md` の「現在有効な主要方針」または「未決事項」を更新する。
-6. 関連する `doc/product/usage-flow.md` や `doc/product/progress.md` に影響がある場合は、必要な最小限の参照を追加する。
+6. 関連する `doc/design/usage-flow.md` や `progress.md` に影響がある場合は、必要な最小限の参照を追加する。
 
 ## ファイル名
 

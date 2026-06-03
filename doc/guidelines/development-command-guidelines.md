@@ -6,7 +6,7 @@
 
 ## 前提
 
-- このプロジェクトの開発基盤は Docker / Docker Compose を前提とする(確定方針。経緯は `doc/product/decision-log/0002-docker-compose-baseline.md`)。
+- このプロジェクトの開発基盤は Docker / Docker Compose を前提とする(確定方針。経緯は `doc/design/decision-log/0002-docker-compose-baseline.md`)。
 - 一方で、アプリケーションの実装スタック(言語・フレームワーク・パッケージ管理ツールなど)はまだ確定していない。そのため本文では特定スタック固有のコマンド名を前提化せず、汎用的な表現で規律する。
 - 実装スタックが確定したら、その時点の具体的な service 名・コマンド例で本文を更新する。
 

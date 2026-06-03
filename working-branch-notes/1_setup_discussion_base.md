@@ -18,10 +18,10 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 
 ## 決定事項
 
-- プロダクト設計ドキュメントは `doc/product/` 配下に置く。
-- 利用手順は `doc/product/usage-flow.md` に置く。
-- 進捗管理表は `doc/product/progress.md` に置く。
-- 方針決定ログは `doc/product/decision-log/` 配下に置き、`index.md` と個別ログに分ける。
+- プロダクト設計ドキュメントは `doc/design/` 配下に置く。
+- 利用手順は `doc/design/usage-flow.md` に置く。
+- 進捗管理表は `progress.md` に置く。
+- 方針決定ログは `doc/design/decision-log/` 配下に置き、`index.md` と個別ログに分ける。
 - AI agent 向けの長い正本は `doc/guidelines/` に置く。
 - `AGENTS.md` は Codex app を含む AI agent 共通入口とする。
 - `CLAUDE.md` は `@AGENTS.md` を取り込む Claude Code 用 shim とする。
@@ -56,8 +56,8 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 ### 2026-06-02
 
 - ユーザーから、利用手順、進捗管理表、方針決定ログのファイル名と配置場所について相談を受けた。
-- 類似の別プロジェクトや、[kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) を確認し、`doc/product/` 配下に設計ドキュメントを置く案を採用した。
-- `doc/product/usage-flow.md`、`doc/product/progress.md`、`doc/product/decision-log/index.md`、`doc/product/decision-log/_template.md` を作成した。
+- 類似の別プロジェクトや、[kiyohara/slack_posts_dumper](https://github.com/kiyohara/slack_posts_dumper) を確認し、`doc/design/` 配下に設計ドキュメントを置く案を採用した。
+- `doc/design/usage-flow.md`、`progress.md`、`doc/design/decision-log/index.md`、`doc/design/decision-log/_template.md` を作成した。
 - decision log は単一ファイルではなく、`index.md` と個別ログファイルに分割する方針にした。
 - AI agent が decision log を記録できるよう、`doc/guidelines/decision-log-guidelines.md` と agent 向け入口を作成した。
 - `AGENTS.md`、`CLAUDE.md`、`.cursor/rules/`、`.claude/rules/` を整備した。
@@ -66,10 +66,10 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 - working branch notes を汎用作業メモとして取り込み、`working-branch-notes/README.md`、`working-branch-notes/_template.md`、`doc/guidelines/working-branch-notes-handling.md`、`doc/guidelines/working-branch-notes-security.md` と agent 入口を作成した。
 - ユーザーが既存 `.git` を `.git-backup` に退避した後、新しい Git 履歴を作成した。
 - Claude Code のレビュー結果を `working-branch-notes/1_setup_discussion_base__agent-review.md` で確認した。
-- Cursor の working branch note rule に `globs` を追加し、decision log rule にも `doc/product/decision-log/**/*.md` の `globs` を追加した。
+- Cursor の working branch note rule に `globs` を追加し、decision log rule にも `doc/design/decision-log/**/*.md` の `globs` を追加した。
 - `number-working-branch-note` skill を `.agents/skills/number-working-branch-note/` に取り込み、`.claude/skills/number-working-branch-note` から symlink した。
 - `doc/guidelines/agent-configuration-management.md` を関連リポジトリの詳細版に寄せ、skill / MCP 共通資材の管理方法を含めた。
 - `doc/guidelines/git-operation-guidelines.md`、`github-cli-guidelines.md`、`github-mcp-guidelines.md`、`pull-request-guidelines.md`、`development-command-guidelines.md` と各 tool 入口を取り込んだ。
 - GitHub MCP 共通資材を `.agents/mcp/github-op-integrated/` に取り込んだ。`github.env` 実体はコピーせず、`.gitignore` に除外を追加した。
-- 試作プロジェクトとの関係を `doc/product/decision-log/0001-relationship-to-prototype.md` に記録した。
-- `doc/product/progress.md` に progress と working branch note の違いを薄く記載し、初期進捗を seed した。
+- 試作プロジェクトとの関係を `doc/design/decision-log/0001-relationship-to-prototype.md` に記録した。
+- `progress.md` に progress と working branch note の違いを薄く記載し、初期進捗を seed した。
