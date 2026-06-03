@@ -4,6 +4,8 @@
 
 目的は、Cursor / Claude Code / Codex から GitHub の collaboration 操作(PR / issue / レビューコメントの read & write)を行うときに、操作ごとに `gh` を呼んで 1Password 承認ダイアログが出る状況を減らすことである。
 
+AI agent が GitHub の PR / issue / レビューコメントを操作する場合、この server の tool が最初の試行先になる。`gh` で事前確認する前に、まず MCP host 上で `github-op-integrated` の tool が利用可能か確認する。
+
 `gh` と MCP の使い分けなどプロジェクト側の方針は [doc/guidelines/github-mcp-guidelines.md](../../../doc/guidelines/github-mcp-guidelines.md) を参照する。MCP 共通資材の配置規約は [doc/guidelines/agent-configuration-management.md](../../../doc/guidelines/agent-configuration-management.md) の「MCP server 共通資材管理」セクションを参照する。
 
 ## ファイル

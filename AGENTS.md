@@ -50,7 +50,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 
 - AI agent 用の設定ファイル、rule、skill、agent 固有入口を作成・削除・rename するときは `doc/guidelines/agent-configuration-management.md` に従う。
 - commit 作成、署名付き tag 作成、GitHub の SSH remote を使う push / fetch / pull など、署名または GitHub との SSH remote 通信を伴う `git` 操作の前に `doc/guidelines/git-operation-guidelines.md` に従う。
-- GitHub の PR / issue / レビューコメントなどを操作するときは `doc/guidelines/github-mcp-guidelines.md` に従い、MCP を優先する。
+- GitHub の PR / issue / レビューコメントなどを操作するときは `doc/guidelines/github-mcp-guidelines.md` に従う。最初の試行先は `github-op-integrated` MCP tool とし、read / write ともに `gh` コマンドより先に MCP tool の利用可否を確認する。
 - `gh` コマンドを実行するときは `doc/guidelines/github-cli-guidelines.md` に従う。GitHub MCP 利用ルールでも `gh` fallback の経路はこの正本を参照する。
 - 依存 install / アプリ起動 / test / build など、開発環境を host OS 上に構築・実行する類のコマンドを実行するときは `doc/guidelines/development-command-guidelines.md` に従い、Docker Compose 経由を優先する。
 - PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
