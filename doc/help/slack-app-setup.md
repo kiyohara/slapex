@@ -88,6 +88,7 @@ manifest を使わずに設定する場合は、次の手順で作成する。
 | public channel の投稿取得 | `channels:history` |
 | private channel の一覧・解決 | `groups:read` |
 | private channel の投稿取得 | `groups:history` |
+| スレッド返信の取得 | 対象 conversation 種別に対応する `*:history` |
 | 画像・添付ファイルの情報取得と download | `files:read` |
 | カスタム絵文字の一覧取得 | `emoji:read` |
 | 投稿者名や表示名の解決 | `users:read` |

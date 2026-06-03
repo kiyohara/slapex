@@ -34,6 +34,10 @@
 
 | 主題 | 状態 | 次に決めること | 関連ログ |
 |---|---|---|---|
+| `.cache/` 再利用時の整合性検証 | open | workspace / channel / token scope /取得条件など、どの metadata の不一致を再利用不可とみなすか | [0005-cache-handling.md](0005-cache-handling.md) |
+| 差分取得と再実行 | open | 既存出力への上書き、差分取得、再実行時の扱い | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
+| CI artifact 化 | open | CI で生成した HTML / assets / cache を artifact として保存・共有する方法 | [0008-default-output-root.md](0008-default-output-root.md) |
+| thread replies を含む全体取得量 | open | 取得前の見込み表示、または親投稿と thread replies を合わせた全体上限を設けるか | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
 
 ## 運用メモ
 

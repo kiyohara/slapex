@@ -119,13 +119,15 @@ option:
 取り扱える件数の上限に達しました。
 ```
 
+親投稿数とは別に、thread replies を含めた全体取得量が大きくなり得る。取得前の見込み表示や、thread replies を含めた全体上限を設けるかどうかは未決事項として扱う。
+
 ## 保存する assets
 
 ローカル HTML から外部 URL へ依存せず閲覧できるように、次の assets を保存対象とする。
 
 | 種別 | 取得元 | 保存時の扱い |
 |---|---|---|
-| 標準絵文字 | Slack の標準絵文字 URL | 本文中の `:emoji_name:` を画像または Unicode fallback として解決する |
+| 標準絵文字 | Slack message text / Unicode emoji mapping | 原則として Unicode に戻して HTML に直接表示する。Unicode fallback できない場合だけ画像 asset として扱う |
 | カスタム絵文字 | Slack API `emoji.list` | workspace 固有の絵文字画像として保存する |
 | URL preview 画像 | Slack message の unfurl / attachment 情報 | Slack 上で preview として表示されていた画像を保存する。ツール自身による Open Graph fetch は行わない |
 | ユーザーがアップロードした画像 | Slack message の `files` 情報、`files.info`、画像 thumbnail / original URL | thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする |
@@ -135,7 +137,7 @@ option:
 
 本リポジトリでも、asset ファイル名は PoC と同じく URL hash ベースにする。元 URL が同じ asset は同じファイル名へ解決されるため、重複 download と重複保存を避けやすい。asset 種別、元 URL、Slack file ID、emoji 名、元の表示ファイル名、content type、取得成否などの人間が読むための情報は `.cache/assets_manifest.json` と HTML 側の表示に保持する。
 
-標準絵文字は原則として Unicode に戻して HTML に直接表示する。Unicode fallback できないカスタム絵文字は画像 asset として保存するが、利用者にとって custom かどうかは重要な分類ではないため、保存先は `assets/emoji/` に集約する。
+標準絵文字は原則として Unicode に戻して HTML に直接表示する。カスタム絵文字や Unicode fallback できない絵文字は画像 asset として保存するが、利用者にとって custom かどうかは重要な分類ではないため、保存先は `assets/emoji/` に集約する。
 
 利用者が出力内容を把握しやすいように、ファイル名は URL hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。
 
@@ -346,7 +348,7 @@ See: https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-a
 3. token を再発行または再 install する。
 4. 詳細手順として help URL を表示する。
 
-### token の workspace が想定と違う
+### token の workspace を確認したい
 
 表示する内容:
 
@@ -354,6 +356,8 @@ See: https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-a
 2. 複数 workspace を扱う場合は、それぞれの workspace に対応する bot token を使う。
 3. CI では job ごとに渡している `SLACK_BOT_TOKEN` が正しいか確認する。
 4. Enterprise org-wide install の token を使っている場合は、初期対象外であることを表示し、単一 workspace install の bot token を使うよう案内する。
+
+通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。
 
 ### channel が見つからない
 
@@ -428,6 +432,7 @@ CI では artifact path を固定しやすくするため、必要に応じて `
 - `.cache/` 再利用時の整合性検証方法。
 - 差分取得、再実行、既存出力への上書き方針。
 - CI artifact としての保存方法。
+- thread replies を含めた全体取得量の見込み表示、または全体上限を設けるかどうか。
 
 ## 参考
 

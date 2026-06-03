@@ -43,17 +43,19 @@
 - ユーザーアップロード画像は thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする。original には `--max-attachment-size` を適用する。詳細は `doc/design/decision-log/0017-uploaded-image-assets.md`。
 - Slack App セットアップ手順は GitHub 上で参照できる help ページに分離し、CLI エラーは短い診断と URL 案内に絞る。詳細は `doc/design/decision-log/0018-cli-help-pages.md`。
 - 設計文書は `doc/design/`、利用者向け help は `doc/help/`、作業状況は root の `progress.md` に分ける。詳細は `doc/design/decision-log/0019-document-directory-structure.md`。
+- PR #2 のレビュー指摘を受け、標準絵文字の保存方針、workspace 診断の位置づけ、thread replies を含む全体取得量の未決扱いを整理した。
 
 ## 次にやること
 
 - 利用者向け手順として過不足がないかレビューする。
 - 出力構造、assets manifest、secret manager 連携、CI artifact 化を後続検討する。
 - `.cache/` の再利用条件検証を後続検討する。
+- thread replies を含めた全体取得量の見込み表示または全体上限を後続検討する。
 - 確定方針が出たら decision log を作成または更新する。
 
 ## 検証
 
-- ドキュメント編集のため、アプリケーション test は未実行。
+- PR #2 レビュー対応は文書修正のみ。アプリケーション test は未実行。
 
 ## リスク・ブロッカー
 
@@ -102,3 +104,4 @@
 - 2026-06-03: Slack App セットアップ手順を `doc/help/slack-app-setup.md` に分離し、CLI エラーでは詳細手順ではなく help URL を案内する方針を usage と decision log に反映した。
 - 2026-06-03: Slack 公式 docs で manifest から App を作成できることを確認し、help ページに `https://api.slack.com/apps?new_app=1`、manifest 貼り付け手順、Bot Token Scopes 入りの YAML 例を追記した。
 - 2026-06-03: `doc/product/` を廃止し、設計文書を `doc/design/`、利用者向け help を `doc/help/`、進捗管理を root の `progress.md` に移動した。各ディレクトリの配置判断は `README.md` を入口にする方針を decision log に記録した。
+- 2026-06-03: PR #2 のレビュー指摘を受け、標準絵文字は原則 Unicode 表示であること、workspace mismatch は通常実行では自動検出エラーにしないこと、thread replies を含む全体取得量を未決事項にすることを `usage-flow.md` と decision log index に反映した。
