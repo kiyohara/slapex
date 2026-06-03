@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-06-02
 - 最終更新日: 2026-06-02
-- 関連: `doc/design/usage-flow.md`, `0010-attachment-file-downloads.md`, `0016-asset-filenames.md`
+- 関連: `../output-format.md`, `../html-rendering.md`, `0010-attachment-file-downloads.md`, `0016-asset-filenames.md`
 
 ## 背景
 

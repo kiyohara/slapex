@@ -11,3 +11,4 @@ alwaysApply: false
 - Decision log を記録する前に `doc/design/decision-log/index.md` を読む。
 - 詳細ログは `doc/design/decision-log/<連番>-<短い英語slug>.md` に 1 テーマ 1 ファイルで記録する。
 - `index.md` には現在有効な主要方針、未決事項、参照先だけを書く。
+- 仕様の正本は `doc/design/` 直下の spec 文書。decision log と `index.md` は参考ログであり、仕様の正本として扱わない。

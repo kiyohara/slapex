@@ -1,3 +1,8 @@
+<!--
+記入前に doc/guidelines/decision-log-guidelines.md の「正本と参照の関係」を確認する。
+- 関連: には spec(doc/design/ 直下)など参照先を書く。decision log は仕様の正本ではない。
+作成後、この説明コメントは削除する。
+-->
 # <ID> <主題>
 
 - 状態:

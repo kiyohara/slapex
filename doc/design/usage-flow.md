@@ -1,10 +1,16 @@
 # 利用手順
 
-このファイルには、利用者が Slack の書き込みを HTML として保存するまでの手順を記載していく。
+このファイルには、利用者が Slack の書き込みを HTML として保存するまでの操作の流れを記載していく。
 
 想定読者は、このツールを利用する人間である。
 
 この内容は議論用の素案であり、実装アーキテクチャ、オプション名、出力ディレクトリ構造は未確定である。利用者が自然に完了できる流れを先に整理し、その後に実装方式を決める。
+
+仕様はトピックごとに次の文書へ分割している。本ファイルは利用者の操作の流れを扱う。
+
+- 出力ディレクトリ構造、保存される assets、取得範囲、サイズ制限: `output-format.md`
+- 生成する `index.html` の表示仕様(見た目): `html-rendering.md`
+- 中間ファイル `.cache/` の扱い: `cache.md`
 
 ## 想定する利用体験
 
@@ -101,6 +107,8 @@ op run -- slapex <channel-keyword>
 11. 出力先に HTML と assets 一式を書き込む。
 12. 完了時に出力先と取得対象 workspace / channel を表示する。
 
+取得範囲制限・出力先のディレクトリ構造・保存対象は `output-format.md`、生成する HTML の見た目は `html-rendering.md` を参照する。
+
 ### 処理対象の表示
 
 通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。その代わり、処理の進行中に token から解決した workspace と、確定した channel を繰り返し表示し、利用者が対象を意識できるようにする。
@@ -132,167 +140,9 @@ Target: Example Workspace (example.slack.com, T012345...) / #engineering (C01234
 5. 完了時の summary では、出力先 path とあわせて workspace / channel label を表示する。
 6. 生成した `index.html` の冒頭にも、取得対象 workspace / channel と export 実行時刻を表示する。
 
-画面表示用 label と directory 用 label は役割を分ける。画面表示用 label は利用者が Slack 上の対象を確認するための情報であり、Slack の表示名、domain、ID などを読みやすく含める。directory 用の `<workspace-label>` / `<channel-label>` は filesystem-safe な slug であり、出力 path の安全性と衝突回避を優先する。
+画面表示用 label と directory 用 label は役割を分ける。画面表示用 label は利用者が Slack 上の対象を確認するための情報であり、Slack の表示名、domain、ID などを読みやすく含める。directory 用の `<workspace-label>` / `<channel-label>` は filesystem-safe な slug であり、出力 path の安全性と衝突回避を優先する(directory 用 label の詳細は `output-format.md`)。
 
 この表示は誤認を減らすための診断情報であり、通常実行で workspace mismatch を強制的に停止する guard ではない。CI などで誤 token を必ず止める必要が出た場合は、将来的に `--expect-team-id` や `--expect-workspace-domain` のような検証専用 option を追加するかを検討する。
-
-## 取得範囲
-
-初期出力は channel 単位の `index.html` とする。日付単位や thread 単位の HTML 分割は初期対象外とする。
-
-歴史の長い channel を指定した場合に無制限取得にならないよう、取得範囲は post 件数と日付で制限する。2 つの制限は AND で結合し、両方を満たす投稿だけを取得対象にする。
-
-option:
-
-| option | default | max | 目的 |
-|---|---:|---:|---|
-| `--max-posts <count>` | `1000` | `10000` | channel timeline 上の親投稿の最大取得件数 |
-| `--days <days>` | `30` | `90` | 現在時刻から何日前までの投稿を取得するか |
-
-`--max-posts` は親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は一緒に取得する。
-
-ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
-
-```text
-取り扱える件数の上限に達しました。
-```
-
-親投稿数とは別に、thread replies を含めた全体取得量が大きくなり得る。取得前の見込み表示や、thread replies を含めた全体上限を設けるかどうかは未決事項として扱う。
-
-## 保存する assets
-
-ローカル HTML から外部 URL へ依存せず閲覧できるように、次の assets を保存対象とする。
-
-| 種別 | 取得元 | 保存時の扱い |
-|---|---|---|
-| 標準絵文字 | Slack message text / Unicode emoji mapping | 原則として Unicode に戻して HTML に直接表示する。Unicode fallback できない場合だけ画像 asset として扱う |
-| カスタム絵文字 | Slack API `emoji.list` | workspace 固有の絵文字画像として保存する |
-| URL preview 画像 | Slack message の unfurl / attachment 情報 | Slack 上で preview として表示されていた画像を保存する。ツール自身による Open Graph fetch は行わない |
-| ユーザーがアップロードした画像 | Slack message の `files` 情報、`files.info`、画像 thumbnail / original URL | thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする |
-| 画像以外の添付ファイル | Slack message の `files` 情報、`files.info`、download URL | サイズ上限以下の添付ファイルを保存し、HTML から相対リンクで参照する |
-
-標準絵文字とカスタム絵文字については、関連評価実装である `slack_posts_dumper` に PoC 実装がある。PoC では `AssetManager` が `output/assets/<url-md5>.<ext>` のような URL hash ベースのファイル名を生成し、`output/assets_manifest.json` に元 URL、ローカルパス、metadata を記録する。`EmojiResolver` は `emoji.list` でカスタム絵文字を解決し、標準絵文字は Slack の標準絵文字 URL を組み立てている。
-
-本リポジトリでも、asset ファイル名は PoC と同じく URL hash ベースにする。元 URL が同じ asset は同じファイル名へ解決されるため、重複 download と重複保存を避けやすい。asset 種別、元 URL、Slack file ID、emoji 名、元の表示ファイル名、content type、取得成否などの人間が読むための情報は `.cache/assets_manifest.json` と HTML 側の表示に保持する。
-
-標準絵文字は原則として Unicode に戻して HTML に直接表示する。カスタム絵文字や Unicode fallback できない絵文字は画像 asset として保存するが、利用者にとって custom かどうかは重要な分類ではないため、保存先は `assets/emoji/` に集約する。
-
-利用者が出力内容を把握しやすいように、ファイル名は URL hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。
-
-## 出力イメージ
-
-出力ディレクトリ構造の素案:
-
-```text
-slapex-<yyyymmdd>-<hhmm>/
-└── <workspace-label>/
-    └── <channel-label>/
-        ├── index.html
-        ├── style.css
-        ├── assets/
-        │   ├── emoji/
-        │   │   └── <url-hash>.gif
-        │   ├── og-images/
-        │   │   └── <url-hash>.jpg
-        │   ├── uploads/
-        │   │   ├── thumbs/
-        │   │   │   └── <url-hash>.jpg
-        │   │   └── originals/
-        │   │       └── <url-hash>.<ext>
-        │   └── attachments/
-        │       └── <url-hash>.<ext>
-        └── .cache/
-            ├── assets_manifest.json
-            ├── metadata.json
-            └── slack_api_cache.json
-```
-
-`index.html` はローカルブラウザで開ける HTML とする。画像や添付ファイルへの参照は、可能な限り出力ディレクトリ内の相対パスにする。
-
-`style.css` は `index.html` から相対 path で参照する。style は HTML 内に固定的に埋め込まず、将来的に theme 切り替えや style 差し替えをしやすいように分離する。
-
-`--output` が指定された場合、その値を出力 root とする。`--output` が指定されていない場合は、カレントディレクトリ配下に `slapex-<yyyymmdd>-<hhmm>` 形式の出力 root を作成する。この日時はコマンド実行時刻を表し、取得対象となる投稿の日時ではない。`<workspace-label>/<channel-label>/` は token と channel 解決結果からツールが作成する。
-
-`<workspace-label>` と `<channel-label>` は、Slack API 上の ID そのものではなく、人間が読みやすい workspace 名、workspace domain、channel 名などを filesystem-safe に正規化した label とする。label が取得できない場合や、正規化後に衝突する場合は、短い `team_id` / channel ID などを suffix または fallback として使う。元の ID、表示名、実際に使った label は metadata / cache に記録する。
-
-この directory 用 label は、画面表示用の workspace / channel label と同一である必要はない。画面表示では対象確認のために Slack 上の表示名、domain、短い ID、channel 種別などを含める。一方、directory 名では filesystem-safe な slug と衝突回避を優先する。
-
-同じ分に複数回実行され、出力 root が既に存在する場合は、`slapex-<yyyymmdd>-<hhmm>-2` のように suffix を付けて衝突を避ける。
-
-`.cache/` は、HTML と assets を生成するための中間ファイル置き場として扱う。通常は export 終了時に削除され、利用者が成果物として扱うのは `index.html` と `assets/` だけにする。
-
-`.cache/assets_manifest.json` は、元 URL、ローカルパス、asset 種別、Slack file ID、emoji 名、取得成否などを保持する候補として扱う。`.cache/metadata.json` は、取得対象 workspace、channel、取得時刻、Slack API 上の ID、取得件数などを保持する候補として扱う。`.cache/slack_api_cache.json` は、同じ export 中に何度も参照する Slack API response や解決済み user / emoji / channel 情報を保持する候補として扱う。
-
-いずれの `.cache/` ファイルにも Slack token や secret は保存しない。
-
-## HTML の表示仕様
-
-最終成果物の `index.html` は、Slack default の投稿表示を模倣した見た目にする。
-
-表示方針:
-
-1. 冒頭に取得対象 workspace、channel、export 実行時刻を表示する。
-2. workspace 表示には workspace 名、workspace URL または domain、短い `team_id` を含める。
-3. channel 表示には channel 名、channel ID、public/private、archived 状態、bot membership を含める。
-4. 投稿は channel timeline と同じく、上から oldest、下へ latest の順に表示する。
-5. 日付と時刻は相対表現ではなく、絶対時刻として表示する。
-6. thread replies は親投稿の下に、親投稿よりインデントを下げて表示する。
-7. thread replies は初期表示で展開済みにする。
-8. reaction は、絵文字 icon と件数を可能な限り Slack default 風に表示する。
-9. reaction した user の一覧や名前は表示しない。
-10. JavaScript は一切使わない。
-11. style は `style.css` に分離し、HTML 内に固定的に inline style として埋め込まない。
-12. CSS で表現可能な interaction は活用してよい。
-13. thread の開閉を入れる場合は、JavaScript ではなく HTML native の `<details open>` / `<summary>` など、JavaScript なしで動作する仕組みを使う。
-
-Slack default 風の avatar、投稿者名、絶対時刻、本文、reactions、attachments を CSS で整え、HTML 自体は静的 file として閲覧できるようにする。
-
-ユーザーがアップロードした画像は、Slack file object の available な thumbnail のうち表示に適したものを保存し、HTML 上の inline image として使う。あわせて original 画像も保存し、inline image をクリックすると original を開けるようにする。
-
-original 画像の保存には `--max-attachment-size` を適用する。original がサイズ上限を超える場合、original は download せず、HTML では thumbnail 表示を残したうえで original がサイズ上限超過により保存されなかったことを示す。thumbnail も取得できない場合は、通常の添付ファイル表示または置換メッセージとして扱う。
-
-## 添付ファイルのサイズ制限
-
-画像以外の添付ファイルも可能な限り保存対象に含める。また、ユーザーがアップロードした画像の original も保存対象に含める。ただし、巨大な添付ファイルや original 画像による実行時間、出力サイズ、CI artifact サイズの肥大化を避けるため、保存にはサイズ上限を設ける。
-
-option:
-
-| option | default | 目的 |
-|---|---:|---|
-| `--max-attachment-size <size>` | `10MB` | 添付ファイルまたは original 画像 1 件あたりの保存上限を指定する |
-
-サイズ上限を超える添付ファイルまたは original 画像は download しない。画像以外の添付ファイルは、HTML 上では添付表示を次のようなメッセージに置き換える。original 画像が上限を超えた場合は、thumbnail 表示を残しつつ original が保存されなかったことを表示する。
-
-```text
-サイズオーバーのため保存されませんでした。
-```
-
-置換表示には、可能であればファイル名、Slack file ID、元の file size、設定された size limit を含める。`.cache/assets_manifest.json` には、保存した添付ファイルだけでなく、サイズ上限超過で保存しなかった添付ファイルの状態も記録する。
-
-## cache の扱い
-
-`.cache/` は最終成果物ではなく、HTML と assets を作成するための中間状態として扱う。
-
-採用理由:
-
-- 良い点: 最終成果物と中間ファイルを分離できるため、利用者が保存・共有すべきファイルが明確になる。
-- 良い点: Slack API response、emoji list、asset download manifest、user 解決結果などを再帰的に参照しやすくなり、同じ実行内での重複 API call や重複 download を減らせる。
-- 良い点: `--keep-cache` を指定すれば、どこまで取得できたか、どの asset が失敗したかを調査しやすい。
-- 注意点: `.cache/` には channel 名、user ID、message ID、file ID、元 URL などが入り得るため、成果物として不用意に共有しない前提にする。
-- 注意点: 古い `.cache/` を再利用すると、Slack 側の更新や権限変更を反映しない stale data になる可能性がある。
-
-option:
-
-| option | 目的 |
-|---|---|
-| `--keep-cache` | export の成否に関係なく `.cache/` を削除せず残す |
-| `--reuse-cache <path>` | 以前に保存した `.cache/` を読み込み、取得済み情報や asset manifest を再利用する |
-
-通常動作では、export の成否に関係なく `.cache/` を削除する。原因調査や cache 再利用のために残したい場合は `--keep-cache` を指定する。process kill や OS 側の異常終了では、cleanup が実行されず `.cache/` が残る可能性がある。
-
-`--reuse-cache` を使う場合は、cache が同じ workspace、channel、token の見える権限範囲、取得条件に対応しているかを検証する必要がある。検証できない cache は使わず、再取得する。
-
-`--no-cache` は初期 option としては採用しない。cache の影響を排除したい場合は `--reuse-cache` を指定せず通常実行すればよく、`--keep-cache` を指定しない限り `.cache/` は削除されるためである。
 
 ## channel の指定と選択
 
@@ -474,10 +324,9 @@ CI では artifact path を固定しやすくするため、必要に応じて `
 
 ## 未決事項
 
-- `.cache/` 再利用時の整合性検証方法。
-- 差分取得、再実行、既存出力への上書き方針。
 - CI artifact としての保存方法。
-- thread replies を含めた全体取得量の見込み表示、または全体上限を設けるかどうか。
+
+出力形式・取得範囲・cache に関する未決事項は `output-format.md` と `cache.md`、全体の一覧は `decision-log/index.md` を参照する。
 
 ## 参考
 

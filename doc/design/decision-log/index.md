@@ -6,6 +6,8 @@
 
 記録方法の詳細は `../../guidelines/decision-log-guidelines.md` を参照する。
 
+なお、仕様の正本は `doc/design/` 直下の各 spec 文書であり、decision log と本 `index.md` はその確定経緯を辿る参考ログである。decision log を仕様の正本として扱わない(詳細は `../../guidelines/decision-log-guidelines.md` の「正本と参照の関係」)。
+
 ## 現在有効な主要方針
 
 | ID | 状態 | 主題 | 現在の結論 | 詳細 |
@@ -30,6 +32,8 @@
 | 0018 | decided | CLI help pages | Slack App セットアップ手順は GitHub 上で参照できる help ページに分離し、CLI エラーは短い診断と URL 案内に絞る | [0018-cli-help-pages.md](0018-cli-help-pages.md) |
 | 0019 | decided | document directory structure | 設計文書は `doc/design/`、利用者向け help は `doc/help/`、作業状況は root の `progress.md` に分ける | [0019-document-directory-structure.md](0019-document-directory-structure.md) |
 | 0020 | decided | 処理対象 workspace / channel の表示 | token から解決した workspace と確定した channel を実行中、完了時、生成 HTML に表示する。画面表示用 label と directory 用 label は役割を分ける | [0020-target-label-display.md](0020-target-label-display.md) |
+| 0021 | decided | 仕様文書の分割 | `usage-flow.md` を利用者の操作の流れに絞り、出力形式・HTML 表示仕様・cache を `output-format.md` / `html-rendering.md` / `cache.md` に分割する | [0021-spec-document-split.md](0021-spec-document-split.md) |
+| 0022 | decided | 正本と参照の関係の明文化 | 仕様の正本は `doc/design/` 直下の spec 文書、decision log は参考ログと位置づけ、guideline / template / index / rule shim に明記して取り違えを防ぐ | [0022-spec-vs-decision-log-authority.md](0022-spec-vs-decision-log-authority.md) |
 
 ## 未決事項
 

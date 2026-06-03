@@ -18,5 +18,8 @@
 
 ## 主な文書
 
-- `usage-flow.md`: 利用者体験と CLI 挙動の設計素案
+- `usage-flow.md`: 利用者の操作の流れ(利用体験と CLI 挙動)の設計素案
+- `output-format.md`: 出力ディレクトリ構造、保存 assets、取得範囲、サイズ制限の仕様素案
+- `html-rendering.md`: 生成する `index.html` の表示仕様(見た目)の素案
+- `cache.md`: 中間ファイル `.cache/` の扱いの素案
 - `decision-log/`: 方針決定ログ

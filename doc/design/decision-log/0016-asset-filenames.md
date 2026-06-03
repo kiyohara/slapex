@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-06-02
 - 最終更新日: 2026-06-03
-- 関連: `doc/design/usage-flow.md`, `../slack_posts_dumper`
+- 関連: `../output-format.md`, `../slack_posts_dumper`
 
 ## 背景
 

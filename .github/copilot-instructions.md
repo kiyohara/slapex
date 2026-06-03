@@ -44,7 +44,10 @@ I want to review in Japanese.
 
 ## 設計ドキュメントのレビュー観点
 
-- `doc/design/usage-flow.md` は利用者体験と CLI 挙動の設計文書である。利用者が実行できない手順、前提の欠落、実装アーキテクチャ判断に影響する矛盾があれば指摘する。
+- `doc/design/usage-flow.md` は利用者の操作の流れ(利用体験と CLI 挙動)の設計文書である。利用者が実行できない手順、前提の欠落、実装アーキテクチャ判断に影響する矛盾があれば指摘する。
+- `doc/design/output-format.md` は出力ディレクトリ構造、保存 assets、取得範囲、サイズ制限の仕様である。出力構造・保存対象・制限値の矛盾や、`usage-flow.md` との不整合があれば指摘する。
+- `doc/design/html-rendering.md` は生成する `index.html` の表示仕様(見た目)である。JavaScript 不使用や CSS 分離など `0012` の方針との矛盾があれば指摘する。
+- `doc/design/cache.md` は中間ファイル `.cache/` の扱いである。成果物と中間ファイルの分離、cache 再利用・削除方針の矛盾があれば指摘する。
 - `doc/help/*.md` は利用者が GitHub 上で直接読む help である。CLI から案内される URL、実行手順、scope、token、secret の扱いに矛盾があれば指摘する。
 - `progress.md` は作業状況の把握を目的とする。進捗、TODO、検証状況、ブロッカーが混ざって読めなくなる変更は指摘する。
 - `doc/design/decision-log/index.md` は方針決定ログの入口である。詳細議論を詰め込みすぎる変更、個別ログへの参照漏れ、現在有効な方針と未決事項の混同を指摘する。
