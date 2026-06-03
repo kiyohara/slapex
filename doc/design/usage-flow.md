@@ -27,7 +27,7 @@ Slack App の作成、scope 設定、workspace install、bot token 発行は手�
 Help URL:
 
 ```text
-https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-app-setup.md
+https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
 token が未設定、無効、または必要な権限を持たない場合、ツールは短い原因説明と上記 help URL を表示する。
@@ -362,7 +362,7 @@ channel 引数が未指定かつ TTY がない場合も同様に、interactive s
 Help URL:
 
 ```text
-https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-app-setup.md
+https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
 ### `SLACK_BOT_TOKEN` が未設定
@@ -381,7 +381,7 @@ SLACK_BOT_TOKEN is not set.
 Set SLACK_BOT_TOKEN from your secret manager or CI secrets, then run slapex again.
 
 Need to create a Slack App or issue a bot token?
-See: https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-app-setup.md
+See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
 ### token が無効

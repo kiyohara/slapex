@@ -48,7 +48,7 @@ Codex の MCP 設定は TOML 形式。user 階層の `~/.codex/config.toml` は�
 
 ```toml
 [mcp_servers.github-op-integrated]
-command = "/absolute/path/to/slack_posts_exporter/.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
+command = "/absolute/path/to/slapex/.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
 startup_timeout_sec = 30
 tool_timeout_sec = 60
 ```
@@ -94,7 +94,7 @@ GITHUB_TOOLSETS=default
       "type": "stdio",
       "command": "./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh",
       "env": {
-        "GITHUB_OP_INTEGRATED_ENV_FILE": "/absolute/path/to/slack_posts_exporter/.agents/mcp/github-op-integrated/github.read-only.env"
+        "GITHUB_OP_INTEGRATED_ENV_FILE": "/absolute/path/to/slapex/.agents/mcp/github-op-integrated/github.read-only.env"
       }
     }
   }

@@ -1,6 +1,6 @@
 # Pull Request 作成ガイドライン
 
-この文書は、AI agent が slack_posts_exporter リポジトリで Pull Request を作成または更新するときの共通正本である。
+この文書は、AI agent が slapex リポジトリで Pull Request を作成または更新するときの共通正本である。
 
 ## 基本方針
 

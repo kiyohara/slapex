@@ -1,6 +1,6 @@
 # GitHub MCP 利用ルール
 
-この文書は、slack_posts_exporter リポジトリで AI agent が GitHub 操作を実行するときに、GitHub MCP Server(公式)を優先的に使うための共通正本である。
+この文書は、slapex リポジトリで AI agent が GitHub 操作を実行するときに、GitHub MCP Server(公式)を優先的に使うための共通正本である。
 
 対応する MCP server 共通資材は `.agents/mcp/github-op-integrated/` に置く。導入手順、wrapper script、各 tool 用の設定例はそちらの `README.md` と `config-examples.md` を参照する。
 

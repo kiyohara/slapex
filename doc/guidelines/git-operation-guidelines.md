@@ -1,6 +1,6 @@
 # Git 操作ルール
 
-この文書は、slack_posts_exporter リポジトリで AI agent が `git` コマンドを実行するときの共通ルールである。
+この文書は、slapex リポジトリで AI agent が `git` コマンドを実行するときの共通ルールである。
 
 ## 1Password 連携が必要な操作
 
