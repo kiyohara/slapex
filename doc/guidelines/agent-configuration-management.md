@@ -1,6 +1,6 @@
 # Agent 設定管理ルール
 
-この文書は、slack_posts_exporter リポジトリ内で Cursor / Codex / Claude Code から共通利用する agent skill と AI 向け rule を作成・削除・rename するときの共通正本である。AI と人間で別ドキュメントを持たず、全員がこの文書を読む。
+この文書は、slapex リポジトリ内で Cursor / Codex / Claude Code から共通利用する agent skill と AI 向け rule を作成・削除・rename するときの共通正本である。AI と人間で別ドキュメントを持たず、全員がこの文書を読む。
 
 本ガイドライン自身もこのルール体系の管理対象である(自己参照)。
 

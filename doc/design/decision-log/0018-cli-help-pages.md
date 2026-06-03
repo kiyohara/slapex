@@ -32,7 +32,7 @@ Slack App の作成、scope 設定、workspace install、bot token 発行、secr
 初期 help ページは `doc/help/slack-app-setup.md` とする。GitHub 上では次の URL で参照できる前提にする。
 
 ```text
-https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-app-setup.md
+https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
 CLI のエラー出力は、短い原因説明、次に確認すべき最小限の内容、help URL に絞る。詳細な Slack App セットアップ手順は CLI に展開しない。

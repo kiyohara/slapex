@@ -1,6 +1,6 @@
 # GitHub CLI 実行ルール
 
-この文書は、slack_posts_exporter リポジトリで AI agent が GitHub CLI(`gh`)を実行するときの共通ルールである。
+この文書は、slapex リポジトリで AI agent が GitHub CLI(`gh`)を実行するときの共通ルールである。
 
 ## GitHub MCP との関係
 
