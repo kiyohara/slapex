@@ -6,11 +6,11 @@
 
 ## 目的
 
-GitHub 操作では `gh` コマンドより先に `github-op-integrated` MCP tool を試すことを、AI agent の入口と repo skill 側でより強く表現する。
+GitHub 操作では `gh` コマンドより先に `github-op-integrated` MCP tool を試すことを、正本・rule shim・repo skill・README でより強く表現する。`AGENTS.md` は index として薄い記述を維持する。
 
 ## 現在の状況
 
-- `AGENTS.md`、`number-working-branch-note` skill、`github-op-integrated` README を更新済み。
+- `number-working-branch-note` skill、`github-op-integrated` README を更新済み。`AGENTS.md` は index としての薄い記述(MCP 優先)を維持し、強い表現は正本・rule shim 側へ集約。
 - 正本 `doc/guidelines/github-mcp-guidelines.md` に「MCP を最初に試す / `gh` preflight を先に走らせない」点を最小追記済み。`.cursor` / `.claude` の rule shim も同じ強調に揃え済み。
 - `gh` の廃止には踏み込んでいない。
 
@@ -40,3 +40,4 @@ GitHub 操作では `gh` コマンドより先に `github-op-integrated` MCP too
 - 2026-06-03: `main` から `prefer-github-op-integrated-first` ブランチを作成。
 - 2026-06-03: GitHub 操作の最初の試行先を `github-op-integrated` MCP tool に寄せる表現を、入口と skill に反映。
 - 2026-06-03: PR #4 レビュー指摘を反映。正本・rule shim へ MCP-first を明記し、skill に write fallback の安全弁を追記。
+- 2026-06-03: AGENTS.md の強い表現を破棄し、index としての薄いポインタに戻す(強い表現は正本・rule shim に集約)。
