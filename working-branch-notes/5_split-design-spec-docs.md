@@ -44,3 +44,4 @@
 - 2026-06-03: 「spec=正本 / decision log=参考」の建て付け確認。0021・本 note の「正本」表現を是正し、内容が移動した decision log(0005 / 0008 / 0010 / 0011 / 0012 / 0013 / 0014 / 0016 / 0017)の `関連` リンクを移動先の新 spec 文書へ更新。
 - 2026-06-03: 取り違え再発防止の仕組みを層構造で導入。`decision-log-guidelines.md` に「正本と参照の関係」節、`_template.md` 冒頭コメント、`index.md` 冒頭一行、`.claude/.cursor` の decision-log shim に一行を追加し、0022 として記録。
 - 2026-06-03: Codex 対応を確認。正本/template/index は tool 非依存で Codex も AGENTS.md→正本で到達するが、auto-load JIT 一行は Claude/Cursor のみ。AGENTS.md への強調一行追加は 42ebdb6 の「薄い index」前例に合わせ見送り、非対称を許容する旨を 0022 に追記。
+- 2026-06-04: PR #5 のレビュー指摘を反映。0016/0017 の `関連` をファイル相対(`../output-format.md` / `../html-rendering.md`)に正規化(壊れた相対リンク修正)、usage-flow.md の `output-format.md` 二重参照を統合。slack_posts_exporter→slapex の名称追従は本 PR 範囲外として別タスクへ切り出し。

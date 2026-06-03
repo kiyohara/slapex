@@ -107,7 +107,7 @@ op run -- slapex <channel-keyword>
 11. 出力先に HTML と assets 一式を書き込む。
 12. 完了時に出力先と取得対象 workspace / channel を表示する。
 
-取得範囲制限は `output-format.md`、出力先のディレクトリ構造と保存対象は `output-format.md`、生成する HTML の見た目は `html-rendering.md` を参照する。
+取得範囲制限・出力先のディレクトリ構造・保存対象は `output-format.md`、生成する HTML の見た目は `html-rendering.md` を参照する。
 
 ### 処理対象の表示
 
