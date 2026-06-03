@@ -91,12 +91,48 @@ op run -- slapex <channel-keyword>
 1. `SLACK_BOT_TOKEN` が存在するか確認する。
 2. Slack の認証確認 API で token が有効か確認する。
 3. token が紐付く workspace を取得し、workspace 名、workspace URL、`team_id` を記録する。
-4. channel 一覧から channel 引数の指定に合う候補を探す。
-5. channel が一意に決まったら、取得範囲制限に従って投稿履歴を取得する。
-6. スレッドがある投稿では返信を取得する。
-7. 投稿内で参照される assets を取得し、ローカル assets として保存する。
-8. 投稿本文、投稿者情報、日時、スレッド、assets への相対リンクを HTML に変換する。
-9. 出力先に HTML と assets 一式を書き込む。
+4. 確定した workspace 情報を表示する。
+5. channel 一覧から channel 引数の指定に合う候補を探す。
+6. channel が一意に決まったら、確定した channel 情報を表示する。
+7. 取得範囲制限に従って投稿履歴を取得する。
+8. スレッドがある投稿では返信を取得する。
+9. 投稿内で参照される assets を取得し、ローカル assets として保存する。
+10. 投稿本文、投稿者情報、日時、スレッド、assets への相対リンクを HTML に変換する。
+11. 出力先に HTML と assets 一式を書き込む。
+12. 完了時に出力先と取得対象 workspace / channel を表示する。
+
+### 処理対象の表示
+
+通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。その代わり、処理の進行中に token から解決した workspace と、確定した channel を繰り返し表示し、利用者が対象を意識できるようにする。
+
+画面表示用の workspace label は、Slack 上の表示名だけに依存しない。可能な限り workspace 名、workspace URL または domain、短い `team_id` を組み合わせる。
+
+例:
+
+```text
+Workspace: Example Workspace (example.slack.com, T012345...)
+```
+
+画面表示用の channel label は、channel 名に加えて channel ID、public/private、archived 状態、bot membership を含める。
+
+例:
+
+```text
+Target: Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, member)
+```
+
+表示タイミング:
+
+1. `auth.test` などで workspace が確定した直後に workspace label を表示する。
+2. channel 候補を表示する場合は、候補 list の前に workspace label を表示する。
+3. channel が確定した直後、履歴取得を開始する前に workspace / channel label を表示する。
+4. 投稿、thread replies、assets などの進捗表示では、必要に応じて workspace / channel label を含める。
+5. 完了時の summary では、出力先 path とあわせて workspace / channel label を表示する。
+6. 生成した `index.html` の冒頭にも、取得対象 workspace / channel と export 実行時刻を表示する。
+
+画面表示用 label と directory 用 label は役割を分ける。画面表示用 label は利用者が Slack 上の対象を確認するための情報であり、Slack の表示名、domain、ID などを読みやすく含める。directory 用の `<workspace-label>` / `<channel-label>` は filesystem-safe な slug であり、出力 path の安全性と衝突回避を優先する。
+
+この表示は誤認を減らすための診断情報であり、通常実行で workspace mismatch を強制的に停止する guard ではない。CI などで誤 token を必ず止める必要が出た場合は、将来的に `--expect-team-id` や `--expect-workspace-domain` のような検証専用 option を追加するかを検討する。
 
 ## 取得範囲
 
@@ -177,6 +213,8 @@ slapex-<yyyymmdd>-<hhmm>/
 
 `<workspace-label>` と `<channel-label>` は、Slack API 上の ID そのものではなく、人間が読みやすい workspace 名、workspace domain、channel 名などを filesystem-safe に正規化した label とする。label が取得できない場合や、正規化後に衝突する場合は、短い `team_id` / channel ID などを suffix または fallback として使う。元の ID、表示名、実際に使った label は metadata / cache に記録する。
 
+この directory 用 label は、画面表示用の workspace / channel label と同一である必要はない。画面表示では対象確認のために Slack 上の表示名、domain、短い ID、channel 種別などを含める。一方、directory 名では filesystem-safe な slug と衝突回避を優先する。
+
 同じ分に複数回実行され、出力 root が既に存在する場合は、`slapex-<yyyymmdd>-<hhmm>-2` のように suffix を付けて衝突を避ける。
 
 `.cache/` は、HTML と assets を生成するための中間ファイル置き場として扱う。通常は export 終了時に削除され、利用者が成果物として扱うのは `index.html` と `assets/` だけにする。
@@ -191,16 +229,19 @@ slapex-<yyyymmdd>-<hhmm>/
 
 表示方針:
 
-1. 投稿は channel timeline と同じく、上から oldest、下へ latest の順に表示する。
-2. 日付と時刻は相対表現ではなく、絶対時刻として表示する。
-3. thread replies は親投稿の下に、親投稿よりインデントを下げて表示する。
-4. thread replies は初期表示で展開済みにする。
-5. reaction は、絵文字 icon と件数を可能な限り Slack default 風に表示する。
-6. reaction した user の一覧や名前は表示しない。
-7. JavaScript は一切使わない。
-8. style は `style.css` に分離し、HTML 内に固定的に inline style として埋め込まない。
-9. CSS で表現可能な interaction は活用してよい。
-10. thread の開閉を入れる場合は、JavaScript ではなく HTML native の `<details open>` / `<summary>` など、JavaScript なしで動作する仕組みを使う。
+1. 冒頭に取得対象 workspace、channel、export 実行時刻を表示する。
+2. workspace 表示には workspace 名、workspace URL または domain、短い `team_id` を含める。
+3. channel 表示には channel 名、channel ID、public/private、archived 状態、bot membership を含める。
+4. 投稿は channel timeline と同じく、上から oldest、下へ latest の順に表示する。
+5. 日付と時刻は相対表現ではなく、絶対時刻として表示する。
+6. thread replies は親投稿の下に、親投稿よりインデントを下げて表示する。
+7. thread replies は初期表示で展開済みにする。
+8. reaction は、絵文字 icon と件数を可能な限り Slack default 風に表示する。
+9. reaction した user の一覧や名前は表示しない。
+10. JavaScript は一切使わない。
+11. style は `style.css` に分離し、HTML 内に固定的に inline style として埋め込まない。
+12. CSS で表現可能な interaction は活用してよい。
+13. thread の開閉を入れる場合は、JavaScript ではなく HTML native の `<details open>` / `<summary>` など、JavaScript なしで動作する仕組みを使う。
 
 Slack default 風の avatar、投稿者名、絶対時刻、本文、reactions、attachments を CSS で整え、HTML 自体は静的 file として閲覧できるようにする。
 
@@ -296,6 +337,8 @@ stdin または stdout が TTY ではない場合は、interactive selection を
 ```text
 Multiple channels matched "eng".
 
+Workspace: Example Workspace (example.slack.com, T012345...)
+
 Candidates:
   C0123456789  #engineering          public   active
   C0234567890  #engineering-notify   public   active
@@ -357,7 +400,7 @@ See: https://github.com/kiyohara/slack_posts_exporter/blob/main/doc/help/slack-a
 3. CI では job ごとに渡している `SLACK_BOT_TOKEN` が正しいか確認する。
 4. Enterprise org-wide install の token を使っている場合は、初期対象外であることを表示し、単一 workspace install の bot token を使うよう案内する。
 
-通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。
+通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。通常の export 実行でも、workspace 確定直後、channel 候補表示、channel 確定直後、完了 summary、生成 HTML に workspace / channel label を表示する。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。
 
 ### channel が見つからない
 
