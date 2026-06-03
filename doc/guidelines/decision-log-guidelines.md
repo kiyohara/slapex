@@ -8,6 +8,14 @@ Decision log は、決定済みの方針だけでなく、どのような経緯�
 
 主な読者は AI agent だが、人間も同じ正本を読む。
 
+## 正本と参照の関係
+
+- 仕様の正本は `doc/design/` 直下の各 spec 文書(例: `usage-flow.md` / `output-format.md` / `html-rendering.md` / `cache.md`)である。
+- decision log は、その仕様がどう確定したかを辿るための参考ログであり、仕様の正本ではない。`index.md` も参考ログの入口であって正本ではない。
+- 参照の向きは、decision log → spec を冒頭の `関連` で示し、spec → decision log を各 spec 文書から「決定経緯」として参照する。
+- decision log や `index.md` を「仕様の正本」として扱ったり、そう記述したりしない。
+- 文書再編で内容が spec 間を移動したら、移動元を指していた `関連` を移動先 spec へ更新する。本文(背景・検討・決定・影響)は当時の記録なので書き換えず、旧 spec への言及が残ってよい。
+
 ## 配置
 
 ```text
