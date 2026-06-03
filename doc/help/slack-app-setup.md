@@ -145,7 +145,7 @@ channel 名または channel ID を確認する。private channel の場合は�
 
 ## 参考
 
-- Slack Developer Docs: [Creating Slack apps](https://docs.slack.dev/tools/app-manifests/)
+- Slack Developer Docs: [Creating apps with manifests](https://docs.slack.dev/tools/app-manifests/)
 - Slack Developer Docs: [Installing with OAuth](https://docs.slack.dev/authentication/installing-with-oauth)
 - Slack Developer Docs: [Tokens](https://docs.slack.dev/authentication/tokens/)
 - Slack Developer Docs: [`auth.test`](https://docs.slack.dev/reference/methods/auth.test)

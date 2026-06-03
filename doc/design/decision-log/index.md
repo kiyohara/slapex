@@ -16,7 +16,7 @@
 | 0004 | decided | channel 指定と選択 | channel は optional positional argument `[channel]` として受け取る。interactive selection は候補 10 件以下に制限し、11 件以上、non-TTY、または `--no-interactive` では候補と usage を表示して非 0 exit とする | [0004-channel-selection.md](0004-channel-selection.md) |
 | 0005 | decided | cache の扱い | 中間ファイルは `.cache/` 配下に置き、`--keep-cache` 指定時だけ成否に関係なく保持する。再利用 option を用意し、`--no-cache` は初期採用しない | [0005-cache-handling.md](0005-cache-handling.md) |
 | 0006 | decided | 初期 CLI の subcommand | 初期 CLI では subcommand を採用せず、root command に option を直接指定する。必要になったら将来再検討する | [0006-no-subcommands-initially.md](0006-no-subcommands-initially.md) |
-| 0007 | decided | CLI command name | CLI command name は `SLack Posts EXporter` の略として `slapex` とする | [0007-cli-command-name.md](0007-cli-command-name.md) |
+| 0007 | decided | CLI command name | CLI command name は `SLAck Posts EXporter` の略として `slapex` とする | [0007-cli-command-name.md](0007-cli-command-name.md) |
 | 0008 | decided | output root の既定値 | `--output` は省略可能とし、省略時はコマンド実行時刻を使って `slapex-<yyyymmdd>-<hhmm>` 形式の出力 root を作成する | [0008-default-output-root.md](0008-default-output-root.md) |
 | 0009 | decided | Slack App の作成主体 | 初期利用手順では、利用者自身が自分用の Slack App を作成し、workspace に install して bot token を発行する | [0009-user-managed-slack-app.md](0009-user-managed-slack-app.md) |
 | 0010 | decided | 添付ファイルの保存対象 | 画像以外の添付ファイルも可能な限り保存対象に含め、`--max-attachment-size` default `10MB` を超えるものは保存せず HTML 上で置換メッセージを表示する | [0010-attachment-file-downloads.md](0010-attachment-file-downloads.md) |

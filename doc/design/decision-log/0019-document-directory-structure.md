@@ -70,7 +70,7 @@ working-branch-notes/
 
 `doc/product/decision-log/` は `doc/design/decision-log/` に移動する。
 
-`doc/product/help/slack-app-setup.md` は `doc/help/slack-app-setup.md` に移動する。
+`doc/help/slack-app-setup.md` を新規作成する（旧構成には help 用ファイルが無いため、移動ではなく新設）。
 
 `doc/product/progress.md` は root の `progress.md` に移動する。
 
