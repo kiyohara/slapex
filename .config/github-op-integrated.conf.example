@@ -1,0 +1,25 @@
+# github-op-integrated MCP server configuration template.
+#
+# Copy this file to `.config/github-op-integrated.conf` and replace placeholders
+# with values for your local environment. Do not commit `.config/*.conf`.
+#
+# Store secrets in 1Password or another secret manager. Use secret references
+# such as `op://<VAULT>/<ITEM>/<FIELD>` here, not raw token values.
+
+# GitHub Personal Access Token for github-op-integrated MCP server.
+# Use a fine-grained PAT scoped to this repository.
+GITHUB_PERSONAL_ACCESS_TOKEN=op://<VAULT>/<ITEM>/<FIELD>
+
+# MCP tools enabled for github-op-integrated.
+# The default allowlist covers PR / issue / review comment collaboration.
+GITHUB_TOOLS=list_pull_requests,search_pull_requests,pull_request_read,create_pull_request,update_pull_request,issue_read,list_issues,search_issues,issue_write,add_issue_comment,add_reply_to_pull_request_comment
+
+# Optional: enable read-only mode. Write tools are disabled even if listed above.
+# GITHUB_READ_ONLY=1
+
+# Optional: use broader toolsets instead of the explicit allowlist above.
+# Prefer GITHUB_TOOLS unless a reviewed guideline change requires toolsets.
+# GITHUB_TOOLSETS=default
+
+# Optional: GitHub Enterprise host. Leave unset for github.com.
+# GITHUB_HOST=github.example.com

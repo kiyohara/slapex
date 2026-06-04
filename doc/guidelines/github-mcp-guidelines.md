@@ -39,7 +39,7 @@ MCP が使える環境かどうかが事前に判断できない場合は、ま�
 
 MCP 化の目的は 1Password 承認ダイアログの頻度を下げることであり、人間承認を不要にすることではない。
 
-- MCP server には broad な `default` / `all` toolset を渡さず、`GITHUB_TOOLS` で必要 tool だけを allowlist する。初期 allowlist の候補は `.agents/mcp/github-op-integrated/github.env.example` と `.agents/mcp/github-op-integrated/config-examples.md` を参照する。
+- MCP server には broad な `default` / `all` toolset を渡さず、`GITHUB_TOOLS` で必要 tool だけを allowlist する。初期 allowlist は `.config/github-op-integrated.conf.example` を参照する。
 - MCP 経由で write 操作を行う場合も、AI agent はユーザー承認(各 tool の MCP 承認 UI、明示の確認応答など)を取る。
 - read-only profile は `.agents/mcp/github-op-integrated/README.md` / `config-examples.md` に併記する任意の安全設定として残す。read のみを許容したい用途では `GITHUB_READ_ONLY=1` を使う。
 
@@ -47,15 +47,15 @@ MCP 化の目的は 1Password 承認ダイアログの頻度を下げること�
 
 - 初期 allowlist は collaboration write を MCP 化することを目的とし、PR / issue / レビューコメント関連 tool に絞る。
 - merge、file push(API 経由のファイル内容 push: `push_files` / `create_or_update_file`。上記「適用範囲」参照)、release、workflow dispatch、repository settings 変更などは初期 allowlist に含めない。これらを MCP 化したい強い動機が出てきたら、別途レビューしてから allowlist を広げる。
-- allowlist の正確な tool 名は GitHub MCP Server の現行 README / release に従う。`.agents/mcp/github-op-integrated/` 配下の README と `<name>.env.example` を更新したときは、本ルール本文の対応関係も同期する。
+- allowlist の正確な tool 名は GitHub MCP Server の現行 README / release に従う。`.agents/mcp/github-op-integrated/` 配下の README と `.config/github-op-integrated.conf.example` を更新したときは、本ルール本文の対応関係も同期する。
 - CI / Actions の調査まで MCP 経由で行う必要が明確になった場合のみ、`actions` toolset または Actions 個別 tool を追加する。
 
 ## secret と設定ファイルの扱い
 
 - `GITHUB_PERSONAL_ACCESS_TOKEN` は 1Password に保管し、wrapper script から `op run --env-file` で解決する。
-- `.agents/mcp/github-op-integrated/github.env.example` には実 vault 名・実 item 名・実 token を書かない。`op://<VAULT>/<ITEM>/<FIELD>` 形式の完全 placeholder と allowlist だけを置く。
-- 各 tool の MCP 設定ファイル(`.cursor/mcp.json` / repo root `.mcp.json` / `.codex/config.toml` / `~/.codex/config.toml`)は各ユーザー環境の入口とし、本 repo では原則 commit しない。設定例は `.agents/mcp/github-op-integrated/README.md` と `config-examples.md` に集約する。
-- repo に置く実 secret ファイル(例: `.agents/mcp/github-op-integrated/github.env`)は `.gitignore` で除外する。
+- `.config/github-op-integrated.conf.example` には実 vault 名・実 item 名・実 token を書かない。`op://<VAULT>/<ITEM>/<FIELD>` 形式の完全 placeholder と allowlist だけを置く。
+- `.cursor/mcp.json` / repo root `.mcp.json` / `.codex/config.toml` は project MCP 設定として commit し、`github-op-integrated` の secret-free な起動定義を置く。
+- repo に置く実 secret reference file(`.config/github-op-integrated.conf`)は `.gitignore` で除外する。旧配置の `.agents/mcp/github-op-integrated/*.env` も legacy local env として除外する。
 
 詳細な配置ルールと禁止事項は `doc/guidelines/agent-configuration-management.md` の「MCP server 共通資材管理」を正本とする。
 

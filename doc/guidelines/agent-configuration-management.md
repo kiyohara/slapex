@@ -37,7 +37,7 @@
 | --- | --- | --- | --- | --- |
 | Agent skill | `.agents/skills/<skill-name>/` | `.agents/skills/` を直接読む(symlink 不要) | `.claude/skills/<skill-name>` symlink | `.agents/skills/` を直接読む |
 | AI 向け rule | `doc/guidelines/<rule-name>.md` | `.cursor/rules/<rule-name>.mdc` 入口 | `.claude/rules/<rule-name>.md` 入口 | `AGENTS.md` から共通正本へ誘導 |
-| MCP server 共通資材 | `.agents/mcp/<server-name>/` | 各ユーザーの `.cursor/mcp.json`(commit しない) | 各ユーザーの `.mcp.json`(commit しない) | 各ユーザーの `.codex/config.toml` または `~/.codex/config.toml`(commit しない) |
+| MCP server 共通資材 | `.agents/mcp/<server-name>/` | `.cursor/mcp.json`(project 設定) / user 設定 | `.mcp.json`(project scope) / user 設定 | trusted project の `.codex/config.toml` / `~/.codex/config.toml`(user) |
 | Copilot Review 指示 | `doc/guidelines/<rule-name>.md` または `.github/copilot-instructions.md` | 対象外 | 対象外 | 対象外 |
 
 迷ったら、まずこの表で対象を決めてから該当セクションだけ読む。
@@ -230,31 +230,32 @@ git ls-files | xargs rg -l "<rule-name>" 2>/dev/null
 .agents/mcp/<server-name>/
 ├── README.md             # commit: yes / 導入手順と Cursor / Claude Code / Codex 別の設定例
 ├── <startup-script>      # commit: yes / wrapper script (例: mcp-<server-name>.sh)
-├── <name>.env.example    # commit: yes / 環境変数 placeholder (実値・実 vault 名を含めない)
 └── config-examples.md    # commit: yes / コピペできる各 tool の MCP 設定例
 ```
 
 - `.agents/mcp/<server-name>/` は MCP server の共通 wrapper / README / 設定例の正本置き場とする。
 - `<server-name>` は操作対象と特徴が判別できる名前にする。一般名(例: `github`)は他の MCP server と衝突しやすいため避ける。
 - `.agents/mcp/` は skill のような自動 discover 対象ではない。MCP 実行基盤(wrapper / 設定例)を skill ディレクトリと分離するため、`.agents/skills/` と混ぜない。
-- tool 固有の MCP 設定ファイル(`.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml`)は各ユーザー環境の入口として扱い、原則 commit しない。完全な設定例は `README.md` / `config-examples.md` に置き、各ユーザーが自身の設定ファイルへコピーする運用とする。
-- secret は repo に書かない。`<name>.env.example` は 1Password secret reference(`op://...`)の placeholder と allowlist だけを含める。実際の secret は wrapper 経由で 1Password CLI(`op run --env-file`)が解決する。
+- tool 固有の MCP 設定ファイル(`.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml`)は project 設定として扱い、secret と個人環境に依存する絶対 path を含めずに commit する。
+- secret は repo に書かない。MCP server 専用 config template は project root の `.config/<server-name>.conf.example` に置き、1Password secret reference(`op://...`)の placeholder と allowlist だけを含める。実際の secret reference は ignored な `.config/<server-name>.conf` に置き、wrapper 経由で 1Password CLI(`op run --env-file`)が解決する。
 - wrapper script は起動方式(Docker / npx / バイナリ)の差異を吸収する役割に留め、tool 別の MCP 設定の責務を持たない。
 
 ### 入口の扱い
 
-- `.cursor/mcp.json`、repo root の `.mcp.json`、`.codex/config.toml` は各ユーザー環境の入口であり、正本ではない。
-- これらは原則 commit しない。`.gitignore` に local secret / local config を追加する場合は、共通正本側 README に commit 方針を明記する。
+- `.cursor/mcp.json`、repo root の `.mcp.json`、`.codex/config.toml` は project MCP 設定である。
+- これらは secret-free な起動定義だけを持つ。個人環境に依存する path、実 vault 名、実 item 名、実 token は書かない。
 - 入口側に恒久ルールや wrapper の詳細を書かない。詳細は `.agents/mcp/<server-name>/README.md` と関連する `doc/guidelines/` の rule(例: `github-mcp-guidelines.md`)に集約する。
 
 ### 作成 checklist
 
 1. `.agents/mcp/<server-name>/` に正本ディレクトリを作る。
-2. wrapper script、`README.md`、`<name>.env.example`、`config-examples.md` を作る。
+2. wrapper script、`README.md`、`config-examples.md` を作る。
 3. wrapper script に実行権限を付ける。
 4. server の利用ルール(MCP 優先方針、`gh` などの fallback、tool allowlist、write 操作の扱い)を `doc/guidelines/<rule-name>.md` に書く。
 5. 上記 rule の Cursor / Claude Code 入口と `AGENTS.md` リンクを「AI 向け rule 管理」の checklist に従って整える。
-6. local secret / local config を必要に応じて `.gitignore` に追加する。
+6. `.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml` に secret-free な project MCP 設定を追加する。
+7. project root の `.config/<server-name>.conf.example` に必要な環境変数 placeholder と allowlist を追加する。
+8. 対応する `.config/<server-name>.conf` が `.gitignore` に無い場合だけ追加する。
 
 ### 削除 checklist
 
@@ -262,7 +263,8 @@ server を廃止する場合は、同じ変更で次をすべて削除する。
 
 - `.agents/mcp/<server-name>/` 一式。
 - 対応する `doc/guidelines/<rule-name>.md` と Cursor / Claude Code 入口、`AGENTS.md` のリンク(「AI 向け rule 管理」の削除 checklist に従う)。
-- `.gitignore` に追加した local secret / local config の entry。
+- `.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml` 内の該当 server entry。
+- project root の `.config/<server-name>.conf.example`。
 
 削除後に確認する:
 
@@ -273,6 +275,6 @@ git ls-files | xargs rg -l "<server-name>" 2>/dev/null
 ### 禁止事項
 
 - `.agents/skills/` 配下に MCP server 資材を置く(自動 discover 対象と混ぜない)。
-- `.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml` を共通正本として扱う、または恒久ルールを書く。
-- `<name>.env.example` に実 vault 名、実 item 名、実 token を入れる(`op://<VAULT>/<ITEM>/<FIELD>` のような完全 placeholder に留める)。
+- `.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml` に恒久ルール、実 vault 名、実 item 名、実 token、個人環境の絶対 path を入れる。
+- project root の `.config/<server-name>.conf.example` に実 vault 名、実 item 名、実 token を入れる(`op://<VAULT>/<ITEM>/<FIELD>` のような完全 placeholder に留める)。
 - wrapper script から secret を直接 echo / log する。

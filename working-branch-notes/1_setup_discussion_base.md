@@ -49,7 +49,7 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 - `.git-backup/` は作業ツリー内に残っているが、`.gitignore` で除外している。
 - 現時点では実装技術が未確定のため、Copilot Review の path 別 instructions は未作成。
 - 設計ドキュメントはひな形段階であり、内容は今後の検討で埋める。
-- GitHub MCP 共通資材は secret を含まないテンプレートと wrapper のみを取り込む。実 env file は `.gitignore` で除外する。
+- GitHub MCP 共通資材は secret を含まないテンプレートと wrapper のみを取り込む。実 env file は `.gitignore` で除外する。(現行方針は `doc/design/decision-log/0023-project-mcp-config.md` を参照)
 
 ## セッションログ
 
@@ -70,6 +70,6 @@ Slack の書き込みを閲覧しやすい HTML 形式で保存するツール�
 - `number-working-branch-note` skill を `.agents/skills/number-working-branch-note/` に取り込み、`.claude/skills/number-working-branch-note` から symlink した。
 - `doc/guidelines/agent-configuration-management.md` を関連リポジトリの詳細版に寄せ、skill / MCP 共通資材の管理方法を含めた。
 - `doc/guidelines/git-operation-guidelines.md`、`github-cli-guidelines.md`、`github-mcp-guidelines.md`、`pull-request-guidelines.md`、`development-command-guidelines.md` と各 tool 入口を取り込んだ。
-- GitHub MCP 共通資材を `.agents/mcp/github-op-integrated/` に取り込んだ。`github.env` 実体はコピーせず、`.gitignore` に除外を追加した。
+- GitHub MCP 共通資材を `.agents/mcp/github-op-integrated/` に取り込んだ。`github.env` 実体はコピーせず、`.gitignore` に除外を追加した。(現行方針は `doc/design/decision-log/0023-project-mcp-config.md` を参照)
 - 試作プロジェクトとの関係を `doc/design/decision-log/0001-relationship-to-prototype.md` に記録した。
 - `progress.md` に progress と working branch note の違いを薄く記載し、初期進捗を seed した。
