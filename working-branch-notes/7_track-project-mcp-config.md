@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: track-project-mcp-config
-- PR:
+- PR: #7
 - 最終更新: 2026-06-04
 
 ## 目的
@@ -22,7 +22,7 @@ MCP host 設定を project 設定として git 管理し、`github-op-integrated
 
 ## 次にやること
 
-- PR 作成後に PR 番号を記録する。
+- PR #7 を作成し、PR 番号を記録済み。
 
 ## 検証
 
