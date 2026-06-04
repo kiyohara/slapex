@@ -43,6 +43,7 @@ secret reference は MCP server 専用 config file に分離することで、re
 - `.config/github-op-integrated.conf.example` は `github-op-integrated` 専用の環境変数 template になる。
 - `.config/github-op-integrated.conf` は `.gitignore` で除外する。
 - `github-op-integrated` wrapper は `.config/github-op-integrated.conf` を `op run --env-file` で解決して起動する。
+- 旧 `GITHUB_OP_INTEGRATED_ENV_FILE` override は廃止し、任意の config file を明示する場合は wrapper の `--config` option を使う。
 - setup 手順は MCP host 設定のコピーではなく、専用 config file の作成と 1Password secret reference の記入が中心になる。
 - project-wide `.env` の採用は今回の PR では扱わず、将来必要になった時点で別途検討する。
 

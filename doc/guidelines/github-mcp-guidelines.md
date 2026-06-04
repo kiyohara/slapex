@@ -41,7 +41,7 @@ MCP 化の目的は 1Password 承認ダイアログの頻度を下げること�
 
 - MCP server には broad な `default` / `all` toolset を渡さず、`GITHUB_TOOLS` で必要 tool だけを allowlist する。初期 allowlist は `.config/github-op-integrated.conf.example` を参照する。
 - MCP 経由で write 操作を行う場合も、AI agent はユーザー承認(各 tool の MCP 承認 UI、明示の確認応答など)を取る。
-- read-only profile は `.agents/mcp/github-op-integrated/README.md` / `config-examples.md` に併記する任意の安全設定として残す。read のみを許容したい用途では `GITHUB_READ_ONLY=1` を使う。
+- read-only profile は `.agents/mcp/github-op-integrated/README.md` に併記する任意の安全設定として残す。read のみを許容したい用途では `GITHUB_READ_ONLY=1` を使う。
 
 ## tool allowlist の運用
 

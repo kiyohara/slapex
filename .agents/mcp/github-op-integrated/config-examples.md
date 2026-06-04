@@ -39,6 +39,7 @@ Cursor は `${workspaceFolder}` を project root に展開する。
 ```
 
 Claude Code は repo root の `.mcp.json` を project scope として読む。
+この相対 `command` は MCP host が project root を基準に解決する前提である。wrapper 起動後は wrapper 自身の配置から project root を解決する。
 
 ## Codex — `.codex/config.toml`
 
@@ -49,7 +50,7 @@ startup_timeout_sec = 30
 tool_timeout_sec = 60
 ```
 
-Codex は trusted project の `.codex/config.toml` を project scope として読む。project root 基準の相対 path で wrapper を指定するため、個人環境に依存する絶対 path は不要である。
+Codex は trusted project の `.codex/config.toml` を project scope として読む。project root 基準の相対 path で wrapper を指定するため、個人環境に依存する絶対 path は不要である。wrapper 起動後は wrapper 自身の配置から project root を解決する。
 
 ## 任意: Docker image を固定する
 

@@ -22,7 +22,7 @@ MCP host 設定を project 設定として git 管理し、`github-op-integrated
 
 ## 次にやること
 
-- PR #7 を作成し、PR 番号を記録済み。
+- PR #7 の review comment 対応を push する。
 
 ## 検証
 
@@ -49,3 +49,4 @@ MCP host 設定を project 設定として git 管理し、`github-op-integrated
 - 2026-06-04: manager feedback を反映。project-wide `.env` を MCP tool に渡す案をやめ、`.config/github-op-integrated.conf` 専用方式へ変更。
 - 2026-06-04: review 指摘を反映。環境変数経由の config override と git command 依存を削除し、`.config/*.conf.example` の配置方針を明確化。
 - 2026-06-04: Codex app 再起動後の実利用確認を実施。project MCP 設定から `github-op-integrated` が起動し、GitHub API read tool が成功することを確認。
+- 2026-06-04: PR #7 review summary に対応。read-only 参照、相対 command path の前提、旧 env override 廃止の移行メモを文書へ反映。
