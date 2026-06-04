@@ -34,6 +34,7 @@
 | 0020 | decided | 処理対象 workspace / channel の表示 | token から解決した workspace と確定した channel を実行中、完了時、生成 HTML に表示する。画面表示用 label と directory 用 label は役割を分ける | [0020-target-label-display.md](0020-target-label-display.md) |
 | 0021 | decided | 仕様文書の分割 | `usage-flow.md` を利用者の操作の流れに絞り、出力形式・HTML 表示仕様・cache を `output-format.md` / `html-rendering.md` / `cache.md` に分割する | [0021-spec-document-split.md](0021-spec-document-split.md) |
 | 0022 | decided | 正本と参照の関係の明文化 | 仕様の正本は `doc/design/` 直下の spec 文書、decision log は参考ログと位置づけ、guideline / template / index / rule shim に明記して取り違えを防ぐ | [0022-spec-vs-decision-log-authority.md](0022-spec-vs-decision-log-authority.md) |
+| 0023 | decided | project MCP config | secret-free な MCP host 設定は project 設定として git 管理し、`github-op-integrated` の secret reference は MCP 専用 `.config/github-op-integrated.conf` で管理する | [0023-project-mcp-config.md](0023-project-mcp-config.md) |
 
 ## 未決事項
 

@@ -8,8 +8,30 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${GITHUB_OP_INTEGRATED_ENV_FILE:-$SCRIPT_DIR/github.env}"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+CONFIG_FILE="$REPO_ROOT/.config/github-op-integrated.conf"
 IMAGE="${GITHUB_OP_INTEGRATED_IMAGE:-ghcr.io/github/github-mcp-server}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --config)
+      if [ "$#" -lt 2 ]; then
+        echo "mcp-github-op-integrated: --config requires a path" >&2
+        exit 1
+      fi
+      CONFIG_FILE="$2"
+      shift 2
+      ;;
+    --config=*)
+      CONFIG_FILE="${1#--config=}"
+      shift
+      ;;
+    *)
+      echo "mcp-github-op-integrated: unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 if ! command -v op >/dev/null 2>&1; then
   echo "mcp-github-op-integrated: '1Password CLI (op)' が PATH に見つからない" >&2
@@ -21,9 +43,9 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -f "$ENV_FILE" ]; then
-  echo "mcp-github-op-integrated: env file が見つからない: $ENV_FILE" >&2
-  echo "github.env.example を github.env にコピーし、1Password secret reference を記入する。" >&2
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "mcp-github-op-integrated: config file が見つからない: $CONFIG_FILE" >&2
+  echo "project root の .config/github-op-integrated.conf.example を .config/github-op-integrated.conf にコピーし、1Password secret reference を記入する。" >&2
   exit 1
 fi
 
@@ -39,5 +61,5 @@ done
 # op のデフォルト masking は stdout 上の bytes を書き換えうるが、PAT 自体は
 # MCP の応答に現れない。masking を切ることで stdio transport を阻害する
 # リスクを排除する。
-exec op run --no-masking --env-file="$ENV_FILE" -- \
+exec op run --no-masking --env-file="$CONFIG_FILE" -- \
   docker run -i --rm "${DOCKER_ENV_ARGS[@]}" "$IMAGE"

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "github-op-integrated": {
+      "type": "stdio",
+      "command": "./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+[mcp_servers.github-op-integrated]
+command = "./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
+startup_timeout_sec = 30
+tool_timeout_sec = 60
