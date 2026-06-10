@@ -29,10 +29,11 @@ Go(執筆時点の安定版は 1.26 系)を採用する。
 |---|---|---|
 | CLI 引数 parse | 標準 `flag` | subcommand なし(`decision-log/0006-no-subcommands-initially.md`)。help 表示の GNU 風整形が必要になったら再検討 |
 | Slack API client | 自前 thin client(`net/http` + `encoding/json`) | 使用 method は 7 種のみ(`slack-api-usage.md`)。429 / `Retry-After` と指数バックオフは自前の HTTP wrapper で実装(`decision-log/0025-slack-api-usage-policy.md`) |
-| TTY interactive selection | `github.com/charmbracelet/huh` v2 | カーソル上下 + Enter の選択 UI(`usage-flow.md`)。MIT license |
-| TTY 判定 | `golang.org/x/term` | stdin / stderr の TTY 判定(`--no-interactive` 制御) |
+| TTY interactive selection | `charm.land/huh/v2`(charmbracelet 製) | カーソル上下 + Enter の選択 UI(`usage-flow.md`)。MIT license。v2 の module path は `charm.land` 配下 |
+| TTY 判定 | `golang.org/x/term` | stdin / stdout の TTY 判定(`--no-interactive` 制御、`usage-flow.md`) |
+| label の Unicode 正規化 | `golang.org/x/text`(`unicode/norm`) | directory label の NFC 正規化(`decision-log/0029-directory-label-rules.md`) |
 | HTML 生成 | 標準 `html/template` | contextual auto-escaping が `decision-log/0026-mrkdwn-html-conversion.md` のエスケープ方針と一致 |
-| 標準絵文字データ | `go:embed` で組込み | shortcode → Unicode 対応表を vendored JSON として同梱(`slack-api-usage.md`) |
+| 標準絵文字データ | `go:embed` で組込み | shortcode → Unicode 対応表を vendored JSON として同梱(`slack-api-usage.md`)。生成は `tools/genemoji`(取得元: iamcal/emoji-data) |
 | サイズ・時刻等の整形 | 標準ライブラリ | `--max-attachment-size` の単位 parse は自前実装(`cli-interface.md` の書式) |
 
 ## 内部構成(パッケージ構成の目安)

@@ -7,8 +7,8 @@
 ## 前提
 
 - このプロジェクトの開発基盤は Docker / Docker Compose を前提とする(確定方針。経緯は `doc/design/decision-log/0002-docker-compose-baseline.md`)。
-- 一方で、アプリケーションの実装スタック(言語・フレームワーク・パッケージ管理ツールなど)はまだ確定していない。そのため本文では特定スタック固有のコマンド名を前提化せず、汎用的な表現で規律する。
-- 実装スタックが確定したら、その時点の具体的な service 名・コマンド例で本文を更新する。
+- アプリケーションの実装スタックは Go である(`doc/design/architecture.md`、経緯は `doc/design/decision-log/0032-implementation-language.md`)。
+- Compose 構成は repo root の `compose.yaml` に置き、開発用 service 名は `dev` とする。`dev` は `golang` 公式 image を base にし、Go の module / build cache を named volume に保持する。
 
 ## 基本方針
 
@@ -32,17 +32,32 @@ docker info
 
 ## 実行の基本形
 
-開発作業は、Docker Compose の標準的なコマンドとして明示する。具体的な service 名やコマンドは、実装スタックと Compose 構成が確定した時点で具体化する。
+開発作業は `dev` service 経由の `docker compose run` を基本形とする。
 
 ```sh
-docker compose run --rm <service> <command>
-docker compose up
+docker compose run --rm dev <command>
+```
+
+代表的なコマンド例:
+
+```sh
+docker compose run --rm dev go build ./...
+docker compose run --rm dev go vet ./...
+docker compose run --rm dev go mod tidy
+docker compose run --rm dev go run ./cmd/slapex --help
+docker compose run --rm dev go run ./tools/genemoji
+```
+
+実行時に環境変数(例: `SLACK_BOT_TOKEN`)を渡す場合は、`-e` で host 環境から forward し、compose ファイルや repo 内に実値を書かない。
+
+```sh
+docker compose run --rm -e SLACK_BOT_TOKEN dev ./bin/slapex <channel>
 ```
 
 依存 service が不要な確認コマンドでは、不要な container 起動を避けるため `--no-deps` を付けてよい。
 
 ```sh
-docker compose run --rm --no-deps <service> <command>
+docker compose run --rm --no-deps dev <command>
 ```
 
 ## 例外
