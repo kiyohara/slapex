@@ -43,6 +43,9 @@
 | 0029 | decided | directory label の正規化規則 | workspace は domain 優先、channel は NFC + 禁止文字置換 + 64 文字制限。Unicode は保持し、空・衝突時だけ ID を使う | [0029-directory-label-rules.md](0029-directory-label-rules.md) |
 | 0030 | decided | cache schema と再利用検証 | `.cache/` 3 ファイルの schema を確定。`--reuse-cache` は schema_version / team_id / channel ID の 3 点一致で再利用し、不一致は警告して通常取得にフォールバック | [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) |
 | 0031 | decided | 対象プラットフォーム | macOS / Linux を対象とし、CI は GitHub Actions Linux runner を想定。Windows は初期対象外として将来検討に記録 | [0031-supported-platforms.md](0031-supported-platforms.md) |
+| 0032 | decided | 実装言語 | Go(1.26 系)を採用。単一バイナリ配布とクロスコンパイル、標準ライブラリの守備範囲、依存最小化で総合判断。Rust / TS / Python / Ruby は理由付きで見送り | [0032-implementation-language.md](0032-implementation-language.md) |
+| 0033 | decided | Go の依存方針とライブラリ | stdlib-first。外部依存は huh(TTY 選択)と x/term に限定。Slack client は自前 thin client、CLI は標準 flag、HTML は html/template、絵文字データは go:embed | [0033-go-dependency-policy.md](0033-go-dependency-policy.md) |
+| 0034 | decided | 配布方式 | GitHub Releases に darwin / linux × amd64 / arm64 の単一バイナリを添付。リリース自動化は goreleaser 想定、Homebrew tap は将来検討 | [0034-distribution-method.md](0034-distribution-method.md) |
 
 ## 未決事項
 
@@ -56,6 +59,7 @@
 | 出力制御 option | open | `--quiet` / `--verbose` / `--no-color` などを追加するか | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md) |
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
+| リリース整備と Homebrew tap | open | goreleaser 設定と release workflow の整備時期、Homebrew tap を提供するか | [0034-distribution-method.md](0034-distribution-method.md) |
 
 解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。
 

@@ -4,7 +4,7 @@
 
 想定読者は、このツールを利用する人間と、cache 周りを実装・検証する担当者である。
 
-本ファイルの cache の位置づけ、各ファイルの schema、再利用時の検証規則は確定仕様として扱う。実装アーキテクチャは未確定である。
+本ファイルの cache の位置づけ、各ファイルの schema、再利用時の検証規則は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
 `.cache/` を含む出力ディレクトリ構造は `output-format.md`、利用者の操作の流れは `usage-flow.md`、決定経緯は `decision-log/0005-cache-handling.md` と `decision-log/0030-cache-schema-and-reuse-validation.md` を参照する。
 

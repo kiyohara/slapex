@@ -4,7 +4,7 @@
 
 想定読者は、このツールを利用する人間と、HTML / CSS を実装・検証する担当者である。
 
-本ファイルの表示方針と変換規則は確定仕様として扱う。実装アーキテクチャは未確定である。
+本ファイルの表示方針と変換規則は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
 出力ディレクトリ構造や保存される assets は `output-format.md`、利用者の操作の流れは `usage-flow.md`、user / emoji の解決は `slack-api-usage.md` を参照する。表示仕様の決定経緯は `decision-log/0012-html-rendering-style.md`、処理対象 label の表示は `decision-log/0020-target-label-display.md`、本文変換・subtype・時刻表示は `decision-log/0026-mrkdwn-html-conversion.md` / `decision-log/0027-message-subtypes-rendering.md` / `decision-log/0028-timestamp-timezone-display.md` を参照する。
 

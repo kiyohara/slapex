@@ -23,5 +23,5 @@
 | 試作プロジェクトとの関係整理 | done | `doc/design/decision-log/0001-relationship-to-prototype.md` に記録 |
 | 利用者向け How to Use 素案 | done | `doc/design/` の仕様 4 文書と `doc/help/slack-app-setup.md` に分割整理済み(PR #2, #5) |
 | 詳細仕様の確定(後続作業に必要な範囲) | done | `finalize-detailed-specs` ブランチ。`cli-interface.md` / `slack-api-usage.md` 新設、既存 4 文書の確定、decision log 0024〜0031 |
-| アーキテクチャ選定(言語・フレームワーク) | pending | 単一バイナリ配布を最重要基準に比較選定し、decision log に記録する |
+| アーキテクチャ選定(言語・フレームワーク) | done | `select-architecture` ブランチ。Go(1.26 系)+ stdlib-first を採用し、`architecture.md` と decision log 0032〜0034 に記録 |
 | PoC 実装(機能充足性の確認) | pending | 選定スタックで happy path を実装し、実 workspace への E2E で検証する。テストは対象外 |
