@@ -4,7 +4,7 @@
 
 想定読者は、このツールを利用する人間と、CLI を実装・検証する担当者である。
 
-本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは未確定である。
+本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
 利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md` と `decision-log/0031-supported-platforms.md` を参照する。
 

@@ -4,7 +4,7 @@
 
 想定読者は、このツールを利用する人間と、出力を実装・検証する担当者である。
 
-本ファイルの出力ディレクトリ構造、option 名、制限値は確定仕様として扱う。実装アーキテクチャは未確定である。
+本ファイルの出力ディレクトリ構造、option 名、制限値は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
 利用者の操作の流れは `usage-flow.md`、CLI option と exit code の一覧は `cli-interface.md`、生成する `index.html` の表示仕様(見た目)は `html-rendering.md`、中間ファイル `.cache/` の扱いは `cache.md`、Slack API の取得方法は `slack-api-usage.md` を参照する。
 
