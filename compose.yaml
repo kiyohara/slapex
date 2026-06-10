@@ -1,0 +1,14 @@
+services:
+  dev:
+    image: golang:1.26
+    working_dir: /work
+    volumes:
+      - .:/work
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      CGO_ENABLED: "0"
+
+volumes:
+  go-mod-cache:
+  go-build-cache:

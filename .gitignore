@@ -4,3 +4,9 @@
 .claude/worktrees/
 .config/*.conf
 .agents/mcp/github-op-integrated/*.env
+
+# build artifacts
+/bin/
+
+# slapex export outputs (default output roots)
+/slapex-*/

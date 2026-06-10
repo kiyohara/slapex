@@ -49,7 +49,7 @@
 
 | field | 内容 |
 |---|---|
-| `kind` | `emoji` / `og_image` / `upload_thumb` / `upload_original` / `attachment` |
+| `kind` | `emoji` / `og_image` / `upload_thumb` / `upload_original` / `attachment` / `avatar` |
 | `source_url` | 元 URL |
 | `local_path` | 出力ディレクトリからの相対 path(未保存なら `null`) |
 | `file_id` / `emoji_name` | Slack file ID または絵文字名(該当する場合のみ) |

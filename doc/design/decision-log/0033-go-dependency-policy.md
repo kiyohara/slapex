@@ -31,6 +31,12 @@
 - Slack API client は自前 thin client とし、`slack-go/slack` は採用しない。
 - CLI 引数は標準 `flag`、HTML 生成は標準 `html/template`、標準絵文字データは `go:embed` の組込み JSON とする。
 
+### PoC 実装時の追記(2026-06-10)
+
+- huh v2 の module path は `charm.land/huh/v2`(charmbracelet の vanity import path)。GitHub path での `go get` は module 宣言と不一致になるため、`charm.land` 側を使う。
+- directory label の NFC 正規化(0029)のため `golang.org/x/text`(`unicode/norm`)を準標準枠で追加した。
+- 標準絵文字データは iamcal/emoji-data の `emoji.json` から `tools/genemoji` で shortcode → Unicode 表(約 2,000 件、約 48KB)を生成し、`internal/emoji/data/emoji.json` として vendoring する方式に確定した。
+
 ## 理由
 
 - サプライチェーンリスクと保守対象を最小化しつつ、要件(7 method、選択 UI、自動エスケープ)を満たす最小構成だから。

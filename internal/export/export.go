@@ -1,0 +1,679 @@
+// Package export orchestrates one slapex run: workspace resolution, channel
+// selection, fetching, asset downloads, HTML rendering and .cache/ output
+// (doc/design/usage-flow.md and the spec documents it references).
+package export
+
+import (
+	"context"
+	"fmt"
+	"html"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"charm.land/huh/v2"
+
+	"github.com/kiyohara/slapex/internal/emoji"
+	"github.com/kiyohara/slapex/internal/output"
+	"github.com/kiyohara/slapex/internal/render"
+	"github.com/kiyohara/slapex/internal/slack"
+)
+
+const (
+	maxSelectable    = 10   // interactive selection limit (decision log 0004)
+	maxThreadReplies = 1000 // per-thread reply cap (doc/design/output-format.md)
+)
+
+// UsageError maps to exit code 2: the target could not be determined from
+// the given arguments (doc/design/cli-interface.md).
+type UsageError struct{ msg string }
+
+func (e *UsageError) Error() string { return e.msg }
+
+func usagef(format string, args ...any) *UsageError {
+	return &UsageError{msg: fmt.Sprintf(format, args...)}
+}
+
+// Options are the validated CLI inputs (doc/design/cli-interface.md).
+type Options struct {
+	ChannelKeyword string
+	OutputDir      string
+	MaxPosts       int
+	Days           int
+	MaxAttachBytes int64
+	KeepCache      bool
+	ReuseCache     string
+	NoInteractive  bool
+	Interactive    bool // stdin and stdout are TTYs
+	ToolVersion    string
+}
+
+// Run performs the export and returns the absolute path of the directory
+// holding index.html.
+func Run(ctx context.Context, client *slack.Client, opts Options, logf func(string, ...any)) (string, error) {
+	now := time.Now()
+
+	auth, err := client.AuthTest(ctx)
+	if err != nil {
+		return "", err
+	}
+	wsLine := fmt.Sprintf("%s (%s, %s)", auth.Team, hostOf(auth.URL), auth.TeamID)
+	logf("Workspace: %s", wsLine)
+
+	if opts.ReuseCache != "" {
+		logf("warning: --reuse-cache is not implemented in this PoC; fetching everything")
+	}
+
+	logf("Listing channels...")
+	channels, err := client.ListChannels(ctx)
+	if err != nil {
+		return "", err
+	}
+	ch, err := chooseChannel(channels, opts, wsLine, logf)
+	if err != nil {
+		return "", err
+	}
+	chLine := channelLine(ch)
+	logf("Target: %s / %s", wsLine, chLine)
+
+	root, err := output.Root(opts.OutputDir, now)
+	if err != nil {
+		return "", fmt.Errorf("create output root: %w", err)
+	}
+	wsLabel := output.WorkspaceLabel(auth.URL, auth.Team, auth.TeamID)
+	chLabel := output.ChannelLabel(ch.Name, ch.ID)
+	dir := filepath.Join(root, wsLabel, chLabel)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("create output directory: %w", err)
+	}
+
+	oldest := now.Add(-time.Duration(opts.Days) * 24 * time.Hour)
+	logf("Fetching messages since %s (--days %d, --max-posts %d)...",
+		oldest.Format("2006-01-02"), opts.Days, opts.MaxPosts)
+	messages, truncated, err := client.History(ctx, ch.ID, slack.FormatTS(oldest.Unix()), opts.MaxPosts,
+		func(n int) { logf("  fetched %d timeline messages...", n) })
+	if err != nil {
+		return "", err
+	}
+	sort.Slice(messages, func(i, j int) bool { return tsLess(messages[i].TS, messages[j].TS) })
+	logf("Fetched %d timeline messages (truncated by --max-posts: %v)", len(messages), truncated)
+
+	replies := map[string][]slack.Message{}
+	repliesTruncated := map[string]bool{}
+	for _, m := range messages {
+		if !m.IsThreadParent() {
+			continue
+		}
+		r, trunc, err := client.Replies(ctx, ch.ID, m.TS, maxThreadReplies)
+		if err != nil {
+			return "", err
+		}
+		sort.Slice(r, func(i, j int) bool { return tsLess(r[i].TS, r[j].TS) })
+		replies[m.TS] = r
+		repliesTruncated[m.TS] = trunc
+		logf("  thread %s: %d replies", m.TS, len(r))
+	}
+
+	userIDs := collectUserIDs(messages, replies)
+	logf("Resolving %d users...", len(userIDs))
+	users := map[string]*slack.User{}
+	for _, id := range userIDs {
+		u, err := client.UserInfo(ctx, id)
+		if err != nil {
+			logf("  warning: could not resolve user %s: %s", id, err)
+			continue
+		}
+		users[id] = u
+	}
+
+	logf("Fetching custom emoji list...")
+	customEmoji, err := client.EmojiList(ctx)
+	if err != nil {
+		return "", err
+	}
+	emojiResolver, err := emoji.NewResolver(customEmoji)
+	if err != nil {
+		return "", fmt.Errorf("load embedded emoji table: %w", err)
+	}
+
+	assets := output.NewAssets(ctx, client, dir, opts.MaxAttachBytes)
+	assets.Logf = logf
+
+	avatars := map[string]string{}
+	for id, u := range users {
+		src := u.Profile.Image72
+		if src == "" {
+			src = u.Profile.Image48
+		}
+		if rel, ok := assets.Save(output.KindAvatar, src, output.AssetMeta{}); ok {
+			avatars[id] = rel
+		}
+	}
+
+	b := &builder{
+		users:   users,
+		avatars: avatars,
+		emoji:   emojiResolver,
+		assets:  assets,
+		limit:   opts.MaxAttachBytes,
+	}
+
+	logf("Downloading assets and rendering HTML...")
+	var items []render.TimelineItem
+	lastDate := ""
+	threadCount := 0
+	replyCount := 0
+	for _, m := range messages {
+		date := tsTime(m.TS).Format("2006-01-02")
+		if date != lastDate {
+			items = append(items, render.TimelineItem{IsDateDivider: true, Date: date})
+			lastDate = date
+		}
+		view := b.messageView(&m)
+		if rs, ok := replies[m.TS]; ok {
+			threadCount++
+			for i := range rs {
+				view.Replies = append(view.Replies, b.messageView(&rs[i]))
+			}
+			replyCount += len(rs)
+			view.RepliesTruncated = repliesTruncated[m.TS]
+		}
+		items = append(items, render.TimelineItem{Message: view})
+	}
+
+	_, tzOffset := now.Zone()
+	page := &render.PageData{
+		WorkspaceName: auth.Team,
+		ChannelName:   ch.Name,
+		WorkspaceLine: wsLine,
+		ChannelLine:   chLine,
+		ExportedLine: fmt.Sprintf("%s (UTC%s) / %s",
+			now.Format("2006-01-02 15:04"), offsetString(tzOffset), now.UTC().Format(time.RFC3339)),
+		RangeLine: fmt.Sprintf("since %s (--days %d, --max-posts %d, --max-attachment-size %s)",
+			oldest.Format("2006-01-02"), opts.Days, opts.MaxPosts, humanBytes(opts.MaxAttachBytes)),
+		Items:     items,
+		Truncated: truncated,
+	}
+
+	htmlFile, err := os.Create(filepath.Join(dir, "index.html"))
+	if err != nil {
+		return "", err
+	}
+	if err := render.WriteHTML(htmlFile, page); err != nil {
+		htmlFile.Close()
+		return "", fmt.Errorf("render index.html: %w", err)
+	}
+	if err := htmlFile.Close(); err != nil {
+		return "", err
+	}
+	if err := render.WriteStyleCSS(dir); err != nil {
+		return "", err
+	}
+
+	saved, skipped, failed := assets.Counts()
+	if err := writeCaches(dir, now, auth, ch, opts, oldest, wsLabel, chLabel,
+		len(messages), threadCount, replyCount, saved, skipped, failed, users, customEmoji, assets); err != nil {
+		return "", err
+	}
+	if !opts.KeepCache {
+		if err := output.RemoveCache(dir); err != nil {
+			return "", err
+		}
+	}
+
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		abs = dir
+	}
+	logf("Done: %s / %s", wsLine, chLine)
+	logf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
+	logf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
+	logf("  output: %s", abs)
+	return abs, nil
+}
+
+// --- channel selection -----------------------------------------------------
+
+func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf func(string, ...any)) (slack.Channel, error) {
+	keyword := opts.ChannelKeyword
+	var candidates []slack.Channel
+	if keyword == "" {
+		candidates = channels
+	} else {
+		for _, ch := range channels {
+			if ch.ID == keyword || ch.Name == strings.TrimPrefix(keyword, "#") {
+				return ch, nil
+			}
+		}
+		lower := strings.ToLower(strings.TrimPrefix(keyword, "#"))
+		for _, ch := range channels {
+			if strings.Contains(strings.ToLower(ch.Name), lower) {
+				candidates = append(candidates, ch)
+			}
+		}
+	}
+
+	switch {
+	case len(candidates) == 0:
+		return slack.Channel{}, usagef("no channel matched %q. Check the channel name or ID; for private channels the bot must be a member.", keyword)
+	case len(candidates) == 1:
+		return candidates[0], nil
+	}
+
+	if len(candidates) > maxSelectable {
+		logf("%d channels matched. Run again with a more specific channel name or a channel ID.", len(candidates))
+		return slack.Channel{}, usagef("too many candidates (%d). Re-run as: slapex <channel-id-or-name>", len(candidates))
+	}
+
+	if !opts.Interactive || opts.NoInteractive {
+		logf("Multiple channels matched %q.", keyword)
+		logf("")
+		logf("Workspace: %s", wsLine)
+		logf("")
+		logf("Candidates:")
+		for _, ch := range candidates {
+			logf("  %s", channelLine(ch))
+		}
+		logf("")
+		logf("Run again with a more specific channel:")
+		logf("")
+		logf("  slapex %s", candidates[0].ID)
+		return slack.Channel{}, usagef("channel selection required but interactive selection is unavailable")
+	}
+
+	return selectChannel(candidates)
+}
+
+func selectChannel(candidates []slack.Channel) (slack.Channel, error) {
+	opts := make([]huh.Option[int], len(candidates))
+	for i, ch := range candidates {
+		opts[i] = huh.NewOption(channelLine(ch), i)
+	}
+	idx := 0
+	form := huh.NewForm(huh.NewGroup(
+		huh.NewSelect[int]().
+			Title("Select a channel").
+			Options(opts...).
+			Value(&idx),
+	))
+	if err := form.Run(); err != nil {
+		return slack.Channel{}, usagef("channel selection cancelled")
+	}
+	return candidates[idx], nil
+}
+
+func channelLine(ch slack.Channel) string {
+	visibility := "public"
+	if ch.IsPrivate {
+		visibility = "private"
+	}
+	state := "active"
+	if ch.IsArchived {
+		state = "archived"
+	}
+	membership := "not member"
+	if ch.IsMember {
+		membership = "member"
+	}
+	return fmt.Sprintf("#%s (%s, %s, %s, %s)", ch.Name, ch.ID, visibility, state, membership)
+}
+
+// --- view building ----------------------------------------------------------
+
+var systemSubtypes = map[string]bool{
+	"channel_join":      true,
+	"channel_leave":     true,
+	"channel_topic":     true,
+	"channel_purpose":   true,
+	"channel_name":      true,
+	"channel_archive":   true,
+	"channel_unarchive": true,
+	"pinned_item":       true,
+}
+
+var normalSubtypes = map[string]bool{
+	"":                 true,
+	"file_share":       true,
+	"thread_broadcast": true,
+	"bot_message":      true,
+	"me_message":       true,
+}
+
+type builder struct {
+	users   map[string]*slack.User
+	avatars map[string]string
+	emoji   *emoji.Resolver
+	assets  *output.Assets
+	limit   int64
+}
+
+// UserName implements render.TextResolver.
+func (b *builder) UserName(id string) string {
+	if u, ok := b.users[id]; ok {
+		return u.DisplayName()
+	}
+	return id
+}
+
+// EmojiHTML implements render.TextResolver.
+func (b *builder) EmojiHTML(name string) string {
+	literal := html.EscapeString(":" + name + ":")
+	r := b.emoji.Resolve(name)
+	switch {
+	case r.Unicode != "":
+		return r.Unicode
+	case r.ImageURL != "":
+		if rel, ok := b.assets.Save(output.KindEmoji, r.ImageURL, output.AssetMeta{EmojiName: name}); ok {
+			return `<img class="emoji" src="` + rel + `" alt="` + literal + `" title="` + literal + `">`
+		}
+		return literal
+	default:
+		return literal
+	}
+}
+
+func (b *builder) messageView(m *slack.Message) *render.MessageView {
+	t := tsTime(m.TS)
+	v := &render.MessageView{
+		TimeLabel: t.Format("2006-01-02 15:04"),
+		TimeISO:   t.UTC().Format(time.RFC3339),
+		Edited:    m.Edited != nil,
+	}
+
+	switch {
+	case systemSubtypes[m.Subtype]:
+		v.IsSystem = true
+		v.Body = render.Mrkdwn(m.Text, b)
+		return v
+	case m.Subtype == "tombstone":
+		v.Author = "(削除)"
+		v.AvatarInitial = "?"
+		v.Body = render.Safe("(削除されたメッセージ)")
+		return v
+	case !normalSubtypes[m.Subtype] && m.Text == "":
+		v.IsSystem = true
+		v.Body = render.Safe("(未対応のメッセージ種別: " + html.EscapeString(m.Subtype) + ")")
+		return v
+	}
+
+	v.Author = b.authorName(m)
+	v.AvatarPath = b.avatars[m.User]
+	v.AvatarInitial = initialOf(v.Author)
+	v.Italic = m.Subtype == "me_message"
+	if m.Text != "" {
+		v.Body = render.Mrkdwn(m.Text, b)
+	}
+	b.addFiles(v, m)
+	b.addUnfurls(v, m)
+	for _, r := range m.Reactions {
+		v.Reactions = append(v.Reactions, render.ReactionView{
+			Emoji: render.Safe(b.EmojiHTML(r.Name)),
+			Count: r.Count,
+		})
+	}
+	return v
+}
+
+func (b *builder) authorName(m *slack.Message) string {
+	if m.User != "" {
+		return b.UserName(m.User)
+	}
+	if m.BotProfile != nil && m.BotProfile.Name != "" {
+		return m.BotProfile.Name
+	}
+	if m.Username != "" {
+		return m.Username
+	}
+	if m.BotID != "" {
+		return m.BotID
+	}
+	return "(unknown)"
+}
+
+func (b *builder) addFiles(v *render.MessageView, m *slack.Message) {
+	for i := range m.Files {
+		f := &m.Files[i]
+		switch {
+		case f.Mode == "tombstone":
+			v.FilesList = append(v.FilesList, render.FileView{Name: "(削除されたファイル)"})
+		case strings.HasPrefix(f.Mimetype, "image/"):
+			b.addImage(v, f)
+		default:
+			b.addAttachmentFile(v, f)
+		}
+	}
+}
+
+func (b *builder) addImage(v *render.MessageView, f *slack.File) {
+	meta := output.AssetMeta{FileID: f.ID, OriginalName: f.Name, Mimetype: f.Mimetype, SizeBytes: f.Size}
+	thumbURL := f.ThumbURL()
+	if thumbURL == "" && f.IsExternal {
+		v.FilesList = append(v.FilesList, render.FileView{Name: f.Name, Note: "(外部サービス連携の画像のため保存対象外)"})
+		return
+	}
+	img := render.ImageView{Name: f.Name}
+	if thumbURL != "" {
+		img.ThumbPath, _ = b.assets.Save(output.KindUploadThumb, thumbURL, meta)
+	}
+	switch {
+	case b.limit > 0 && f.Size > b.limit:
+		b.assets.SkipTooLarge(output.KindUploadOriginal, f.DownloadURL(), meta)
+		img.Note = fmt.Sprintf("original はサイズ上限超過のため保存されませんでした。(%s: %s, 上限 %s)",
+			f.Name, humanBytes(f.Size), humanBytes(b.limit))
+	case f.DownloadURL() != "":
+		if rel, ok := b.assets.Save(output.KindUploadOriginal, f.DownloadURL(), meta); ok {
+			img.OriginalPath = rel
+		} else {
+			img.Note = "original の取得に失敗しました。"
+		}
+	}
+	if img.ThumbPath == "" && img.OriginalPath != "" {
+		img.ThumbPath = img.OriginalPath
+	}
+	if img.ThumbPath == "" {
+		v.FilesList = append(v.FilesList, render.FileView{Name: f.Name, Note: "画像の取得に失敗しました。"})
+		return
+	}
+	v.Images = append(v.Images, img)
+}
+
+func (b *builder) addAttachmentFile(v *render.MessageView, f *slack.File) {
+	meta := output.AssetMeta{FileID: f.ID, OriginalName: f.Name, Mimetype: f.Mimetype, SizeBytes: f.Size}
+	name := f.Name
+	if name == "" {
+		name = f.ID
+	}
+	switch {
+	case f.IsExternal || f.DownloadURL() == "":
+		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "(外部サービス連携のファイルのため保存対象外)"})
+	case b.limit > 0 && f.Size > b.limit:
+		b.assets.SkipTooLarge(output.KindAttachment, f.DownloadURL(), meta)
+		v.FilesList = append(v.FilesList, render.FileView{
+			Name: name,
+			Note: fmt.Sprintf("サイズオーバーのため保存されませんでした。(%s, 上限 %s)",
+				humanBytes(f.Size), humanBytes(b.limit)),
+		})
+	default:
+		if rel, ok := b.assets.Save(output.KindAttachment, f.DownloadURL(), meta); ok {
+			v.FilesList = append(v.FilesList, render.FileView{Name: name, Path: rel})
+		} else {
+			v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "取得に失敗しました。"})
+		}
+	}
+}
+
+func (b *builder) addUnfurls(v *render.MessageView, m *slack.Message) {
+	for i := range m.Attachments {
+		a := &m.Attachments[i]
+		uv := render.UnfurlView{Service: a.ServiceName, Title: a.Title}
+		if strings.HasPrefix(a.TitleLink, "http://") || strings.HasPrefix(a.TitleLink, "https://") {
+			uv.TitleHref = a.TitleLink
+		}
+		if a.Text != "" {
+			uv.Text = render.Mrkdwn(a.Text, b)
+		}
+		if src := a.PreviewImageURL(); src != "" {
+			uv.ImagePath, _ = b.assets.Save(output.KindOGImage, src, output.AssetMeta{})
+		}
+		if uv.Service == "" && uv.Title == "" && uv.Text == "" && uv.ImagePath == "" {
+			continue
+		}
+		v.Unfurls = append(v.Unfurls, uv)
+	}
+}
+
+// --- cache files -------------------------------------------------------------
+
+type cachedUser struct {
+	DisplayName string `json:"display_name"`
+	RealName    string `json:"real_name,omitempty"`
+	AvatarURL   string `json:"avatar_url,omitempty"`
+}
+
+func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Channel, opts Options,
+	oldest time.Time, wsLabel, chLabel string, timeline, threads, replyTotal, saved, skipped, failed int,
+	users map[string]*slack.User, customEmoji map[string]string, assets *output.Assets) error {
+
+	common := output.CacheCommon{SchemaVersion: output.SchemaVersion, GeneratedAt: now.UTC().Format(time.RFC3339)}
+
+	metadata := map[string]any{
+		"schema_version": common.SchemaVersion,
+		"generated_at":   common.GeneratedAt,
+		"tool_version":   opts.ToolVersion,
+		"workspace": map[string]string{
+			"team_id": auth.TeamID, "name": auth.Team, "url": auth.URL, "domain": hostOf(auth.URL),
+		},
+		"channel": map[string]any{
+			"id": ch.ID, "name": ch.Name,
+			"is_private": ch.IsPrivate, "is_archived": ch.IsArchived, "is_member": ch.IsMember,
+		},
+		"fetch": map[string]any{
+			"days": opts.Days, "max_posts": opts.MaxPosts,
+			"max_attachment_size_bytes": opts.MaxAttachBytes,
+			"oldest_ts":                 slack.FormatTS(oldest.Unix()),
+			"executed_at":               now.UTC().Format(time.RFC3339),
+		},
+		"labels": map[string]string{
+			"workspace_label": wsLabel, "channel_label": chLabel,
+			"workspace_name": auth.Team, "channel_name": ch.Name,
+		},
+		"counts": map[string]int{
+			"timeline_messages": timeline, "threads": threads, "replies": replyTotal,
+			"assets_saved": saved, "assets_skipped": skipped, "assets_failed": failed,
+		},
+	}
+	if err := output.WriteCacheFile(dir, "metadata.json", metadata); err != nil {
+		return err
+	}
+
+	manifest := map[string]any{
+		"schema_version": common.SchemaVersion,
+		"generated_at":   common.GeneratedAt,
+		"assets":         assets.Entries(),
+	}
+	if err := output.WriteCacheFile(dir, "assets_manifest.json", manifest); err != nil {
+		return err
+	}
+
+	cachedUsers := map[string]cachedUser{}
+	for id, u := range users {
+		cachedUsers[id] = cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: u.Profile.Image72}
+	}
+	apiCache := map[string]any{
+		"schema_version": common.SchemaVersion,
+		"generated_at":   common.GeneratedAt,
+		"users":          cachedUsers,
+		"emoji":          customEmoji,
+		"workspace":      auth,
+		"channel":        ch,
+	}
+	return output.WriteCacheFile(dir, "slack_api_cache.json", apiCache)
+}
+
+// --- small helpers -----------------------------------------------------------
+
+var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)[|>]`)
+
+func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message) []string {
+	seen := map[string]bool{}
+	add := func(m *slack.Message) {
+		if m.User != "" {
+			seen[m.User] = true
+		}
+		for _, match := range reMention.FindAllStringSubmatch(m.Text, -1) {
+			seen[match[1]] = true
+		}
+	}
+	for i := range messages {
+		add(&messages[i])
+	}
+	for _, rs := range replies {
+		for i := range rs {
+			add(&rs[i])
+		}
+	}
+	ids := make([]string, 0, len(seen))
+	for id := range seen {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+func tsTime(ts string) time.Time {
+	f, err := strconv.ParseFloat(ts, 64)
+	if err != nil {
+		return time.Time{}
+	}
+	sec := int64(f)
+	nsec := int64((f - float64(sec)) * 1e9)
+	return time.Unix(sec, nsec)
+}
+
+func tsLess(a, b string) bool {
+	fa, _ := strconv.ParseFloat(a, 64)
+	fb, _ := strconv.ParseFloat(b, 64)
+	return fa < fb
+}
+
+func hostOf(rawURL string) string {
+	host := strings.TrimPrefix(strings.TrimPrefix(rawURL, "https://"), "http://")
+	host = strings.TrimSuffix(host, "/")
+	if i := strings.Index(host, "/"); i >= 0 {
+		host = host[:i]
+	}
+	return host
+}
+
+func initialOf(name string) string {
+	for _, r := range name {
+		return strings.ToUpper(string(r))
+	}
+	return "?"
+}
+
+func offsetString(seconds int) string {
+	sign := "+"
+	if seconds < 0 {
+		sign = "-"
+		seconds = -seconds
+	}
+	return fmt.Sprintf("%s%02d:%02d", sign, seconds/3600, (seconds%3600)/60)
+}
+
+func humanBytes(n int64) string {
+	switch {
+	case n >= 1<<30 && n%(1<<30) == 0:
+		return fmt.Sprintf("%dGB", n>>30)
+	case n >= 1<<20 && n%(1<<20) == 0:
+		return fmt.Sprintf("%dMB", n>>20)
+	case n >= 1<<10 && n%(1<<10) == 0:
+		return fmt.Sprintf("%dKB", n>>10)
+	default:
+		return fmt.Sprintf("%dB", n)
+	}
+}
