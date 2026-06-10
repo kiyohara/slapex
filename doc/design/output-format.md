@@ -4,9 +4,9 @@
 
 想定読者は、このツールを利用する人間と、出力を実装・検証する担当者である。
 
-この内容は議論用の素案であり、実装アーキテクチャ、オプション名、出力ディレクトリ構造は未確定である。
+本ファイルの出力ディレクトリ構造、option 名、制限値は確定仕様として扱う。実装アーキテクチャは未確定である。
 
-利用者の操作の流れは `usage-flow.md`、生成する `index.html` の表示仕様(見た目)は `html-rendering.md`、中間ファイル `.cache/` の扱いは `cache.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、CLI option と exit code の一覧は `cli-interface.md`、生成する `index.html` の表示仕様(見た目)は `html-rendering.md`、中間ファイル `.cache/` の扱いは `cache.md`、Slack API の取得方法は `slack-api-usage.md` を参照する。
 
 ## 取得範囲
 
@@ -21,7 +21,7 @@ option:
 | `--max-posts <count>` | `1000` | `10000` | channel timeline 上の親投稿の最大取得件数 |
 | `--days <days>` | `30` | `90` | 現在時刻から何日前までの投稿を取得するか |
 
-`--max-posts` は親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は一緒に取得する。
+`--max-posts` は親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
 
 ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
 
@@ -104,6 +104,26 @@ slapex-<yyyymmdd>-<hhmm>/
 `--output` が指定された場合、その値を出力 root とする。`--output` が指定されていない場合は、カレントディレクトリ配下に `slapex-<yyyymmdd>-<hhmm>` 形式の出力 root を作成する。この日時はコマンド実行時刻を表し、取得対象となる投稿の日時ではない。`<workspace-label>/<channel-label>/` は token と channel 解決結果からツールが作成する。
 
 `<workspace-label>` と `<channel-label>` は、Slack API 上の ID そのものではなく、人間が読みやすい workspace 名、workspace domain、channel 名などを filesystem-safe に正規化した label とする。label が取得できない場合や、正規化後に衝突する場合は、短い `team_id` / channel ID などを suffix または fallback として使う。元の ID、表示名、実際に使った label は metadata / cache に記録する。
+
+### directory label の正規化規則
+
+`<workspace-label>` は次の優先順で決める。
+
+1. workspace domain の subdomain 部(例: `example.slack.com` → `example`)。
+2. domain が取得できない場合は、workspace 名を下記の正規化にかけた結果。
+3. 正規化の結果が空になる場合は `team_id`。
+
+`<channel-label>` は channel 名から次の正規化で作る。
+
+1. Unicode を NFC 正規化する。
+2. `/` `\` `:` `*` `?` `"` `<` `>` `|`、空白、制御文字を `-` に置換する。
+3. 連続する `-` を 1 つにまとめ、先頭・末尾の `-` を除去する。
+4. 64 文字を超える場合は 64 文字で切り詰める。
+5. 結果が空になる場合は channel ID を使う。
+
+- 日本語などの Unicode 文字はそのまま保持する。「filesystem-safe」は、対象プラットフォーム(`cli-interface.md`)で予約・禁止される文字を含まないことを指す。
+- 正規化の結果、同一出力 root 内で label が衝突する場合は、`-` + ID 末尾 6 文字を suffix として付ける。
+- 決定経緯は `decision-log/0029-directory-label-rules.md` を参照する。
 
 この directory 用 label は、画面表示用の workspace / channel label と同一である必要はない。画面表示では対象確認のために Slack 上の表示名、domain、短い ID、channel 種別などを含める(画面表示の方針は `usage-flow.md` の「処理対象の表示」を参照)。一方、directory 名では filesystem-safe な slug と衝突回避を優先する。
 

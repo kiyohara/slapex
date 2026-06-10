@@ -4,9 +4,9 @@
 
 想定読者は、このツールを利用する人間と、cache 周りを実装・検証する担当者である。
 
-この内容は議論用の素案であり、実装アーキテクチャ、オプション名、出力ディレクトリ構造は未確定である。
+本ファイルの cache の位置づけ、各ファイルの schema、再利用時の検証規則は確定仕様として扱う。実装アーキテクチャは未確定である。
 
-`.cache/` を含む出力ディレクトリ構造は `output-format.md`、利用者の操作の流れは `usage-flow.md`、決定経緯は `decision-log/0005-cache-handling.md` を参照する。
+`.cache/` を含む出力ディレクトリ構造は `output-format.md`、利用者の操作の流れは `usage-flow.md`、決定経緯は `decision-log/0005-cache-handling.md` と `decision-log/0030-cache-schema-and-reuse-validation.md` を参照する。
 
 ## 位置づけ
 
@@ -22,11 +22,50 @@
 
 ## `.cache/` に置くファイル
 
-- `.cache/assets_manifest.json`: 元 URL、ローカルパス、asset 種別、Slack file ID、emoji 名、取得成否などを保持する候補として扱う。
-- `.cache/metadata.json`: 取得対象 workspace、channel、取得時刻、Slack API 上の ID、取得件数などを保持する候補として扱う。
-- `.cache/slack_api_cache.json`: 同じ export 中に何度も参照する Slack API response や解決済み user / emoji / channel 情報を保持する候補として扱う。
+- `.cache/assets_manifest.json`: 元 URL、ローカルパス、asset 種別、Slack file ID、emoji 名、取得成否などを保持する。
+- `.cache/metadata.json`: 取得対象 workspace、channel、取得時刻、Slack API 上の ID、取得件数などを保持する。
+- `.cache/slack_api_cache.json`: 同じ export 中に何度も参照する解決済み user / emoji / workspace / channel 情報を保持する。
 
 いずれの `.cache/` ファイルにも Slack token や secret は保存しない。
+
+## `.cache/` ファイルの schema
+
+各ファイルは JSON とし、共通 field として `schema_version`(整数、初期値 `1`)と `generated_at`(ISO 8601 UTC)を持つ。schema を後方互換のない形で変更するときは `schema_version` を上げる。
+
+### `metadata.json`
+
+| field | 内容 |
+|---|---|
+| `tool_version` | slapex の version |
+| `workspace` | `team_id`、workspace 名、domain、URL |
+| `channel` | channel ID、channel 名、public/private、archived 状態、bot membership |
+| `fetch` | `--days` / `--max-posts` / `--max-attachment-size` の実効値、`oldest` 境界、実行時刻 |
+| `labels` | 実際に使った `<workspace-label>` / `<channel-label>` と元の表示名 |
+| `counts` | timeline メッセージ数、thread 数、replies 数、assets の保存・上限超過・失敗件数 |
+
+### `assets_manifest.json`
+
+`assets` 配列の各要素:
+
+| field | 内容 |
+|---|---|
+| `kind` | `emoji` / `og_image` / `upload_thumb` / `upload_original` / `attachment` |
+| `source_url` | 元 URL |
+| `local_path` | 出力ディレクトリからの相対 path(未保存なら `null`) |
+| `file_id` / `emoji_name` | Slack file ID または絵文字名(該当する場合のみ) |
+| `original_name` / `mimetype` / `size_bytes` | 元の表示ファイル名と metadata |
+| `status` | `saved` / `skipped_size` / `failed` |
+| `error` | 失敗理由(失敗時のみ) |
+
+### `slack_api_cache.json`
+
+| field | 内容 |
+|---|---|
+| `users` | user ID → 解決済み display name / real name / avatar URL |
+| `emoji` | 絵文字名 → 画像 URL または alias 先の名前 |
+| `workspace` / `channel` | `auth.test` と channel 解決の結果 |
+
+メッセージ本文の raw API response は保持しない。サイズが大きく、stale data になるリスクが高いためである(再検討の条件は決定経緯ログを参照)。
 
 ## option
 
@@ -37,12 +76,22 @@
 
 通常動作では、export の成否に関係なく `.cache/` を削除する。原因調査や cache 再利用のために残したい場合は `--keep-cache` を指定する。process kill や OS 側の異常終了では、cleanup が実行されず `.cache/` が残る可能性がある。
 
-`--reuse-cache` を使う場合は、cache が同じ workspace、channel、token の見える権限範囲、取得条件に対応しているかを検証する必要がある。検証できない cache は使わず、再取得する。
-
 `--no-cache` は初期 option としては採用しない。cache の影響を排除したい場合は `--reuse-cache` を指定せず通常実行すればよく、`--keep-cache` を指定しない限り `.cache/` は削除されるためである。
+
+## `--reuse-cache` の整合性検証
+
+`--reuse-cache <path>` で指定された cache は、次のすべてを満たす場合だけ再利用する。
+
+1. `schema_version` が現在の実装の値と一致する。
+2. `metadata.json` の `team_id` が、今回 `auth.test` で解決した workspace と一致する。
+3. `metadata.json` の channel ID が、今回確定した channel と一致する。
+
+いずれかが不一致、または検証不能(ファイル欠落、parse 不能)な場合は、その cache を使わず、警告を表示して通常の取得にフォールバックする(エラー終了にはしない)。
+
+取得条件(`--days` / `--max-posts`)の差異は再利用可否の判定に使わない。cache の主な再利用対象は assets manifest と user / emoji の解決結果であり、メッセージ本文は毎回取得し直すためである。token の scope 差異も事前検証しない。scope 不足による個別 asset の取得失敗は通常の失敗として manifest に記録され、HTML 上では置換表示になる。
 
 ## 未決事項
 
-- `.cache/` 再利用時の整合性検証方法(workspace / channel / token scope / 取得条件など、どの metadata の不一致を再利用不可とみなすか)。
+このファイルが扱う範囲に現時点の未決事項はない。以前未決だった「`.cache/` 再利用時の整合性検証」は `decision-log/0030-cache-schema-and-reuse-validation.md` で確定した。
 
 全体の未決事項一覧は `decision-log/index.md` を参照する。
