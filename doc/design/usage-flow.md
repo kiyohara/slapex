@@ -4,13 +4,15 @@
 
 想定読者は、このツールを利用する人間である。
 
-この内容は議論用の素案であり、実装アーキテクチャ、オプション名、出力ディレクトリ構造は未確定である。利用者が自然に完了できる流れを先に整理し、その後に実装方式を決める。
+本ファイルの操作の流れ、option 名、出力ディレクトリ構造は確定仕様として扱う。実装アーキテクチャは未確定である。
 
 仕様はトピックごとに次の文書へ分割している。本ファイルは利用者の操作の流れを扱う。
 
+- CLI のコマンド形式、option、環境変数、exit code: `cli-interface.md`
 - 出力ディレクトリ構造、保存される assets、取得範囲、サイズ制限: `output-format.md`
 - 生成する `index.html` の表示仕様(見た目): `html-rendering.md`
 - 中間ファイル `.cache/` の扱い: `cache.md`
+- Slack API の利用方針(method、pagination、rate limit、user / emoji / file 解決): `slack-api-usage.md`
 
 ## 想定する利用体験
 
@@ -158,6 +160,8 @@ channel は、明示指定と選択の両方に対応する。
 6. 候補が 2 件以上 10 件以下の場合は、利用者に選択を求める。
 7. 候補が 11 件以上の場合は、候補が多すぎることを表示し、より具体的な channel 引数で再実行するよう促して非 0 exit code で終了する。
 8. channel 引数が指定されていない場合も、利用者に channel 選択を求める。ただし、候補が 11 件以上になる場合は選択を開始しない。
+
+非 0 exit code の具体値は `cli-interface.md` の exit code 仕様に従う(対象を確定できない場合は `2`)。
 
 候補表示では、少なくとも channel ID、channel 名、public/private、archived 状態、bot が member かどうかを表示する。private channel は、bot token から見える範囲だけが候補になる。
 
