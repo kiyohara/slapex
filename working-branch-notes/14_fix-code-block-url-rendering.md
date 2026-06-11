@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: fix-code-block-url-rendering
-- PR: 未採番
+- PR: #14
 - 最終更新: 2026-06-11
 
 ## 目的
