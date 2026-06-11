@@ -62,10 +62,9 @@
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
 | リリース整備と Homebrew tap | open | goreleaser 設定と release workflow の整備時期、Homebrew tap を提供するか | [0034-distribution-method.md](0034-distribution-method.md) |
 | system メッセージの actor 表示 | open | `channel_topic` 等で API の `text` に actor mention が含まれない場合に、`user` field から author prefix を補完して Slack UI 同等にするか(PoC 追加 E2E の所見) | [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) |
-| code block 内の URL 構文の表示 | open | Slack は code block / inline code 内でも URL を `<URL>` 構文で格納するが、PoC は code 内容を未処理で出力するため browser が未知タグとして非表示にする(PoC 目視レビューの所見)。構文を表示テキストへ展開し、残る生 `<` `>` を防御的にエスケープする実装に直す | [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) |
 | コンテナ実行時のタイムゾーン | open | Docker 経由の実行ではコンテナの local timezone(UTC)が表示とディレクトリ名に使われ、利用者の期待(JST 等)とずれる(PoC 目視レビューの所見)。dev / E2E 手順で host の `TZ` を forward するか、`--tz` などの明示指定 option を導入するか | [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) |
 
-解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。
+解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。「code block 内の URL 構文の表示」は [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) の追記で方針を確定し、修正済み。
 
 ## 運用メモ
 

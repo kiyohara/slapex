@@ -54,15 +54,16 @@ func (c *converter) restore(s string) string {
 func Mrkdwn(text string, res TextResolver) template.HTML {
 	c := &converter{res: res}
 
-	// 1. code blocks and inline code keep their content verbatim
-	//    (already entity-escaped by Slack).
+	// 1. code blocks and inline code render as plain text: Slack embeds
+	//    constructs even inside code (auto-linked URLs, mentions), so they
+	//    are reduced to display text and leftover angle brackets escaped.
 	s := reFenced.ReplaceAllStringFunc(text, func(m string) string {
 		inner := reFenced.FindStringSubmatch(m)[1]
-		return c.stash("<pre><code>" + strings.TrimRight(inner, "\n") + "</code></pre>")
+		return c.stash("<pre><code>" + c.codeText(strings.TrimRight(inner, "\n")) + "</code></pre>")
 	})
 	s = reInline.ReplaceAllStringFunc(s, func(m string) string {
 		inner := reInline.FindStringSubmatch(m)[1]
-		return c.stash("<code>" + inner + "</code>")
+		return c.stash("<code>" + c.codeText(inner) + "</code>")
 	})
 
 	// 2. <...> constructs: mentions, channel links, special commands, URLs.
@@ -88,8 +89,37 @@ func Mrkdwn(text string, res TextResolver) template.HTML {
 	return template.HTML(c.restore(s))
 }
 
+// codeText renders code span / code block content. Slack auto-links URLs
+// (and can embed mentions) even inside code, so constructs are reduced to
+// their display text; remaining raw angle brackets are escaped so browsers
+// never parse code content as markup. User-typed < and > arrive entity-
+// escaped from Slack, so this never double-escapes.
+func (c *converter) codeText(s string) string {
+	s = reConstruct.ReplaceAllStringFunc(s, func(m string) string {
+		body, label, hasLabel := strings.Cut(reConstruct.FindStringSubmatch(m)[1], "|")
+		text, _ := c.constructText(body, label, hasLabel)
+		return text
+	})
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	return strings.ReplaceAll(s, ">", "&gt;")
+}
+
 func (c *converter) construct(inner string) string {
 	body, label, hasLabel := strings.Cut(inner, "|")
+	text, mention := c.constructText(body, label, hasLabel)
+	switch {
+	case mention:
+		return `<span class="mention">` + text + `</span>`
+	case strings.HasPrefix(body, "!"):
+		return text
+	default:
+		return anchor(body, text)
+	}
+}
+
+// constructText resolves the display text of a <...> construct already split
+// at "|"; mention reports whether it is highlighted outside code content.
+func (c *converter) constructText(body, label string, hasLabel bool) (text string, mention bool) {
 	switch {
 	case strings.HasPrefix(body, "@"):
 		id := strings.TrimPrefix(body, "@")
@@ -100,41 +130,44 @@ func (c *converter) construct(inner string) string {
 		if name == "" {
 			name = id
 		}
-		return `<span class="mention">@` + name + `</span>`
+		return "@" + name, true
 	case strings.HasPrefix(body, "#"):
 		name := label
 		if name == "" {
 			name = strings.TrimPrefix(body, "#")
 		}
-		return `<span class="mention">#` + name + `</span>`
+		return "#" + name, true
 	case strings.HasPrefix(body, "!"):
 		return c.special(strings.TrimPrefix(body, "!"), label)
 	default:
-		return anchor(body, label)
+		if label != "" {
+			return label, false
+		}
+		return body, false
 	}
 }
 
-func (c *converter) special(cmd, label string) string {
+func (c *converter) special(cmd, label string) (text string, mention bool) {
 	switch {
 	case cmd == "here" || cmd == "channel" || cmd == "everyone":
-		return `<span class="mention">@` + cmd + `</span>`
+		return "@" + cmd, true
 	case strings.HasPrefix(cmd, "subteam^"):
 		if label == "" {
 			label = "@group"
 		}
-		return `<span class="mention">` + label + `</span>`
+		return label, true
 	case strings.HasPrefix(cmd, "date^"):
 		// render the fallback text per the spec; full <!date> formatting
 		// support is out of scope initially.
 		if label != "" {
-			return label
+			return label, false
 		}
-		return cmd
+		return cmd, false
 	default:
 		if label != "" {
-			return label
+			return label, false
 		}
-		return cmd
+		return cmd, false
 	}
 }
 

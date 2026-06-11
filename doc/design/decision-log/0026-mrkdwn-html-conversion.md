@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-06-11
 - 関連: `doc/design/html-rendering.md`, `doc/design/slack-api-usage.md`
 
 ## 背景
@@ -42,3 +42,14 @@
 
 - `text` fallback では再現できない投稿(リスト構造、複雑な書式)が実利用で問題になった場合。
 - Slack が `text` fallback の生成を廃止・変更した場合。
+
+## 追記: code 内の構文の扱い(2026-06-11)
+
+PoC E2E の目視レビューで、code block 内にあった URL が HTML 上で表示されない問題が見つかった(経緯は PR #13 の記録)。Slack は inline code / code block の内部でも URL を `<URL>` 構文(auto-link)で格納するが、当初実装は code 内容を entity エスケープ済みの素テキストとみなして未処理のまま `<pre><code>` / `<code>` に出力していたため、生成 HTML に生の `<URL>` が残り、browser が未知タグとして解釈して URL が非表示になっていた。code 内の生 `<` `>` を素通しするため、エスケープ防御の穴でもあった。
+
+次のとおり決定し、実装した。
+
+- code span / code block の内容でも `<...>` 構文を解釈する。ただしリンクや mention のマークアップは生成せず、表示テキストへ展開する(`<URL>` は URL、`<URL|label>` は label、`<@U...>` / `<#C...|name>` / `<!here>` などの mention 系は通常本文と同じ表示テキスト `@表示名` / `#channel名` / `@here`)。
+- 構文展開後に code 内容へ残る生の `<` `>` は HTML エスケープして出力する。利用者が入力した `<` `>` は Slack 側で `&lt;` `&gt;` 化済みのため、二重エスケープは起きない。
+
+`html-rendering.md` の変換規則とエスケープ方針へ反映した。

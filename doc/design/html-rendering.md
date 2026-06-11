@@ -59,6 +59,7 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 | `:emoji_name:` | 絵文字(Unicode 直接表示またはローカル画像、`slack-api-usage.md`) |
 | 改行 | 改行として表示 |
 
+- Slack は inline code / code block の内部でも、URL の auto-link(`<https://...>`)や mention などの `<...>` 構文を `text` に格納する。code 内の構文はリンクや mention のマークアップを生成せず、表示テキスト(label があれば label、URL はその URL、mention は `@表示名` など)へ展開して code の内容として表示する。
 - mention の表示名解決は `slack-api-usage.md` の user 解決に従う。解決できない場合は user ID を表示する。
 - rich text(`blocks` の `rich_text`)の構造を直接レンダリングすることは初期対象外とし、`text` フィールド(Slack が生成する fallback テキストを含む)を表示の正とする。`blocks` の完全レンダリングは将来検討とする。
 - legacy attachment(URL unfurl など)は、URL preview 画像(`output-format.md`)とタイトル・本文テキストの範囲で表示し、色付き枠やフィールド構造の完全模倣は初期対象外とする。
@@ -66,6 +67,7 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 ## エスケープとサニタイズ
 
 - Slack 由来のすべてのテキストは HTML エスケープしたうえで、本ツールが生成するマークアップだけを組み立てる。Slack 本文に HTML 断片が含まれていても、そのまま出力しない。
+- code(inline code / code block)の内容も同じ方針の対象とする。`<...>` 構文を表示テキストへ展開した後に残る生の `<` `>` は HTML エスケープして出力する(利用者が入力した `<` `>` は Slack API 側でエンティティ化済みのため、二重エスケープにはならない)。
 - リンクとして出力する URL は `http` / `https` scheme のみ許可する。その他の scheme はリンク化せずテキストとして表示する。
 - 「JavaScript を一切使わない」方針(表示方針 10)を、サニタイズの面でも維持する。生成 HTML に script 要素や inline event handler を含めない。
 
