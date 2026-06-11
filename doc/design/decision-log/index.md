@@ -61,6 +61,7 @@
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
 | リリース整備と Homebrew tap | open | goreleaser 設定と release workflow の整備時期、Homebrew tap を提供するか | [0034-distribution-method.md](0034-distribution-method.md) |
+| system メッセージの actor 表示 | open | `channel_topic` 等で API の `text` に actor mention が含まれない場合に、`user` field から author prefix を補完して Slack UI 同等にするか(PoC 追加 E2E の所見) | [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) |
 
 解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。
 
