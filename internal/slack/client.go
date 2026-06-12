@@ -121,22 +121,21 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 // failures (5xx, network errors) with exponential backoff and jitter.
 func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http.Response, error)) ([]byte, error) {
 	var lastErr error
-	var retryWait time.Duration // next wait dictated by Retry-After; 0 means backoff
+	// skipBackoff is set when a 429 already waited out Retry-After; the wait
+	// happens at detection so it is honoured even when retries are exhausted.
+	skipBackoff := false
 	for attempt := 0; ; attempt++ {
 		if attempt > maxRetries {
 			return nil, fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
 		}
-		if attempt > 0 {
-			wait := retryWait
-			retryWait = 0
-			if wait == 0 {
-				wait = backoffWait(attempt)
-				c.Logf("retrying %s in %s (%s)", what, wait.Round(time.Second), lastErr)
-			}
+		if attempt > 0 && !skipBackoff {
+			wait := backoffWait(attempt)
+			c.Logf("retrying %s in %s (%s)", what, wait.Round(time.Second), lastErr)
 			if err := c.sleep(ctx, wait); err != nil {
 				return nil, err
 			}
 		}
+		skipBackoff = false
 		resp, err := doReq()
 		if err != nil {
 			lastErr = err
@@ -147,8 +146,11 @@ func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
 			if wait, ok := retryAfter(resp); ok {
-				retryWait = wait
 				c.Logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
+				if err := c.sleep(ctx, wait); err != nil {
+					return nil, err
+				}
+				skipBackoff = true
 			}
 			continue
 		case resp.StatusCode >= 500:
@@ -226,22 +228,20 @@ func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.
 
 func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadCloser, string, error) {
 	var lastErr error
-	var retryWait time.Duration // next wait dictated by Retry-After; 0 means backoff
+	// skipBackoff: see withRetry.
+	skipBackoff := false
 	for attempt := 0; ; attempt++ {
 		if attempt > maxRetries {
 			return nil, "", fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
 		}
-		if attempt > 0 {
-			wait := retryWait
-			retryWait = 0
-			if wait == 0 {
-				wait = backoffWait(attempt)
-				c.Logf("retrying download in %s (%s)", wait.Round(time.Second), lastErr)
-			}
+		if attempt > 0 && !skipBackoff {
+			wait := backoffWait(attempt)
+			c.Logf("retrying download in %s (%s)", wait.Round(time.Second), lastErr)
 			if err := c.sleep(ctx, wait); err != nil {
 				return nil, "", err
 			}
 		}
+		skipBackoff = false
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, srcURL, nil)
 		if err != nil {
 			return nil, "", err
@@ -257,8 +257,11 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
 			if wait, ok := retryAfter(resp); ok {
-				retryWait = wait
 				c.Logf("rate limited on download, waiting %s as instructed by Slack", wait.Round(time.Second))
+				if err := c.sleep(ctx, wait); err != nil {
+					return nil, "", err
+				}
+				skipBackoff = true
 			}
 			continue
 		case resp.StatusCode >= 500:

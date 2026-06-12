@@ -456,6 +456,73 @@ func TestCallGivesUpAfterMaxRetries(t *testing.T) {
 	}
 }
 
+// always429 returns a server config where every request up to the retry
+// budget is rejected with 429 + Retry-After: 1.
+func always429() *statusSequenceServer {
+	return &statusSequenceServer{
+		statuses: slices.Repeat([]int{http.StatusTooManyRequests}, maxRetries+1),
+		headers:  slices.Repeat([]http.Header{{"Retry-After": {"1"}}}, maxRetries+1),
+		okBody:   authTestOK,
+	}
+}
+
+func TestCall429RetryAfterWaitsBeforeGivingUp(t *testing.T) {
+	t.Parallel()
+
+	seq := always429()
+	srv := httptest.NewServer(seq)
+	defer srv.Close()
+
+	c, rec := newTestClient(srv)
+	_, err := c.AuthTest(context.Background())
+	if err == nil {
+		t.Fatal("AuthTest succeeded, want error after retries are exhausted")
+	}
+	if !strings.Contains(err.Error(), "giving up after 5 retries") {
+		t.Errorf("err = %v, want it to mention giving up after 5 retries", err)
+	}
+	if n := seq.requestCount(); n != 6 {
+		t.Errorf("requests = %d, want 6 (initial + 5 retries)", n)
+	}
+	// Every 429 must wait out its Retry-After, including the final attempt's:
+	// the same Client keeps issuing requests after a failed call.
+	waits := rec.recorded()
+	if len(waits) != 6 {
+		t.Fatalf("waits = %v, want one Retry-After wait per 429 response", waits)
+	}
+	for _, w := range waits {
+		assertWaitIn(t, w, 1*time.Second)
+	}
+}
+
+func TestDownloadRetryAfterWaitsBeforeGivingUp(t *testing.T) {
+	t.Parallel()
+
+	seq := always429()
+	srv := httptest.NewServer(seq)
+	defer srv.Close()
+
+	c, rec := newTestClient(srv)
+	var buf bytes.Buffer
+	_, _, err := c.Download(context.Background(), srv.URL+"/files/orig.png", 0, &buf)
+	if err == nil {
+		t.Fatal("Download succeeded, want error after retries are exhausted")
+	}
+	if !strings.Contains(err.Error(), "giving up after 5 retries") {
+		t.Errorf("err = %v, want it to mention giving up after 5 retries", err)
+	}
+	if n := seq.requestCount(); n != 6 {
+		t.Errorf("requests = %d, want 6 (initial + 5 retries)", n)
+	}
+	waits := rec.recorded()
+	if len(waits) != 6 {
+		t.Fatalf("waits = %v, want one Retry-After wait per 429 response", waits)
+	}
+	for _, w := range waits {
+		assertWaitIn(t, w, 1*time.Second)
+	}
+}
+
 func TestBackoffWait(t *testing.T) {
 	t.Parallel()
 

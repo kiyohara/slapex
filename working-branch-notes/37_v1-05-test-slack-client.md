@@ -48,3 +48,4 @@ GitHub Issue #19 に従い、Slack thin client(`internal/slack/`)の retry / rat
 - 2026-06-12: baseURL / sleep の注入リファクタ、retry 待機の仕様整合修正、`client_test.go` 追加。Issue 指定の検証をすべて実施し pass。
 - 2026-06-12: PR #37 作成後、note を `working-branch-notes/37_v1-05-test-slack-client.md` へ rename。
 - 2026-06-12: self code-review(/code-review medium、finder 7 + verifier 4 のサブエージェント構成)を実施。確定指摘 1 件(`TestCallGivesUpAfterMaxRetries` の 6×500 literal を `slices.Repeat(..., maxRetries+1)` に変更)へ対応し、test / gofmt / vet を再実行し pass。棄却 2 件・見送り 1 件は PR コメントに記録。
+- 2026-06-13: レビュー指摘(Bugbot 経由)「最終 attempt の 429 で Retry-After 待機がスキップされる」を検証し regression と確認。429 + Retry-After の待機を検出時その場の sleep に戻し、二重待機の排除は skipBackoff フラグで次 iteration のバックオフ抑止に変更(withRetry / downloadRetry 両方)。回帰テスト 2 件(常時 429 + Retry-After → 6 リクエスト・6 回待機・give up)を追加し、検証一式を再実行し pass。
