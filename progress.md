@@ -24,5 +24,5 @@
 | 利用者向け How to Use 素案 | done | `doc/design/` の仕様 4 文書と `doc/help/slack-app-setup.md` に分割整理済み(PR #2, #5) |
 | 詳細仕様の確定(後続作業に必要な範囲) | done | `finalize-detailed-specs` ブランチ。`cli-interface.md` / `slack-api-usage.md` 新設、既存 4 文書の確定、decision log 0024〜0031 |
 | アーキテクチャ選定(言語・フレームワーク) | done | `select-architecture` ブランチ。Go(1.26 系)+ stdlib-first を採用し、`architecture.md` と decision log 0032〜0034 に記録 |
-| PoC 実装(機能充足性の確認) | done | `poc-implementation` ブランチ。Go で happy path を実装し、実 workspace への E2E で主要経路を確認。機能充足性に問題なし。`--reuse-cache` は PoC 未実装(note 参照)。追加 E2E(`poc-additional-e2e` ブランチ、実運用 channel 2 件)で system 行・複数ユーザー・実 unfurl・bot 未参加エラー経路も確認。目視レビュー所見 2 件(code block 内 URL、コンテナ実行時 TZ)は未決事項に記録済み |
+| PoC 実装(機能充足性の確認) | done | `poc-implementation` ブランチ。Go で happy path を実装し、実 workspace への E2E で主要経路を確認。機能充足性に問題なし。`--reuse-cache` は PoC 未実装(note 参照)。追加 E2E(`poc-additional-e2e` ブランチ、実運用 channel 2 件)で system 行・複数ユーザー・実 unfurl・bot 未参加エラー経路も確認。目視レビュー所見 2 件のうち code block 内 URL は修正済み(decision log 0026 追記)、コンテナ実行時 TZ は未決事項のまま |
 | 本実装(テスト整備、--reuse-cache、リリース整備など) | pending | PoC を土台に実装フェーズへ。スコープは別途整理する |
