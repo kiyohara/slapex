@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -43,70 +44,35 @@ var authErrorCodes = map[string]bool{
 
 const helpURL = "https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md"
 
+var errUsage = errors.New("usage error")
+
 func main() {
 	os.Exit(run())
 }
 
+type cliOptions struct {
+	channel        string
+	outputDir      string
+	maxPosts       int
+	days           int
+	maxAttachBytes int64
+	keepCache      bool
+	reuseCache     string
+	noInteractive  bool
+	showVersion    bool
+}
+
 func run() int {
-	fs := flag.NewFlagSet("slapex", flag.ContinueOnError)
-	fs.SetOutput(os.Stderr)
-	var (
-		outputDir     = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
-		maxPosts      = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
-		days          = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
-		maxAttach     = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
-		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
-		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept .cache/ directory (not implemented in PoC)")
-		noInteractive = fs.Bool("no-interactive", false, "never start interactive channel selection")
-		showVersion   = fs.Bool("version", false, "print version and exit")
-	)
-	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: slapex [channel] [options]\n\n")
-		fmt.Fprintf(os.Stderr, "Exports Slack channel posts as locally browsable HTML with assets.\n")
-		fmt.Fprintf(os.Stderr, "The bot token is taken from the SLACK_BOT_TOKEN environment variable.\n\n")
-		fmt.Fprintf(os.Stderr, "Options:\n")
-		fs.PrintDefaults()
-	}
-	// The standard flag package stops parsing at the first non-flag
-	// argument, but the spec allows options after the positional channel
-	// (cli-interface.md: slapex [channel] [options]). Parse in two passes.
-	if err := fs.Parse(os.Args[1:]); err != nil {
+	opts, err := parseArgsWithOutput(os.Args[1:], os.Stderr)
+	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
 		}
 		return exitUsage
 	}
-	channel := ""
-	if fs.NArg() > 0 {
-		channel = fs.Arg(0)
-		if err := fs.Parse(fs.Args()[1:]); err != nil {
-			if errors.Is(err, flag.ErrHelp) {
-				return exitOK
-			}
-			return exitUsage
-		}
-	}
-	if *showVersion {
+	if opts.showVersion {
 		fmt.Fprintln(os.Stdout, "slapex "+version)
 		return exitOK
-	}
-	if fs.NArg() > 0 {
-		fmt.Fprintf(os.Stderr, "slapex: too many arguments: %s\n", strings.Join(fs.Args(), " "))
-		fs.Usage()
-		return exitUsage
-	}
-	if *maxPosts < 1 || *maxPosts > 10000 {
-		fmt.Fprintln(os.Stderr, "slapex: --max-posts must be between 1 and 10000")
-		return exitUsage
-	}
-	if *days < 1 || *days > 90 {
-		fmt.Fprintln(os.Stderr, "slapex: --days must be between 1 and 90")
-		return exitUsage
-	}
-	maxAttachBytes, err := parseSize(*maxAttach)
-	if err != nil || maxAttachBytes < 1024 {
-		fmt.Fprintf(os.Stderr, "slapex: invalid --max-attachment-size %q (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n", *maxAttach)
-		return exitUsage
 	}
 
 	token := os.Getenv("SLACK_BOT_TOKEN")
@@ -126,21 +92,21 @@ func run() int {
 	client := slack.New(token)
 	client.Logf = logf
 
-	opts := export.Options{
-		ChannelKeyword: channel,
-		OutputDir:      *outputDir,
-		MaxPosts:       *maxPosts,
-		Days:           *days,
-		MaxAttachBytes: maxAttachBytes,
-		KeepCache:      *keepCache,
-		ReuseCache:     *reuseCache,
-		NoInteractive:  *noInteractive,
+	exportOpts := export.Options{
+		ChannelKeyword: opts.channel,
+		OutputDir:      opts.outputDir,
+		MaxPosts:       opts.maxPosts,
+		Days:           opts.days,
+		MaxAttachBytes: opts.maxAttachBytes,
+		KeepCache:      opts.keepCache,
+		ReuseCache:     opts.reuseCache,
+		NoInteractive:  opts.noInteractive,
 		Interactive: term.IsTerminal(int(os.Stdin.Fd())) &&
 			term.IsTerminal(int(os.Stdout.Fd())),
 		ToolVersion: version,
 	}
 
-	dir, err := export.Run(context.Background(), client, opts, logf)
+	dir, err := export.Run(context.Background(), client, exportOpts, logf)
 	if err != nil {
 		code := classify(err)
 		fmt.Fprintf(os.Stderr, "slapex: %s\n", err)
@@ -151,6 +117,83 @@ func run() int {
 	}
 	fmt.Fprintln(os.Stdout, dir)
 	return exitOK
+}
+
+func parseArgs(args []string) (*cliOptions, error) {
+	return parseArgsWithOutput(args, io.Discard)
+}
+
+func parseArgsWithOutput(args []string, output io.Writer) (*cliOptions, error) {
+	fs := flag.NewFlagSet("slapex", flag.ContinueOnError)
+	fs.SetOutput(output)
+	var (
+		outputDir     = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
+		maxPosts      = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
+		days          = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
+		maxAttach     = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
+		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
+		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept .cache/ directory (not implemented in PoC)")
+		noInteractive = fs.Bool("no-interactive", false, "never start interactive channel selection")
+		showVersion   = fs.Bool("version", false, "print version and exit")
+	)
+	fs.Usage = func() {
+		fmt.Fprintf(output, "Usage: slapex [channel] [options]\n\n")
+		fmt.Fprintf(output, "Exports Slack channel posts as locally browsable HTML with assets.\n")
+		fmt.Fprintf(output, "The bot token is taken from the SLACK_BOT_TOKEN environment variable.\n\n")
+		fmt.Fprintf(output, "Options:\n")
+		fs.PrintDefaults()
+	}
+	// The standard flag package stops parsing at the first non-flag
+	// argument, but the spec allows options after the positional channel
+	// (cli-interface.md: slapex [channel] [options]). Parse in two passes.
+	if err := fs.Parse(args); err != nil {
+		if !errors.Is(err, flag.ErrHelp) {
+			err = fmt.Errorf("%w: %v", errUsage, err)
+		}
+		return nil, err
+	}
+	channel := ""
+	if fs.NArg() > 0 {
+		channel = fs.Arg(0)
+		if err := fs.Parse(fs.Args()[1:]); err != nil {
+			if !errors.Is(err, flag.ErrHelp) {
+				err = fmt.Errorf("%w: %v", errUsage, err)
+			}
+			return nil, err
+		}
+	}
+	if *showVersion {
+		return &cliOptions{showVersion: true}, nil
+	}
+	if fs.NArg() > 0 {
+		fmt.Fprintf(output, "slapex: too many arguments: %s\n", strings.Join(fs.Args(), " "))
+		fs.Usage()
+		return nil, errUsage
+	}
+	if *maxPosts < 1 || *maxPosts > 10000 {
+		fmt.Fprintln(output, "slapex: --max-posts must be between 1 and 10000")
+		return nil, errUsage
+	}
+	if *days < 1 || *days > 90 {
+		fmt.Fprintln(output, "slapex: --days must be between 1 and 90")
+		return nil, errUsage
+	}
+	maxAttachBytes, err := parseSize(*maxAttach)
+	if err != nil || maxAttachBytes < 1024 {
+		fmt.Fprintf(output, "slapex: invalid --max-attachment-size %q (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n", *maxAttach)
+		return nil, errUsage
+	}
+	return &cliOptions{
+		channel:        channel,
+		outputDir:      *outputDir,
+		maxPosts:       *maxPosts,
+		days:           *days,
+		maxAttachBytes: maxAttachBytes,
+		keepCache:      *keepCache,
+		reuseCache:     *reuseCache,
+		noInteractive:  *noInteractive,
+		showVersion:    *showVersion,
+	}, nil
 }
 
 func classify(err error) int {
@@ -168,7 +211,7 @@ func classify(err error) int {
 		}
 		return exitRuntime
 	}
-	return exitRuntime
+	return exitOther
 }
 
 // parseSize parses --max-attachment-size values: a plain byte count or an
