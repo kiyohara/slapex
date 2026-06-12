@@ -1,0 +1,11 @@
+---
+description: GitHub Issue を指定されたタスクを消化するときに読み込む Issue 駆動タスク実行ルール
+alwaysApply: false
+---
+
+# Issue 駆動タスク実行ルール
+
+- 詳細は `doc/guidelines/issue-driven-task-execution.md`
+- Issue 指定のタスク消化を始める前に、必ず共通正本を読む
+- 1 Issue = 1 ブランチ = 1 PR。PR の merge は agent が行わず、ユーザーが行う
+- tool 固有入口だけに恒久ルールを書かない

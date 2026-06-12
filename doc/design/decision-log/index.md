@@ -47,6 +47,8 @@
 | 0033 | decided | Go の依存方針とライブラリ | stdlib-first。外部依存は huh(TTY 選択、module path は charm.land/huh/v2)と x/term、x/text(NFC 正規化)に限定。Slack client は自前 thin client、CLI は標準 flag、HTML は html/template、絵文字データは go:embed | [0033-go-dependency-policy.md](0033-go-dependency-policy.md) |
 | 0034 | decided | 配布方式 | GitHub Releases に darwin / linux × amd64 / arm64 の単一バイナリを添付。リリース自動化は goreleaser 想定、Homebrew tap は将来検討 | [0034-distribution-method.md](0034-distribution-method.md) |
 | 0035 | decided | avatar 画像の保存対象化 | 登場する投稿者の avatar を `assets/avatars/` に保存し、取得不可時はイニシャル表示に fallback。PoC で顕在化した表示仕様と保存仕様のギャップを解消 | [0035-avatar-assets.md](0035-avatar-assets.md) |
+| 0036 | decided | v1.0 リリースのスコープ | テスト整備・CI・`--reuse-cache`・TZ 課題・actor 表示・リリース整備・README / LICENSE・総合 E2E を含め、v1.0 公開までを本実装プランとする。差分取得などの未決事項は post-v1 に据え置き | [0036-v1-release-scope.md](0036-v1-release-scope.md) |
+| 0037 | decided | Issue 駆動タスク消化の運用方式 | 1 Issue = 1 ブランチ = 1 PR の自己完結 Issue を直列消化する。共通手順は `doc/guidelines/issue-driven-task-execution.md`、索引は `progress.md` のタスク表、merge はユーザーが行う | [0037-issue-driven-task-execution.md](0037-issue-driven-task-execution.md) |
 
 ## 未決事項
 
@@ -60,9 +62,9 @@
 | 出力制御 option | open | `--quiet` / `--verbose` / `--no-color` などを追加するか | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md) |
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
-| リリース整備と Homebrew tap | open | goreleaser 設定と release workflow の整備時期、Homebrew tap を提供するか | [0034-distribution-method.md](0034-distribution-method.md) |
-| system メッセージの actor 表示 | open | `channel_topic` 等で API の `text` に actor mention が含まれない場合に、`user` field から author prefix を補完して Slack UI 同等にするか(PoC 追加 E2E の所見) | [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) |
-| コンテナ実行時のタイムゾーン | open | Docker 経由の実行ではコンテナの local timezone(UTC)が表示とディレクトリ名に使われ、利用者の期待(JST 等)とずれる(PoC 目視レビューの所見)。dev / E2E 手順で host の `TZ` を forward するか、`--tz` などの明示指定 option を導入するか | [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) |
+| リリース整備と Homebrew tap | open | goreleaser 設定と release workflow は v1 プラン(task v1-13 / v1-14)で整備する。Homebrew tap を提供するかは post-v1 で判断 | [0034-distribution-method.md](0034-distribution-method.md) |
+| system メッセージの actor 表示 | open | `channel_topic` 等で API の `text` に actor mention が含まれない場合に、`user` field から author prefix を補完して Slack UI 同等にするか(PoC 追加 E2E の所見)。v1 プラン(task v1-12)で決定・対応する | [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) |
+| コンテナ実行時のタイムゾーン | open | Docker 経由の実行ではコンテナの local timezone(UTC)が表示とディレクトリ名に使われ、利用者の期待(JST 等)とずれる(PoC 目視レビューの所見)。dev / E2E 手順で host の `TZ` を forward するか、`--tz` などの明示指定 option を導入するか。v1 プラン(task v1-11)で決定・対応する | [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) |
 
 解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。「code block 内の URL 構文の表示」は [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) の追記で方針を確定し、修正済み。
 
