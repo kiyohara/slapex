@@ -53,8 +53,29 @@ type Client struct {
 	Logf func(format string, args ...any)
 }
 
-func New(token string) *Client {
-	return &Client{
+// Option customizes a Client.
+type Option func(*Client)
+
+// WithBaseURL points the client at an alternate Slack Web API base URL.
+func WithBaseURL(baseURL string) Option {
+	return func(c *Client) {
+		if !strings.HasSuffix(baseURL, "/") {
+			baseURL += "/"
+		}
+		c.baseURL = baseURL
+	}
+}
+
+// WithSleeper replaces request pacing and retry sleeps.
+func WithSleeper(sleep func(context.Context, time.Duration) error) Option {
+	return func(c *Client) {
+		c.sleep = sleep
+	}
+}
+
+// New creates a Slack Web API client for token.
+func New(token string, opts ...Option) *Client {
+	c := &Client{
 		token:      token,
 		baseURL:    apiBase,
 		httpClient: &http.Client{Timeout: 120 * time.Second},
@@ -62,6 +83,10 @@ func New(token string) *Client {
 		sleep:      sleepCtx,
 		Logf:       func(string, ...any) {},
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 type apiEnvelope struct {
