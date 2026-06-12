@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `v1/04-test-output`
-- PR: 未作成
+- PR: #36
 - 最終更新: 2026-06-12
 
 ## 目的
@@ -14,6 +14,7 @@ GitHub Issue #18 に従い、`internal/output/` の directory label 正規化、
 - `progress.md` で依存タスク v1-01 が done であることを確認済み。
 - `v1/04-test-output` ブランチを作成済み。
 - `internal/output/label_test.go` と `internal/output/output_test.go` を追加済み。
+- PR #36 を作成済み。
 
 ## 決定事項
 
@@ -21,7 +22,7 @@ GitHub Issue #18 に従い、`internal/output/` の directory label 正規化、
 
 ## 次にやること
 
-- PR 作成後、PR 番号を `progress.md` と note ファイル名へ反映する。
+- レビュー待ち。
 
 ## 検証
 
@@ -37,3 +38,4 @@ GitHub Issue #18 に従い、`internal/output/` の directory label 正規化、
 
 - 2026-06-12: MCP で Issue #18 を取得し、依存確認とブランチ作成を実施。
 - 2026-06-12: `internal/output` の label / root / assets / extension / cache / remove cache のユニットテストを追加し、Issue 指定の検証を完了。
+- 2026-06-12: PR #36 作成後、note を `working-branch-notes/36_v1-04-test-output.md` へ rename。
