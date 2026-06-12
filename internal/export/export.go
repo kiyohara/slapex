@@ -270,7 +270,11 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 	}
 
 	if !opts.Interactive || opts.NoInteractive {
-		logf("Multiple channels matched %q.", keyword)
+		if keyword == "" {
+			logf("No channel specified. Select one of the following channels:")
+		} else {
+			logf("Multiple channels matched %q.", keyword)
+		}
 		logf("")
 		logf("Workspace: %s", wsLine)
 		logf("")

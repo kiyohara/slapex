@@ -84,7 +84,19 @@ func TestChooseChannel(t *testing.T) {
 			opts:    Options{},
 			wantErr: true,
 			wantLogs: []string{
-				`Multiple channels matched "".`,
+				"No channel specified. Select one of the following channels:",
+				"Candidates:",
+				"#general (C001, public, active, member)",
+				"slapex C001",
+			},
+		},
+		{
+			name:     "empty keyword single candidate non interactive",
+			channels: testChannels("C001", "general"),
+			opts:     Options{},
+			wantErr:  true,
+			wantLogs: []string{
+				"No channel specified. Select one of the following channels:",
 				"Candidates:",
 				"#general (C001, public, active, member)",
 				"slapex C001",
@@ -109,7 +121,7 @@ func TestChooseChannel(t *testing.T) {
 			}
 			var logs []string
 			got, err := chooseChannel(testChannels, tt.opts, "Example Workspace", func(format string, args ...any) {
-				logs = append(logs, sprintf(format, args...))
+				logs = append(logs, fmt.Sprintf(format, args...))
 			})
 			if tt.wantErr {
 				var usage *UsageError
@@ -175,8 +187,8 @@ func numberedChannels(n int, prefix string) []slack.Channel {
 	channels := make([]slack.Channel, 0, n)
 	for i := 1; i <= n; i++ {
 		channels = append(channels, slack.Channel{
-			ID:       sprintf("C%03d", i),
-			Name:     sprintf("%s-%02d", prefix, i),
+			ID:       fmt.Sprintf("C%03d", i),
+			Name:     fmt.Sprintf("%s-%02d", prefix, i),
 			IsMember: true,
 		})
 	}
@@ -190,8 +202,4 @@ func containsLog(logs []string, want string) bool {
 		}
 	}
 	return false
-}
-
-func sprintf(format string, args ...any) string {
-	return strings.TrimSpace(fmt.Sprintf(format, args...))
 }
