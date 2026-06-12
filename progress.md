@@ -38,7 +38,7 @@
 
 | # | タスク | Issue | 依存 | 状態 | PR |
 |---|---|---|---|---|---|
-| v1-01 | CI 整備(gofmt / vet / build / test / クロスコンパイル) | #15 | なし | pending | |
+| v1-01 | CI 整備(gofmt / vet / build / test / クロスコンパイル) | #15 | なし | done | |
 | v1-02 | mrkdwn 変換のユニットテスト | #16 | v1-01 | pending | |
 | v1-03 | CLI flag parse・検証・exit code 分類のユニットテスト | #17 | v1-01 | pending | |
 | v1-04 | output の label 正規化・出力構造・cache 書き出しテスト | #18 | v1-01 | pending | |
