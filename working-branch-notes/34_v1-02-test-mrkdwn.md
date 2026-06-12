@@ -14,6 +14,7 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 - `main` が `origin/main` と同一 commit であることを確認し、作業ブランチを作成済み。
 - `internal/render/mrkdwn_test.go` を追加し、Issue #16 の対象ケースを実装済み。
 - テスト追加中に見つかった引用 block 直後の改行欠落を `internal/render/mrkdwn.go` で修正済み。
+- `progress.md` の v1-02 行を done / #34 に更新済み。
 
 ## 決定事項
 
@@ -22,7 +23,7 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 
 ## 次にやること
 
-- PR #34 への反映確認と、`progress.md` の PR 列更新を行う。
+- PR #34 への追加 commit 反映と PR description 更新を確認する。
 
 ## 検証
 
@@ -39,3 +40,4 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 - 2026-06-12: Issue #16 を読み、依存 v1-01 done を確認。`v1/02-test-mrkdwn` を作成し、作業開始。
 - 2026-06-12: mrkdwn 変換の table-driven test を追加。引用 block 直後の通常行で改行が落ちる既存バグを検出し、仕様から期待挙動が一意に判断できるため同 PR で修正。
 - 2026-06-12: Issue 指定の検証 3 件が pass。
+- 2026-06-12: PR #34 採番後に note を rename し、`progress.md` を更新。
