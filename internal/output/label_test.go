@@ -47,7 +47,6 @@ func TestSlug(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			if got := Slug(tt.in); got != tt.want {
@@ -91,7 +90,6 @@ func TestWorkspaceLabel(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got := WorkspaceLabel(tt.workspaceURL, tt.teamName, tt.teamID)
@@ -126,7 +124,6 @@ func TestChannelLabel(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got := ChannelLabel(tt.channelName, tt.channelID)

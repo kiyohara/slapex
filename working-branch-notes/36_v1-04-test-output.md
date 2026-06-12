@@ -15,6 +15,7 @@ GitHub Issue #18 に従い、`internal/output/` の directory label 正規化、
 - `v1/04-test-output` ブランチを作成済み。
 - `internal/output/label_test.go` と `internal/output/output_test.go` を追加済み。
 - PR #36 を作成済み。
+- self code-review の指摘 2 件(`tt := tt` の削除、`TestWriteCacheFile` の subtest 化)へ対応済み。
 
 ## 決定事項
 
@@ -39,3 +40,4 @@ GitHub Issue #18 に従い、`internal/output/` の directory label 正規化、
 - 2026-06-12: MCP で Issue #18 を取得し、依存確認とブランチ作成を実施。
 - 2026-06-12: `internal/output` の label / root / assets / extension / cache / remove cache のユニットテストを追加し、Issue 指定の検証を完了。
 - 2026-06-12: PR #36 作成後、note を `working-branch-notes/36_v1-04-test-output.md` へ rename。
+- 2026-06-12: self code-review(/code-review medium)を実施し、指摘 2 件(`tt := tt` dead code、`TestWriteCacheFile` subtest 化)へ対応。test / gofmt / vet を再実行し pass。

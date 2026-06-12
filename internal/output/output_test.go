@@ -159,7 +159,6 @@ func TestExtensionFor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			if got := extensionFor(tt.meta, tt.srcURL, tt.contentType); got != tt.want {
@@ -204,24 +203,27 @@ func TestWriteCacheFile(t *testing.T) {
 	}
 
 	for name, payload := range payloads {
-		if err := WriteCacheFile(outDir, name, payload); err != nil {
-			t.Fatalf("WriteCacheFile(%s): %v", name, err)
-		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := WriteCacheFile(outDir, name, payload); err != nil {
+				t.Fatalf("WriteCacheFile(%s): %v", name, err)
+			}
 
-		raw, err := os.ReadFile(filepath.Join(outDir, ".cache", name))
-		if err != nil {
-			t.Fatalf("read cache file %s: %v", name, err)
-		}
-		var got struct {
-			SchemaVersion int    `json:"schema_version"`
-			GeneratedAt   string `json:"generated_at"`
-		}
-		if err := json.Unmarshal(raw, &got); err != nil {
-			t.Fatalf("unmarshal cache file %s: %v", name, err)
-		}
-		if got.SchemaVersion != SchemaVersion || got.GeneratedAt != generatedAt {
-			t.Fatalf("%s common fields = schema:%d generated_at:%q, want schema:%d generated_at:%q", name, got.SchemaVersion, got.GeneratedAt, SchemaVersion, generatedAt)
-		}
+			raw, err := os.ReadFile(filepath.Join(outDir, ".cache", name))
+			if err != nil {
+				t.Fatalf("read cache file %s: %v", name, err)
+			}
+			var got struct {
+				SchemaVersion int    `json:"schema_version"`
+				GeneratedAt   string `json:"generated_at"`
+			}
+			if err := json.Unmarshal(raw, &got); err != nil {
+				t.Fatalf("unmarshal cache file %s: %v", name, err)
+			}
+			if got.SchemaVersion != SchemaVersion || got.GeneratedAt != generatedAt {
+				t.Fatalf("%s common fields = schema:%d generated_at:%q, want schema:%d generated_at:%q", name, got.SchemaVersion, got.GeneratedAt, SchemaVersion, generatedAt)
+			}
+		})
 	}
 }
 
