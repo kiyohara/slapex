@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: plan-v1-implementation
-- PR: (未採番)
+- PR: #32
 - 最終更新: 2026-06-12
 
 ## 目的
@@ -24,8 +24,8 @@
 
 ## 次にやること
 
-- PR 作成、採番後に note rename。merge 判断はユーザー(本プラン PR から人間 merge 運用に切り替え)。
-- merge 後、ユーザーが Issue を 1 件ずつ指定して消化を開始する(kickoff prompt は issue-driven-task-execution.md 参照)。
+- ユーザーによる PR #32 のレビューと merge(本プラン PR から人間 merge 運用に切り替え)。
+- merge 後、ユーザーが Issue #15(v1-01)から 1 件ずつ指定して消化を開始する(kickoff prompt は issue-driven-task-execution.md 参照)。
 
 ## 検証
 
