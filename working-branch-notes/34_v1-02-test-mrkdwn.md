@@ -1,0 +1,50 @@
+# 作業ブランチメモ
+
+- ブランチ: v1/02-test-mrkdwn
+- PR: #34
+- 最終更新: 2026-06-12
+
+## 目的
+
+Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を table-driven test で固定する。
+
+## 現在の状況
+
+- v1-01 の依存完了を `progress.md` で確認済み。
+- `main` が `origin/main` と同一 commit であることを確認し、作業ブランチを作成済み。
+- `internal/render/mrkdwn_test.go` を追加し、Issue #16 の対象ケースを実装済み。
+- テスト追加中に見つかった引用 block 直後の改行欠落を `internal/render/mrkdwn.go` で修正済み。
+- `progress.md` の v1-02 行を done / #34 に更新済み。
+- PR #34 description を更新済み。
+- Review follow-up として引用 block の隣接経路テストを追加し、`linesToHTML` の条件式を簡略化済み。
+
+## 決定事項
+
+- テスト用 `TextResolver` fake を使い、変換表、エスケープ系、code 内構文のケースを `internal/render/mrkdwn_test.go` に集約する。
+- 引用 block の直後に通常行が続く場合も、仕様の「改行は改行として表示」に従い `<br>` を残す。
+
+## 次にやること
+
+- レビュー待ち。merge はユーザーが行う。
+
+## 検証
+
+- `docker compose run --rm dev go test ./internal/render/... -v` pass。
+- `docker compose run --rm dev gofmt -l .` pass(出力なし)。
+- `docker compose run --rm dev go vet ./...` pass。
+- Review follow-up 後に `docker compose run --rm dev go test ./internal/render/... -v` pass。
+- Review follow-up 後に `docker compose run --rm dev gofmt -l .` pass(出力なし)。
+- Review follow-up 後に `docker compose run --rm dev go vet ./...` pass。
+
+## リスク・ブロッカー
+
+- なし。
+
+## セッションログ
+
+- 2026-06-12: Issue #16 を読み、依存 v1-01 done を確認。`v1/02-test-mrkdwn` を作成し、作業開始。
+- 2026-06-12: mrkdwn 変換の table-driven test を追加。引用 block 直後の通常行で改行が落ちる既存バグを検出し、仕様から期待挙動が一意に判断できるため同 PR で修正。
+- 2026-06-12: Issue 指定の検証 3 件が pass。
+- 2026-06-12: PR #34 採番後に note を rename し、`progress.md` を更新。
+- 2026-06-12: PR #34 description を採番後の状態に更新。
+- 2026-06-12: Review thread 2 件に対応。引用 block の隣接経路テストを追加し、`hadQuote` 条件を簡略化。
