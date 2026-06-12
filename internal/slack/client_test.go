@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -429,7 +430,7 @@ func TestCallGivesUpAfterMaxRetries(t *testing.T) {
 	t.Parallel()
 
 	seq := &statusSequenceServer{
-		statuses: []int{500, 500, 500, 500, 500, 500},
+		statuses: slices.Repeat([]int{http.StatusInternalServerError}, maxRetries+1),
 		okBody:   authTestOK,
 	}
 	srv := httptest.NewServer(seq)
