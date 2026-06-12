@@ -42,7 +42,7 @@
 | v1-02 | mrkdwn 変換のユニットテスト | #16 | v1-01 | done | #34 |
 | v1-03 | CLI flag parse・検証・exit code 分類のユニットテスト | #17 | v1-01 | done | #35 |
 | v1-04 | output の label 正規化・出力構造・cache 書き出しテスト | #18 | v1-01 | done | #36 |
-| v1-05 | slack thin client のテスト(retry / 429 / pagination) | #19 | v1-01 | pending | |
+| v1-05 | slack thin client のテスト(retry / 429 / pagination) | #19 | v1-01 | done | #37 |
 | v1-06 | channel 解決ロジックのテスト | #20 | v1-01 | pending | |
 | v1-07 | fake Slack server 統合テストハーネス + happy path | #21 | v1-05 | pending | |
 | v1-08 | 統合テスト: 表示系シナリオ追加 | #22 | v1-07 | pending | |
