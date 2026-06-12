@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `v1/06-test-channel-resolution`
-- PR: 未作成
+- PR: #38
 - 最終更新: 2026-06-13
 
 ## 目的
@@ -22,8 +22,7 @@ GitHub Issue #20 に従い、`internal/export` の channel 解決ロジックを
 
 ## 次にやること
 
-- `progress.md` の v1-06 行を更新し、PR を作成する。
-- PR 作成後、note を番号付きファイル名へ rename する。
+- レビュー待ち。
 
 ## 検証
 
@@ -39,3 +38,4 @@ GitHub Issue #20 に従い、`internal/export` の channel 解決ロジックを
 
 - 2026-06-13: Issue #20 を GitHub MCP で確認し、依存 v1-01 done を `progress.md` で確認。作業ブランチを作成。
 - 2026-06-13: `chooseChannel` / `channelLine` のユニットテストを追加。channel 未指定 + non-TTY で候補 1 件を自動確定していた仕様不整合を修正し、Issue 指定の検証を実行して pass。
+- 2026-06-13: PR #38 作成後、note を `working-branch-notes/38_v1-06-test-channel-resolution.md` へ rename。
