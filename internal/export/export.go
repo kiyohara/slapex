@@ -260,7 +260,7 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 	switch {
 	case len(candidates) == 0:
 		return slack.Channel{}, usagef("no channel matched %q. Check the channel name or ID; for private channels the bot must be a member.", keyword)
-	case len(candidates) == 1:
+	case len(candidates) == 1 && keyword != "":
 		return candidates[0], nil
 	}
 
@@ -270,7 +270,11 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 	}
 
 	if !opts.Interactive || opts.NoInteractive {
-		logf("Multiple channels matched %q.", keyword)
+		if keyword == "" {
+			logf("No channel specified. Select one of the following channels:")
+		} else {
+			logf("Multiple channels matched %q.", keyword)
+		}
 		logf("")
 		logf("Workspace: %s", wsLine)
 		logf("")
