@@ -17,6 +17,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - Decision log 記録ルール(方針決定ログの作成・更新・index 管理): `doc/guidelines/decision-log-guidelines.md`
 - Working branch notes 取り扱いルール(性質・整合性スコープ・ライフサイクル・メンテコスト判断): `doc/guidelines/working-branch-notes-handling.md`
 - Working branch notes 情報統制ルール(`working-branch-notes/**/*.md` のセキュリティ禁則): `doc/guidelines/working-branch-notes-security.md`
+- Issue 駆動タスク実行ルール(Issue 指定タスクの消化手順 / 1 Issue = 1 PR / merge はユーザー): `doc/guidelines/issue-driven-task-execution.md`
 
 ## ドキュメント配置
 
@@ -54,6 +55,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - `gh` コマンドを実行するときは `doc/guidelines/github-cli-guidelines.md` に従う。GitHub MCP 利用ルールでも `gh` fallback の経路はこの正本を参照する。
 - 依存 install / アプリ起動 / test / build など、開発環境を host OS 上に構築・実行する類のコマンドを実行するときは `doc/guidelines/development-command-guidelines.md` に従い、Docker Compose 経由を優先する。
 - PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
+- GitHub Issue を指定されてタスクを消化するときは `doc/guidelines/issue-driven-task-execution.md` に従う。
 - ドキュメントを作成・移動・分類変更するときは、まず `doc/README.md` と該当ディレクトリの `README.md` を確認する。
 - 設計判断、方針変更、重要な検討経緯を記録するときは `doc/guidelines/decision-log-guidelines.md` に従う。
 - Decision log を記録するときは、まず `doc/design/decision-log/index.md` を読み、必要に応じて個別ログを作成または更新する。
