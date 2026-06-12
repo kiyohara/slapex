@@ -11,7 +11,7 @@ GitHub Issue #17 のタスクとして、`cmd/slapex` の CLI 引数 parse・入
 ## 現在の状況
 
 - 依存タスク v1-01 は `progress.md` 上で done を確認済み。
-- `parseArgsWithOutput` を抽出し、CLI parse・validation・exit code 分類のユニットテストを追加済み。
+- `parseCLIArgs` を抽出し、CLI parse・validation・exit code 分類のユニットテストを追加済み。
 - Issue 指定の検証は完了。
 - PR #35 を作成済み。
 - `progress.md` の v1-03 行を done / PR #35 に更新済み。
@@ -21,7 +21,7 @@ GitHub Issue #17 のタスクとして、`cmd/slapex` の CLI 引数 parse・入
 
 - Issue 本文のスコープに従い、挙動変更を伴わないテスト可能化とテスト追加に限定する。
 - `classify` の fallback は、現状の `export.Run` が実行時失敗を plain error として返すことを踏まえ、既存挙動どおり `exitRuntime` のまま維持する。
-- test 専用の `parseArgs` wrapper は production code から外し、`main_test.go` 側の helper とする。
+- `parseArgsWithOutput` / test 専用 `parseArgs` の関係は本筋と派生が逆に見えるため、production 側の本体を `parseCLIArgs(args, diagnostics)` に改名し、テストでは `io.Discard` を直接渡す。
 
 ## 次にやること
 
@@ -50,3 +50,4 @@ GitHub Issue #17 のタスクとして、`cmd/slapex` の CLI 引数 parse・入
 - 2026-06-12: Issue #17 を確認。MCP は再認証が必要だったため、ルールに従い `gh` fallback で Issue 本文を取得。依存 v1-01 done を確認し、作業ブランチと note を作成。
 - 2026-06-12: `parseArgs` 抽出、`cmd/slapex/main_test.go` 追加、`classify` の分類不能 error を exit code 1 へ修正。Issue 指定の検証を完了。
 - 2026-06-12: PR #35 の review comment 2 件を github-op-integrated MCP tool で確認。どちらも妥当と判断し、`classify` fallback を `exitRuntime` に戻し、test 専用 `parseArgs` wrapper を `main_test.go` へ移す方針で対応。
+- 2026-06-12: `parseArgs` / `parseArgsWithOutput` の命名を再検討。本体を `parseCLIArgs(args, diagnostics)` とし、テストは `io.Discard` を直接渡す形に変更。

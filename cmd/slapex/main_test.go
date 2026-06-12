@@ -11,10 +11,6 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-func parseArgs(args []string) (*cliOptions, error) {
-	return parseArgsWithOutput(args, io.Discard)
-}
-
 func TestParseSize(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -76,12 +72,12 @@ func TestParseArgsValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseArgs(tt.args)
+			_, err := parseCLIArgs(tt.args, io.Discard)
 			if tt.wantErr && err == nil {
-				t.Fatalf("parseArgs(%v) succeeded, want error", tt.args)
+				t.Fatalf("parseCLIArgs(%v) succeeded, want error", tt.args)
 			}
 			if !tt.wantErr && err != nil {
-				t.Fatalf("parseArgs(%v) returned error: %v", tt.args, err)
+				t.Fatalf("parseCLIArgs(%v) returned error: %v", tt.args, err)
 			}
 		})
 	}
@@ -98,9 +94,9 @@ func TestParseArgsTwoPass(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseArgs(tt.args)
+			got, err := parseCLIArgs(tt.args, io.Discard)
 			if err != nil {
-				t.Fatalf("parseArgs(%v) returned error: %v", tt.args, err)
+				t.Fatalf("parseCLIArgs(%v) returned error: %v", tt.args, err)
 			}
 			if got.channel != "general" {
 				t.Fatalf("channel = %q, want %q", got.channel, "general")
@@ -126,12 +122,12 @@ func TestParseArgsUsageErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseArgs(tt.args)
+			_, err := parseCLIArgs(tt.args, io.Discard)
 			if err == nil {
-				t.Fatalf("parseArgs(%v) succeeded, want error", tt.args)
+				t.Fatalf("parseCLIArgs(%v) succeeded, want error", tt.args)
 			}
 			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("parseArgs(%v) error = %v, want %v", tt.args, err, tt.wantErr)
+				t.Fatalf("parseCLIArgs(%v) error = %v, want %v", tt.args, err, tt.wantErr)
 			}
 		})
 	}

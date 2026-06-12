@@ -63,7 +63,7 @@ type cliOptions struct {
 }
 
 func run() int {
-	opts, err := parseArgsWithOutput(os.Args[1:], os.Stderr)
+	opts, err := parseCLIArgs(os.Args[1:], os.Stderr)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
@@ -119,9 +119,9 @@ func run() int {
 	return exitOK
 }
 
-func parseArgsWithOutput(args []string, output io.Writer) (*cliOptions, error) {
+func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 	fs := flag.NewFlagSet("slapex", flag.ContinueOnError)
-	fs.SetOutput(output)
+	fs.SetOutput(diagnostics)
 	var (
 		outputDir     = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
 		maxPosts      = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
@@ -133,10 +133,10 @@ func parseArgsWithOutput(args []string, output io.Writer) (*cliOptions, error) {
 		showVersion   = fs.Bool("version", false, "print version and exit")
 	)
 	fs.Usage = func() {
-		fmt.Fprintf(output, "Usage: slapex [channel] [options]\n\n")
-		fmt.Fprintf(output, "Exports Slack channel posts as locally browsable HTML with assets.\n")
-		fmt.Fprintf(output, "The bot token is taken from the SLACK_BOT_TOKEN environment variable.\n\n")
-		fmt.Fprintf(output, "Options:\n")
+		fmt.Fprintf(diagnostics, "Usage: slapex [channel] [options]\n\n")
+		fmt.Fprintf(diagnostics, "Exports Slack channel posts as locally browsable HTML with assets.\n")
+		fmt.Fprintf(diagnostics, "The bot token is taken from the SLACK_BOT_TOKEN environment variable.\n\n")
+		fmt.Fprintf(diagnostics, "Options:\n")
 		fs.PrintDefaults()
 	}
 	// The standard flag package stops parsing at the first non-flag
@@ -162,21 +162,21 @@ func parseArgsWithOutput(args []string, output io.Writer) (*cliOptions, error) {
 		return &cliOptions{showVersion: true}, nil
 	}
 	if fs.NArg() > 0 {
-		fmt.Fprintf(output, "slapex: too many arguments: %s\n", strings.Join(fs.Args(), " "))
+		fmt.Fprintf(diagnostics, "slapex: too many arguments: %s\n", strings.Join(fs.Args(), " "))
 		fs.Usage()
 		return nil, errUsage
 	}
 	if *maxPosts < 1 || *maxPosts > 10000 {
-		fmt.Fprintln(output, "slapex: --max-posts must be between 1 and 10000")
+		fmt.Fprintln(diagnostics, "slapex: --max-posts must be between 1 and 10000")
 		return nil, errUsage
 	}
 	if *days < 1 || *days > 90 {
-		fmt.Fprintln(output, "slapex: --days must be between 1 and 90")
+		fmt.Fprintln(diagnostics, "slapex: --days must be between 1 and 90")
 		return nil, errUsage
 	}
 	maxAttachBytes, err := parseSize(*maxAttach)
 	if err != nil || maxAttachBytes < 1024 {
-		fmt.Fprintf(output, "slapex: invalid --max-attachment-size %q (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n", *maxAttach)
+		fmt.Fprintf(diagnostics, "slapex: invalid --max-attachment-size %q (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n", *maxAttach)
 		return nil, errUsage
 	}
 	return &cliOptions{
