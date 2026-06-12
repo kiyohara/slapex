@@ -15,6 +15,8 @@ GitHub Issue #21 の v1-07 タスクとして、fake Slack server による `int
 - 作業ブランチ `v1/07-integration-harness` を作成済み。
 - `internal/export` に fake Slack server ベースの統合テストハーネスと happy path テストを追加済み。
 - Issue #21 指定の検証コマンドはすべて pass。
+- PR #39 を作成し、note を番号付きファイル名へ rename 済み。
+- `progress.md` の v1-07 行を done / #39 に更新済み。
 
 ## 決定事項
 
@@ -22,7 +24,7 @@ GitHub Issue #21 の v1-07 タスクとして、fake Slack server による `int
 
 ## 次にやること
 
-- `progress.md` の v1-07 行を PR #39 / done に更新する。
+- レビュー待ち。
 
 ## 検証
 
@@ -39,3 +41,4 @@ GitHub Issue #21 の v1-07 タスクとして、fake Slack server による `int
 
 - 2026-06-13: Issue #21 を GitHub MCP で確認し、依存 v1-05 が done であることを確認。`main` を更新して作業ブランチを作成。
 - 2026-06-13: Slack client に baseURL / sleep の option を追加し、`internal/export` に scenario fixture と fake Slack server を用いた happy path 統合テストを追加。Issue 指定の検証を完了。
+- 2026-06-13: PR #39 を作成し、note を `39_v1-07-integration-harness.md` へ rename。`progress.md` を done / #39 に更新。
