@@ -14,6 +14,7 @@ GitHub Issue #17 のタスクとして、`cmd/slapex` の CLI 引数 parse・入
 - `parseArgs` を抽出し、CLI parse・validation・exit code 分類のユニットテストを追加済み。
 - Issue 指定の検証は完了。
 - PR #35 を作成済み。
+- `progress.md` の v1-03 行を done / PR #35 に更新済み。
 
 ## 決定事項
 
@@ -22,7 +23,7 @@ GitHub Issue #17 のタスクとして、`cmd/slapex` の CLI 引数 parse・入
 
 ## 次にやること
 
-- 採番後の note rename と `progress.md` の PR 番号追記を commit / push する。
+- ユーザーに PR URL、検証結果、未解決事項を報告する。
 
 ## 検証
 

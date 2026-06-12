@@ -40,7 +40,7 @@
 |---|---|---|---|---|---|
 | v1-01 | CI 整備(gofmt / vet / build / test / クロスコンパイル) | #15 | なし | done | #33 |
 | v1-02 | mrkdwn 変換のユニットテスト | #16 | v1-01 | done | #34 |
-| v1-03 | CLI flag parse・検証・exit code 分類のユニットテスト | #17 | v1-01 | done | |
+| v1-03 | CLI flag parse・検証・exit code 分類のユニットテスト | #17 | v1-01 | done | #35 |
 | v1-04 | output の label 正規化・出力構造・cache 書き出しテスト | #18 | v1-01 | pending | |
 | v1-05 | slack thin client のテスト(retry / 429 / pagination) | #19 | v1-01 | pending | |
 | v1-06 | channel 解決ロジックのテスト | #20 | v1-01 | pending | |
