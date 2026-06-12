@@ -30,14 +30,14 @@ const (
 // Slack error codes that indicate authentication / permission problems
 // (exit code 3, doc/design/cli-interface.md).
 var authErrorCodes = map[string]bool{
-	"invalid_auth":     true,
-	"not_authed":       true,
-	"account_inactive": true,
-	"token_revoked":    true,
-	"token_expired":    true,
-	"missing_scope":    true,
-	"no_permission":    true,
-	"not_in_channel":   true,
+	"invalid_auth":      true,
+	"not_authed":        true,
+	"account_inactive":  true,
+	"token_revoked":     true,
+	"token_expired":     true,
+	"missing_scope":     true,
+	"no_permission":     true,
+	"not_in_channel":    true,
 	"ekm_access_denied": true,
 }
 
