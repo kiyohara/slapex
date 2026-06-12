@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: v1/07-integration-harness
-- PR: 未作成
+- PR: #39
 - 最終更新: 2026-06-13
 
 ## 目的
@@ -22,7 +22,7 @@ GitHub Issue #21 の v1-07 タスクとして、fake Slack server による `int
 
 ## 次にやること
 
-- PR を作成し、採番後に `progress.md` と note ファイル名を更新する。
+- `progress.md` の v1-07 行を PR #39 / done に更新する。
 
 ## 検証
 
