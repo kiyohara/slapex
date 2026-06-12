@@ -43,8 +43,12 @@ var ErrTooLarge = errors.New("download exceeds size limit")
 
 type Client struct {
 	token      string
+	baseURL    string
 	httpClient *http.Client
 	lastCall   map[string]time.Time
+	// sleep performs pacing and retry waits. Tests replace it with a fake
+	// that records the requested durations without sleeping.
+	sleep func(context.Context, time.Duration) error
 	// Logf reports progress such as rate limit waits. Defaults to a no-op.
 	Logf func(format string, args ...any)
 }
@@ -52,8 +56,10 @@ type Client struct {
 func New(token string) *Client {
 	return &Client{
 		token:      token,
+		baseURL:    apiBase,
 		httpClient: &http.Client{Timeout: 120 * time.Second},
 		lastCall:   map[string]time.Time{},
+		sleep:      sleepCtx,
 		Logf:       func(string, ...any) {},
 	}
 }
@@ -66,20 +72,25 @@ type apiEnvelope struct {
 	} `json:"response_metadata"`
 }
 
-func (c *Client) pace(key string) {
+func (c *Client) pace(ctx context.Context, key string) error {
 	if last, ok := c.lastCall[key]; ok {
 		if wait := methodPace - time.Since(last); wait > 0 {
-			time.Sleep(wait)
+			if err := c.sleep(ctx, wait); err != nil {
+				return err
+			}
 		}
 	}
 	c.lastCall[key] = time.Now()
+	return nil
 }
 
 // call POSTs a form-encoded Web API request and decodes the body into out.
 func (c *Client) call(ctx context.Context, method string, params url.Values, out any) (string, error) {
-	c.pace(method)
+	if err := c.pace(ctx, method); err != nil {
+		return "", fmt.Errorf("slack api %s: %w", method, err)
+	}
 	body, err := c.withRetry(ctx, "api "+method, func() (*http.Response, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiBase+method,
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+method,
 			strings.NewReader(params.Encode()))
 		if err != nil {
 			return nil, err
@@ -110,15 +121,19 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 // failures (5xx, network errors) with exponential backoff and jitter.
 func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http.Response, error)) ([]byte, error) {
 	var lastErr error
+	var retryWait time.Duration // next wait dictated by Retry-After; 0 means backoff
 	for attempt := 0; ; attempt++ {
 		if attempt > maxRetries {
 			return nil, fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
 		}
 		if attempt > 0 {
-			backoff := min(time.Duration(1<<(attempt-1))*time.Second, maxBackoff)
-			backoff += time.Duration(rand.Int63n(int64(time.Second)))
-			c.Logf("retrying %s in %s (%s)", what, backoff.Round(time.Second), lastErr)
-			if err := sleepCtx(ctx, backoff); err != nil {
+			wait := retryWait
+			retryWait = 0
+			if wait == 0 {
+				wait = backoffWait(attempt)
+				c.Logf("retrying %s in %s (%s)", what, wait.Round(time.Second), lastErr)
+			}
+			if err := c.sleep(ctx, wait); err != nil {
 				return nil, err
 			}
 		}
@@ -129,12 +144,11 @@ func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http
 		}
 		switch {
 		case resp.StatusCode == http.StatusTooManyRequests:
-			wait := retryAfter(resp)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
-			c.Logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
-			if err := sleepCtx(ctx, wait); err != nil {
-				return nil, err
+			if wait, ok := retryAfter(resp); ok {
+				retryWait = wait
+				c.Logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
 			}
 			continue
 		case resp.StatusCode >= 500:
@@ -155,13 +169,23 @@ func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http
 	}
 }
 
-func retryAfter(resp *http.Response) time.Duration {
+// backoffWait is the exponential backoff before the given retry attempt
+// (1-based): 1s, 2s, 4s, ... capped at maxBackoff, plus up to 1s of jitter.
+func backoffWait(attempt int) time.Duration {
+	wait := min(time.Duration(1<<(attempt-1))*time.Second, maxBackoff)
+	return wait + time.Duration(rand.Int63n(int64(time.Second)))
+}
+
+// retryAfter parses the Retry-After header, adding up to 1s of jitter. It
+// reports false when the header is missing or unusable; the caller then
+// falls back to exponential backoff.
+func retryAfter(resp *http.Response) (time.Duration, bool) {
 	if v := resp.Header.Get("Retry-After"); v != "" {
 		if secs, err := strconv.Atoi(v); err == nil && secs > 0 {
-			return time.Duration(secs)*time.Second + time.Duration(rand.Int63n(int64(time.Second)))
+			return time.Duration(secs)*time.Second + time.Duration(rand.Int63n(int64(time.Second))), true
 		}
 	}
-	return 5 * time.Second
+	return 0, false
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -178,7 +202,9 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 // Download fetches an asset URL (files.slack.com etc.) with the bot token.
 // When limit > 0 and the body exceeds it, ErrTooLarge is returned.
 func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.Writer) (written int64, contentType string, err error) {
-	c.pace("download")
+	if err := c.pace(ctx, "download"); err != nil {
+		return 0, "", err
+	}
 	body, ct, err := c.downloadRetry(ctx, srcURL)
 	if err != nil {
 		return 0, "", err
@@ -200,13 +226,19 @@ func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.
 
 func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadCloser, string, error) {
 	var lastErr error
+	var retryWait time.Duration // next wait dictated by Retry-After; 0 means backoff
 	for attempt := 0; ; attempt++ {
 		if attempt > maxRetries {
 			return nil, "", fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
 		}
 		if attempt > 0 {
-			backoff := min(time.Duration(1<<(attempt-1))*time.Second, maxBackoff)
-			if err := sleepCtx(ctx, backoff); err != nil {
+			wait := retryWait
+			retryWait = 0
+			if wait == 0 {
+				wait = backoffWait(attempt)
+				c.Logf("retrying download in %s (%s)", wait.Round(time.Second), lastErr)
+			}
+			if err := c.sleep(ctx, wait); err != nil {
 				return nil, "", err
 			}
 		}
@@ -222,12 +254,11 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 		}
 		switch {
 		case resp.StatusCode == http.StatusTooManyRequests:
-			wait := retryAfter(resp)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
-			c.Logf("rate limited on download, waiting %s", wait.Round(time.Second))
-			if err := sleepCtx(ctx, wait); err != nil {
-				return nil, "", err
+			if wait, ok := retryAfter(resp); ok {
+				retryWait = wait
+				c.Logf("rate limited on download, waiting %s as instructed by Slack", wait.Round(time.Second))
 			}
 			continue
 		case resp.StatusCode >= 500:
