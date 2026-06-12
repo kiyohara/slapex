@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: v1/02-test-mrkdwn
-- PR:
+- PR: #34
 - 最終更新: 2026-06-12
 
 ## 目的
@@ -22,7 +22,7 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 
 ## 次にやること
 
-- PR を作成し、PR 採番後に note rename と `progress.md` の PR 列更新を行う。
+- PR #34 への反映確認と、`progress.md` の PR 列更新を行う。
 
 ## 検証
 
