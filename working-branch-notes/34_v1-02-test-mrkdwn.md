@@ -16,6 +16,7 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 - テスト追加中に見つかった引用 block 直後の改行欠落を `internal/render/mrkdwn.go` で修正済み。
 - `progress.md` の v1-02 行を done / #34 に更新済み。
 - PR #34 description を更新済み。
+- Review follow-up として引用 block の隣接経路テストを追加し、`linesToHTML` の条件式を簡略化済み。
 
 ## 決定事項
 
@@ -31,6 +32,9 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 - `docker compose run --rm dev go test ./internal/render/... -v` pass。
 - `docker compose run --rm dev gofmt -l .` pass(出力なし)。
 - `docker compose run --rm dev go vet ./...` pass。
+- Review follow-up 後に `docker compose run --rm dev go test ./internal/render/... -v` pass。
+- Review follow-up 後に `docker compose run --rm dev gofmt -l .` pass(出力なし)。
+- Review follow-up 後に `docker compose run --rm dev go vet ./...` pass。
 
 ## リスク・ブロッカー
 
@@ -43,3 +47,4 @@ Issue #16 に従い、`internal/render/mrkdwn.go` の mrkdwn to HTML 変換を t
 - 2026-06-12: Issue 指定の検証 3 件が pass。
 - 2026-06-12: PR #34 採番後に note を rename し、`progress.md` を更新。
 - 2026-06-12: PR #34 description を採番後の状態に更新。
+- 2026-06-12: Review thread 2 件に対応。引用 block の隣接経路テストを追加し、`hadQuote` 条件を簡略化。

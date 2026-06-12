@@ -69,6 +69,21 @@ func TestMrkdwn(t *testing.T) {
 			want: "<blockquote>quoted</blockquote><br>normal",
 		},
 		{
+			name: "quote block at end",
+			text: "normal\n&gt; quoted",
+			want: "normal<br><blockquote>quoted</blockquote>",
+		},
+		{
+			name: "multi-line quote block",
+			text: "&gt; first\n&gt; second",
+			want: "<blockquote>first<br>second</blockquote>",
+		},
+		{
+			name: "multiple quote blocks",
+			text: "&gt; first\nnormal\n&gt; second",
+			want: "<blockquote>first</blockquote><br>normal<br><blockquote>second</blockquote>",
+		},
+		{
 			name: "bare link",
 			text: "<https://example.com/path?q=1>",
 			want: `<a href="https://example.com/path?q=1">https://example.com/path?q=1</a>`,

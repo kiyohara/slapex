@@ -209,7 +209,7 @@ func linesToHTML(s string) string {
 		}
 		hadQuote := len(quote) > 0
 		flushQuote()
-		if hadQuote && out.Len() > 0 {
+		if hadQuote {
 			out.WriteString("<br>")
 		}
 		out.WriteString(line)
