@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `v1/05-test-slack-client`
-- PR: (未採番)
+- PR: #37
 - 最終更新: 2026-06-12
 
 ## 目的
@@ -28,7 +28,7 @@ GitHub Issue #19 に従い、Slack thin client(`internal/slack/`)の retry / rat
 
 ## 次にやること
 
-- PR 作成とレビュー待ち。
+- レビュー待ち。
 
 ## 検証
 
@@ -46,3 +46,4 @@ GitHub Issue #19 に従い、Slack thin client(`internal/slack/`)の retry / rat
 
 - 2026-06-12: MCP で Issue #19 を取得し、依存確認とブランチ作成を実施。
 - 2026-06-12: baseURL / sleep の注入リファクタ、retry 待機の仕様整合修正、`client_test.go` 追加。Issue 指定の検証をすべて実施し pass。
+- 2026-06-12: PR #37 作成後、note を `working-branch-notes/37_v1-05-test-slack-client.md` へ rename。
