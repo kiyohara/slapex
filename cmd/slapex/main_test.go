@@ -4,11 +4,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
 )
+
+func parseArgs(args []string) (*cliOptions, error) {
+	return parseArgsWithOutput(args, io.Discard)
+}
 
 func TestParseSize(t *testing.T) {
 	tests := []struct {
@@ -169,9 +174,9 @@ func TestClassify(t *testing.T) {
 			want: exitRuntime,
 		},
 		{
-			name: "other unclassified failure",
+			name: "plain runtime failure",
 			err:  errors.New("unexpected internal failure"),
-			want: exitOther,
+			want: exitRuntime,
 		},
 	}
 

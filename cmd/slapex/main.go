@@ -119,10 +119,6 @@ func run() int {
 	return exitOK
 }
 
-func parseArgs(args []string) (*cliOptions, error) {
-	return parseArgsWithOutput(args, io.Discard)
-}
-
 func parseArgsWithOutput(args []string, output io.Writer) (*cliOptions, error) {
 	fs := flag.NewFlagSet("slapex", flag.ContinueOnError)
 	fs.SetOutput(output)
@@ -211,7 +207,7 @@ func classify(err error) int {
 		}
 		return exitRuntime
 	}
-	return exitOther
+	return exitRuntime
 }
 
 // parseSize parses --max-attachment-size values: a plain byte count or an
