@@ -260,7 +260,7 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 	switch {
 	case len(candidates) == 0:
 		return slack.Channel{}, usagef("no channel matched %q. Check the channel name or ID; for private channels the bot must be a member.", keyword)
-	case len(candidates) == 1:
+	case len(candidates) == 1 && keyword != "":
 		return candidates[0], nil
 	}
 
