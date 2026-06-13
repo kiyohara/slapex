@@ -18,6 +18,7 @@ GitHub Issue #21 の v1-07 タスクとして、fake Slack server による `int
 - PR #39 を作成し、note を番号付きファイル名へ rename 済み。
 - `progress.md` の v1-07 行を done / #39 に更新済み。
 - レビューコメント 5 件を確認し、妥当と判断して修正済み。
+- 追加レビューコメント 1 件を確認し、妥当と判断して修正済み。
 
 ## 決定事項
 
@@ -45,3 +46,4 @@ GitHub Issue #21 の v1-07 タスクとして、fake Slack server による `int
 - 2026-06-13: PR #39 を作成し、note を `39_v1-07-integration-harness.md` へ rename。`progress.md` を done / #39 に更新。
 - 2026-06-13: PR #39 のレビューコメント 5 件を確認。channel ID 固定、未使用 form 記録、JSON response 生成、manifest asset 型、Slack client test の注入経路を修正。
 - 2026-06-13: 修正を push し、レビューコメント 5 件へ対応結果を返信。
+- 2026-06-13: 追加レビューコメント 1 件を確認。date divider assertion のタイムゾーン依存を修正し、`TZ=Asia/Tokyo` でも対象テストが pass することを確認。

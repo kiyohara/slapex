@@ -437,6 +437,8 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		t.Fatalf("read index.html: %v", err)
 	}
 	body := string(data)
+	dateDivider := fmt.Sprintf(`<div class="date-divider"><span>%s</span></div>`,
+		tsTime("1700000001.000000").Format("2006-01-02"))
 	for _, marker := range []string{
 		"Acme Workspace (acme.example.slack.com, TACME123)",
 		"#project-alpha (C123, public, active, member)",
@@ -448,7 +450,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		"Thread is wrapped up",
 		`<span class="reaction-count">3</span>`,
 		`<span class="reaction-count">2</span>`,
-		`<div class="date-divider"><span>2023-11-14</span></div>`,
+		dateDivider,
 		`assets/avatars/`,
 		`assets/emoji/`,
 		`assets/og-images/`,
