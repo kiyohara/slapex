@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -225,7 +224,6 @@ type fakeSlackServer struct {
 
 	mu     sync.Mutex
 	counts map[string]int
-	forms  map[string][]url.Values
 }
 
 func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
@@ -235,7 +233,6 @@ func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
 		t:      t,
 		sc:     sc,
 		counts: map[string]int{},
-		forms:  map[string][]url.Values{},
 	}
 	mux := http.NewServeMux()
 	for path := range sc.Assets {
@@ -289,7 +286,7 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	case "/api/conversations.list":
 		writeSlackOK(w, map[string]any{"channels": f.sc.Channels})
 	case "/api/conversations.history":
-		if got := r.PostForm.Get("channel"); got != "C123" {
+		if got := r.PostForm.Get("channel"); !f.hasChannel(got) {
 			writeSlackError(w, "channel_not_found")
 			return
 		}
@@ -315,6 +312,12 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (f *fakeSlackServer) hasChannel(id string) bool {
+	return slices.ContainsFunc(f.sc.Channels, func(ch slack.Channel) bool {
+		return ch.ID == id
+	})
+}
+
 func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 	if got := r.Header.Get("Authorization"); got != "Bearer "+integrationTestToken {
 		http.Error(w, "missing auth", http.StatusUnauthorized)
@@ -334,27 +337,31 @@ func (f *fakeSlackServer) record(r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.counts[r.URL.Path]++
-	if r.PostForm != nil {
-		f.forms[r.URL.Path] = append(f.forms[r.URL.Path], cloneValues(r.PostForm))
-	}
-}
-
-func cloneValues(values url.Values) url.Values {
-	clone := make(url.Values, len(values))
-	for key, vals := range values {
-		clone[key] = append([]string(nil), vals...)
-	}
-	return clone
 }
 
 func writeSlackOK(w http.ResponseWriter, payload any) {
 	w.Header().Set("Content-Type", "application/json")
-	data, err := json.Marshal(payload)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	body := map[string]any{"ok": true}
+	if payload != nil {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var fields map[string]any
+		if err := json.Unmarshal(data, &fields); err == nil {
+			for key, value := range fields {
+				if key != "ok" {
+					body[key] = value
+				}
+			}
+		} else {
+			body["payload"] = payload
+		}
 	}
-	fmt.Fprintf(w, `{"ok":true,%s`, strings.TrimPrefix(string(data), "{"))
+	if err := json.NewEncoder(w).Encode(body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func writeSlackError(w http.ResponseWriter, code string) {
@@ -518,10 +525,7 @@ func assertCacheFiles(t *testing.T, dir string) {
 	}
 
 	var manifest struct {
-		Assets []struct {
-			Kind   string `json:"kind"`
-			Status string `json:"status"`
-		} `json:"assets"`
+		Assets []manifestAsset `json:"assets"`
 	}
 	readJSON(t, filepath.Join(dir, ".cache/assets_manifest.json"), &manifest)
 	for _, kind := range []string{"avatar", "emoji", "og_image", "upload_thumb", "upload_original", "attachment"} {
@@ -557,14 +561,13 @@ func readJSON(t *testing.T, path string, out any) {
 	}
 }
 
-func hasSavedAsset(assets []struct {
+type manifestAsset struct {
 	Kind   string `json:"kind"`
 	Status string `json:"status"`
-}, kind string) bool {
-	return slices.ContainsFunc(assets, func(asset struct {
-		Kind   string `json:"kind"`
-		Status string `json:"status"`
-	}) bool {
+}
+
+func hasSavedAsset(assets []manifestAsset, kind string) bool {
+	return slices.ContainsFunc(assets, func(asset manifestAsset) bool {
 		return asset.Kind == kind && asset.Status == "saved"
 	})
 }
