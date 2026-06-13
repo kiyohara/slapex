@@ -47,7 +47,7 @@
 | v1-07 | fake Slack server 統合テストハーネス + happy path | #21 | v1-05 | done | #39 |
 | v1-08 | 統合テスト: 表示系シナリオ追加 | #22 | v1-07 | done | #40 |
 | v1-09 | 統合テスト: エラー・rate limit シナリオ追加 | #23 | v1-07 | done | #41 |
-| v1-10 | `--reuse-cache` の実装 | #24 | v1-07 | pending | |
+| v1-10 | `--reuse-cache` の実装 | #24 | v1-07 | done | #42 |
 | v1-11 | コンテナ実行時 TZ の解決(TZ forward) | #25 | v1-01 | pending | |
 | v1-12 | system メッセージの actor 表示 | #26 | v1-08 | pending | |
 | v1-13 | goreleaser 設定と version 埋め込み | #27 | v1-01 | pending | |
