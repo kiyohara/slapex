@@ -461,9 +461,11 @@ func TestRunIntegrationOversizeAttachment(t *testing.T) {
 	got := runExportScenario(t, sc, opts)
 	body := readIndexHTML(t, got.OutputDir)
 
-	// Replacement message includes file name, original size and the limit.
+	// Replacement message includes file name (link text), Slack file ID,
+	// original size and the limit (output-format.md). Asserting the file ID
+	// keeps the display honest if it is ever dropped.
 	mustContain(t, body, `<span class="file-link unavailable">📄 big-archive.zip</span>`)
-	mustContain(t, body, "サイズオーバーのため保存されませんでした。(5000B, 上限 100B)")
+	mustContain(t, body, "サイズオーバーのため保存されませんでした。(file ID: F-ZIP, 5000B, 上限 100B)")
 
 	entry, ok := findManifest(readManifestEntries(t, got.OutputDir), func(e manifestEntryFull) bool {
 		return e.Kind == "attachment" && e.FileID == "F-ZIP"
@@ -604,8 +606,11 @@ func TestRunIntegrationRepliesTruncated(t *testing.T) {
 	got := runExportScenario(t, sc, renderingOptions(t))
 	body := readIndexHTML(t, got.OutputDir)
 
+	// All replies up to the 1000 cap are kept, including the boundary value
+	// reply 1000; only the 1001st is dropped. (reply 1000 present guards
+	// against an off-by-one that cuts at 999.)
 	mustContain(t, body, `<div class="message-body">reply 1</div>`)
-	// The 1001st reply is dropped at the cap.
+	mustContain(t, body, `<div class="message-body">reply 1000</div>`)
 	mustNotContain(t, body, "reply 1001")
 
 	threadIdx := strings.Index(body, `<div class="thread">`)

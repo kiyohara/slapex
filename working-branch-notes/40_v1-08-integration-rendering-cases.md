@@ -32,8 +32,14 @@ v1.0 リリース実装プランのタスク 08/17(Issue #22)。v1-07 で整え�
 - date divider など timezone 依存の assert は、ハードコードせず `tsTime(...)` から
   期待値を算出する(直近の TZ flaky 修正と同じ方針)。
 - 1000 件打ち切りの replies は fixture をコードでループ生成する(Issue の許可どおり)。
-- 実装の挙動はすべて確定仕様(html-rendering.md / output-format.md)に一致しており、
-  仕様と実装の食い違いは見つかっていない。表示仕様の変更はしない(スコープ外)。
+- サイズ超過の非画像添付の置換表示に file ID を追加(PR #40 レビュー対応)。
+  `output-format.md`「置換表示には、可能であればファイル名、Slack file ID、元の
+  file size、設定された size limit を含める」が一意で、file ID は取得可能なため、
+  `addAttachmentFile` の置換 note を `(file ID: <id>, <size>, 上限 <limit>)` に変更し、
+  `TestRunIntegrationOversizeAttachment` で `F-ZIP` を assert(issue-driven の
+  「仕様が一意なら同 PR 修正」に該当)。画像 original 超過(10b)の注記は今回未変更。
+- それ以外の表示挙動はすべて確定仕様(html-rendering.md / output-format.md)に一致して
+  おり、表示仕様そのものの変更・追加はしない(スコープ外)。
 
 ## 次にやること
 
@@ -78,3 +84,7 @@ v1.0 リリース実装プランのタスク 08/17(Issue #22)。v1-07 で整え�
 
 - 2026-06-13: main を最新化(PR #39 merge 済みを確認)し作業ブランチを作成。
   ハーネスと rendering 実装を読了。13 ケースの追加方針を確定。
+- 2026-06-13: 13 ケース追加・全検証 pass で PR #40 を作成。
+- 2026-06-13: PR #40 レビュー対応。(1) 置換表示に file ID を追加して 10a で `F-ZIP`
+  を assert、(2) 12 の打ち切り境界 `reply 1000` の残存 assert を追加。再検証で
+  `go test ./...` / `gofmt -l .` / `go vet ./...` すべて pass。
