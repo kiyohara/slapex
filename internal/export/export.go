@@ -64,10 +64,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	wsLine := fmt.Sprintf("%s (%s, %s)", auth.Team, hostOf(auth.URL), auth.TeamID)
 	logf("Workspace: %s", wsLine)
 
-	if opts.ReuseCache != "" {
-		logf("warning: --reuse-cache is not implemented in this PoC; fetching everything")
-	}
-
 	logf("Listing channels...")
 	channels, err := client.ListChannels(ctx)
 	if err != nil {
@@ -79,6 +75,11 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	}
 	chLine := channelLine(ch)
 	logf("Target: %s / %s", wsLine, chLine)
+
+	var reuse *reusableCache
+	if opts.ReuseCache != "" {
+		reuse = resolveReuseCache(opts.ReuseCache, auth.TeamID, ch.ID, logf)
+	}
 
 	root, err := output.Root(opts.OutputDir, now)
 	if err != nil {
@@ -121,7 +122,15 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	userIDs := collectUserIDs(messages, replies)
 	logf("Resolving %d users...", len(userIDs))
 	users := map[string]*slack.User{}
+	reusedUsers := 0
 	for _, id := range userIDs {
+		if reuse != nil {
+			if cu, ok := reuse.users[id]; ok {
+				users[id] = cu.toUser(id)
+				reusedUsers++
+				continue
+			}
+		}
 		u, err := client.UserInfo(ctx, id)
 		if err != nil {
 			logf("  warning: could not resolve user %s: %s", id, err)
@@ -129,11 +138,20 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 		}
 		users[id] = u
 	}
+	if reusedUsers > 0 {
+		logf("  reused %d user(s) from cache (skipped users.info)", reusedUsers)
+	}
 
-	logf("Fetching custom emoji list...")
-	customEmoji, err := client.EmojiList(ctx)
-	if err != nil {
-		return "", err
+	var customEmoji map[string]string
+	if reuse != nil {
+		customEmoji = reuse.emoji
+		logf("Reusing custom emoji list from cache (%d entries, skipped emoji.list)", len(customEmoji))
+	} else {
+		logf("Fetching custom emoji list...")
+		customEmoji, err = client.EmojiList(ctx)
+		if err != nil {
+			return "", err
+		}
 	}
 	emojiResolver, err := emoji.NewResolver(customEmoji)
 	if err != nil {
@@ -142,6 +160,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 
 	assets := output.NewAssets(ctx, client, dir, opts.MaxAttachBytes)
 	assets.Logf = logf
+	if reuse != nil {
+		assets.SetReuseSource(reuse.reuseSource())
+	}
 
 	avatars := map[string]string{}
 	for id, u := range users {
@@ -232,6 +253,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	logf("Done: %s / %s", wsLine, chLine)
 	logf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
 	logf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
+	if n := assets.Reused(); n > 0 {
+		logf("    (of which %d copied from reused cache, no download)", n)
+	}
 	logf("  output: %s", abs)
 	return abs, nil
 }

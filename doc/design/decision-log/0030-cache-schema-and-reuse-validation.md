@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-06-13
 - 関連: `doc/design/cache.md`, `doc/design/decision-log/0005-cache-handling.md`
 
 ## 背景
@@ -38,6 +38,26 @@
 - 0005 以来の未決事項「再利用時の整合性検証」を解決し、`index.md` の未決事項から外す。
 - 実装は cache 読み込み時に 3 点検証を行い、検証結果を stderr に表示する。
 - 将来差分取得を導入する場合は、メッセージ raw response の保存方針を再検討する(その際は本ログを superseded にする)。
+
+## 追記(2026-06-13, v1-10 実装): assets の旧出力からの実ファイルコピー
+
+`--reuse-cache` の実装(v1-10 / Issue #24)で、assets の再利用方法を次のように具体化した。これは
+`cache.md` 本文に明文化されていない実装詳細であり、本文の方針(「再利用対象は assets manifest と
+user / emoji 解決結果」)を変えるものではないため、`cache.md` は変更せず本ログに記録する。
+
+- 仕組み: 取得対象 asset の `source_url` が旧 `assets_manifest.json` の `status: "saved"` エントリに
+  一致し、旧 `.cache/` の親ディレクトリ(旧出力の channel ディレクトリ)に当該エントリの `local_path`
+  の実ファイルが存在する場合、その実ファイルを新しい出力の同じ `local_path` へコピーして download を
+  省略する。実ファイルが無い、または検証不能・コピー失敗の場合は、その asset だけ通常 download に
+  フォールバックする。
+- `local_path` は `md5(source_url)` + 拡張子の決定的レイアウトのため、旧 `local_path` をそのまま新しい
+  出力の相対 path として用いる。これにより HTML が参照する asset path が 1 回目の実行と一致する。
+- 対象は `status: "saved"` のエントリのみ。旧実行で `skipped_size` / `failed` だった asset は再利用せず
+  通常 download する。
+- size 上限(`--max-attachment-size`)の差異は、message metadata の `size` と上限による事前判定
+  (`output-format.md`)でカバーされる。コピーはこの事前判定を通過した asset に対してのみ呼ばれる。
+- user / emoji の再利用は API 呼び出し(`users.info` / `emoji.list`)の省略であり、ファイルコピーは
+  伴わない。`auth.test` / `conversations.list` は cache 検証のため毎回実行し、live 値を正とする。
 
 ## 後から見直す条件
 
