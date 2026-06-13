@@ -33,7 +33,7 @@ import (
 func TestRunIntegrationReuseCacheReducesRequests(t *testing.T) {
 	t.Parallel()
 
-	r := runReuseScenario(t, nil)
+	r := runReuseScenario(t, happyPathScenario(), nil)
 
 	// users.info and emoji.list are not called again, and no asset is downloaded
 	// a second time: all came from the reused cache.
@@ -101,6 +101,14 @@ func TestRunIntegrationReuseCacheFallback(t *testing.T) {
 			},
 		},
 		{
+			name: "channel ID mismatch",
+			tamper: func(t *testing.T, dir string) {
+				rewriteJSON(t, filepath.Join(dir, "metadata.json"), func(m map[string]any) {
+					m["channel"].(map[string]any)["id"] = "CWRONG999"
+				})
+			},
+		},
+		{
 			name: "missing cache file",
 			tamper: func(t *testing.T, dir string) {
 				if err := os.Remove(filepath.Join(dir, "slack_api_cache.json")); err != nil {
@@ -123,7 +131,7 @@ func TestRunIntegrationReuseCacheFallback(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := runReuseScenario(t, tc.tamper)
+			r := runReuseScenario(t, happyPathScenario(), tc.tamper)
 
 			if d := delta(r.before, r.after, "/api/users.info"); d < 1 {
 				t.Fatalf("users.info delta = %d, want >= 1 (fallback re-resolves users)", d)
@@ -145,6 +153,25 @@ func TestRunIntegrationReuseCacheFallback(t *testing.T) {
 	}
 }
 
+// --- case 6: an image_48-only avatar is preserved across reuse ---------------
+
+// Regression guard for the avatar fidelity fix: a user whose avatar comes from
+// image_48 (image_72 empty) must still have its avatar copied on reuse, not
+// dropped. If the cache persisted only image_72, run 2 would save no avatar and
+// its assets/ subtree would differ from run 1's, failing assertAssetsIdentical.
+func TestRunIntegrationReuseCacheImage48Avatar(t *testing.T) {
+	t.Parallel()
+
+	r := runReuseScenario(t, image48AvatarScenario(), nil)
+
+	// The image_48 avatar is copied from the cache (no re-download) and the
+	// assets/ subtree is byte-identical to the first run.
+	if d := delta(r.before, r.after, "/files/avatar48.png"); d != 0 {
+		t.Fatalf("avatar download delta = %d, want 0 (image_48 avatar copied from cache)", d)
+	}
+	assertAssetsIdentical(t, r.dir1, r.dir2)
+}
+
 // --- shared harness ----------------------------------------------------------
 
 // reuseRun holds the two output directories, the fake server request counts
@@ -160,10 +187,9 @@ type reuseRun struct {
 // runReuseScenario runs the happy-path export twice against one shared fake
 // server: run 1 keeps its cache, then tamper (if any) mutates that cache, then
 // run 2 reuses it. It returns the request-count snapshots and run 2's logs.
-func runReuseScenario(t *testing.T, tamper func(t *testing.T, cacheDir string)) reuseRun {
+func runReuseScenario(t *testing.T, sc exportScenario, tamper func(t *testing.T, cacheDir string)) reuseRun {
 	t.Helper()
 
-	sc := happyPathScenario()
 	fake := newFakeSlackServer(t, &sc)
 	t.Cleanup(fake.Close)
 
@@ -213,6 +239,24 @@ func reuseOptions(t *testing.T, keepCache bool) Options {
 		KeepCache:      keepCache,
 		ToolVersion:    "test",
 	}
+}
+
+// image48AvatarScenario is a minimal valid scenario whose single resolved user
+// has only an image_48 avatar (image_72 empty), exercising the image_48 fallback
+// path through the cache.
+func image48AvatarScenario() exportScenario {
+	sc := baseScenario()
+	u := sc.Users["U01"]
+	u.Profile.Image72 = ""
+	u.Profile.Image48 = "{{base}}/files/avatar48.png"
+	sc.Users["U01"] = u
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1700000001.000000", User: "U01", Text: "hello"},
+	}
+	sc.Assets = map[string]fakeAsset{
+		"/files/avatar48.png": {ContentType: "image/png", Body: "avatar-48-only"},
+	}
+	return sc
 }
 
 func assetPaths(sc exportScenario) []string {

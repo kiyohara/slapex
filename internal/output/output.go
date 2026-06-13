@@ -228,6 +228,13 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	if !ok || entry.LocalPath == "" {
 		return "", false
 	}
+	// LocalPath comes from a previous run's manifest. Reject anything that is not
+	// a contained relative path so a corrupted or untrusted cache cannot read or
+	// write outside the old / new output directories (path traversal); such an
+	// asset falls back to a normal download.
+	if !filepath.IsLocal(filepath.FromSlash(entry.LocalPath)) {
+		return "", false
+	}
 	src := filepath.Join(a.reuse.OldDir, filepath.FromSlash(entry.LocalPath))
 	info, err := os.Stat(src)
 	if err != nil || info.IsDir() {
@@ -247,6 +254,9 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 		meta.Mimetype = entry.Mimetype
 	}
 	a.reused++
+	// Record under the requested kind: each source_url maps to exactly one kind,
+	// so this matches both the copied file's directory and what a fresh download
+	// would record, keeping the reused manifest identical to a normal run.
 	a.record(kind, srcURL, meta, entry.LocalPath, "saved", "")
 	return entry.LocalPath, true
 }

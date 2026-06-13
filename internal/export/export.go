@@ -166,11 +166,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 
 	avatars := map[string]string{}
 	for id, u := range users {
-		src := u.Profile.Image72
-		if src == "" {
-			src = u.Profile.Image48
-		}
-		if rel, ok := assets.Save(output.KindAvatar, src, output.AssetMeta{}); ok {
+		if rel, ok := assets.Save(output.KindAvatar, avatarURL(u), output.AssetMeta{}); ok {
 			avatars[id] = rel
 		}
 	}
@@ -615,7 +611,7 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 
 	cachedUsers := map[string]cachedUser{}
 	for id, u := range users {
-		cachedUsers[id] = cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: u.Profile.Image72}
+		cachedUsers[id] = cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: avatarURL(u)}
 	}
 	apiCache := map[string]any{
 		"schema_version": common.SchemaVersion,
@@ -656,6 +652,17 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+// avatarURL is the avatar image URL slapex saves for a user: the 72px image,
+// falling back to the 48px image. Persisting this effective URL (rather than
+// image_72 alone) lets --reuse-cache reproduce the same avatar source_url, so a
+// user whose avatar came from image_48 is not dropped on reuse.
+func avatarURL(u *slack.User) string {
+	if u.Profile.Image72 != "" {
+		return u.Profile.Image72
+	}
+	return u.Profile.Image48
 }
 
 func tsTime(ts string) time.Time {
