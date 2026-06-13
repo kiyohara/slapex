@@ -102,7 +102,19 @@ type Assets struct {
 	limit   int64 // per-file byte limit, 0 = unlimited
 	known   map[string]string
 	entries []ManifestEntry
+	reuse   *ReuseSource // previous run's assets to copy instead of downloading
+	reused  int          // assets copied from the reuse source
 	Logf    func(format string, args ...any)
+}
+
+// ReuseSource lets Save copy an already-saved asset from a previous run's
+// output instead of downloading it again, for --reuse-cache (doc/design/cache.md,
+// decision log 0030). OldDir is the previous run's channel directory (the parent
+// of the reused .cache/); Entries maps each previously saved source_url to its
+// manifest entry, whose LocalPath is relative to OldDir.
+type ReuseSource struct {
+	OldDir  string
+	Entries map[string]ManifestEntry
 }
 
 func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Assets {
@@ -113,6 +125,25 @@ func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Ass
 		limit: limit,
 		known: map[string]string{},
 		Logf:  func(string, ...any) {},
+	}
+}
+
+// SetReuseSource enables copy-from-previous-run behaviour in Save (--reuse-cache).
+func (a *Assets) SetReuseSource(r *ReuseSource) { a.reuse = r }
+
+// Reused returns how many assets were copied from the reuse source instead of
+// being downloaded.
+func (a *Assets) Reused() int { return a.reused }
+
+// limitFor returns the per-file byte limit that applies to kind (0 = unlimited).
+// The size limit applies to original images and attachments only; thumbnails,
+// emoji, OG images and avatars are always saved regardless of size.
+func (a *Assets) limitFor(kind string) int64 {
+	switch kind {
+	case KindEmoji, KindUploadThumb, KindOGImage, KindAvatar:
+		return 0
+	default:
+		return a.limit
 	}
 }
 
@@ -135,6 +166,12 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 		return rel, rel != ""
 	}
 
+	if a.reuse != nil {
+		if rel, ok := a.copyFromReuse(kind, srcURL, meta); ok {
+			return rel, true
+		}
+	}
+
 	sum := md5.Sum([]byte(srcURL))
 	base := hex.EncodeToString(sum[:])
 	rel := filepath.Join(kindDirs[kind], base) // extension added after download
@@ -146,11 +183,7 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	}
 	defer os.Remove(tmp.Name())
 
-	limit := a.limit
-	if kind == KindEmoji || kind == KindUploadThumb || kind == KindOGImage || kind == KindAvatar {
-		limit = 0 // size limit applies to originals and attachments only
-	}
-	size, contentType, err := a.dl.Download(a.ctx, srcURL, limit, tmp)
+	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), tmp)
 	tmp.Close()
 	if err != nil {
 		status := "failed"
@@ -190,6 +223,75 @@ func (a *Assets) record(kind, srcURL string, meta AssetMeta, rel, status, errMsg
 		Mimetype: meta.Mimetype, SizeBytes: meta.SizeBytes,
 		Status: status, Error: errMsg,
 	})
+}
+
+// copyFromReuse copies an asset that a previous run already saved into this
+// run's output instead of downloading it, when --reuse-cache matched (decision
+// log 0030). It reuses the old LocalPath verbatim so the deterministic
+// md5+extension layout (and therefore the HTML references) stays identical
+// across runs. It returns false — so Save falls back to a normal download — when
+// srcURL was not a saved asset before or the previous file is gone.
+func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, bool) {
+	entry, ok := a.reuse.Entries[srcURL]
+	if !ok || entry.LocalPath == "" {
+		return "", false
+	}
+	// LocalPath comes from a previous run's manifest. Reject anything that is not
+	// a contained relative path so a corrupted or untrusted cache cannot read or
+	// write outside the old / new output directories (path traversal); such an
+	// asset falls back to a normal download.
+	if !filepath.IsLocal(filepath.FromSlash(entry.LocalPath)) {
+		return "", false
+	}
+	src := filepath.Join(a.reuse.OldDir, filepath.FromSlash(entry.LocalPath))
+	info, err := os.Stat(src)
+	if err != nil || info.IsDir() {
+		return "", false
+	}
+	// A previous run may have saved this asset under a larger --max-attachment-size.
+	// If its real size now exceeds this run's limit, do not copy it: fall back to a
+	// normal download so it is enforced and recorded as skipped_size, exactly like a
+	// fresh run (the builder's pre-check uses Slack's file.size, which can be absent
+	// or understated).
+	if limit := a.limitFor(kind); limit > 0 && info.Size() > limit {
+		return "", false
+	}
+	dst := filepath.Join(a.dir, filepath.FromSlash(entry.LocalPath))
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return "", false
+	}
+	if err := copyFile(src, dst); err != nil {
+		return "", false
+	}
+	if meta.SizeBytes == 0 {
+		meta.SizeBytes = entry.SizeBytes
+	}
+	if meta.Mimetype == "" {
+		meta.Mimetype = entry.Mimetype
+	}
+	a.reused++
+	// Record under the requested kind: each source_url maps to exactly one kind,
+	// so this matches both the copied file's directory and what a fresh download
+	// would record, keeping the reused manifest identical to a normal run.
+	a.record(kind, srcURL, meta, entry.LocalPath, "saved", "")
+	return entry.LocalPath, true
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 func (a *Assets) Entries() []ManifestEntry { return a.entries }

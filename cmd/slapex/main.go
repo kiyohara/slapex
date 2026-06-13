@@ -136,7 +136,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		days          = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
 		maxAttach     = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
 		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
-		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept .cache/ directory (not implemented in PoC)")
+		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept .cache/ directory (path to .cache/)")
 		noInteractive = fs.Bool("no-interactive", false, "never start interactive channel selection")
 		showVersion   = fs.Bool("version", false, "print version and exit")
 	)

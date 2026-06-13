@@ -64,10 +64,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	wsLine := fmt.Sprintf("%s (%s, %s)", auth.Team, hostOf(auth.URL), auth.TeamID)
 	logf("Workspace: %s", wsLine)
 
-	if opts.ReuseCache != "" {
-		logf("warning: --reuse-cache is not implemented in this PoC; fetching everything")
-	}
-
 	logf("Listing channels...")
 	channels, err := client.ListChannels(ctx)
 	if err != nil {
@@ -79,6 +75,11 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	}
 	chLine := channelLine(ch)
 	logf("Target: %s / %s", wsLine, chLine)
+
+	var reuse *reusableCache
+	if opts.ReuseCache != "" {
+		reuse = resolveReuseCache(opts.ReuseCache, auth.TeamID, ch.ID, logf)
+	}
 
 	root, err := output.Root(opts.OutputDir, now)
 	if err != nil {
@@ -121,7 +122,15 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	userIDs := collectUserIDs(messages, replies)
 	logf("Resolving %d users...", len(userIDs))
 	users := map[string]*slack.User{}
+	reusedUsers := 0
 	for _, id := range userIDs {
+		if reuse != nil {
+			if cu, ok := reuse.users[id]; ok {
+				users[id] = cu.toUser(id)
+				reusedUsers++
+				continue
+			}
+		}
 		u, err := client.UserInfo(ctx, id)
 		if err != nil {
 			logf("  warning: could not resolve user %s: %s", id, err)
@@ -129,11 +138,20 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 		}
 		users[id] = u
 	}
+	if reusedUsers > 0 {
+		logf("  reused %d user(s) from cache (skipped users.info)", reusedUsers)
+	}
 
-	logf("Fetching custom emoji list...")
-	customEmoji, err := client.EmojiList(ctx)
-	if err != nil {
-		return "", err
+	var customEmoji map[string]string
+	if reuse != nil {
+		customEmoji = reuse.emoji
+		logf("Reusing custom emoji list from cache (%d entries, skipped emoji.list)", len(customEmoji))
+	} else {
+		logf("Fetching custom emoji list...")
+		customEmoji, err = client.EmojiList(ctx)
+		if err != nil {
+			return "", err
+		}
 	}
 	emojiResolver, err := emoji.NewResolver(customEmoji)
 	if err != nil {
@@ -142,14 +160,13 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 
 	assets := output.NewAssets(ctx, client, dir, opts.MaxAttachBytes)
 	assets.Logf = logf
+	if reuse != nil {
+		assets.SetReuseSource(reuse.reuseSource())
+	}
 
 	avatars := map[string]string{}
 	for id, u := range users {
-		src := u.Profile.Image72
-		if src == "" {
-			src = u.Profile.Image48
-		}
-		if rel, ok := assets.Save(output.KindAvatar, src, output.AssetMeta{}); ok {
+		if rel, ok := assets.Save(output.KindAvatar, avatarURL(u), output.AssetMeta{}); ok {
 			avatars[id] = rel
 		}
 	}
@@ -232,6 +249,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	logf("Done: %s / %s", wsLine, chLine)
 	logf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
 	logf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
+	if n := assets.Reused(); n > 0 {
+		logf("    (of which %d copied from reused cache, no download)", n)
+	}
 	logf("  output: %s", abs)
 	return abs, nil
 }
@@ -591,7 +611,7 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 
 	cachedUsers := map[string]cachedUser{}
 	for id, u := range users {
-		cachedUsers[id] = cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: u.Profile.Image72}
+		cachedUsers[id] = cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: avatarURL(u)}
 	}
 	apiCache := map[string]any{
 		"schema_version": common.SchemaVersion,
@@ -632,6 +652,17 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+// avatarURL is the avatar image URL slapex saves for a user: the 72px image,
+// falling back to the 48px image. Persisting this effective URL (rather than
+// image_72 alone) lets --reuse-cache reproduce the same avatar source_url, so a
+// user whose avatar came from image_48 is not dropped on reuse.
+func avatarURL(u *slack.User) string {
+	if u.Profile.Image72 != "" {
+		return u.Profile.Image72
+	}
+	return u.Profile.Image48
 }
 
 func tsTime(ts string) time.Time {
