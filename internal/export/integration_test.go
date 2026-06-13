@@ -1,7 +1,6 @@
 package export
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,10 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/kiyohara/slapex/internal/slack"
 )
@@ -46,31 +45,19 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 	})
 }
 
-// runExportScenario is the integration-test entry point for later scenarios:
-// define an exportScenario fixture, call this helper, then assert on the
-// returned output directory and fake Slack request counters.
+// runExportScenario is the integration-test entry point for happy-path
+// scenarios: define an exportScenario fixture, call this helper, then assert on
+// the returned output directory and fake Slack request counters. It fails the
+// test if Run returns an error; error-path scenarios use runExportScenarioRaw
+// (integration_error_test.go) instead.
 func runExportScenario(t *testing.T, sc exportScenario, opts Options) exportRunResult {
 	t.Helper()
 
-	fake := newFakeSlackServer(t, &sc)
-	t.Cleanup(fake.Close)
-
-	var logs []string
-	client := slack.New(integrationTestToken,
-		slack.WithBaseURL(fake.URL()+"/api/"),
-		slack.WithSleeper(func(context.Context, time.Duration) error { return nil }),
-	)
-	client.Logf = func(format string, args ...any) {
-		logs = append(logs, fmt.Sprintf(format, args...))
-	}
-
-	outDir, err := Run(context.Background(), client, opts, func(format string, args ...any) {
-		logs = append(logs, fmt.Sprintf(format, args...))
-	})
+	got, _, err := runExportScenarioRaw(t, sc, opts)
 	if err != nil {
-		t.Fatalf("Run() error = %v\nlogs:\n%s", err, strings.Join(logs, "\n"))
+		t.Fatalf("Run() error = %v\nlogs:\n%s", err, strings.Join(got.Logs, "\n"))
 	}
-	return exportRunResult{OutputDir: outDir, Server: fake, Logs: logs}
+	return got
 }
 
 type exportRunResult struct {
@@ -87,11 +74,42 @@ type exportScenario struct {
 	Users    map[string]slack.User
 	Emoji    map[string]string
 	Assets   map[string]fakeAsset
+
+	// APIFaults / AssetFaults inject error and rate-limit behaviour for the
+	// v1-09 error scenarios, keyed by request path (e.g.
+	// "/api/conversations.history" or "/files/flaky.pdf"). A nil/empty map
+	// keeps the happy behaviour, so v1-07 / v1-08 fixtures are unaffected.
+	APIFaults   map[string]*endpointFault
+	AssetFaults map[string]*endpointFault
 }
 
 type fakeAsset struct {
 	ContentType string
 	Body        string
+}
+
+// endpointFault injects error / rate-limit behaviour for one fake server
+// endpoint (an API path or an asset path) in the v1-09 error scenarios.
+type endpointFault struct {
+	// transient responses are emitted one per call, in order, before the
+	// endpoint falls through to its normal handler. Used for "429 once then
+	// succeed" and "5xx then succeed".
+	transient []faultResponse
+	// sticky, when non-nil, is returned on every call once transient responses
+	// are drained. Used for persistent Slack errors (invalid_auth,
+	// missing_scope, not_in_channel), a persistent 429 (retry-limit reached)
+	// and a persistent download failure.
+	sticky *faultResponse
+}
+
+// faultResponse is a single fake response. A non-zero httpStatus (429 or 5xx)
+// is written directly, with Retry-After taken from retryAfterSec when > 0. An
+// httpStatus of 0 with slackError set yields an {"ok":false,...} body;
+// otherwise the endpoint's normal handler runs.
+type faultResponse struct {
+	httpStatus    int
+	retryAfterSec int
+	slackError    string
 }
 
 func happyPathScenario() exportScenario {
@@ -238,6 +256,13 @@ func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
 	for path := range sc.Assets {
 		mux.HandleFunc(path, f.handleAsset)
 	}
+	// Asset paths that only exist to inject a download failure (no body in
+	// Assets) still need a handler so the fault response is served.
+	for path := range sc.AssetFaults {
+		if _, ok := sc.Assets[path]; !ok {
+			mux.HandleFunc(path, f.handleAsset)
+		}
+	}
 	for _, path := range []string{
 		"/api/auth.test",
 		"/api/conversations.list",
@@ -279,6 +304,9 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.record(r)
+	if resp := f.nextFault(f.sc.APIFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
+		return
+	}
 
 	switch r.URL.Path {
 	case "/api/auth.test":
@@ -324,6 +352,9 @@ func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.record(r)
+	if resp := f.nextFault(f.sc.AssetFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
+		return
+	}
 	asset, ok := f.sc.Assets[r.URL.Path]
 	if !ok {
 		http.NotFound(w, r)
@@ -337,6 +368,51 @@ func (f *fakeSlackServer) record(r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.counts[r.URL.Path]++
+}
+
+// nextFault returns the fault response the endpoint should emit for this call,
+// or nil to fall through to the normal handler. transient responses are
+// consumed first; once drained, the sticky response (if any) applies to every
+// later call.
+func (f *fakeSlackServer) nextFault(faults map[string]*endpointFault, path string) *faultResponse {
+	if faults == nil {
+		return nil
+	}
+	fault := faults[path]
+	if fault == nil {
+		return nil
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(fault.transient) > 0 {
+		resp := fault.transient[0]
+		fault.transient = fault.transient[1:]
+		return &resp
+	}
+	return fault.sticky
+}
+
+// writeFault emits resp and reports whether it handled the request. A 429 or
+// 5xx status is written directly (with Retry-After for 429); httpStatus 0 with
+// slackError yields an {"ok":false} body. Any other shape returns false so the
+// caller runs the endpoint's normal handler.
+func (f *fakeSlackServer) writeFault(w http.ResponseWriter, resp *faultResponse) bool {
+	switch {
+	case resp.httpStatus == http.StatusTooManyRequests:
+		if resp.retryAfterSec > 0 {
+			w.Header().Set("Retry-After", strconv.Itoa(resp.retryAfterSec))
+		}
+		w.WriteHeader(http.StatusTooManyRequests)
+		return true
+	case resp.httpStatus >= 500:
+		w.WriteHeader(resp.httpStatus)
+		return true
+	case resp.slackError != "":
+		writeSlackError(w, resp.slackError)
+		return true
+	default:
+		return false
+	}
 }
 
 func writeSlackOK(w http.ResponseWriter, payload any) {
