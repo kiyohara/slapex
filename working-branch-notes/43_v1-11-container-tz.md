@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: v1/11-container-tz
-- PR: 未作成
+- PR: #43
 - 最終更新: 2026-06-13
 
 ## 目的
@@ -21,8 +21,8 @@ Issue #25 / v1-11 として、Docker Compose 経由の dev / E2E 実行時に ho
 
 ## 次にやること
 
-- 初回コミットを作成し、branch を push して PR を作成する。
-- PR 採番後に note を番号付きファイル名へ rename し、`progress.md` の PR 列を更新する。
+- note 採番と `progress.md` の PR 列更新をコミットして push する。
+- PR description / title に stale な draft note 参照がないことを確認する。
 
 ## 検証
 
