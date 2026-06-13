@@ -40,9 +40,7 @@ func (r *sleepRecorder) recorded() []time.Duration {
 // newTestClient points a Client at srv and disables real sleeping.
 func newTestClient(srv *httptest.Server) (*Client, *sleepRecorder) {
 	rec := &sleepRecorder{}
-	c := New(testToken)
-	c.baseURL = srv.URL + "/api/"
-	c.sleep = rec.sleep
+	c := New(testToken, WithBaseURL(srv.URL+"/api/"), WithSleeper(rec.sleep))
 	return c, rec
 }
 
