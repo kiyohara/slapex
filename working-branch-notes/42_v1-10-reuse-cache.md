@@ -88,4 +88,11 @@ v1.0 リリース実装プランのタスク 10/17(Issue #24)。PoC で未実装
   `internal/export/export.go`(reuse 解決を channel 確定後に挿入、users.info / emoji.list の省略、
   Assets への reuse source 付与、reused 件数の summary 出力)、`cmd/slapex/main.go`(flag 説明更新)。
   統合テスト `integration_reuse_test.go` を追加。decision log 0030 に asset 実ファイルコピーの追記。
-  全検証 pass で PR 作成へ。
+  全検証 pass で PR #42 作成。
+- 2026-06-13: セルフレビュー(`/code-review medium` 相当)を独立サブエージェントで実施し、PR #42 に
+  inline コメント 4 件として投稿。妥当と判断した指摘へ対応(commit `9ad2bdf`):
+  (1) `copyFromReuse` の path traversal 対策(`filepath.IsLocal` で非 local な `local_path` は再利用せず
+  通常 download にフォールバック)、(2) avatar の effective URL(`Image72` ?: `Image48`)を `avatarURL`
+  helper 経由で cache に保存し `image_48` 由来 avatar の欠落を解消、(3) cross-kind 記録の不変条件を
+  コメントで明示(挙動変更なし)、(4) fallback テストに channel ID 不一致ケース追加 + `image_48` avatar
+  再利用の回帰テスト追加。各コメントへ対応方針を返信済み。全検証 pass。
