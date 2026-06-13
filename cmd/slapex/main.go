@@ -108,15 +108,23 @@ func run() int {
 
 	dir, err := export.Run(context.Background(), client, exportOpts, logf)
 	if err != nil {
-		code := classify(err)
-		fmt.Fprintf(os.Stderr, "slapex: %s\n", err)
-		if code == exitAuth {
-			fmt.Fprintln(os.Stderr, "See: "+helpURL)
-		}
-		return code
+		return reportRunError(os.Stderr, err)
 	}
 	fmt.Fprintln(os.Stdout, dir)
 	return exitOK
+}
+
+// reportRunError writes the user-facing message for a failed export.Run to w
+// and returns the process exit code (doc/design/cli-interface.md). Auth /
+// permission failures (exit 3) also point the user at the setup help page
+// (doc/design/usage-flow.md「情報が足りない場合の案内」).
+func reportRunError(w io.Writer, err error) int {
+	code := classify(err)
+	fmt.Fprintf(w, "slapex: %s\n", err)
+	if code == exitAuth {
+		fmt.Fprintln(w, "See: "+helpURL)
+	}
+	return code
 }
 
 func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
