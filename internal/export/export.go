@@ -496,10 +496,16 @@ func (b *builder) addAttachmentFile(v *render.MessageView, f *slack.File) {
 		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "(外部サービス連携のファイルのため保存対象外)"})
 	case b.limit > 0 && f.Size > b.limit:
 		b.assets.SkipTooLarge(output.KindAttachment, f.DownloadURL(), meta)
+		// 置換表示にはファイル名 / file ID / 元サイズ / 上限を含める
+		// (output-format.md「添付ファイルのサイズ制限」)。file ID は取得できる
+		// 場合のみ添える。
+		detail := fmt.Sprintf("%s, 上限 %s", humanBytes(f.Size), humanBytes(b.limit))
+		if f.ID != "" {
+			detail = fmt.Sprintf("file ID: %s, %s", f.ID, detail)
+		}
 		v.FilesList = append(v.FilesList, render.FileView{
 			Name: name,
-			Note: fmt.Sprintf("サイズオーバーのため保存されませんでした。(%s, 上限 %s)",
-				humanBytes(f.Size), humanBytes(b.limit)),
+			Note: "サイズオーバーのため保存されませんでした。(" + detail + ")",
 		})
 	default:
 		if rel, ok := b.assets.Save(output.KindAttachment, f.DownloadURL(), meta); ok {
