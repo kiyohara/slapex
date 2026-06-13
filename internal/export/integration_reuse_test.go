@@ -109,6 +109,22 @@ func TestRunIntegrationReuseCacheFallback(t *testing.T) {
 			},
 		},
 		{
+			name: "slack_api_cache schema_version mismatch",
+			tamper: func(t *testing.T, dir string) {
+				rewriteJSON(t, filepath.Join(dir, "slack_api_cache.json"), func(m map[string]any) {
+					m["schema_version"] = 999
+				})
+			},
+		},
+		{
+			name: "assets_manifest schema_version mismatch",
+			tamper: func(t *testing.T, dir string) {
+				rewriteJSON(t, filepath.Join(dir, "assets_manifest.json"), func(m map[string]any) {
+					m["schema_version"] = 999
+				})
+			},
+		},
+		{
 			name: "missing cache file",
 			tamper: func(t *testing.T, dir string) {
 				if err := os.Remove(filepath.Join(dir, "slack_api_cache.json")); err != nil {
@@ -172,6 +188,61 @@ func TestRunIntegrationReuseCacheImage48Avatar(t *testing.T) {
 	assertAssetsIdentical(t, r.dir1, r.dir2)
 }
 
+// --- case 7: an oversize asset is re-checked, not copied, under a smaller limit -
+
+// A previous run saved an attachment under a large --max-attachment-size. On a
+// reuse run with a smaller limit — and a Slack file.size that understates the real
+// bytes, so the builder pre-check passes — copyFromReuse must NOT copy the file: it
+// re-downloads so the limit is enforced and the asset is recorded skipped_size,
+// exactly like a fresh run.
+func TestRunIntegrationReuseCacheOversizeNotCopied(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message", TS: "1700000001.000000", User: "U01", Text: "Report",
+			Files: []slack.File{
+				{
+					ID:                 "F-BIG",
+					Name:               "report.pdf",
+					Mimetype:           "application/pdf",
+					Size:               50, // understates the real size, so the builder pre-check passes
+					URLPrivateDownload: "{{base}}/files/report.pdf",
+				},
+			},
+		},
+	}
+	// The real body (200 bytes) exceeds run 2's smaller limit.
+	sc.Assets = map[string]fakeAsset{
+		"/files/report.pdf": {ContentType: "application/pdf", Body: strings.Repeat("x", 200)},
+	}
+
+	opts1 := reuseOptions(t, true)
+	opts1.MaxAttachBytes = 1 << 20 // run 1: large limit -> saved
+	opts2 := reuseOptions(t, true) // keep run 2's cache so its manifest can be read
+	opts2.MaxAttachBytes = 100     // run 2: smaller than the real 200 bytes
+
+	r := runReuseScenarioOpts(t, sc, opts1, opts2, nil)
+
+	// run 1 saved the attachment.
+	if e, ok := findManifest(readManifestEntries(t, r.dir1), func(e manifestEntryFull) bool {
+		return e.FileID == "F-BIG"
+	}); !ok || e.Status != "saved" {
+		t.Fatalf("run 1 attachment entry = %+v (ok=%v), want status saved", e, ok)
+	}
+	// run 2 re-downloaded it (did not copy from cache)...
+	if d := delta(r.before, r.after, "/files/report.pdf"); d < 1 {
+		t.Fatalf("attachment download delta = %d, want >= 1 (oversize asset re-checked, not copied)", d)
+	}
+	// ...and recorded it as skipped_size under the smaller limit, like a fresh run.
+	if e, ok := findManifest(readManifestEntries(t, r.dir2), func(e manifestEntryFull) bool {
+		return e.FileID == "F-BIG"
+	}); !ok || e.Status != "skipped_size" {
+		t.Fatalf("run 2 attachment entry = %+v (ok=%v), want status skipped_size", e, ok)
+	}
+}
+
 // --- shared harness ----------------------------------------------------------
 
 // reuseRun holds the two output directories, the fake server request counts
@@ -189,6 +260,17 @@ type reuseRun struct {
 // run 2 reuses it. It returns the request-count snapshots and run 2's logs.
 func runReuseScenario(t *testing.T, sc exportScenario, tamper func(t *testing.T, cacheDir string)) reuseRun {
 	t.Helper()
+	return runReuseScenarioOpts(t, sc, reuseOptions(t, true), reuseOptions(t, false), tamper)
+}
+
+// runReuseScenarioOpts runs the export twice against one shared fake server with
+// explicit options for each run: run 1 (opts1, cache forced kept) populates the
+// cache, an optional tamper mutates it, then run 2 (opts2) reuses it. It returns
+// the per-endpoint request-count snapshots and run 2's logs. Use this directly
+// when the two runs need different options (e.g. a smaller --max-attachment-size
+// on reuse).
+func runReuseScenarioOpts(t *testing.T, sc exportScenario, opts1, opts2 Options, tamper func(t *testing.T, cacheDir string)) reuseRun {
+	t.Helper()
 
 	fake := newFakeSlackServer(t, &sc)
 	t.Cleanup(fake.Close)
@@ -205,7 +287,8 @@ func runReuseScenario(t *testing.T, sc exportScenario, tamper func(t *testing.T,
 		"/api/users.info", "/api/emoji.list",
 	}, assets...)
 
-	dir1, err := Run(context.Background(), client, reuseOptions(t, true), func(string, ...any) {})
+	opts1.KeepCache = true
+	dir1, err := Run(context.Background(), client, opts1, func(string, ...any) {})
 	if err != nil {
 		t.Fatalf("run 1 (populate cache) error: %v", err)
 	}
@@ -216,7 +299,6 @@ func runReuseScenario(t *testing.T, sc exportScenario, tamper func(t *testing.T,
 		tamper(t, cacheDir)
 	}
 
-	opts2 := reuseOptions(t, false)
 	opts2.ReuseCache = cacheDir
 	var logs2 []string
 	dir2, err := Run(context.Background(), client, opts2, appendLogf(&logs2))

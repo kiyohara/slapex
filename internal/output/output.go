@@ -135,6 +135,18 @@ func (a *Assets) SetReuseSource(r *ReuseSource) { a.reuse = r }
 // being downloaded.
 func (a *Assets) Reused() int { return a.reused }
 
+// limitFor returns the per-file byte limit that applies to kind (0 = unlimited).
+// The size limit applies to original images and attachments only; thumbnails,
+// emoji, OG images and avatars are always saved regardless of size.
+func (a *Assets) limitFor(kind string) int64 {
+	switch kind {
+	case KindEmoji, KindUploadThumb, KindOGImage, KindAvatar:
+		return 0
+	default:
+		return a.limit
+	}
+}
+
 // SkipTooLarge records a file that was not downloaded due to the size limit.
 func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
 	a.entries = append(a.entries, ManifestEntry{
@@ -171,11 +183,7 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	}
 	defer os.Remove(tmp.Name())
 
-	limit := a.limit
-	if kind == KindEmoji || kind == KindUploadThumb || kind == KindOGImage || kind == KindAvatar {
-		limit = 0 // size limit applies to originals and attachments only
-	}
-	size, contentType, err := a.dl.Download(a.ctx, srcURL, limit, tmp)
+	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), tmp)
 	tmp.Close()
 	if err != nil {
 		status := "failed"
@@ -238,6 +246,14 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	src := filepath.Join(a.reuse.OldDir, filepath.FromSlash(entry.LocalPath))
 	info, err := os.Stat(src)
 	if err != nil || info.IsDir() {
+		return "", false
+	}
+	// A previous run may have saved this asset under a larger --max-attachment-size.
+	// If its real size now exceeds this run's limit, do not copy it: fall back to a
+	// normal download so it is enforced and recorded as skipped_size, exactly like a
+	// fresh run (the builder's pre-check uses Slack's file.size, which can be absent
+	// or understated).
+	if limit := a.limitFor(kind); limit > 0 && info.Size() > limit {
 		return "", false
 	}
 	dst := filepath.Join(a.dir, filepath.FromSlash(entry.LocalPath))
