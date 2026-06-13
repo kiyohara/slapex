@@ -10,7 +10,8 @@ Issue #25 / v1-11 として、Docker Compose 経由の dev / E2E 実行時に ho
 
 ## 現在の状況
 
-- `compose.yaml` の `dev` service に `TZ: ${TZ:-}` を追加する方針で作業中。
+- `compose.yaml` の `dev` service に `TZ: ${TZ:-}` を追加済み。
+- guideline / decision log / index / `progress.md` を更新済み。
 - CLI option は追加しない。配布バイナリを host で直接実行する本来の利用形態では host local timezone を使う既存仕様のままとする。
 - Issue 指定の検証は完了済み。
 
@@ -21,8 +22,7 @@ Issue #25 / v1-11 として、Docker Compose 経由の dev / E2E 実行時に ho
 
 ## 次にやること
 
-- note 採番と `progress.md` の PR 列更新をコミットして push する。
-- PR description / title に stale な draft note 参照がないことを確認する。
+- レビュー待ち。merge はユーザーが行う。
 
 ## 検証
 
@@ -39,3 +39,4 @@ Issue #25 / v1-11 として、Docker Compose 経由の dev / E2E 実行時に ho
 ## セッションログ
 
 - 2026-06-13: Issue #25 を `github-op-integrated` MCP で確認。依存 v1-01 が `progress.md` で done であることを確認し、`v1/11-container-tz` ブランチを作成。
+- 2026-06-13: PR #43 を作成し、note 採番と `progress.md` の PR 番号反映を実施。
