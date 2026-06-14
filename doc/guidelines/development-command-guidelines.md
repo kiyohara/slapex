@@ -48,6 +48,13 @@ docker compose run --rm dev go run ./cmd/slapex --help
 docker compose run --rm dev go run ./tools/genemoji
 ```
 
+時刻が出力内容や出力ディレクトリ名に影響するコマンド(アプリ実行や E2E など)では、timezone を明示する。`dev` service は host の `TZ` を引き継ぐため、host 側で `TZ` が設定済みなら通常の Compose 実行で反映される。実行ごとに固定したい場合は `-e TZ=Asia/Tokyo` のように指定する。
+
+```sh
+TZ=Asia/Tokyo docker compose run --rm dev go run ./cmd/slapex
+docker compose run --rm -e TZ=Asia/Tokyo dev go run ./cmd/slapex
+```
+
 実行時に環境変数(例: `SLACK_BOT_TOKEN`)を渡す場合は、`-e` で host 環境から forward し、compose ファイルや repo 内に実値を書かない。
 
 ```sh

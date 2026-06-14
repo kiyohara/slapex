@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-06-13
 - 関連: `doc/design/html-rendering.md`
 
 ## 背景
@@ -27,6 +27,7 @@
 - `index.html` ヘッダに export 実行時刻と使用 timezone(UTC offset)を明記する。
 - 各時刻要素の `title` 属性に ISO 8601(UTC)のフル時刻を入れる。
 - timeline 上の日付の変わり目に date divider を表示する。
+- dev / E2E の Docker Compose 実行では host の `TZ` を `dev` service に forward する。`--tz` のような専用 CLI option は導入しない。
 
 ## 理由
 
@@ -36,6 +37,13 @@
 
 - HTML テンプレートは timezone 情報を受け取る。`.cache/metadata.json` の時刻は ISO 8601 UTC で記録する(`cache.md`)。
 - CI 実行では runner の timezone(通常 UTC)が表示に使われる。明示したい場合は環境変数 `TZ` で制御できる(OS 標準の挙動に従い、専用 option は設けない)。
+- Docker Compose 経由の dev / E2E 実行では、host 側で `TZ` が設定されていれば `compose.yaml` の `TZ: ${TZ:-}` によりコンテナへ引き継がれる。実行ごとに明示する場合は `docker compose run --rm -e TZ=Asia/Tokyo dev ...` のように指定する。
+
+## 追記: コンテナ実行時の timezone
+
+PoC 目視レビューで、Docker 経由の実行ではコンテナの default timezone(UTC)が時刻表示と出力ディレクトリ名に使われ、JST など host 側の期待とずれることが分かった。golang image には tzdata があり、`TZ` を渡せば JST 表示になることも確認済み。
+
+この問題は dev / E2E のコンテナ実行に限られる。配布バイナリを host で直接実行する本来の利用形態では、既存決定どおり host の local timezone が使われる。そのため、対応は Compose で host の `TZ` を forward することに絞り、CLI option は追加しない。
 
 ## 後から見直す条件
 
