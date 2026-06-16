@@ -24,7 +24,7 @@ Issue #27 の v1-13 として、GoReleaser による 4 target 単一バイナリ
 
 ## 次にやること
 
-- 採番後の note rename と `progress.md` 更新を commit / push する。
+- ユーザーのレビューと merge 判断を待つ。
 
 ## 検証
 
