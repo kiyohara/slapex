@@ -40,3 +40,4 @@ GitHub Issue #26(v1-12)に従い、system メッセージで Slack API の `text
 - 2026-06-16: Issue #26 を github-op-integrated MCP tool で取得。関連 guideline と依存状態を確認し、ブランチと note を作成。
 - 2026-06-16: `channel_topic` / `channel_purpose` / `channel_name` の actor prefix 補完を実装。統合テスト、decision log、表示仕様を更新し、Issue 指定の検証を完了。
 - 2026-06-16: PR #44 を作成。note を採番済みファイル名へ rename し、`progress.md` の v1-12 行を done / PR #44 に更新。
+- 2026-06-16: PR review comment を受け、dedup 判定から bare display name を外し、display name が system text の固定接頭辞と一致しても actor prefix を補完する回帰テストを追加。

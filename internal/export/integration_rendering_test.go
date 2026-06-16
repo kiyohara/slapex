@@ -159,6 +159,7 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	t.Parallel()
 
 	sc := baseScenario()
+	sc.Users["U03"] = testUser("U03", "set", "Set User", "set", "")
 	sc.Messages = []slack.Message{
 		{
 			Type:    "message",
@@ -180,6 +181,13 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 			TS:      "1700000300.000000",
 			Text:    "set the channel purpose: Planning docs",
 		},
+		{
+			Type:    "message",
+			Subtype: "channel_name",
+			TS:      "1700000400.000000",
+			User:    "U03",
+			Text:    "set the channel name: project-beta",
+		},
 	}
 
 	got := runExportScenario(t, sc, renderingOptions(t))
@@ -189,11 +197,15 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	mustContain(t, body, "has joined the channel")
 	mustContain(t, body, `<span class="mention">@Bob</span> set the channel topic: Launch planning`)
 	mustContain(t, body, "set the channel purpose: Planning docs")
+	mustContain(t, body, `<span class="mention">@set</span> set the channel name: project-beta`)
 	if got := strings.Count(body, `<span class="mention">@Alice</span>`); got != 1 {
 		t.Fatalf("@Alice mention count = %d, want 1 (channel_join must not get a duplicate actor prefix)", got)
 	}
 	if got := strings.Count(body, `<span class="mention">@Bob</span>`); got != 1 {
 		t.Fatalf("@Bob mention count = %d, want 1 (channel_topic gets exactly one actor prefix)", got)
+	}
+	if got := strings.Count(body, `<span class="mention">@set</span>`); got != 1 {
+		t.Fatalf("@set mention count = %d, want 1 (display name must not suppress actor prefix)", got)
 	}
 	// System rows carry no avatar and are not rendered as full messages.
 	mustNotContain(t, body, `<div class="message">`)

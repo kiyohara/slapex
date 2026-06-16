@@ -491,7 +491,6 @@ func systemTextStartsWithActor(text, userID, displayName string) bool {
 		"<@" + userID + ">",
 		"<@" + userID + "|",
 		"@" + displayName,
-		displayName,
 	} {
 		if prefix != "" && strings.HasPrefix(text, prefix) {
 			return true
