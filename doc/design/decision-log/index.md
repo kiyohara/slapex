@@ -63,9 +63,8 @@
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
 | リリース整備と Homebrew tap | open | goreleaser 設定と release workflow は v1 プラン(task v1-13 / v1-14)で整備する。Homebrew tap を提供するかは post-v1 で判断 | [0034-distribution-method.md](0034-distribution-method.md) |
-| system メッセージの actor 表示 | open | `channel_topic` 等で API の `text` に actor mention が含まれない場合に、`user` field から author prefix を補完して Slack UI 同等にするか(PoC 追加 E2E の所見)。v1 プラン(task v1-12)で決定・対応する | [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) |
 
-解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。「code block 内の URL 構文の表示」は [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) の追記で方針を確定し、修正済み。「コンテナ実行時のタイムゾーン」は [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) の追記で、dev / E2E の Docker Compose 実行時に host の `TZ` を forward し、専用 CLI option は導入しない方針として確定した。
+解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。「code block 内の URL 構文の表示」は [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) の追記で方針を確定し、修正済み。「コンテナ実行時のタイムゾーン」は [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) の追記で、dev / E2E の Docker Compose 実行時に host の `TZ` を forward し、専用 CLI option は導入しない方針として確定した。「system メッセージの actor 表示」は [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) の追記で、`channel_topic` / `channel_purpose` / `channel_name` の actor prefix 補完として確定した。
 
 ## 運用メモ
 

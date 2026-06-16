@@ -80,6 +80,7 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 | 置換表示 | `tombstone`(削除済みだが thread が残る親投稿) | 「(削除されたメッセージ)」のプレースホルダを表示し、その thread replies は通常どおり表示する |
 | 未知の subtype | 上記以外 | `text` があれば通常表示に準じ、無ければ「(未対応のメッセージ種別: subtype名)」のシステム行にする |
 
+- `channel_topic`、`channel_purpose`、`channel_name` の system 行で `text` 先頭に actor が含まれない場合は、`user` field を display name 優先で解決し、`@表示名` 相当の prefix を補完する。`user` が空または解決不能の場合は `text` のみ表示する。
 - `thread_broadcast` は Slack の表示と同様、channel timeline と thread 内の両方に表示する。
 - 編集済みメッセージは本文末尾に「(edited)」相当の控えめな表示を付ける。reaction や編集の履歴は表示しない。
 
