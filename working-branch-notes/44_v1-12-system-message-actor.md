@@ -12,7 +12,7 @@ GitHub Issue #26(v1-12)に従い、system メッセージで Slack API の `text
 
 - v1-08 の依存は `progress.md` で done を確認済み。
 - `git fetch origin main` は SSH agent の署名通信失敗で完了できなかったが、作業開始時点のローカル `HEAD` と `origin/main` は同一 commit だった。
-- Issue 指定ブランチ `v1/12-system-message-actor` で実装・検証まで完了。
+- Issue 指定ブランチ `v1/12-system-message-actor` で実装・検証・PR 作成・`progress.md` 更新まで完了。
 
 ## 決定事項
 
@@ -22,8 +22,7 @@ GitHub Issue #26(v1-12)に従い、system メッセージで Slack API の `text
 
 ## 次にやること
 
-- PR を作成する。
-- PR 採番後、note を番号付きファイル名へ rename し、`progress.md` の該当行に PR 番号を反映する。
+- ユーザーによる PR #44 のレビューと merge 判断を待つ。
 
 ## 検証
 
@@ -40,3 +39,4 @@ GitHub Issue #26(v1-12)に従い、system メッセージで Slack API の `text
 
 - 2026-06-16: Issue #26 を github-op-integrated MCP tool で取得。関連 guideline と依存状態を確認し、ブランチと note を作成。
 - 2026-06-16: `channel_topic` / `channel_purpose` / `channel_name` の actor prefix 補完を実装。統合テスト、decision log、表示仕様を更新し、Issue 指定の検証を完了。
+- 2026-06-16: PR #44 を作成。note を採番済みファイル名へ rename し、`progress.md` の v1-12 行を done / PR #44 に更新。
