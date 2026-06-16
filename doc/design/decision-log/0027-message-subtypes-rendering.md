@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-06-16
 - 関連: `doc/design/html-rendering.md`, `doc/design/slack-api-usage.md`
 
 ## 背景
@@ -34,6 +34,8 @@
 
 編集済みメッセージは「(edited)」相当の控えめな表示を付ける。
 
+2026-06-16 追記: `channel_topic` / `channel_purpose` / `channel_name` のように Slack API の `text` 先頭に actor が含まれない system 行では、message の `user` field を user 解決し、表示名を `@表示名` 相当の prefix として補完する。`user` が空、user 解決不能、または `text` がすでに actor mention / `@表示名` で始まる場合は補完しない。
+
 ## 理由
 
 - channel の文脈を保ちつつ Slack の見た目の模倣を優先し、未知 subtype への安全な fallback で将来の API 変化にも壊れにくくするため。
@@ -42,6 +44,7 @@
 
 - HTML テンプレートは「通常投稿」「システム行」「プレースホルダ」の 3 形式を持つ。
 - `--max-posts` のカウント対象(timeline メッセージ)に subtype 付きメッセージも含まれる(`output-format.md`)。
+- system 行の view 組み立てでは、一部 subtype について `text` だけでなく `user` 解決結果も表示に使う。
 
 ## 後から見直す条件
 

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -359,6 +360,12 @@ var systemSubtypes = map[string]bool{
 	"pinned_item":       true,
 }
 
+var actorPrefixSystemSubtypes = map[string]bool{
+	"channel_topic":   true,
+	"channel_purpose": true,
+	"channel_name":    true,
+}
+
 var normalSubtypes = map[string]bool{
 	"":                 true,
 	"file_share":       true,
@@ -411,7 +418,7 @@ func (b *builder) messageView(m *slack.Message) *render.MessageView {
 	switch {
 	case systemSubtypes[m.Subtype]:
 		v.IsSystem = true
-		v.Body = render.Mrkdwn(m.Text, b)
+		v.Body = b.systemBody(m)
 		return v
 	case m.Subtype == "tombstone":
 		v.Author = "(削除)"
@@ -442,6 +449,16 @@ func (b *builder) messageView(m *slack.Message) *render.MessageView {
 	return v
 }
 
+func (b *builder) systemBody(m *slack.Message) template.HTML {
+	body := render.Mrkdwn(m.Text, b)
+	name, ok := b.userDisplayName(m.User)
+	if !ok || !actorPrefixSystemSubtypes[m.Subtype] || systemTextStartsWithActor(m.Text, m.User, name) {
+		return body
+	}
+	prefix := `<span class="mention">` + html.EscapeString("@"+name) + `</span> `
+	return render.Safe(prefix) + body
+}
+
 func (b *builder) authorName(m *slack.Message) string {
 	if m.User != "" {
 		return b.UserName(m.User)
@@ -456,6 +473,30 @@ func (b *builder) authorName(m *slack.Message) string {
 		return m.BotID
 	}
 	return "(unknown)"
+}
+
+func (b *builder) userDisplayName(id string) (string, bool) {
+	if id == "" {
+		return "", false
+	}
+	u, ok := b.users[id]
+	if !ok {
+		return "", false
+	}
+	return u.DisplayName(), true
+}
+
+func systemTextStartsWithActor(text, userID, displayName string) bool {
+	for _, prefix := range []string{
+		"<@" + userID + ">",
+		"<@" + userID + "|",
+		"@" + displayName,
+	} {
+		if prefix != "" && strings.HasPrefix(text, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *builder) addFiles(v *render.MessageView, m *slack.Message) {
