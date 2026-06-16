@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `v1/13-goreleaser`
-- PR: 未作成
+- PR: #45
 - 最終更新: 2026-06-16
 
 ## 目的
@@ -24,8 +24,7 @@ Issue #27 の v1-13 として、GoReleaser による 4 target 単一バイナリ
 
 ## 次にやること
 
-- `progress.md` を PR 番号付きで更新する。
-- commit / push / PR 作成を行う。
+- 採番後の note rename と `progress.md` 更新を commit / push する。
 
 ## 検証
 

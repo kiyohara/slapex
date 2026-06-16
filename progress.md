@@ -50,7 +50,7 @@
 | v1-10 | `--reuse-cache` の実装 | #24 | v1-07 | done | #42 |
 | v1-11 | コンテナ実行時 TZ の解決(TZ forward) | #25 | v1-01 | done | #43 |
 | v1-12 | system メッセージの actor 表示 | #26 | v1-08 | done | #44 |
-| v1-13 | goreleaser 設定と version 埋め込み | #27 | v1-01 | pending | |
+| v1-13 | goreleaser 設定と version 埋め込み | #27 | v1-01 | done | #45 |
 | v1-14 | リリース workflow(tag → Releases) | #28 | v1-13 | pending | |
 | v1-15 | README と LICENSE | #29 | v1-13 | pending | |
 | v1-16 | 実 token 総合 E2E(ユーザー協働) | #30 | v1-10〜v1-15 | pending | |
