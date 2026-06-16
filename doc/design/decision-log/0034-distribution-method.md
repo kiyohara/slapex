@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-06-16
 - 関連: `doc/design/architecture.md`, `doc/design/decision-log/0031-supported-platforms.md`, `doc/design/decision-log/0032-implementation-language.md`
 
 ## 背景
@@ -27,7 +27,7 @@
 
 - 配布は GitHub Releases への単一バイナリ添付を主経路とする。
 - build target は `darwin/amd64` / `darwin/arm64` / `linux/amd64` / `linux/arm64`(0031 の対象プラットフォーム)。
-- リリース自動化は goreleaser を想定し、checksum を同梱する。
+- リリース自動化は goreleaser を使い、`goreleaser` 設定で 4 target の単一バイナリと sha256 checksum を生成する。version は build 時の ldflags で CLI に埋め込む。
 - Homebrew tap は将来検討として未決事項に記録する。コンテナ image 配布は採用しない。
 - リリース workflow と tap の整備は PoC 後の実装フェーズで行う。
 
@@ -38,7 +38,7 @@
 ## 影響
 
 - `architecture.md` の配布方式に反映した。
-- 実装フェーズで goreleaser 設定と GitHub Actions release workflow を追加する。
+- 実装フェーズで goreleaser 設定を追加した。GitHub Actions release workflow は後続タスクで追加する。
 - `doc/help/` には、実装フェーズでインストール手順(Releases からの取得)を追加する。
 
 ## 後から見直す条件

@@ -18,7 +18,7 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-const version = "0.0.0-poc"
+var version = "dev"
 
 const (
 	exitOK      = 0
