@@ -1,0 +1,35 @@
+version: 2
+
+project_name: slapex
+
+env:
+  - GOTOOLCHAIN=auto
+
+builds:
+  - id: slapex
+    main: ./cmd/slapex
+    binary: slapex
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: slapex
+    formats:
+      - binary
+    name_template: "slapex_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "slapex_checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"

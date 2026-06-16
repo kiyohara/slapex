@@ -7,6 +7,7 @@
 
 # build artifacts
 /bin/
+/dist/
 
 # slapex export outputs (default output roots)
 /slapex-*/
