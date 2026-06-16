@@ -45,3 +45,4 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 - 2026-06-16: PR #46 を作成し、note を番号付きファイル名へ rename した。
 - 2026-06-16: `progress.md` の v1-14 行を done / PR #46 に更新した。
 - 2026-06-16: review comment を受け、publish 権限を持つ release workflow の actions を commit SHA pin に変更した。
+- 2026-06-16: 追加 review comment を受け、release workflow の tag trigger を `v[0-9]*` に絞り、同一 ref の並行 release を防ぐ concurrency を追加した。
