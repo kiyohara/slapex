@@ -17,6 +17,7 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 - `doc/design/architecture.md` の配布方式へ release workflow の要点を追記済み。
 - Issue 指定の検証は完了済み。
 - PR #46 を作成済み。
+- `progress.md` の v1-14 行を done / PR #46 に更新済み。
 
 ## 決定事項
 
@@ -25,7 +26,7 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 
 ## 次にやること
 
-- `progress.md` の v1-14 行へ PR #46 を反映する。
+- レビュー待ち。merge はユーザーが行う。
 
 ## 検証
 
@@ -42,3 +43,4 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 
 - 2026-06-16: Issue #28 を MCP で取得。依存 v1-13 が done であることを `progress.md` で確認し、作業を開始した。
 - 2026-06-16: PR #46 を作成し、note を番号付きファイル名へ rename した。
+- 2026-06-16: `progress.md` の v1-14 行を done / PR #46 に更新した。
