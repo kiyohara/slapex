@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `v1/14-release-workflow`
-- PR: 未作成
+- PR: #46
 - 最終更新: 2026-06-16
 
 ## 目的
@@ -16,6 +16,7 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 - `.github/workflows/release.yml` を追加済み。
 - `doc/design/architecture.md` の配布方式へ release workflow の要点を追記済み。
 - Issue 指定の検証は完了済み。
+- PR #46 を作成済み。
 
 ## 決定事項
 
@@ -24,8 +25,7 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 
 ## 次にやること
 
-- PR 作成後、`progress.md` の v1-14 行へ PR 番号を反映する。
-- PR 採番後、note を番号付きファイル名へ rename する。
+- `progress.md` の v1-14 行へ PR #46 を反映する。
 
 ## 検証
 
@@ -41,3 +41,4 @@ Issue #28 / v1-14 として、`v*` tag push をトリガーに GoReleaser で Gi
 ## セッションログ
 
 - 2026-06-16: Issue #28 を MCP で取得。依存 v1-13 が done であることを `progress.md` で確認し、作業を開始した。
+- 2026-06-16: PR #46 を作成し、note を番号付きファイル名へ rename した。
