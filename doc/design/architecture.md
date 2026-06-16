@@ -58,6 +58,8 @@ internal/emoji/    絵文字解決(組込みデータセット + emoji.list)
 
 - GitHub Releases に各 OS / arch の単一バイナリを添付する。build target は `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64`(`decision-log/0031-supported-platforms.md`)。
 - リリース自動化は goreleaser を想定する。checksum ファイルを同梱する。
+- リリース時は `doc/guidelines/git-operation-guidelines.md` に従って署名付き tag `vX.Y.Z` を `git tag -s` で作成し、GitHub remote へ push する。
+- `v*` tag の push をトリガーに release workflow が goreleaser を実行し、GitHub Releases へ各 target のバイナリと checksum を添付する。
 - Homebrew tap の提供は将来検討とする。
 - リリース workflow と tap の整備は PoC 後の実装フェーズで行う(`decision-log/0034-distribution-method.md`)。
 
