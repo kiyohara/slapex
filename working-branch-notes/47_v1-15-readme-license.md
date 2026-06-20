@@ -28,7 +28,8 @@ v1.0 リリース実装プラン タスク 15/17(Issue #29)。v1.0 公開に向�
 
 ## 次にやること
 
-- ユーザーによる PR #47 のレビューと merge 待ち(agent は merge しない)。
+- AI レビュー(2 種)指摘へ対応済み。ユーザーによる再レビューと merge 待ち(agent は merge しない)。
+- 将来課題は Issue #51 / #52 / #53(新規)と #48 / #49 / #50(既存サンプル流用)で post-v1 に管理。
 
 ## 検証
 
@@ -46,3 +47,4 @@ v1.0 リリース実装プラン タスク 15/17(Issue #29)。v1.0 公開に向�
 - 2026-06-20: Issue #29 着手。依存 v1-13 done を `progress.md` で確認。参照ドキュメント(usage-flow / cli-interface / output-format / slack-app-setup / decision log 0031,0034 / `.goreleaser.yaml` / `compose.yaml`)を確認し、README / LICENSE 作成に着手。
 - 2026-06-20: README / LICENSE(MIT)作成、検証完了、`progress.md` 更新、PR #47 作成・note 採番。
 - 2026-06-20: ユーザーがライセンスを MIT で確定。decision log `0038-license-selection.md` を新規作成し index に追加。本メモと PR description を MIT 確定の前提に更新。
+- 2026-06-20: AI レビュー 2 種の指摘を分類して対応。本 PR 修正(README の token 例・節順・checksum 分割・表記統一・stdout 仕様・各種リンク。commit 26d1fcf、CI green)と、将来課題の Issue 化(A-1=#51 / A-2=#52 / B-4=#53 を新規、B-1〜B-3=#48〜#50 を流用)。全 inline コメント(14)+ ロールアップコメントへ返信。resolve はユーザー対応。
