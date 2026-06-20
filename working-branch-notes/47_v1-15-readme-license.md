@@ -14,22 +14,21 @@ v1.0 リリース実装プラン タスク 15/17(Issue #29)。v1.0 公開に向�
 ## 現在の状況
 
 - `README.md` を新規作成(概要 / インストール / 事前準備 / 使い方 / 出力 / 開発 / ライセンス)。
-- `LICENSE` を MIT(copyright `2026 Tomokazu Kiyohara`)で配置(提案。種別はユーザー最終確認事項)。
+- `LICENSE` を MIT(copyright `2026 Tomokazu Kiyohara`)で配置。**ユーザー確認により MIT 確定**(decision log 0038 に記録)。
 - 手順は複製せず `doc/` 配下の正本へリンクする方針で記述。
 - リンク切れ確認・`go build ./...`(Docker Compose 経由)ともに成功(下記「検証」)。
+- PR #47 作成・push 済み。CI 5 チェック全 success。
 
 ## 決定事項
 
 - README は日本語。手順の重複を避け、Slack App 準備は `doc/help/slack-app-setup.md`、CLI 全量は `doc/design/cli-interface.md`、出力詳細は `doc/design/output-format.md` へリンクする。
 - インストール手順は goreleaser 設定(`.goreleaser.yaml`)に合わせる。配布物は raw binary `slapex_<os>_<arch>`(darwin/linux × amd64/arm64)+ `slapex_checksums.txt`(sha256)。
 - 開発コマンドは Docker Compose(`compose.yaml` の `dev` service)前提で例示。
-- **LICENSE は MIT を提案するが、ライセンス種別はユーザーの最終確認事項。** PR description の「レビューしてほしい点」に明記し、merge レビューで確定してもらう。
+- **ライセンスは MIT に確定**(ユーザー確認済み、2026-06-20)。経緯は decision log `0038-license-selection.md`、index にも反映。README ライセンス節・`LICENSE`・decision log を MIT で整合させる。
 
 ## 次にやること
 
-- リンク切れ確認と `go build ./...`(Docker Compose 経由)を実行し、結果を本メモに記録する。
-- `progress.md` の v1-15 行を更新する。
-- PR を作成(`Closes #29`)し、本メモを PR 番号付きへ rename する。
+- ユーザーによる PR #47 のレビューと merge 待ち(agent は merge しない)。
 
 ## 検証
 
@@ -40,8 +39,10 @@ v1.0 リリース実装プラン タスク 15/17(Issue #29)。v1.0 公開に向�
 
 ## リスク・ブロッカー
 
-- ライセンス種別が未確定(ユーザー確認待ち)。MIT 前提で README ライセンス節と LICENSE を整合させてあるため、別ライセンスに変える場合は両方の更新が必要。
+- (解消)ライセンス種別はユーザー確認により MIT で確定(decision log 0038)。README ライセンス節・`LICENSE`・decision log を整合済み。
 
 ## セッションログ
 
 - 2026-06-20: Issue #29 着手。依存 v1-13 done を `progress.md` で確認。参照ドキュメント(usage-flow / cli-interface / output-format / slack-app-setup / decision log 0031,0034 / `.goreleaser.yaml` / `compose.yaml`)を確認し、README / LICENSE 作成に着手。
+- 2026-06-20: README / LICENSE(MIT)作成、検証完了、`progress.md` 更新、PR #47 作成・note 採番。
+- 2026-06-20: ユーザーがライセンスを MIT で確定。decision log `0038-license-selection.md` を新規作成し index に追加。本メモと PR description を MIT 確定の前提に更新。
