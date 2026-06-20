@@ -59,6 +59,7 @@ v1.0 リリース前の実 token 総合 E2E を実施する。自動テストで
 - 記録:
   - `TZ=Asia/Tokyo` 付き実行で、HTML header の `Exported` が `UTC+09:00` を表示することを確認。
   - message 時刻も UTC timestamp に対して JST 表示になっていることを確認。
+  - 出力ディレクトリ名の timestamp は、今回の実 token E2E が `--output` で出力 root を固定していたため未確認。Issue #30 の受け入れ条件上は、未確認理由として本 note に記録する。
 
 ### (e) 配布形態
 
