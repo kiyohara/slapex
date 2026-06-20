@@ -12,7 +12,7 @@ v1.0 リリース前の実 token 総合 E2E を実施する。自動テストで
 
 - Issue #30 の依存(v1-10〜v1-15)は `progress.md` 上すべて done。
 - 作業ブランチを `main` から作成済み。
-- E2E checklist (a)〜(g) は実施済み。見つかった所見は #54〜#57 として Issue 化済み。
+- E2E checklist (a)〜(g) は実施済み。追加 rendering E2E も実施済み。見つかった所見は #54〜#57 / #59 として Issue 化済み。
 
 ## 決定事項
 
@@ -90,6 +90,19 @@ v1.0 リリース前の実 token 総合 E2E を実施する。自動テストで
   - 長い URL を含む channel topic system message で、時刻表示が折り返される。
   - URL preview の service 部分に favicon / service icon 相当の小アイコンが表示されない。
 
+### 追加 rendering E2E
+
+- 担当: ユーザー / agent
+- 結果: 実施
+- 記録:
+  - rendering 確認用の投稿を追加し、実 token export が成功。timeline 10 件、thread 2 本、replies 6 件、assets 11 件を取得。
+  - HTML から参照されるローカルファイルの欠落はなかった。
+  - bold / italic / strike / inline code / quote / fenced code block / plain URL / 標準 emoji の表示を確認。
+  - thread reply 6 件、標準 emoji reaction、custom emoji reaction を確認。
+  - upload image 3 件、添付 PDF 1 件、URL preview image 1 件、edited marker を確認。
+  - 削除済み投稿は今回の出力には現れなかった。
+  - Slack-style labeled link 相当の投稿が label 表示にならないケースを確認し、#59 として Issue 化した。
+
 ### 所見の Issue 化
 
 - 結果: 実施
@@ -98,6 +111,7 @@ v1.0 リリース前の実 token 総合 E2E を実施する。自動テストで
   - #55: app / bot 追加の system message で追加操作を行ったユーザーを表示する。
   - #56: 長い URL を含む system message で時刻表示が折り返される。
   - #57: URL preview に service icon / favicon 相当の表示を追加する。
+  - #59: mrkdwn の labeled link が実データで label 表示にならないケースを調査する。
 
 ## リスク・ブロッカー
 
