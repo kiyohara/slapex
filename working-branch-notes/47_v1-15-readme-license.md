@@ -25,6 +25,7 @@ v1.0 リリース実装プラン タスク 15/17(Issue #29)。v1.0 公開に向�
 - インストール手順は goreleaser 設定(`.goreleaser.yaml`)に合わせる。配布物は raw binary `slapex_<os>_<arch>`(darwin/linux × amd64/arm64)+ `slapex_checksums.txt`(sha256)。
 - 開発コマンドは Docker Compose(`compose.yaml` の `dev` service)前提で例示。
 - **ライセンスは MIT に確定**(ユーザー確認済み、2026-06-20)。経緯は decision log `0038-license-selection.md`、index にも反映。README ライセンス節・`LICENSE`・decision log を MIT で整合させる。
+- **decision log は内部参照ドキュメント**。利用者向けドキュメント(README / `doc/help/`)から直接リンクしない方針に確定(decision log `0039-decision-log-audience.md`)。README の 0031 直リンクを削除し、`decision-log-guidelines.md` と shim に明記。
 
 ## 次にやること
 
@@ -48,3 +49,4 @@ v1.0 リリース実装プラン タスク 15/17(Issue #29)。v1.0 公開に向�
 - 2026-06-20: README / LICENSE(MIT)作成、検証完了、`progress.md` 更新、PR #47 作成・note 採番。
 - 2026-06-20: ユーザーがライセンスを MIT で確定。decision log `0038-license-selection.md` を新規作成し index に追加。本メモと PR description を MIT 確定の前提に更新。
 - 2026-06-20: AI レビュー 2 種の指摘を分類して対応。本 PR 修正(README の token 例・節順・checksum 分割・表記統一・stdout 仕様・各種リンク。commit 26d1fcf、CI green)と、将来課題の Issue 化(A-1=#51 / A-2=#52 / B-4=#53 を新規、B-1〜B-3=#48〜#50 を流用)。全 inline コメント(14)+ ロールアップコメントへ返信。resolve はユーザー対応。
+- 2026-06-20: decision log を内部参照ドキュメントと位置づけ、利用者向け文書から直接リンクしない方針を decision log 0039 に記録。`decision-log-guidelines.md` と shim に追記、README の 0031 直リンク削除、`doc/help/README.md` に補足。commit af3ec95。review #13 へ再対応を返信。
