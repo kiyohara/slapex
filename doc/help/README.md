@@ -19,4 +19,4 @@ CLI のエラー出力や `--help` から URL で案内する文書は、この�
 
 ## 文体
 
-利用者がそのまま実行できる手順として書く。設計上の迷いや検討経緯は書かず、必要な場合は decision log へ分ける。
+利用者がそのまま実行できる手順として書く。設計上の迷いや検討経緯は書かず、必要な場合は decision log へ分ける。decision log は開発時参照の内部ドキュメントとして扱い、利用者向け help から直接リンクしない(方針は `doc/guidelines/decision-log-guidelines.md`)。

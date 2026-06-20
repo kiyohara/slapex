@@ -13,3 +13,4 @@ paths:
 - 詳細ログは `doc/design/decision-log/<連番>-<短い英語slug>.md` に 1 テーマ 1 ファイルで記録する。
 - `index.md` には現在有効な主要方針、未決事項、参照先だけを書く。
 - 仕様の正本は `doc/design/` 直下の spec 文書。decision log と `index.md` は参考ログであり、仕様の正本として扱わない。
+- decision log は内部参照ドキュメント。利用者向けドキュメント(`README.md` / `doc/help/`)から直接リンクしない(経緯: 0039)。

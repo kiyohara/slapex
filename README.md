@@ -13,7 +13,7 @@
 - **read 系 scope のみ** — Slack へは履歴・ファイル・絵文字・ユーザー情報の取得など read 系 scope だけを使います。
 - **スレッド・絵文字・reaction・unfurl 対応** — thread の返信、標準 / カスタム絵文字、reaction、URL unfurl の preview 画像なども取得して描画します。
 
-対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。Windows は初期対象外です([0031-supported-platforms.md](doc/design/decision-log/0031-supported-platforms.md))。
+対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。Windows は初期対象外です。
 
 利用者の操作の流れ全体は [`doc/design/usage-flow.md`](doc/design/usage-flow.md) にまとめています。使い始めるまでの流れ:
 

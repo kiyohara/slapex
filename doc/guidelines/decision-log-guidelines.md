@@ -16,6 +16,13 @@ Decision log は、決定済みの方針だけでなく、どのような経緯�
 - decision log や `index.md` を「仕様の正本」として扱ったり、そう記述したりしない。
 - 文書再編で内容が spec 間を移動したら、移動元を指していた `関連` を移動先 spec へ更新する。本文(背景・検討・決定・影響)は当時の記録なので書き換えず、旧 spec への言及が残ってよい。
 
+## 対象読者と利用者向け文書からの参照
+
+- decision log は開発時に参照する内部ドキュメントである。主な読者は AI agent と開発者であり、一般利用者が読む前提ではない。
+- 利用者向けドキュメント(repo root の `README.md` と `doc/help/` 配下)からは、decision log へ直接リンクしない。利用者に必要な情報は利用者向け文書に本文として書くか、利用者向けの spec / help へリンクする。
+- `doc/design/` 配下の spec 文書からの「決定経緯」としての decision log 参照は、開発者向けの内部参照として許容する(「正本と参照の関係」を参照)。
+- 経緯は `doc/design/decision-log/0039-decision-log-audience.md`。
+
 ## 配置
 
 ```text

@@ -50,6 +50,7 @@
 | 0036 | decided | v1.0 リリースのスコープ | テスト整備・CI・`--reuse-cache`・TZ 課題・actor 表示・リリース整備・README / LICENSE・総合 E2E を含め、v1.0 公開までを本実装プランとする。差分取得などの未決事項は post-v1 に据え置き | [0036-v1-release-scope.md](0036-v1-release-scope.md) |
 | 0037 | decided | Issue 駆動タスク消化の運用方式 | 1 Issue = 1 ブランチ = 1 PR の自己完結 Issue を直列消化する。共通手順は `doc/guidelines/issue-driven-task-execution.md`、索引は `progress.md` のタスク表、merge はユーザーが行う | [0037-issue-driven-task-execution.md](0037-issue-driven-task-execution.md) |
 | 0038 | decided | ライセンス選定 | 公開ライセンスは MIT(copyright `2026 Tomokazu Kiyohara`)に確定。repo root の `LICENSE` を `README.md` のライセンス節から参照する。特許付与が必要な利用形態が出れば Apache-2.0 を再検討 | [0038-license-selection.md](0038-license-selection.md) |
+| 0039 | decided | decision log の対象読者とリンク方針 | decision log は開発時参照の内部ドキュメント。利用者向けドキュメント(`README.md` / `doc/help/`)からは直接リンクしない。`doc/design/` spec からの決定経緯参照(0022)は許容 | [0039-decision-log-audience.md](0039-decision-log-audience.md) |
 
 ## 未決事項
 
