@@ -152,6 +152,7 @@ blockquote {
   font-size: 13px;
 }
 .system-body { min-width: 0; overflow-wrap: anywhere; }
+.system-context { color: var(--muted); font-size: 12px; }
 
 /* uploads and attachments */
 .image-block { margin: 6px 0; }

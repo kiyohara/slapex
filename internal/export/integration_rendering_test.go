@@ -160,12 +160,14 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 
 	sc := baseScenario()
 	sc.Users["U03"] = testUser("U03", "set", "Set User", "set", "")
+	sc.Users["U04"] = testUser("U04", "charlie", "Charlie Inviter", "Charlie", "")
 	sc.Messages = []slack.Message{
 		{
 			Type:    "message",
 			Subtype: "channel_join",
 			TS:      "1700000100.000000",
 			User:    "U01",
+			Inviter: "U04",
 			Text:    "<@U01> has joined the channel",
 		},
 		{
@@ -195,6 +197,7 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 
 	mustContain(t, body, `<div class="system-message">`)
 	mustContain(t, body, "has joined the channel")
+	mustContain(t, body, `has joined the channel <span class="system-context">(invited by <span class="mention">@Charlie</span>)</span>`)
 	mustContain(t, body, `<span class="mention">@Bob</span> set the channel topic: Launch planning`)
 	mustContain(t, body, "set the channel purpose: Planning docs")
 	mustContain(t, body, `<span class="mention">@set</span> set the channel name: project-beta`)
@@ -203,6 +206,9 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	}
 	if got := strings.Count(body, `<span class="mention">@Bob</span>`); got != 1 {
 		t.Fatalf("@Bob mention count = %d, want 1 (channel_topic gets exactly one actor prefix)", got)
+	}
+	if got := strings.Count(body, `<span class="mention">@Charlie</span>`); got != 1 {
+		t.Fatalf("@Charlie mention count = %d, want 1 (channel_join inviter gets exactly one context suffix)", got)
 	}
 	if got := strings.Count(body, `<span class="mention">@set</span>`); got != 1 {
 		t.Fatalf("@set mention count = %d, want 1 (display name must not suppress actor prefix)", got)

@@ -451,12 +451,27 @@ func (b *builder) messageView(m *slack.Message) *render.MessageView {
 
 func (b *builder) systemBody(m *slack.Message) template.HTML {
 	body := render.Mrkdwn(m.Text, b)
+	if suffix, ok := b.channelJoinInviterSuffix(m); ok {
+		body += suffix
+	}
 	name, ok := b.userDisplayName(m.User)
 	if !ok || !actorPrefixSystemSubtypes[m.Subtype] || systemTextStartsWithActor(m.Text, m.User, name) {
 		return body
 	}
 	prefix := `<span class="mention">` + html.EscapeString("@"+name) + `</span> `
 	return render.Safe(prefix) + body
+}
+
+func (b *builder) channelJoinInviterSuffix(m *slack.Message) (template.HTML, bool) {
+	if m.Subtype != "channel_join" || m.Inviter == "" || m.Inviter == m.User || systemTextMentionsUser(m.Text, m.Inviter) {
+		return "", false
+	}
+	name, ok := b.userDisplayName(m.Inviter)
+	if !ok {
+		return "", false
+	}
+	suffix := ` <span class="system-context">(invited by <span class="mention">` + html.EscapeString("@"+name) + `</span>)</span>`
+	return render.Safe(suffix), true
 }
 
 func (b *builder) authorName(m *slack.Message) string {
@@ -497,6 +512,10 @@ func systemTextStartsWithActor(text, userID, displayName string) bool {
 		}
 	}
 	return false
+}
+
+func systemTextMentionsUser(text, userID string) bool {
+	return userID != "" && (strings.Contains(text, "<@"+userID+">") || strings.Contains(text, "<@"+userID+"|"))
 }
 
 func (b *builder) addFiles(v *render.MessageView, m *slack.Message) {
@@ -674,6 +693,9 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 	add := func(m *slack.Message) {
 		if m.User != "" {
 			seen[m.User] = true
+		}
+		if m.Inviter != "" {
+			seen[m.Inviter] = true
 		}
 		for _, match := range reMention.FindAllStringSubmatch(m.Text, -1) {
 			seen[match[1]] = true
