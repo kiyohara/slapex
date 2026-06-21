@@ -17,6 +17,7 @@ GitHub Issue #55 に従い、app / bot 追加の system message で追加操作�
 - Slack docs で `channel_join` message は招待された場合に `inviter` property を含むことを確認済み。
 - `channel_join` の `inviter` を user 解決し、本文末尾に `(invited by @表示名)` を補足表示する実装とテストを追加済み。
 - 関連する HTML 表示仕様と decision log 0027 を更新済み。
+- PR #62 のレビューコメントを確認し、`.system-context` の CSS 未定義指摘は妥当と判断。CSS と CSS 出力テストを追加済み。
 
 ## 決定事項
 
@@ -35,6 +36,11 @@ GitHub Issue #55 に従い、app / bot 追加の system message で追加操作�
 - `docker compose run --rm --no-deps dev go test ./...`
 - `docker compose run --rm --no-deps dev go vet ./...`
 - `git diff --check`
+- レビュー対応後:
+  - `docker compose run --rm --no-deps dev go test ./internal/render ./internal/export`
+  - `docker compose run --rm --no-deps dev go test ./...`
+  - `docker compose run --rm --no-deps dev go vet ./...`
+  - `git diff --check`
 
 ## リスク・ブロッカー
 
@@ -44,3 +50,4 @@ GitHub Issue #55 に従い、app / bot 追加の system message で追加操作�
 
 - 2026-06-21: Issue #55 の作業を開始。GitHub MCP で Issue 本文を確認し、`main` 最新化と作業ブランチ作成を実施。
 - 2026-06-21: Slack docs で `channel_join` の `inviter` property を確認。`slack.Message`、user ID 収集、system row renderer、統合テスト、設計文書を更新。
+- 2026-06-22: PR #62 のレビューコメントを確認。`.system-context` の CSS 未定義指摘を妥当と判断し、style と CSS 出力テストを追加。
