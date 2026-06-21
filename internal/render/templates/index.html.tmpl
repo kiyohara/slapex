@@ -68,7 +68,7 @@
       {{- end}}
       {{- range .Unfurls}}
       <div class="unfurl">
-        {{- if .Service}}<div class="unfurl-service">{{.Service}}</div>{{end}}
+        {{- if or .Service .ServiceIconPath}}<div class="unfurl-service">{{if .ServiceIconPath}}<img class="unfurl-service-icon" src="{{.ServiceIconPath}}" alt="">{{end}}{{.Service}}</div>{{end}}
         {{- if .Title}}<div class="unfurl-title">{{if .TitleHref}}<a href="{{.TitleHref}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}</div>{{end}}
         {{- if .Text}}<div class="unfurl-text">{{.Text}}</div>{{end}}
         {{- if .ImagePath}}<img class="unfurl-image" src="{{.ImagePath}}" alt="">{{end}}

@@ -181,7 +181,20 @@ blockquote {
   padding: 6px 10px;
   border-left: 4px solid var(--line);
 }
-.unfurl-service { color: var(--muted); font-size: 12px; }
+.unfurl-service {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.unfurl-service-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: contain;
+}
 .unfurl-title { font-weight: 700; }
 .unfurl-text { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .unfurl-image {

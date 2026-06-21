@@ -72,11 +72,12 @@ type FileView struct {
 
 // UnfurlView is a legacy attachment / URL preview.
 type UnfurlView struct {
-	Service   string
-	Title     string
-	TitleHref string
-	Text      template.HTML
-	ImagePath string
+	Service         string
+	ServiceIconPath string
+	Title           string
+	TitleHref       string
+	Text            template.HTML
+	ImagePath       string
 }
 
 // ReactionView is one reaction pill.

@@ -59,6 +59,7 @@ const (
 	KindUploadOriginal = "upload_original"
 	KindAttachment     = "attachment"
 	KindAvatar         = "avatar"
+	KindServiceIcon    = "service_icon"
 )
 
 var kindDirs = map[string]string{
@@ -68,6 +69,7 @@ var kindDirs = map[string]string{
 	KindUploadOriginal: "assets/uploads/originals",
 	KindAttachment:     "assets/attachments",
 	KindAvatar:         "assets/avatars",
+	KindServiceIcon:    "assets/service-icons",
 }
 
 // ManifestEntry mirrors the assets_manifest.json schema (doc/design/cache.md).
@@ -140,7 +142,7 @@ func (a *Assets) Reused() int { return a.reused }
 // emoji, OG images and avatars are always saved regardless of size.
 func (a *Assets) limitFor(kind string) int64 {
 	switch kind {
-	case KindEmoji, KindUploadThumb, KindOGImage, KindAvatar:
+	case KindEmoji, KindUploadThumb, KindOGImage, KindAvatar, KindServiceIcon:
 		return 0
 	default:
 		return a.limit

@@ -127,6 +127,7 @@ func (f *File) ThumbURL() string {
 // Attachment is the subset of legacy attachments (URL unfurls) slapex uses.
 type Attachment struct {
 	ServiceName string `json:"service_name"`
+	ServiceIcon string `json:"service_icon"`
 	Title       string `json:"title"`
 	TitleLink   string `json:"title_link"`
 	Text        string `json:"text"`

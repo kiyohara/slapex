@@ -143,6 +143,7 @@ func happyPathScenario() exportScenario {
 				Attachments: []slack.Attachment{
 					{
 						ServiceName: "Example News",
+						ServiceIcon: "{{base}}/files/service-example-news.png",
 						Title:       "Launch checklist",
 						TitleLink:   "https://example.com/launch-checklist",
 						Text:        "Read <@U02>'s notes",
@@ -215,13 +216,14 @@ func happyPathScenario() exportScenario {
 			"party_sloth": "{{base}}/files/emoji-party-sloth.png",
 		},
 		Assets: map[string]fakeAsset{
-			"/files/avatar-u01.png":          {ContentType: "image/png", Body: "avatar-u01"},
-			"/files/avatar-u02.png":          {ContentType: "image/png", Body: "avatar-u02"},
-			"/files/emoji-party-sloth.png":   {ContentType: "image/png", Body: "custom-emoji"},
-			"/files/og-launch.png":           {ContentType: "image/png", Body: "og-image"},
-			"/files/runbook.pdf":             {ContentType: "application/pdf", Body: "runbook attachment"},
-			"/files/screenshot-original.png": {ContentType: "image/png", Body: "screenshot original"},
-			"/files/screenshot-thumb.png":    {ContentType: "image/png", Body: "screenshot thumb"},
+			"/files/avatar-u01.png":           {ContentType: "image/png", Body: "avatar-u01"},
+			"/files/avatar-u02.png":           {ContentType: "image/png", Body: "avatar-u02"},
+			"/files/emoji-party-sloth.png":    {ContentType: "image/png", Body: "custom-emoji"},
+			"/files/service-example-news.png": {ContentType: "image/png", Body: "service-icon"},
+			"/files/og-launch.png":            {ContentType: "image/png", Body: "og-image"},
+			"/files/runbook.pdf":              {ContentType: "application/pdf", Body: "runbook attachment"},
+			"/files/screenshot-original.png":  {ContentType: "image/png", Body: "screenshot original"},
+			"/files/screenshot-thumb.png":     {ContentType: "image/png", Body: "screenshot thumb"},
 		},
 	}
 }
@@ -480,6 +482,7 @@ func replaceMessageBaseURL(m *slack.Message, repl func(string) string) {
 	for i := range m.Attachments {
 		m.Attachments[i].ImageURL = repl(m.Attachments[i].ImageURL)
 		m.Attachments[i].ThumbURL = repl(m.Attachments[i].ThumbURL)
+		m.Attachments[i].ServiceIcon = repl(m.Attachments[i].ServiceIcon)
 	}
 }
 
@@ -491,6 +494,7 @@ func assertOutputFiles(t *testing.T, dir string) {
 		"style.css",
 		"assets/avatars",
 		"assets/emoji",
+		"assets/service-icons",
 		"assets/og-images",
 		"assets/uploads/thumbs",
 		"assets/uploads/originals",
@@ -529,6 +533,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		dateDivider,
 		`assets/avatars/`,
 		`assets/emoji/`,
+		`assets/service-icons/`,
 		`assets/og-images/`,
 		`assets/uploads/thumbs/`,
 		`assets/uploads/originals/`,
@@ -606,7 +611,7 @@ func assertCacheFiles(t *testing.T, dir string) {
 		Assets []manifestAsset `json:"assets"`
 	}
 	readJSON(t, filepath.Join(dir, ".cache/assets_manifest.json"), &manifest)
-	for _, kind := range []string{"avatar", "emoji", "og_image", "upload_thumb", "upload_original", "attachment"} {
+	for _, kind := range []string{"avatar", "emoji", "service_icon", "og_image", "upload_thumb", "upload_original", "attachment"} {
 		if !hasSavedAsset(manifest.Assets, kind) {
 			t.Fatalf("assets_manifest.json missing saved %s asset: %+v", kind, manifest.Assets)
 		}
