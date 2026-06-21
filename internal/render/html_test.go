@@ -3,6 +3,7 @@ package render
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -20,13 +21,31 @@ func TestWriteStyleCSSKeepsTimestampsFromWrapping(t *testing.T) {
 	}
 	css := string(data)
 
-	for _, marker := range []string{
-		"flex: none;",
-		"white-space: nowrap;",
-		".system-body { min-width: 0; overflow-wrap: anywhere; }",
-	} {
-		if !strings.Contains(css, marker) {
-			t.Fatalf("style.css missing marker %q", marker)
-		}
+	timeBlock := cssBlock(t, css, ".time")
+	assertCSSDeclaration(t, timeBlock, "flex", "none")
+	assertCSSDeclaration(t, timeBlock, "white-space", "nowrap")
+
+	systemBodyBlock := cssBlock(t, css, ".system-body")
+	assertCSSDeclaration(t, systemBodyBlock, "min-width", "0")
+	assertCSSDeclaration(t, systemBodyBlock, "overflow-wrap", "anywhere")
+}
+
+func cssBlock(t *testing.T, css, selector string) string {
+	t.Helper()
+
+	re := regexp.MustCompile(regexp.QuoteMeta(selector) + `\s*\{([^}]*)\}`)
+	matches := re.FindStringSubmatch(css)
+	if matches == nil {
+		t.Fatalf("style.css missing selector %q", selector)
+	}
+	return matches[1]
+}
+
+func assertCSSDeclaration(t *testing.T, block, property, value string) {
+	t.Helper()
+
+	re := regexp.MustCompile(`(^|;)\s*` + regexp.QuoteMeta(property) + `\s*:\s*` + regexp.QuoteMeta(value) + `\s*(;|$)`)
+	if !re.MatchString(strings.TrimSpace(block)) {
+		t.Fatalf("CSS block missing declaration %s: %s", property, value)
 	}
 }

@@ -14,6 +14,7 @@ GitHub Issue #56 の修正。長い URL を含む system message で時刻表示
 - `progress.md` には #56 の行はないため、関連 Issue #30 / v1-16 が done であることを依存確認の根拠とする。
 - `origin/main` から `issue-56-system-message-time-nowrap` を作成済み。
 - CSS 修正と回帰テスト追加済み。
+- PR review comment 2 件を確認し、CSS 契約テストの selector scope / 整形耐性を修正済み。
 
 ## 決定事項
 
@@ -22,13 +23,16 @@ GitHub Issue #56 の修正。長い URL を含む system message で時刻表示
 
 ## 次にやること
 
-- note 採番 commit を push し、PR に反映する。
+- レビュー再確認を待つ。
 
 ## 検証
 
 - `docker compose run --rm --no-deps dev gofmt -w internal/render/html_test.go`
 - `docker compose run --rm --no-deps dev go test ./...`
   - 成功。通常 message を含む既存 export / render tests と、時刻 nowrap / system body 折り返しの CSS 契約テストを確認。
+- `docker compose run --rm --no-deps dev gofmt -w internal/render/html_test.go`
+- `docker compose run --rm --no-deps dev go test ./internal/render ./...`
+  - 成功。review comment 対応後の selector scope / declaration 検証を確認。
 
 ## リスク・ブロッカー
 
@@ -38,3 +42,4 @@ GitHub Issue #56 の修正。長い URL を含む system message で時刻表示
 
 - 2026-06-21: Issue #56 と関連ガイドラインを確認し、作業ブランチと note を作成。
 - 2026-06-21: `.time` の shrink / wrap を抑止し、`.system-body` 側で長い本文を折り返す CSS に変更。回帰テストを追加し、全パッケージテスト成功。
+- 2026-06-21: PR review comment 2 件を妥当と判断し、CSS テストを selector block 単位の declaration 検証に修正。対象パッケージと全体テスト成功。
