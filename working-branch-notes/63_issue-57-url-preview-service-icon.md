@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-57-url-preview-service-icon
-- PR:
+- PR: #63
 - 最終更新: 2026-06-22
 
 ## 目的
