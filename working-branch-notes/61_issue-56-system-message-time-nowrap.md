@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-56-system-message-time-nowrap
-- PR:
+- PR: #61
 - 最終更新: 2026-06-21
 
 ## 目的
@@ -22,8 +22,7 @@ GitHub Issue #56 の修正。長い URL を含む system message で時刻表示
 
 ## 次にやること
 
-- PR を作成する。
-- PR 採番後に note を番号付きファイル名へ rename する。
+- note 採番 commit を push し、PR に反映する。
 
 ## 検証
 
