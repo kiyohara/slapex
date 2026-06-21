@@ -6,7 +6,7 @@
 
 本ファイルの方針は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と保存対象は `output-format.md`、cache の扱いは `cache.md` を参照する。決定経緯は `decision-log/0025-slack-api-usage-policy.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と保存対象は `output-format.md`、cache の扱いは `cache.md` を参照する。決定経緯は `decision-log/0025-slack-api-usage-policy.md` と `decision-log/0040-credential-scope-for-asset-downloads.md` を参照する。
 
 ## 前提とする token と App
 

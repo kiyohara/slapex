@@ -63,9 +63,16 @@ I want to review in Japanese.
 
 Slack token、個人情報、顧客固有情報、出力 HTML に含まれる機密情報、実 Slack ワークスペースの秘匿すべき識別情報が混入している場合は `[must]` で指摘する。
 
+## 認証情報の送信先スコープ
+
+- `Authorization` / `Cookie` / `X-API-Key` などの header 追加・変更は security-sensitive として扱う。
+- 認証情報は明示 allowlist の host にだけ送る。host 判定なしに共通 HTTP client / downloader へ認証情報を持たせる変更は `[must]` で指摘する。
+- URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL へ Slack bot token を送る変更は `[must]` で指摘する。
+- 認証情報付与条件を広げる変更では、allowlist 外へ送られない negative test と、必要な host へ送られる positive test があるか確認する。
+
 ## 実装 PR が始まった後
 
-実装言語、フレームワーク、テスト方針が決まったら、対象 path 別に `.github/instructions/*.instructions.md` を追加する。それまでは特定技術スタック向けの指摘を前提にしない。
+実装言語、フレームワーク、テスト方針は Go / stdlib-first / Docker Compose 経由の Go test として確定している。対象 path 別の詳細レビュー観点は `.github/instructions/*.instructions.md` に置く。
 
 `.github/instructions/*.instructions.md` を追加する場合、各 instruction file は先頭から約 4,000 文字のみ反映される前提で、高シグナルな要点に絞る。
 

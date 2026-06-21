@@ -13,6 +13,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - GitHub MCP 利用ルール(MCP 優先 / `gh` fallback / tool allowlist): `doc/guidelines/github-mcp-guidelines.md`
 - GitHub CLI 実行ルール(1Password op plugin 連携 / 実行環境制約 / MCP 不可時の fallback): `doc/guidelines/github-cli-guidelines.md`
 - 開発コマンド実行ルール(Docker Compose 優先 / host OS 上での開発環境の直接構築・実行を抑止): `doc/guidelines/development-command-guidelines.md`
+- 認証情報の送信先スコープルール(token / cookie / Authorization header の送信先 allowlist / public asset への送信禁止): `doc/guidelines/credential-scope-guidelines.md`
 - Pull Request 作成ガイドライン: `doc/guidelines/pull-request-guidelines.md`
 - Decision log 記録ルール(方針決定ログの作成・更新・index 管理): `doc/guidelines/decision-log-guidelines.md`
 - Working branch notes 取り扱いルール(性質・整合性スコープ・ライフサイクル・メンテコスト判断): `doc/guidelines/working-branch-notes-handling.md`
@@ -54,6 +55,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - GitHub の PR / issue / レビューコメントなどを操作するときは `doc/guidelines/github-mcp-guidelines.md` に従い、MCP を優先する。
 - `gh` コマンドを実行するときは `doc/guidelines/github-cli-guidelines.md` に従う。GitHub MCP 利用ルールでも `gh` fallback の経路はこの正本を参照する。
 - 依存 install / アプリ起動 / test / build など、開発環境を host OS 上に構築・実行する類のコマンドを実行するときは `doc/guidelines/development-command-guidelines.md` に従い、Docker Compose 経由を優先する。
+- token / cookie / Authorization header などの認証情報を HTTP client / asset download / 外部通信で扱うときは `doc/guidelines/credential-scope-guidelines.md` に従い、明示 allowlist の host 以外へ送らない。
 - PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
 - GitHub Issue を指定されてタスクを消化するときは `doc/guidelines/issue-driven-task-execution.md` に従う。
 - ドキュメントを作成・移動・分類変更するときは、まず `doc/README.md` と該当ディレクトリの `README.md` を確認する。

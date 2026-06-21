@@ -86,6 +86,7 @@ type exportScenario struct {
 type fakeAsset struct {
 	ContentType string
 	Body        string
+	RejectAuth  bool
 }
 
 // endpointFault injects error / rate-limit behaviour for one fake server
@@ -219,7 +220,7 @@ func happyPathScenario() exportScenario {
 			"/files/avatar-u01.png":           {ContentType: "image/png", Body: "avatar-u01"},
 			"/files/avatar-u02.png":           {ContentType: "image/png", Body: "avatar-u02"},
 			"/files/emoji-party-sloth.png":    {ContentType: "image/png", Body: "custom-emoji"},
-			"/files/service-example-news.png": {ContentType: "image/png", Body: "service-icon"},
+			"/files/service-example-news.png": {ContentType: "image/png", Body: "service-icon", RejectAuth: true},
 			"/files/og-launch.png":            {ContentType: "image/png", Body: "og-image"},
 			"/files/runbook.pdf":              {ContentType: "application/pdf", Body: "runbook attachment"},
 			"/files/screenshot-original.png":  {ContentType: "image/png", Body: "screenshot original"},
@@ -356,6 +357,10 @@ func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 	asset, ok := f.sc.Assets[r.URL.Path]
 	if !ok {
 		http.NotFound(w, r)
+		return
+	}
+	if asset.RejectAuth && r.Header.Get("Authorization") != "" {
+		http.Error(w, "unexpected auth header", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", asset.ContentType)
