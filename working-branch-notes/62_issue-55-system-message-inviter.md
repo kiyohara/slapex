@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-55-system-message-inviter
-- PR: 未作成
+- PR: #62
 - 最終更新: 2026-06-21
 
 ## 目的
