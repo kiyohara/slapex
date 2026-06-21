@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-16
+- 最終更新日: 2026-06-21
 - 関連: `doc/design/html-rendering.md`, `doc/design/slack-api-usage.md`
 
 ## 背景
@@ -35,6 +35,8 @@
 編集済みメッセージは「(edited)」相当の控えめな表示を付ける。
 
 2026-06-16 追記: `channel_topic` / `channel_purpose` / `channel_name` のように Slack API の `text` 先頭に actor が含まれない system 行では、message の `user` field を user 解決し、表示名を `@表示名` 相当の prefix として補完する。`user` が空、user 解決不能、または `text` がすでに actor mention / `@表示名` で始まる場合は補完しない。
+
+2026-06-21 追記: `channel_join` は `user` が参加した user / bot を指し、招待された場合は追加操作を行ったユーザー ID が `inviter` に入る。app / bot 追加時に操作ユーザーが HTML から欠落しないよう、`channel_join` の system 行では `inviter` を user 解決し、本文末尾に `(invited by @表示名)` 相当の補足を表示する。`inviter` が空、参加した `user` と同一、解決不能、または本文にすでに inviter mention が含まれる場合は補足しない。
 
 ## 理由
 

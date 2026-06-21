@@ -68,6 +68,7 @@ type Message struct {
 	TS         string `json:"ts"`
 	ThreadTS   string `json:"thread_ts"`
 	User       string `json:"user"`
+	Inviter    string `json:"inviter"`
 	BotID      string `json:"bot_id"`
 	Username   string `json:"username"`
 	BotProfile *struct {
