@@ -349,10 +349,6 @@ func (f *fakeSlackServer) hasChannel(id string) bool {
 }
 
 func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
-	if got := r.Header.Get("Authorization"); got != "Bearer "+integrationTestToken {
-		http.Error(w, "missing auth", http.StatusUnauthorized)
-		return
-	}
 	f.record(r)
 	if resp := f.nextFault(f.sc.AssetFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
 		return

@@ -13,12 +13,14 @@ GitHub Issue #57 に従い、Slack API の attachment / unfurl 情報から serv
 - Issue #57 の本文とコメントを確認済み。
 - `progress.md` に Issue #57 の行はなく、Issue 本文にも依存指定はないため、依存なしの単発 enhancement として進める。
 - `service_icon` を Slack API 由来の attachment field として扱い、取得できた場合だけ `assets/service-icons/` に保存して URL preview の service 名横へ表示する実装を追加済み。
+- E2E で外部 service icon 取得時に HTTP 400 が発生したため調査し、外部 asset URL へ Slack token 用 Authorization header を送っていたことが原因と確認した。
 
 ## 決定事項
 
 - ブランチ名は `issue-57-url-preview-service-icon` とする。
 - ツール自身による favicon / Open Graph fetch は追加しない。Slack API の attachment / unfurl 情報に `service_icon` が存在する場合だけ表示する。
 - `progress.md` に Issue #57 の該当行がないため、今回の作業では progress 表を更新しない。
+- asset download の Authorization header は Slack private file URL (`files.slack.com`) のみに付与する。URL preview 画像、service icon、avatar、emoji などの public asset URL には付与しない。
 
 ## 次にやること
 
@@ -27,6 +29,10 @@ GitHub Issue #57 に従い、Slack API の attachment / unfurl 情報から serv
 ## 検証
 
 - `docker compose run --rm --no-deps dev gofmt -w internal/slack/api.go internal/render/html.go internal/output/output.go internal/export/export.go internal/export/integration_test.go internal/output/output_test.go`
+- `docker compose run --rm --no-deps dev go test ./...`
+- E2E 出力の `.cache/assets_manifest.json` を確認し、失敗は `service_icon` 1 件のみ、対象 URL は Authorization header なしで HTTP 200、ダミー Authorization header 付きで HTTP 400 になることを確認した。
+- `docker compose run --rm --no-deps dev gofmt -w internal/slack/client.go internal/slack/client_test.go internal/export/integration_test.go`
+- `docker compose run --rm --no-deps dev go test ./internal/slack ./internal/export`
 - `docker compose run --rm --no-deps dev go test ./...`
 
 ## リスク・ブロッカー
@@ -37,3 +43,4 @@ GitHub Issue #57 に従い、Slack API の attachment / unfurl 情報から serv
 
 - 2026-06-22: Issue #57 を開始。MCP 経由で Issue 本文とコメントを確認し、`origin/main` から作業ブランチを作成した。
 - 2026-06-22: `service_icon` の保存・表示、manifest kind、HTML/CSS、仕様文書、integration test を更新し、Docker Compose 経由で gofmt と全テストを実行した。
+- 2026-06-22: E2E で `service_icon` の HTTP 400 が見つかったため調査。外部 asset へ Authorization header を送っていたことが原因だったため、Slack private file URL 以外では Authorization header を送らないよう修正した。
