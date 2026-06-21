@@ -93,7 +93,12 @@ body {
 .message-main { flex: 1; min-width: 0; }
 .message-head { display: flex; align-items: baseline; gap: 8px; }
 .author { font-weight: 900; }
-.time { color: var(--muted); font-size: 12px; }
+.time {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
 .edited { color: var(--muted); font-size: 12px; }
 
 .message-body { overflow-wrap: anywhere; white-space: normal; }
@@ -146,6 +151,7 @@ blockquote {
   color: var(--muted);
   font-size: 13px;
 }
+.system-body { min-width: 0; overflow-wrap: anywhere; }
 
 /* uploads and attachments */
 .image-block { margin: 6px 0; }
