@@ -51,6 +51,7 @@
 | 0037 | decided | Issue 駆動タスク消化の運用方式 | 1 Issue = 1 ブランチ = 1 PR の自己完結 Issue を直列消化する。共通手順は `doc/guidelines/issue-driven-task-execution.md`、索引は `progress.md` のタスク表、merge はユーザーが行う | [0037-issue-driven-task-execution.md](0037-issue-driven-task-execution.md) |
 | 0038 | decided | ライセンス選定 | 公開ライセンスは MIT(copyright `2026 Tomokazu Kiyohara`)に確定。repo root の `LICENSE` を `README.md` のライセンス節から参照する。特許付与が必要な利用形態が出れば Apache-2.0 を再検討 | [0038-license-selection.md](0038-license-selection.md) |
 | 0039 | decided | decision log の対象読者とリンク方針 | decision log は開発時参照の内部ドキュメント。利用者向けドキュメント(`README.md` / `doc/help/`)からは直接リンクしない。`doc/design/` spec からの決定経緯参照(0022)は許容 | [0039-decision-log-audience.md](0039-decision-log-audience.md) |
+| 0040 | decided | asset download 時の認証情報送信先 | Slack bot token は Slack Web API と Slack private file URL(`files.slack.com`)にだけ送る。URL preview 画像、service icon、avatar、emoji などの public asset URL には送らない | [0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md) |
 
 ## 未決事項
 

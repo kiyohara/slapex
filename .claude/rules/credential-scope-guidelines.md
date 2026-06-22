@@ -1,0 +1,7 @@
+# 認証情報の送信先スコープルール
+
+- 詳細は `doc/guidelines/credential-scope-guidelines.md`
+- 認証情報は default deny とし、明示 allowlist の host にだけ送る
+- public asset、URL preview、avatar、emoji、第三者 host へ向かう可能性がある通信には認証情報を送らない
+- 認証情報付与条件を変更する場合は、allowlist 外へ送られない negative test と、必要な host へ送られる positive test を追加する
+- tool 固有入口だけに恒久ルールを書かない

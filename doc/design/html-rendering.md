@@ -62,7 +62,7 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 - Slack は inline code / code block の内部でも、URL の auto-link(`<https://...>`)や mention などの `<...>` 構文を `text` に格納する。code 内の構文はリンクや mention のマークアップを生成せず、表示テキスト(label があれば label、URL はその URL、mention は `@表示名` など)へ展開して code の内容として表示する。
 - mention の表示名解決は `slack-api-usage.md` の user 解決に従う。解決できない場合は user ID を表示する。
 - rich text(`blocks` の `rich_text`)の構造を直接レンダリングすることは初期対象外とし、`text` フィールド(Slack が生成する fallback テキストを含む)を表示の正とする。`blocks` の完全レンダリングは将来検討とする。
-- legacy attachment(URL unfurl など)は、URL preview 画像(`output-format.md`)とタイトル・本文テキストの範囲で表示し、色付き枠やフィールド構造の完全模倣は初期対象外とする。
+- legacy attachment(URL unfurl など)は、service 名、service icon、URL preview 画像(`output-format.md`)とタイトル・本文テキストの範囲で表示し、色付き枠やフィールド構造の完全模倣は初期対象外とする。service icon は Slack API の attachment / unfurl 情報に URL が含まれる場合だけ表示し、ツール自身による favicon / Open Graph fetch は行わない。
 
 ## エスケープとサニタイズ
 

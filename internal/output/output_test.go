@@ -61,6 +61,7 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 			"https://example.com/avatar":          {body: "avatar", contentType: "image/jpeg"},
 			"https://example.com/emoji":           {body: "emoji", contentType: "image/gif"},
 			"https://example.com/og":              {body: "og", contentType: "image/png"},
+			"https://example.com/service-icon":    {body: "service-icon", contentType: "image/png"},
 			"https://example.com/thumb":           {body: "thumb", contentType: "image/webp"},
 			"https://example.com/original":        {body: "original", contentType: "image/png"},
 			"https://example.com/attachment":      {body: "attachment", contentType: "application/octet-stream"},
@@ -80,6 +81,7 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 		{kind: KindAvatar, url: "https://example.com/avatar", dir: "assets/avatars", ext: ".jpg"},
 		{kind: KindEmoji, url: "https://example.com/emoji", dir: "assets/emoji", ext: ".gif", meta: AssetMeta{EmojiName: "party"}},
 		{kind: KindOGImage, url: "https://example.com/og", dir: "assets/og-images", ext: ".png"},
+		{kind: KindServiceIcon, url: "https://example.com/service-icon", dir: "assets/service-icons", ext: ".png"},
 		{kind: KindUploadThumb, url: "https://example.com/thumb", dir: "assets/uploads/thumbs", ext: ".webp"},
 		{kind: KindUploadOriginal, url: "https://example.com/original", dir: "assets/uploads/originals", ext: ".png", meta: AssetMeta{FileID: "F001", OriginalName: "photo.png"}},
 		{kind: KindAttachment, url: "https://example.com/attachment", dir: "assets/attachments", ext: ".txt", meta: AssetMeta{FileID: "F002", OriginalName: "report.txt", Mimetype: "text/plain", SizeBytes: 42}},
@@ -119,6 +121,34 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 	assertEntry(t, entries, "https://example.com/large", "skipped_size", "")
 	assertEntry(t, entries, "https://example.com/fail", "failed", "")
 	assertEntry(t, entries, "https://example.com/too-large-error", "skipped_size", "")
+}
+
+func TestAssetsLimitFor(t *testing.T) {
+	t.Parallel()
+
+	assets := NewAssets(context.Background(), &fakeDownloader{}, t.TempDir(), 10)
+
+	tests := []struct {
+		kind string
+		want int64
+	}{
+		{kind: KindEmoji, want: 0},
+		{kind: KindUploadThumb, want: 0},
+		{kind: KindAvatar, want: 0},
+		{kind: KindOGImage, want: publicPreviewAssetLimit},
+		{kind: KindServiceIcon, want: publicPreviewAssetLimit},
+		{kind: KindUploadOriginal, want: 10},
+		{kind: KindAttachment, want: 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.kind, func(t *testing.T) {
+			t.Parallel()
+			if got := assets.limitFor(tt.kind); got != tt.want {
+				t.Fatalf("limitFor(%s) = %d, want %d", tt.kind, got, tt.want)
+			}
+		})
+	}
 }
 
 func TestExtensionFor(t *testing.T) {

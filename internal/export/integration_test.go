@@ -86,6 +86,7 @@ type exportScenario struct {
 type fakeAsset struct {
 	ContentType string
 	Body        string
+	RejectAuth  bool
 }
 
 // endpointFault injects error / rate-limit behaviour for one fake server
@@ -143,6 +144,7 @@ func happyPathScenario() exportScenario {
 				Attachments: []slack.Attachment{
 					{
 						ServiceName: "Example News",
+						ServiceIcon: "{{base}}/files/service-example-news.png",
 						Title:       "Launch checklist",
 						TitleLink:   "https://example.com/launch-checklist",
 						Text:        "Read <@U02>'s notes",
@@ -215,13 +217,14 @@ func happyPathScenario() exportScenario {
 			"party_sloth": "{{base}}/files/emoji-party-sloth.png",
 		},
 		Assets: map[string]fakeAsset{
-			"/files/avatar-u01.png":          {ContentType: "image/png", Body: "avatar-u01"},
-			"/files/avatar-u02.png":          {ContentType: "image/png", Body: "avatar-u02"},
-			"/files/emoji-party-sloth.png":   {ContentType: "image/png", Body: "custom-emoji"},
-			"/files/og-launch.png":           {ContentType: "image/png", Body: "og-image"},
-			"/files/runbook.pdf":             {ContentType: "application/pdf", Body: "runbook attachment"},
-			"/files/screenshot-original.png": {ContentType: "image/png", Body: "screenshot original"},
-			"/files/screenshot-thumb.png":    {ContentType: "image/png", Body: "screenshot thumb"},
+			"/files/avatar-u01.png":           {ContentType: "image/png", Body: "avatar-u01"},
+			"/files/avatar-u02.png":           {ContentType: "image/png", Body: "avatar-u02"},
+			"/files/emoji-party-sloth.png":    {ContentType: "image/png", Body: "custom-emoji"},
+			"/files/service-example-news.png": {ContentType: "image/png", Body: "service-icon", RejectAuth: true},
+			"/files/og-launch.png":            {ContentType: "image/png", Body: "og-image"},
+			"/files/runbook.pdf":              {ContentType: "application/pdf", Body: "runbook attachment"},
+			"/files/screenshot-original.png":  {ContentType: "image/png", Body: "screenshot original"},
+			"/files/screenshot-thumb.png":     {ContentType: "image/png", Body: "screenshot thumb"},
 		},
 	}
 }
@@ -347,10 +350,6 @@ func (f *fakeSlackServer) hasChannel(id string) bool {
 }
 
 func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
-	if got := r.Header.Get("Authorization"); got != "Bearer "+integrationTestToken {
-		http.Error(w, "missing auth", http.StatusUnauthorized)
-		return
-	}
 	f.record(r)
 	if resp := f.nextFault(f.sc.AssetFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
 		return
@@ -358,6 +357,10 @@ func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 	asset, ok := f.sc.Assets[r.URL.Path]
 	if !ok {
 		http.NotFound(w, r)
+		return
+	}
+	if asset.RejectAuth && r.Header.Get("Authorization") != "" {
+		http.Error(w, "unexpected auth header", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", asset.ContentType)
@@ -480,6 +483,7 @@ func replaceMessageBaseURL(m *slack.Message, repl func(string) string) {
 	for i := range m.Attachments {
 		m.Attachments[i].ImageURL = repl(m.Attachments[i].ImageURL)
 		m.Attachments[i].ThumbURL = repl(m.Attachments[i].ThumbURL)
+		m.Attachments[i].ServiceIcon = repl(m.Attachments[i].ServiceIcon)
 	}
 }
 
@@ -491,6 +495,7 @@ func assertOutputFiles(t *testing.T, dir string) {
 		"style.css",
 		"assets/avatars",
 		"assets/emoji",
+		"assets/service-icons",
 		"assets/og-images",
 		"assets/uploads/thumbs",
 		"assets/uploads/originals",
@@ -529,6 +534,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		dateDivider,
 		`assets/avatars/`,
 		`assets/emoji/`,
+		`assets/service-icons/`,
 		`assets/og-images/`,
 		`assets/uploads/thumbs/`,
 		`assets/uploads/originals/`,
@@ -606,7 +612,7 @@ func assertCacheFiles(t *testing.T, dir string) {
 		Assets []manifestAsset `json:"assets"`
 	}
 	readJSON(t, filepath.Join(dir, ".cache/assets_manifest.json"), &manifest)
-	for _, kind := range []string{"avatar", "emoji", "og_image", "upload_thumb", "upload_original", "attachment"} {
+	for _, kind := range []string{"avatar", "emoji", "service_icon", "og_image", "upload_thumb", "upload_original", "attachment"} {
 		if !hasSavedAsset(manifest.Assets, kind) {
 			t.Fatalf("assets_manifest.json missing saved %s asset: %+v", kind, manifest.Assets)
 		}

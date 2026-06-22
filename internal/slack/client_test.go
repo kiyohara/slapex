@@ -572,9 +572,65 @@ func TestDownloadSavesBody(t *testing.T) {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	if want := "Bearer " + testToken; auth != want {
-		t.Errorf("Authorization = %q, want %q", auth, want)
+	if auth != "" {
+		t.Errorf("Authorization = %q, want empty for non-Slack asset URL", auth)
 	}
+}
+
+func TestDownloadSendsAuthForSlackFiles(t *testing.T) {
+	t.Parallel()
+
+	var auth string
+	c := New(testToken)
+	c.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		auth = req.Header.Get("Authorization")
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": {"application/pdf"}},
+			Body:       io.NopCloser(strings.NewReader("file body")),
+			Request:    req,
+		}, nil
+	})}
+
+	var buf bytes.Buffer
+	if _, _, err := c.Download(context.Background(), "https://files.slack.com/files-pri/T123-F123/download/report.pdf", 0, &buf); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if want := "Bearer " + testToken; auth != want {
+		t.Fatalf("Authorization = %q, want %q", auth, want)
+	}
+}
+
+func TestDownloadNeedsAuthOnlyForSlackFiles(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		rawURL string
+		want   bool
+	}{
+		{rawURL: "https://files.slack.com/files-pri/T123-F123/download/report.pdf", want: true},
+		{rawURL: "https://files.slack.com/files-tmb/T123-F123/image_480.png", want: true},
+		{rawURL: "https://avatars.slack-edge.com/2026/avatar.png", want: false},
+		{rawURL: "https://emoji.slack-edge.com/T123/custom/abc.png", want: false},
+		{rawURL: "https://restaurant.ikyu.com/app_icon_144_2.png", want: false},
+		{rawURL: "https://example.com/image.png", want: false},
+		{rawURL: ":", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.rawURL, func(t *testing.T) {
+			t.Parallel()
+			if got := downloadNeedsAuth(tt.rawURL); got != tt.want {
+				t.Fatalf("downloadNeedsAuth(%q) = %v, want %v", tt.rawURL, got, tt.want)
+			}
+		})
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func TestDownloadRetries(t *testing.T) {

@@ -6,7 +6,7 @@
 
 本ファイルの方針は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と保存対象は `output-format.md`、cache の扱いは `cache.md` を参照する。決定経緯は `decision-log/0025-slack-api-usage-policy.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と保存対象は `output-format.md`、cache の扱いは `cache.md` を参照する。決定経緯は `decision-log/0025-slack-api-usage-policy.md` と `decision-log/0040-credential-scope-for-asset-downloads.md` を参照する。
 
 ## 前提とする token と App
 
@@ -69,6 +69,7 @@
 ## file / asset の取得
 
 - message の `files` 配列を情報源とし、`url_private_download`(無ければ `url_private`)へ `Authorization: Bearer` ヘッダ付きの HTTP GET で取得する。
+- URL preview 画像、URL preview service icon、avatar、emoji など、Slack private file ではない public asset URL へは `Authorization: Bearer` ヘッダを送らない。
 - 画像は表示用 thumbnail と original の両方を保存する(`decision-log/0017-uploaded-image-assets.md`)。
 - file object の `size` が `--max-attachment-size` を超えるものは download しない(`output-format.md`)。
 - 外部サービス連携ファイル(external file)など download URL を持たないものは、リンクのみの添付として扱い、manifest に記録する。

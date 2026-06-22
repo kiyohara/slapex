@@ -606,10 +606,13 @@ func (b *builder) addUnfurls(v *render.MessageView, m *slack.Message) {
 		if a.Text != "" {
 			uv.Text = render.Mrkdwn(a.Text, b)
 		}
+		if a.ServiceIcon != "" {
+			uv.ServiceIconPath, _ = b.assets.Save(output.KindServiceIcon, a.ServiceIcon, output.AssetMeta{})
+		}
 		if src := a.PreviewImageURL(); src != "" {
 			uv.ImagePath, _ = b.assets.Save(output.KindOGImage, src, output.AssetMeta{})
 		}
-		if uv.Service == "" && uv.Title == "" && uv.Text == "" && uv.ImagePath == "" {
+		if uv.Service == "" && uv.ServiceIconPath == "" && uv.Title == "" && uv.Text == "" && uv.ImagePath == "" {
 			continue
 		}
 		v.Unfurls = append(v.Unfurls, uv)

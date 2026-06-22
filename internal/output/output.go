@@ -59,7 +59,10 @@ const (
 	KindUploadOriginal = "upload_original"
 	KindAttachment     = "attachment"
 	KindAvatar         = "avatar"
+	KindServiceIcon    = "service_icon"
 )
+
+const publicPreviewAssetLimit int64 = 5 << 20 // 5 MiB guard for third-party unfurl assets.
 
 var kindDirs = map[string]string{
 	KindEmoji:          "assets/emoji",
@@ -68,6 +71,7 @@ var kindDirs = map[string]string{
 	KindUploadOriginal: "assets/uploads/originals",
 	KindAttachment:     "assets/attachments",
 	KindAvatar:         "assets/avatars",
+	KindServiceIcon:    "assets/service-icons",
 }
 
 // ManifestEntry mirrors the assets_manifest.json schema (doc/design/cache.md).
@@ -136,12 +140,14 @@ func (a *Assets) SetReuseSource(r *ReuseSource) { a.reuse = r }
 func (a *Assets) Reused() int { return a.reused }
 
 // limitFor returns the per-file byte limit that applies to kind (0 = unlimited).
-// The size limit applies to original images and attachments only; thumbnails,
-// emoji, OG images and avatars are always saved regardless of size.
+// The user-configurable size limit applies to original images and attachments.
+// Third-party unfurl display assets get a fixed guard limit.
 func (a *Assets) limitFor(kind string) int64 {
 	switch kind {
-	case KindEmoji, KindUploadThumb, KindOGImage, KindAvatar:
+	case KindEmoji, KindUploadThumb, KindAvatar:
 		return 0
+	case KindOGImage, KindServiceIcon:
+		return publicPreviewAssetLimit
 	default:
 		return a.limit
 	}

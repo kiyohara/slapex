@@ -40,6 +40,7 @@ option:
 | 標準絵文字 | Slack message text / Unicode emoji mapping | 原則として Unicode に戻して HTML に直接表示する。Unicode fallback できない場合だけ画像 asset として扱う |
 | カスタム絵文字 | Slack API `emoji.list` | workspace 固有の絵文字画像として保存する |
 | URL preview 画像 | Slack message の unfurl / attachment 情報 | Slack 上で preview として表示されていた画像を保存する。ツール自身による Open Graph fetch は行わない |
+| URL preview service icon | Slack message の unfurl / attachment 情報 | `service_icon` など Slack API が返す service icon 相当 URL がある場合だけ保存し、service 名の横に表示する。ツール自身による favicon / Open Graph fetch は行わない |
 | ユーザーがアップロードした画像 | Slack message の `files` 情報、`files.info`、画像 thumbnail / original URL | thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする |
 | 画像以外の添付ファイル | Slack message の `files` 情報、`files.info`、download URL | サイズ上限以下の添付ファイルを保存し、HTML から相対リンクで参照する |
 | 投稿者の avatar 画像 | Slack API `users.info` の profile image URL | Slack default 風表示(`html-rendering.md`)の avatar として、登場する投稿者ごとに 1 画像を保存する。取得できない場合はイニシャル表示に fallback する(`decision-log/0035-avatar-assets.md`) |
@@ -51,6 +52,8 @@ option:
 標準絵文字は原則として Unicode に戻して HTML に直接表示する。カスタム絵文字や Unicode fallback できない絵文字は画像 asset として保存するが、利用者にとって custom かどうかは重要な分類ではないため、保存先は `assets/emoji/` に集約する。
 
 利用者が出力内容を把握しやすいように、ファイル名は URL hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。
+
+URL preview 画像と URL preview service icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像または service icon を表示しない。
 
 ## 添付ファイルのサイズ制限
 
@@ -87,6 +90,8 @@ slapex-<yyyymmdd>-<hhmm>/
         │   │   └── <url-hash>.gif
         │   ├── og-images/
         │   │   └── <url-hash>.jpg
+        │   ├── service-icons/
+        │   │   └── <url-hash>.png
         │   ├── uploads/
         │   │   ├── thumbs/
         │   │   │   └── <url-hash>.jpg
