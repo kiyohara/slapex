@@ -45,9 +45,9 @@
 | 0031 | decided | 対象プラットフォーム | macOS / Linux を対象とし、CI は GitHub Actions Linux runner を想定。Windows は初期対象外として将来検討に記録 | [0031-supported-platforms.md](0031-supported-platforms.md) |
 | 0032 | decided | 実装言語 | Go(1.26 系)を採用。単一バイナリ配布とクロスコンパイル、標準ライブラリの守備範囲、依存最小化で総合判断。Rust / TS / Python / Ruby は理由付きで見送り | [0032-implementation-language.md](0032-implementation-language.md) |
 | 0033 | decided | Go の依存方針とライブラリ | stdlib-first。外部依存は huh(TTY 選択、module path は charm.land/huh/v2)と x/term、x/text(NFC 正規化)に限定。Slack client は自前 thin client、CLI は標準 flag、HTML は html/template、絵文字データは go:embed | [0033-go-dependency-policy.md](0033-go-dependency-policy.md) |
-| 0034 | decided | 配布方式 | GitHub Releases に darwin / linux × amd64 / arm64 の単一バイナリを添付。リリース自動化は goreleaser 想定、Homebrew tap は将来検討 | [0034-distribution-method.md](0034-distribution-method.md) |
+| 0034 | decided | 配布方式 | GitHub Releases に darwin / linux × amd64 / arm64 の単一バイナリと checksum を添付する。v1.0.0 はこの方式で公開済み。Homebrew tap は将来検討 | [0034-distribution-method.md](0034-distribution-method.md) |
 | 0035 | decided | avatar 画像の保存対象化 | 登場する投稿者の avatar を `assets/avatars/` に保存し、取得不可時はイニシャル表示に fallback。PoC で顕在化した表示仕様と保存仕様のギャップを解消 | [0035-avatar-assets.md](0035-avatar-assets.md) |
-| 0036 | decided | v1.0 リリースのスコープ | テスト整備・CI・`--reuse-cache`・TZ 課題・actor 表示・リリース整備・README / LICENSE・総合 E2E を含め、v1.0 公開までを本実装プランとする。差分取得などの未決事項は post-v1 に据え置き | [0036-v1-release-scope.md](0036-v1-release-scope.md) |
+| 0036 | decided | v1.0 リリースのスコープ | テスト整備・CI・`--reuse-cache`・TZ 課題・actor 表示・リリース整備・README / LICENSE・総合 E2E を含む本実装プランは v1.0.0 公開で完了。差分取得などの未決事項は post-v1 に据え置き | [0036-v1-release-scope.md](0036-v1-release-scope.md) |
 | 0037 | decided | Issue 駆動タスク消化の運用方式 | 1 Issue = 1 ブランチ = 1 PR の自己完結 Issue を直列消化する。共通手順は `doc/guidelines/issue-driven-task-execution.md`、索引は `progress.md` のタスク表、merge はユーザーが行う | [0037-issue-driven-task-execution.md](0037-issue-driven-task-execution.md) |
 | 0038 | decided | ライセンス選定 | 公開ライセンスは MIT(copyright `2026 Tomokazu Kiyohara`)に確定。repo root の `LICENSE` を `README.md` のライセンス節から参照する。特許付与が必要な利用形態が出れば Apache-2.0 を再検討 | [0038-license-selection.md](0038-license-selection.md) |
 | 0039 | decided | decision log の対象読者とリンク方針 | decision log は開発時参照の内部ドキュメント。利用者向けドキュメント(`README.md` / `doc/help/`)からは直接リンクしない。`doc/design/` spec からの決定経緯参照(0022)は許容 | [0039-decision-log-audience.md](0039-decision-log-audience.md) |
@@ -65,7 +65,7 @@
 | 出力制御 option | open | `--quiet` / `--verbose` / `--no-color` などを追加するか | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md) |
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
-| リリース整備と Homebrew tap | open | goreleaser 設定と release workflow は v1 プラン(task v1-13 / v1-14)で整備する。Homebrew tap を提供するかは post-v1 で判断 | [0034-distribution-method.md](0034-distribution-method.md) |
+| Homebrew tap | open | GitHub Releases での単一バイナリ配布を主経路として運用し、Homebrew tap を提供するかは post-v1 で判断 | [0034-distribution-method.md](0034-distribution-method.md) |
 
 解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。「code block 内の URL 構文の表示」は [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) の追記で方針を確定し、修正済み。「コンテナ実行時のタイムゾーン」は [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) の追記で、dev / E2E の Docker Compose 実行時に host の `TZ` を forward し、専用 CLI option は導入しない方針として確定した。「system メッセージの actor 表示」は [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) の追記で、`channel_topic` / `channel_purpose` / `channel_name` の actor prefix 補完として確定した。
 

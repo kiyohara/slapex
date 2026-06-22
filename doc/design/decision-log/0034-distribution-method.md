@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-16
+- 最終更新日: 2026-06-22
 - 関連: `doc/design/architecture.md`, `doc/design/decision-log/0031-supported-platforms.md`, `doc/design/decision-log/0032-implementation-language.md`
 
 ## 背景
@@ -38,8 +38,9 @@
 ## 影響
 
 - `architecture.md` の配布方式に反映した。
-- 実装フェーズで goreleaser 設定を追加した。GitHub Actions release workflow は後続タスクで追加する。
-- `doc/help/` には、実装フェーズでインストール手順(Releases からの取得)を追加する。
+- 実装フェーズで goreleaser 設定と GitHub Actions release workflow を追加した。
+- `README.md` に GitHub Releases からの install 手順、checksum 確認、`--version` 確認を追加した。
+- v1.0.0 は GitHub Releases に `darwin/amd64` / `darwin/arm64` / `linux/amd64` / `linux/arm64` の単一バイナリと `slapex_checksums.txt` を添付して公開した。
 
 ## 後から見直す条件
 

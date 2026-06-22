@@ -25,7 +25,7 @@
 | 詳細仕様の確定(後続作業に必要な範囲) | done | `finalize-detailed-specs` ブランチ。`cli-interface.md` / `slack-api-usage.md` 新設、既存 4 文書の確定、decision log 0024〜0031 |
 | アーキテクチャ選定(言語・フレームワーク) | done | `select-architecture` ブランチ。Go(1.26 系)+ stdlib-first を採用し、`architecture.md` と decision log 0032〜0034 に記録 |
 | PoC 実装(機能充足性の確認) | done | `poc-implementation` ブランチ。Go で happy path を実装し、実 workspace への E2E で主要経路を確認。機能充足性に問題なし。`--reuse-cache` は PoC 未実装(note 参照)。追加 E2E(`poc-additional-e2e` ブランチ、実運用 channel 2 件)で system 行・複数ユーザー・実 unfurl・bot 未参加エラー経路も確認。目視レビュー所見 2 件のうち code block 内 URL は修正済み(decision log 0026 追記)、コンテナ実行時 TZ は未決事項のまま |
-| 本実装(v1.0 リリースまで) | in_progress | スコープを v1.0 リリースまでと確定(decision log 0036)。タスクは下記「v1.0 リリース実装プラン」の表と GitHub Issue #15〜#31 で管理(運用方式は decision log 0037) |
+| 本実装(v1.0 リリースまで) | done | v1.0.0 を GitHub Releases で公開済み。スコープは decision log 0036、タスク管理方式は decision log 0037 |
 
 ## v1.0 リリース実装プラン
 
@@ -54,6 +54,6 @@
 | v1-14 | リリース workflow(tag → Releases) | #28 | v1-13 | done | #46 |
 | v1-15 | README と LICENSE | #29 | v1-13 | done | #47 |
 | v1-16 | 実 token 総合 E2E(ユーザー協働) | #30 | v1-10〜v1-15 | done | #58 |
-| v1-17 | v1.0.0 リリース実施と事後整理(ユーザー協働) | #31 | v1-16 | pending | |
+| v1-17 | v1.0.0 リリース実施と事後整理(ユーザー協働) | #31 | v1-16 | done | #76 |
 
 依存列は「その Issue の作業開始前に done であるべきタスク」の最小セット。直列運用では基本的に直前までの全タスクが done になっている想定。タスク完了時の表の更新方法は `doc/guidelines/issue-driven-task-execution.md` を参照。
