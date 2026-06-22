@@ -77,6 +77,9 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
     - label text は `2 messages`
     - hover/open 枠線の角丸は 6px
     - avatar 左端は親本文左端とほぼ一致する
+- click target 拡大調整:
+  - chip の左位置は維持したまま上下 padding を 3px に増やす
+  - chip 幅を `min(360px, 100%)` にし、右側にもクリック可能な余白を確保する
 
 ## リスク・ブロッカー
 
@@ -93,3 +96,4 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - 2026-06-22: 目視確認で chip が右に寄りすぎ、下余白が詰まって見えたため、chip は親本文側へ寄せ、返信群側のインデントで階層を維持する方針に再調整した。
 - 2026-06-22: Slack の thread summary に寄せ、thread chip 内に返信者 avatar を最大 3 件表示し、残り人数を `+N` で表示する実装を追加した。
 - 2026-06-22: Slack 寄せの微調整として、label 文言から `Thread (` / `)` を外し、hover/open 枠線の角丸を小さくし、avatar 左端が親本文左端に揃うようにした。
+- 2026-06-22: thread summary が小さくクリックしづらいため、avatar 左端を維持したまま上下 padding と右側のクリック領域を拡大した。
