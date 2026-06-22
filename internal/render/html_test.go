@@ -69,9 +69,15 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, threadLabelBlock, "font-weight", "700")
 	assertCSSDeclaration(t, threadLabelBlock, "cursor", "pointer")
 	assertCSSDeclaration(t, threadLabelBlock, "list-style", "none")
+	assertCSSDeclaration(t, threadLabelBlock, "display", "inline-flex")
+	assertCSSDeclaration(t, threadLabelBlock, "width", "fit-content")
+	assertCSSDeclaration(t, threadLabelBlock, "background", "var(--thread-chip-bg)")
+	assertCSSDeclaration(t, threadLabelBlock, "border", "1px solid var(--thread-chip-line)")
+	assertCSSDeclaration(t, threadLabelBlock, "border-radius", "6px")
 
-	threadLabelRuleBlock := cssBlock(t, css, ".thread-label::after")
-	assertCSSDeclaration(t, threadLabelRuleBlock, "border-top", "1px solid var(--thread-line)")
+	threadLabelHoverBlock := cssBlock(t, css, ".thread-label:hover")
+	assertCSSDeclaration(t, threadLabelHoverBlock, "background", "var(--thread-chip-bg-hover)")
+	assertCSSDeclaration(t, threadLabelHoverBlock, "border-color", "var(--thread-chip-line-hover)")
 
 	threadBlock := cssBlock(t, css, ".thread")
 	assertCSSDeclaration(t, threadBlock, "padding", "0 0 0 8px")

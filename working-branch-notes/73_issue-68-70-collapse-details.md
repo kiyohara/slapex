@@ -16,7 +16,7 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - Issue 本文を github-op-integrated MCP tool で確認済み。
 - #68 / #70 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
 - 通常ルールは 1 Issue = 1 PR だが、ユーザー指示と既存の #60 / #64 同時対応前例により、同じ `details` / `summary` 導入として同一ブランチで扱う。
-- 実装、テスト、ブラウザ確認、PR 作成は完了。note 採番処理中。
+- PR 作成後の目視フィードバックを受け、thread label の横罫線を廃止して控えめな chip 表現へ追加調整済み。commit / push 待ち。
 
 ## 決定事項
 
@@ -27,7 +27,7 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 
 ## 次にやること
 
-- note 採番 commit を push し、終了報告する。
+- chip 表現の追加調整を検証し、commit / push する。
 
 ## 検証
 
@@ -41,6 +41,14 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
   - 初期状態で `.export-meta.open == false`、`.thread-group.open == false`
   - summary click 後に `.export-meta.open == true`、`.thread-group.open == true`
   - click 後に Workspace / Channel / Exported / Range と thread replies が表示される
+- thread chip 追加調整後:
+  - `docker compose run --rm --no-deps dev gofmt -w internal/render/html_test.go`
+  - `docker compose run --rm --no-deps dev go test ./internal/render ./internal/export`
+  - `docker compose run --rm --no-deps dev go test ./...`
+  - 一時ローカル HTTP server で生成サンプル HTML をブラウザ確認
+    - `.thread-label` が `inline-flex` の chip として表示される
+    - `.thread-label::after` の横罫線が表示されない
+    - summary click 後に `.thread-group.open == true` となり、返信本文が表示される
 
 ## リスク・ブロッカー
 
@@ -51,3 +59,5 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - 2026-06-22: main から `issue-68-70-collapse-details` を作成し、Issue #68 / #70 の本文と関連ファイルを確認した。
 - 2026-06-22: header メタ情報と thread replies を `details` / `summary` で初期折りたたみに変更し、CSS と仕様文書・テストを更新した。
 - 2026-06-22: Docker Compose 経由の対象テスト・全体テストと、一時ローカル HTTP server 経由のブラウザ確認を完了した。
+- 2026-06-22: thread label の右罫線が日付区切りと似て見えるという目視フィードバックを受け、横罫線を削除し、控えめな薄い青の chip 表現にする方針で追加調整を開始した。
+- 2026-06-22: thread label を薄い青の chip 表現に変更し、CSS test とブラウザ確認で横罫線が消えていることを確認した。
