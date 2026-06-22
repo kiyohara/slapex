@@ -51,10 +51,23 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, unfurlBlock, "padding", "6px 10px")
 	assertCSSDeclaration(t, unfurlBlock, "border-left", "4px solid var(--line)")
 
+	threadGroupBlock := cssBlock(t, css, ".thread-group")
+	assertCSSDeclaration(t, threadGroupBlock, "padding-left", "28px")
+
+	threadGuideBlock := cssBlock(t, css, ".thread-group::before")
+	assertCSSDeclaration(t, threadGuideBlock, "border-left", "2px solid var(--thread-line)")
+
+	threadLabelBlock := cssBlock(t, css, ".thread-label")
+	assertCSSDeclaration(t, threadLabelBlock, "font-weight", "700")
+
+	threadLabelRuleBlock := cssBlock(t, css, ".thread-label::after")
+	assertCSSDeclaration(t, threadLabelRuleBlock, "border-top", "1px solid var(--thread-line)")
+
 	threadBlock := cssBlock(t, css, ".thread")
-	assertCSSDeclaration(t, threadBlock, "padding", "6px 0 2px 18px")
-	assertCSSDeclaration(t, threadBlock, "border-left", "3px solid var(--thread-line)")
-	assertCSSDeclaration(t, threadBlock, "background", "var(--thread-bg)")
+	assertCSSDeclaration(t, threadBlock, "padding", "0 0 0 8px")
+
+	threadNodeBlock := cssBlock(t, css, ".thread .message::before")
+	assertCSSDeclaration(t, threadNodeBlock, "border", "2px solid var(--thread-line)")
 }
 
 func cssBlock(t *testing.T, css, selector string) string {

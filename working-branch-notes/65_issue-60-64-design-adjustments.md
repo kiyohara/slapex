@@ -16,17 +16,17 @@ GitHub Issue #60 と #64 の小さな HTML デザイン調整を同一ブラン�
 - Issue 本文を github-op-integrated MCP tool で確認済み。
 - #60 / #64 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
 - 通常ルールは 1 Issue = 1 PR だが、ユーザー指示により今回は 2 件の類似デザイン調整を同時対応する。
-- 実装、検証、PR 作成は完了。note 採番後の push 待ち。
+- デザイナーフィードバックを受けた thread 表示の追加調整と検証は完了。push 待ち。
 
 ## 決定事項
 
 - URL preview の `.unfurl` 表示は変更しない。
 - edited marker は本文がある場合は `.message-body` の末尾へ置き、本文がない場合は単独の控えめな行として表示する。
-- thread は左罫線だけでなく、より広いインデントと淡い背景で URL preview と区別する。
+- thread は背景色の面を使わず、thread label、左ガイドライン、返信位置を示す節点で URL preview と区別する。
 
 ## 次にやること
 
-- note 採番 commit を push する。
+- 追加調整 commit を push する。
 
 ## 検証
 
@@ -43,3 +43,4 @@ GitHub Issue #60 と #64 の小さな HTML デザイン調整を同一ブラン�
 
 - 2026-06-22: main から `issue-60-64-design-adjustments` を作成し、Issue #60 / #64 の本文と関連ファイルを確認した。
 - 2026-06-22: edited marker を本文末尾 / 本文なし fallback に移動し、thread 表示を URL preview と区別しやすい CSS に調整した。仕様とテストも更新した。
+- 2026-06-22: デザイナー画像フィードバックを確認。thread の淡い背景をやめ、ラベルと左ガイドラインで階層を示す方向に再調整し、上限打ち切り時は thread label に `+` を付けることにした。

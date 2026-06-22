@@ -433,6 +433,7 @@ func TestRunIntegrationThreadBroadcast(t *testing.T) {
 	if n := strings.Count(body, `<div class="thread">`); n != 1 {
 		t.Fatalf("thread block count = %d, want 1", n)
 	}
+	mustContain(t, body, `Thread (2 messages)`)
 	// One copy is inside the thread, after the non-broadcast reply.
 	assertOrder(t, body, `<div class="thread">`, "Normal reply", "Broadcast to channel")
 }
@@ -674,6 +675,7 @@ func TestRunIntegrationRepliesTruncated(t *testing.T) {
 	if threadIdx < 0 || noticeIdx < 0 || noticeIdx < threadIdx {
 		t.Fatalf("truncation notice should render inside the thread: thread=%d notice=%d", threadIdx, noticeIdx)
 	}
+	mustContain(t, body, `Thread (1000+ messages)`)
 }
 
 // --- case 13: standard emoji -> Unicode, unknown shortcode stays literal -----
