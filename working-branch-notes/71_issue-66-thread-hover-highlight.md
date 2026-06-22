@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-66-thread-hover-highlight
-- PR: 未作成
+- PR: #71
 - 最終更新: 2026-06-22
 
 ## 目的
@@ -15,6 +15,7 @@ Issue #66 の指摘に従い、thread を持つ親メッセージの hover ハ�
 - `issue-66-thread-hover-highlight` ブランチを作成済み。
 - `progress.md` には #66 の行はないため、関連 PR #65 が merge 済みであることを依存確認の根拠とする。
 - HTML/CSS 修正、仕様追記、回帰テスト追加済み。
+- PR #71 作成済み。
 
 ## 決定事項
 
@@ -23,7 +24,7 @@ Issue #66 の指摘に従い、thread を持つ親メッセージの hover ハ�
 
 ## 次にやること
 
-- PR 作成後、note を採番済みファイル名へ rename する。
+- レビュー待ち。
 
 ## 検証
 
