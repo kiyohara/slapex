@@ -57,3 +57,12 @@
 | v1-17 | v1.0.0 リリース実施と事後整理(ユーザー協働) | #31 | v1-16 | done | #76 |
 
 依存列は「その Issue の作業開始前に done であるべきタスク」の最小セット。直列運用では基本的に直前までの全タスクが done になっている想定。タスク完了時の表の更新方法は `doc/guidelines/issue-driven-task-execution.md` を参照。
+
+## post-v1 改善(配布・導入)
+
+v1.0.0 公開後に PR #47 レビュー等で挙がった配布・導入まわりの改善課題。v1.0 プランと同様 1 Issue = 1 ブランチ = 1 PR で消化する。経緯は decision log 0041。
+
+| タスク | Issue | 状態 | PR |
+|---|---|---|---|
+| install script(`scripts/install.sh`)の提供(案B) | #77 | done | - |
+| Homebrew tap の提供(案A) | #50 | todo | - |
