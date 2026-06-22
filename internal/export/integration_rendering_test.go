@@ -445,8 +445,27 @@ func TestRunIntegrationThreadBroadcast(t *testing.T) {
 		t.Fatalf("thread block count = %d, want 1", n)
 	}
 	mustContain(t, body, `Thread (2 messages)`)
+	assertThreadGroupOutsideParentMessage(t, body, "Parent post")
 	// One copy is inside the thread, after the non-broadcast reply.
 	assertOrder(t, body, `<div class="thread">`, "Normal reply", "Broadcast to channel")
+}
+
+func assertThreadGroupOutsideParentMessage(t *testing.T, body, parentText string) {
+	t.Helper()
+
+	parentMarker := `<div class="message-body">` + parentText + `</div>`
+	parentIdx := strings.Index(body, parentMarker)
+	if parentIdx < 0 {
+		t.Fatalf("missing parent message body %q", parentText)
+	}
+	afterParent := body[parentIdx+len(parentMarker):]
+	threadIdx := strings.Index(afterParent, `<div class="thread-group">`)
+	if threadIdx < 0 {
+		t.Fatalf("missing thread group after parent message body %q", parentText)
+	}
+	if closes := strings.Count(afterParent[:threadIdx], "</div>"); closes < 2 {
+		t.Fatalf("thread group is still nested in the parent message: closing div count before thread group = %d, want at least 2", closes)
+	}
 }
 
 // --- case 8: date divider inserted when the day changes ----------------------

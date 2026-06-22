@@ -30,7 +30,7 @@
 
 Slack default 風の avatar、投稿者名、絶対時刻、本文、reactions、attachments を CSS で整え、HTML 自体は静的 file として閲覧できるようにする。
 
-thread replies のインライン展開は、URL preview と同じ「左罫線 + インデント」だけに寄せすぎると隣接時に判別しづらいため、URL preview 側の表示は据え置き、thread 側で thread label、左ガイドライン、返信位置を示す節点を使って会話の入れ子であることを示す。長文でも読みやすいように、thread 全体を背景色の面で囲う表現は避ける。
+thread replies のインライン展開は、URL preview と同じ「左罫線 + インデント」だけに寄せすぎると隣接時に判別しづらいため、URL preview 側の表示は据え置き、thread 側で thread label、左ガイドライン、返信位置を示す節点を使って会話の入れ子であることを示す。長文でも読みやすいように、thread 全体を背景色の面で囲う表現は避ける。投稿の hover ハイライトは個別投稿単位に限定し、thread を持つ親投稿に hover しても返信群全体へ背景色が広がらない構造にする。
 
 ## 画像と添付ファイルの表示
 
