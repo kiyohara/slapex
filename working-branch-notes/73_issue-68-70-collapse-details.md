@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-68-70-collapse-details
-- PR:
+- PR: #73
 - 最終更新: 2026-06-22
 
 ## 目的
@@ -16,7 +16,7 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - Issue 本文を github-op-integrated MCP tool で確認済み。
 - #68 / #70 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
 - 通常ルールは 1 Issue = 1 PR だが、ユーザー指示と既存の #60 / #64 同時対応前例により、同じ `details` / `summary` 導入として同一ブランチで扱う。
-- 実装、テスト、ブラウザ確認は完了。PR 作成待ち。
+- 実装、テスト、ブラウザ確認、PR 作成は完了。note 採番処理中。
 
 ## 決定事項
 
@@ -27,7 +27,7 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 
 ## 次にやること
 
-- commit / push して PR を作成する。
+- note 採番 commit を push し、終了報告する。
 
 ## 検証
 
