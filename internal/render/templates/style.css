@@ -280,8 +280,8 @@ img.emoji {
   color: var(--text);
   background: var(--thread-chip-bg);
   border: 1px solid var(--thread-chip-line);
-  border-radius: 12px;
-  padding: 1px 8px;
+  border-radius: 6px;
+  padding: 1px 8px 1px 0;
   font-size: 13px;
   font-weight: 700;
   margin: 0 0 12px;
