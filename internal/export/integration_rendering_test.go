@@ -153,6 +153,25 @@ func TestRunIntegrationFencedCodeBlock(t *testing.T) {
 	mustNotContain(t, body, `<a href="https://example.com/api?id=42"`)
 }
 
+func TestRunIntegrationHeaderMetadataIsCollapsed(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1700000001.000000", User: "U01", Text: "Hello"},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<h1><span class="channel-hash">#</span>project-alpha</h1>`)
+	mustContain(t, body, `<details class="export-meta">`)
+	mustContain(t, body, `<summary>Export information</summary>`)
+	mustContain(t, body, `<dt>Workspace</dt><dd>Acme Workspace (acme.example.slack.com, TACME123)</dd>`)
+	mustNotContain(t, body, `<details class="export-meta" open>`)
+	assertOrder(t, body, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`)
+}
+
 // --- case 2: system rows render quietly and supplement missing actors --------
 
 func TestRunIntegrationSystemRows(t *testing.T) {
@@ -246,6 +265,7 @@ func TestRunIntegrationTombstoneParent(t *testing.T) {
 
 	mustContain(t, body, `<span class="author">(削除)</span>`)
 	mustContain(t, body, "(削除されたメッセージ)")
+	mustContain(t, body, `<details class="thread-group">`)
 	mustContain(t, body, `<div class="thread">`)
 	assertOrder(t, body,
 		"(削除されたメッセージ)",
@@ -391,6 +411,9 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 	mustContain(t, body, `<div class="message-body me-message">waves edited <span class="edited">(edited)</span></div>`)
 	mustContain(t, body, `Thread (1 message)`)
 	mustNotContain(t, body, `Thread (1 messages)`)
+	mustContain(t, body, `<summary class="thread-label"><span class="thread-label-icon" aria-hidden="true">↪</span><span>Thread (1 message)</span></summary>`)
+	mustContain(t, body, `<details class="thread-group">`)
+	mustNotContain(t, body, `<details class="thread-group" open>`)
 	assertOrder(t, body, `Preview without body`, `<div class="edited edited-fallback">(edited)</div>`)
 	mustNotContain(t, body, `</span><span class="edited">(edited)</span>`)
 	if n := strings.Count(body, "(edited)"); n != 4 {
@@ -459,7 +482,7 @@ func assertThreadGroupOutsideParentMessage(t *testing.T, body, parentText string
 		t.Fatalf("missing parent message body %q", parentText)
 	}
 	afterParent := body[parentIdx+len(parentMarker):]
-	threadIdx := strings.Index(afterParent, `<div class="thread-group">`)
+	threadIdx := strings.Index(afterParent, `<details class="thread-group">`)
 	if threadIdx < 0 {
 		t.Fatalf("missing thread group after parent message body %q", parentText)
 	}

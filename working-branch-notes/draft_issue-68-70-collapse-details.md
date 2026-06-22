@@ -1,0 +1,53 @@
+# 作業ブランチメモ
+
+- ブランチ: issue-68-70-collapse-details
+- PR:
+- 最終更新: 2026-06-22
+
+## 目的
+
+GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実施する。
+
+- #68: 出力先頭の Workspace / Channel / Exported / Range メタ情報を JavaScript なしで折りたたみ表示にする。
+- #70: thread replies を JavaScript なしでクリック開閉できるようにし、初期状態を折りたたみにする。
+
+## 現在の状況
+
+- Issue 本文を github-op-integrated MCP tool で確認済み。
+- #68 / #70 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
+- 通常ルールは 1 Issue = 1 PR だが、ユーザー指示と既存の #60 / #64 同時対応前例により、同じ `details` / `summary` 導入として同一ブランチで扱う。
+- 実装、テスト、ブラウザ確認は完了。PR 作成待ち。
+
+## 決定事項
+
+- JavaScript は使わず、HTML native の `details` / `summary` を使う。
+- header の h1 と thread を持つ親投稿は常時表示のままにする。
+- header メタ情報と thread replies は初期閉じ状態にする。
+- メタ情報の項目内容、thread label の文言・件数ロジックは変更しない。
+
+## 次にやること
+
+- commit / push して PR を作成する。
+
+## 検証
+
+- `docker --version`
+- `docker compose version`
+- `docker info`
+- `docker compose run --rm --no-deps dev gofmt -w internal/export/integration_rendering_test.go internal/render/html_test.go`
+- `docker compose run --rm --no-deps dev go test ./internal/render ./internal/export`
+- `docker compose run --rm --no-deps dev go test ./...`
+- 一時ローカル HTTP server で生成サンプル HTML をブラウザ確認:
+  - 初期状態で `.export-meta.open == false`、`.thread-group.open == false`
+  - summary click 後に `.export-meta.open == true`、`.thread-group.open == true`
+  - click 後に Workspace / Channel / Exported / Range と thread replies が表示される
+
+## リスク・ブロッカー
+
+- 現時点ではなし。
+
+## セッションログ
+
+- 2026-06-22: main から `issue-68-70-collapse-details` を作成し、Issue #68 / #70 の本文と関連ファイルを確認した。
+- 2026-06-22: header メタ情報と thread replies を `details` / `summary` で初期折りたたみに変更し、CSS と仕様文書・テストを更新した。
+- 2026-06-22: Docker Compose 経由の対象テスト・全体テストと、一時ローカル HTTP server 経由のブラウザ確認を完了した。

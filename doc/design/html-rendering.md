@@ -12,25 +12,25 @@
 
 最終成果物の `index.html` は、Slack default の投稿表示を模倣した見た目にする。
 
-1. 冒頭に取得対象 workspace、channel、export 実行時刻を表示する。
+1. 冒頭に取得対象 workspace、channel、export 実行時刻を折りたたみ可能なメタ情報として表示する。
 2. workspace 表示には workspace 名、workspace URL または domain、短い `team_id` を含める。
 3. channel 表示には channel 名、channel ID、public/private、archived 状態、bot membership を含める。
 4. 投稿は channel timeline と同じく、上から oldest、下へ latest の順に表示する。
 5. 日付と時刻は相対表現ではなく、絶対時刻として表示する。
 6. thread replies は親投稿の下に、親投稿よりインデントを下げて表示する。
-7. thread replies は初期表示で展開済みにする。
+7. thread replies は `details` / `summary` による開閉表示にし、初期表示では折りたたむ。
 8. reaction は、絵文字 icon と件数を可能な限り Slack default 風に表示する。
 9. reaction した user の一覧や名前は表示しない。
 10. JavaScript は一切使わない。
 11. style は `style.css` に分離し、HTML 内に固定的に inline style として埋め込まない。
 12. CSS で表現可能な interaction は活用してよい。
-13. thread の開閉を入れる場合は、JavaScript ではなく HTML native の `<details open>` / `<summary>` など、JavaScript なしで動作する仕組みを使う。
+13. 折りたたみや開閉は、JavaScript ではなく HTML native の `<details>` / `<summary>` など、JavaScript なしで動作する仕組みを使う。
 
-冒頭に表示する workspace / channel label の内容と、実行中の画面表示との対応は `usage-flow.md` の「処理対象の表示」を参照する。
+冒頭に表示する workspace / channel label の内容と、実行中の画面表示との対応は `usage-flow.md` の「処理対象の表示」を参照する。チャンネル名見出しは常時表示し、workspace / channel / export 実行時刻 / 取得範囲のメタ情報は初期状態で折りたたむ。
 
 Slack default 風の avatar、投稿者名、絶対時刻、本文、reactions、attachments を CSS で整え、HTML 自体は静的 file として閲覧できるようにする。
 
-thread replies のインライン展開は、URL preview と同じ「左罫線 + インデント」だけに寄せすぎると隣接時に判別しづらいため、URL preview 側の表示は据え置き、thread 側で thread label、左ガイドライン、返信位置を示す節点を使って会話の入れ子であることを示す。長文でも読みやすいように、thread 全体を背景色の面で囲う表現は避ける。投稿の hover ハイライトは個別投稿単位に限定し、thread を持つ親投稿に hover しても返信群全体へ背景色が広がらない構造にする。
+thread replies は初期状態では折りたたみ、thread label をクリックして開閉できるようにする。URL preview と同じ「左罫線 + インデント」だけに寄せすぎると隣接時に判別しづらいため、URL preview 側の表示は据え置き、thread 側で thread label、左ガイドライン、返信位置を示す節点を使って会話の入れ子であることを示す。長文でも読みやすいように、thread 全体を背景色の面で囲う表現は避ける。投稿の hover ハイライトは個別投稿単位に限定し、thread を持つ親投稿に hover しても返信群全体へ背景色が広がらない構造にする。
 
 ## 画像と添付ファイルの表示
 

@@ -59,10 +59,16 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, threadGroupBlock, "padding-left", "28px")
 
 	threadGuideBlock := cssBlock(t, css, ".thread-group::before")
+	assertCSSDeclaration(t, threadGuideBlock, "display", "none")
 	assertCSSDeclaration(t, threadGuideBlock, "border-left", "2px solid var(--thread-line)")
+
+	threadOpenGuideBlock := cssBlock(t, css, ".thread-group[open]::before")
+	assertCSSDeclaration(t, threadOpenGuideBlock, "display", "block")
 
 	threadLabelBlock := cssBlock(t, css, ".thread-label")
 	assertCSSDeclaration(t, threadLabelBlock, "font-weight", "700")
+	assertCSSDeclaration(t, threadLabelBlock, "cursor", "pointer")
+	assertCSSDeclaration(t, threadLabelBlock, "list-style", "none")
 
 	threadLabelRuleBlock := cssBlock(t, css, ".thread-label::after")
 	assertCSSDeclaration(t, threadLabelRuleBlock, "border-top", "1px solid var(--thread-line)")
@@ -72,6 +78,30 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 
 	threadNodeBlock := cssBlock(t, css, ".thread .message::before")
 	assertCSSDeclaration(t, threadNodeBlock, "border", "2px solid var(--thread-line)")
+}
+
+func TestWriteStyleCSSStylesNativeDisclosureControls(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	exportSummaryBlock := cssBlock(t, css, ".export-meta summary")
+	assertCSSDeclaration(t, exportSummaryBlock, "cursor", "pointer")
+	assertCSSDeclaration(t, exportSummaryBlock, "list-style", "none")
+
+	exportSummaryFocusBlock := cssBlock(t, css, ".export-meta summary:focus-visible")
+	assertCSSDeclaration(t, exportSummaryFocusBlock, "outline", "2px solid var(--mention-fg)")
+
+	threadLabelFocusBlock := cssBlock(t, css, ".thread-label:focus-visible")
+	assertCSSDeclaration(t, threadLabelFocusBlock, "outline", "2px solid var(--mention-fg)")
 }
 
 func TestWriteStyleCSSLimitsImageLinkHitArea(t *testing.T) {
