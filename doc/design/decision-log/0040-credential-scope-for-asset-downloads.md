@@ -17,6 +17,7 @@ URL preview の service icon 保存対応後の E2E で、外部 service icon UR
 - asset kind ごとに Authorization header の有無を分ける。
 - download URL の host allowlist で Authorization header の有無を分ける。
 - private file download と public asset download の API を完全に分ける。
+- 第三者 host 由来の public display asset に固定の guard size limit を設ける。
 
 ## 検討内容
 
@@ -26,11 +27,15 @@ asset kind ごとの分岐は、呼び出し側の分類漏れで再発しやす
 
 private file download と public asset download の API 分離はより強い設計だが、現時点の変更量に対して大きい。まずは download の認証付与条件を 1 箇所に集約し、host allowlist とテストで守る。
 
+認証情報の送信先スコープとは別に、URL preview 画像や service icon は第三者 host 由来の public asset URL になり得る。これらを無制限に download すると、悪意ある、または巨大な response により download 量や disk 使用量が過大になる。ユーザー添付ファイルとは性質が異なるため `--max-attachment-size` ではなく、表示用 public preview asset の保護上限として固定 guard limit を設ける。
+
 ## 決定
 
 asset download で Slack bot token を送るのは Slack private file URL (`files.slack.com`) のみに限定する。
 
 Slack Web API (`slack.com/api`) への request は従来どおり Authorization header を付ける。URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL には Authorization header を付けない。
+
+URL preview 画像と URL preview service icon には 1 件あたり 5MiB の guard limit を設け、上限を超える場合は保存せず manifest に `skipped_size` として記録する。
 
 ## 理由
 
@@ -40,6 +45,7 @@ Slack Web API (`slack.com/api`) への request は従来どおり Authorization 
 
 - `internal/slack.Client.Download` は `files.slack.com` の場合だけ Authorization header を付ける。
 - unit test で Slack private file URL には Authorization header が付くこと、public asset URL には付かないことを確認する。
+- unit test で URL preview 画像と URL preview service icon に固定 guard limit が適用されることを確認する。
 - integration test の public service icon fixture は Authorization header が来た場合に失敗する。
 - AI agent 向け共通 rule として `doc/guidelines/credential-scope-guidelines.md` を追加し、Cursor / Claude / Codex / Copilot の入口にも反映する。
 

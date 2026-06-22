@@ -53,6 +53,8 @@ option:
 
 利用者が出力内容を把握しやすいように、ファイル名は URL hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。
 
+URL preview 画像と URL preview service icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像または service icon を表示しない。
+
 ## 添付ファイルのサイズ制限
 
 画像以外の添付ファイルも可能な限り保存対象に含める。また、ユーザーがアップロードした画像の original も保存対象に含める。ただし、巨大な添付ファイルや original 画像による実行時間、出力サイズ、CI artifact サイズの肥大化を避けるため、保存にはサイズ上限を設ける。

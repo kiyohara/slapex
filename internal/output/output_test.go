@@ -123,6 +123,34 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 	assertEntry(t, entries, "https://example.com/too-large-error", "skipped_size", "")
 }
 
+func TestAssetsLimitFor(t *testing.T) {
+	t.Parallel()
+
+	assets := NewAssets(context.Background(), &fakeDownloader{}, t.TempDir(), 10)
+
+	tests := []struct {
+		kind string
+		want int64
+	}{
+		{kind: KindEmoji, want: 0},
+		{kind: KindUploadThumb, want: 0},
+		{kind: KindAvatar, want: 0},
+		{kind: KindOGImage, want: publicPreviewAssetLimit},
+		{kind: KindServiceIcon, want: publicPreviewAssetLimit},
+		{kind: KindUploadOriginal, want: 10},
+		{kind: KindAttachment, want: 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.kind, func(t *testing.T) {
+			t.Parallel()
+			if got := assets.limitFor(tt.kind); got != tt.want {
+				t.Fatalf("limitFor(%s) = %d, want %d", tt.kind, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestExtensionFor(t *testing.T) {
 	t.Parallel()
 
