@@ -12,6 +12,8 @@
   --reaction-line: #e0e0e0;
   --code-bg: #f8f8f8;
   --code-line: #dddddd;
+  --thread-line: #9b9b9b;
+  --thread-bg: #f7f7f7;
 }
 
 * { box-sizing: border-box; }
@@ -100,6 +102,7 @@ body {
   white-space: nowrap;
 }
 .edited { color: var(--muted); font-size: 12px; }
+.edited-fallback { margin-top: 4px; }
 
 .message-body { overflow-wrap: anywhere; white-space: normal; }
 .me-message { font-style: italic; }
@@ -229,11 +232,14 @@ img.emoji {
 
 /* threads */
 .thread {
-  margin-top: 6px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line);
+  margin-top: 8px;
+  margin-left: 4px;
+  padding: 6px 0 2px 18px;
+  border-left: 3px solid var(--thread-line);
+  background: var(--thread-bg);
 }
 .thread .message { padding: 4px; }
+.thread .message:hover { background: #eeeeee; }
 .thread .avatar, .thread .avatar img { width: 28px; }
 .thread .avatar img, .thread .avatar-fallback { width: 28px; height: 28px; }
 

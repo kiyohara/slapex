@@ -334,14 +334,17 @@ func TestRunIntegrationMeAndBotMessage(t *testing.T) {
 func TestRunIntegrationEditedMessage(t *testing.T) {
 	t.Parallel()
 
+	const parentTS = "1700000601.000000"
 	sc := baseScenario()
 	sc.Messages = []slack.Message{
 		{
-			Type:   "message",
-			TS:     "1700000601.000000",
-			User:   "U01",
-			Text:   "This line was edited",
-			Edited: editedAt("1700000605.000000"),
+			Type:       "message",
+			TS:         parentTS,
+			ThreadTS:   parentTS,
+			User:       "U01",
+			Text:       "This line was edited",
+			ReplyCount: 1,
+			Edited:     editedAt("1700000605.000000"),
 		},
 		{
 			Type: "message",
@@ -349,16 +352,38 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 			User: "U02",
 			Text: "This line was not edited",
 		},
+		{
+			Type:   "message",
+			TS:     "1700000604.000000",
+			User:   "U01",
+			Edited: editedAt("1700000606.000000"),
+			Attachments: []slack.Attachment{
+				{ServiceName: "Example", Title: "Preview without body"},
+			},
+		},
+	}
+	sc.Replies = map[string][]slack.Message{
+		parentTS: {
+			{
+				Type:     "message",
+				TS:       "1700000603.000000",
+				ThreadTS: parentTS,
+				User:     "U02",
+				Text:     "Reply was edited",
+				Edited:   editedAt("1700000607.000000"),
+			},
+		},
 	}
 
 	got := runExportScenario(t, sc, renderingOptions(t))
 	body := readIndexHTML(t, got.OutputDir)
 
-	mustContain(t, body, `<span class="edited">(edited)</span>`)
-	mustContain(t, body, "This line was edited")
-	// Only the edited message carries the marker.
-	if n := strings.Count(body, "(edited)"); n != 1 {
-		t.Fatalf("(edited) marker count = %d, want 1", n)
+	mustContain(t, body, `This line was edited <span class="edited">(edited)</span>`)
+	mustContain(t, body, `Reply was edited <span class="edited">(edited)</span>`)
+	assertOrder(t, body, `Preview without body`, `<div class="edited edited-fallback">(edited)</div>`)
+	mustNotContain(t, body, `</span><span class="edited">(edited)</span>`)
+	if n := strings.Count(body, "(edited)"); n != 3 {
+		t.Fatalf("(edited) marker count = %d, want 3", n)
 	}
 }
 

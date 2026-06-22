@@ -34,6 +34,29 @@ func TestWriteStyleCSSKeepsTimestampsFromWrapping(t *testing.T) {
 	assertCSSDeclaration(t, systemContextBlock, "font-size", "12px")
 }
 
+func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	unfurlBlock := cssBlock(t, css, ".unfurl")
+	assertCSSDeclaration(t, unfurlBlock, "padding", "6px 10px")
+	assertCSSDeclaration(t, unfurlBlock, "border-left", "4px solid var(--line)")
+
+	threadBlock := cssBlock(t, css, ".thread")
+	assertCSSDeclaration(t, threadBlock, "padding", "6px 0 2px 18px")
+	assertCSSDeclaration(t, threadBlock, "border-left", "3px solid var(--thread-line)")
+	assertCSSDeclaration(t, threadBlock, "background", "var(--thread-bg)")
+}
+
 func cssBlock(t *testing.T, css, selector string) string {
 	t.Helper()
 
