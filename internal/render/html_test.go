@@ -74,6 +74,26 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, threadNodeBlock, "border", "2px solid var(--thread-line)")
 }
 
+func TestWriteStyleCSSLimitsImageLinkHitArea(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	imageLinkBlock := cssBlock(t, css, ".image-block a")
+	assertCSSDeclaration(t, imageLinkBlock, "display", "inline-block")
+
+	thumbBlock := cssBlock(t, css, ".upload-thumb")
+	assertCSSDeclaration(t, thumbBlock, "display", "block")
+}
+
 func cssBlock(t *testing.T, css, selector string) string {
 	t.Helper()
 

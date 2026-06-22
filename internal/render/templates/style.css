@@ -158,6 +158,7 @@ blockquote {
 
 /* uploads and attachments */
 .image-block { margin: 6px 0; }
+.image-block a { display: inline-block; }
 .upload-thumb {
   max-width: 360px;
   max-height: 280px;
