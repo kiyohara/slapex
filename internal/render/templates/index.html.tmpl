@@ -41,10 +41,9 @@
       <div class="message-head">
         <span class="author">{{.Author}}</span>
         <span class="time" title="{{.TimeISO}}">{{.TimeLabel}}</span>
-        {{- if .Edited}}<span class="edited">(edited)</span>{{end}}
       </div>
       {{- if .Body}}
-      <div class="message-body{{if .Italic}} me-message{{end}}">{{.Body}}</div>
+      <div class="message-body{{if .Italic}} me-message{{end}}">{{.Body}}{{if .Edited}} <span class="edited">(edited)</span>{{end}}</div>
       {{- end}}
       {{- range .Images}}
       <div class="image-block">
@@ -74,6 +73,9 @@
         {{- if .ImagePath}}<img class="unfurl-image" src="{{.ImagePath}}" alt="">{{end}}
       </div>
       {{- end}}
+      {{- if and .Edited (not .Body)}}
+      <div class="edited edited-fallback">(edited)</div>
+      {{- end}}
       {{- if .Reactions}}
       <div class="reactions">
         {{- range .Reactions}}
@@ -82,11 +84,14 @@
       </div>
       {{- end}}
       {{- if .Replies}}
-      <div class="thread">
-        {{- range .Replies}}
-        {{- template "message" .}}
-        {{- end}}
-        {{- if .RepliesTruncated}}<div class="notice">取り扱える件数の上限に達しました。</div>{{end}}
+      <div class="thread-group">
+        <div class="thread-label"><span class="thread-label-icon" aria-hidden="true">↪</span><span>Thread ({{len .Replies}}{{if .RepliesTruncated}}+{{end}} message{{if or .RepliesTruncated (ne (len .Replies) 1)}}s{{end}})</span></div>
+        <div class="thread">
+          {{- range .Replies}}
+          {{- template "message" .}}
+          {{- end}}
+          {{- if .RepliesTruncated}}<div class="notice">取り扱える件数の上限に達しました。</div>{{end}}
+        </div>
       </div>
       {{- end}}
     </div>

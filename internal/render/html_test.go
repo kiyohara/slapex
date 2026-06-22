@@ -32,6 +32,45 @@ func TestWriteStyleCSSKeepsTimestampsFromWrapping(t *testing.T) {
 	systemContextBlock := cssBlock(t, css, ".system-context")
 	assertCSSDeclaration(t, systemContextBlock, "color", "var(--muted)")
 	assertCSSDeclaration(t, systemContextBlock, "font-size", "12px")
+
+	editedBlock := cssBlock(t, css, ".edited")
+	assertCSSDeclaration(t, editedBlock, "font-style", "normal")
+}
+
+func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	unfurlBlock := cssBlock(t, css, ".unfurl")
+	assertCSSDeclaration(t, unfurlBlock, "padding", "6px 10px")
+	assertCSSDeclaration(t, unfurlBlock, "border-left", "4px solid var(--line)")
+
+	threadGroupBlock := cssBlock(t, css, ".thread-group")
+	assertCSSDeclaration(t, threadGroupBlock, "padding-left", "28px")
+
+	threadGuideBlock := cssBlock(t, css, ".thread-group::before")
+	assertCSSDeclaration(t, threadGuideBlock, "border-left", "2px solid var(--thread-line)")
+
+	threadLabelBlock := cssBlock(t, css, ".thread-label")
+	assertCSSDeclaration(t, threadLabelBlock, "font-weight", "700")
+
+	threadLabelRuleBlock := cssBlock(t, css, ".thread-label::after")
+	assertCSSDeclaration(t, threadLabelRuleBlock, "border-top", "1px solid var(--thread-line)")
+
+	threadBlock := cssBlock(t, css, ".thread")
+	assertCSSDeclaration(t, threadBlock, "padding", "0 0 0 8px")
+
+	threadNodeBlock := cssBlock(t, css, ".thread .message::before")
+	assertCSSDeclaration(t, threadNodeBlock, "border", "2px solid var(--thread-line)")
 }
 
 func cssBlock(t *testing.T, css, selector string) string {

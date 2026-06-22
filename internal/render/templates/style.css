@@ -12,6 +12,7 @@
   --reaction-line: #e0e0e0;
   --code-bg: #f8f8f8;
   --code-line: #dddddd;
+  --thread-line: #d0d7de;
 }
 
 * { box-sizing: border-box; }
@@ -99,7 +100,8 @@ body {
   font-size: 12px;
   white-space: nowrap;
 }
-.edited { color: var(--muted); font-size: 12px; }
+.edited { color: var(--muted); font-size: 12px; font-style: normal; }
+.edited-fallback { margin-top: 4px; }
 
 .message-body { overflow-wrap: anywhere; white-space: normal; }
 .me-message { font-style: italic; }
@@ -228,12 +230,66 @@ img.emoji {
 }
 
 /* threads */
-.thread {
-  margin-top: 6px;
-  padding-left: 12px;
-  border-left: 2px solid var(--line);
+.thread-group {
+  position: relative;
+  margin-top: 8px;
+  padding-left: 28px;
 }
-.thread .message { padding: 4px; }
+.thread-group::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  bottom: 4px;
+  left: 8px;
+  border-left: 2px solid var(--thread-line);
+}
+.thread-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.thread-label::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--thread-line);
+  margin-left: 8px;
+}
+.thread-label-icon {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--thread-line);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--mention-fg);
+  font-size: 12px;
+  line-height: 1;
+}
+.thread {
+  padding: 0 0 0 8px;
+}
+.thread .message {
+  position: relative;
+  padding: 4px;
+}
+.thread .message::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: -33px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--thread-line);
+  border-radius: 50%;
+  background: #ffffff;
+}
 .thread .avatar, .thread .avatar img { width: 28px; }
 .thread .avatar img, .thread .avatar-fallback { width: 28px; height: 28px; }
 
