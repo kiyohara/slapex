@@ -260,13 +260,13 @@ img.emoji {
 .thread-group {
   position: relative;
   margin: 8px 0 0 48px;
-  padding-left: 28px;
+  padding-left: 0;
 }
 .thread-group::before {
   content: "";
   display: none;
   position: absolute;
-  top: 28px;
+  top: 34px;
   bottom: 4px;
   left: 8px;
   border-left: 2px solid var(--thread-line);
@@ -284,7 +284,7 @@ img.emoji {
   padding: 1px 8px;
   font-size: 13px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin: 0 0 12px;
   cursor: pointer;
   list-style: none;
 }
@@ -312,7 +312,7 @@ img.emoji {
   line-height: 1;
 }
 .thread {
-  padding: 0 0 0 8px;
+  padding: 0 0 0 36px;
 }
 .thread .message {
   position: relative;

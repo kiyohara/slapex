@@ -50,6 +50,15 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
     - `.thread-label::after` の横罫線が表示されない
     - chip 文字色は本文色で、青は icon のみに限定される
     - summary click 後に `.thread-group.open == true` となり、返信本文が表示される
+- thread chip 位置・余白調整後:
+  - `docker compose run --rm --no-deps dev gofmt -w internal/render/html_test.go`
+  - `docker compose run --rm --no-deps dev go test ./internal/render ./internal/export`
+  - `docker compose run --rm --no-deps dev go test ./...`
+  - chip の左位置を親本文側に寄せる
+  - chip 下の余白を増やし、返信先頭との詰まりを緩和する
+  - 一時ローカル HTTP server で生成サンプル HTML をブラウザ確認
+    - chip 左端が親本文左端と揃う
+    - 展開後の返信本文は親本文から 76px 右へ下がる
 
 ## リスク・ブロッカー
 
@@ -63,3 +72,4 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - 2026-06-22: thread label の右罫線が日付区切りと似て見えるという目視フィードバックを受け、横罫線を削除し、控えめな薄い青の chip 表現にする方針で追加調整を開始した。
 - 2026-06-22: thread label を薄い青の chip 表現に変更し、CSS test とブラウザ確認で横罫線が消えていることを確認した。
 - 2026-06-22: 薄い青の chip はデザイナ案に寄りすぎているため、青はアイコンに限定し、背景と枠線は reaction pill に近いニュートラル寄りへ再調整した。
+- 2026-06-22: 目視確認で chip が右に寄りすぎ、下余白が詰まって見えたため、chip は親本文側へ寄せ、返信群側のインデントで階層を維持する方針に再調整した。
