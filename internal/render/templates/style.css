@@ -232,7 +232,7 @@ img.emoji {
 /* threads */
 .thread-group {
   position: relative;
-  margin-top: 8px;
+  margin: 8px 0 0 48px;
   padding-left: 28px;
 }
 .thread-group::before {
