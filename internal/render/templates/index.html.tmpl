@@ -9,12 +9,15 @@
 <body>
 <header class="export-header">
   <h1><span class="channel-hash">#</span>{{.ChannelName}}</h1>
-  <dl>
-    <dt>Workspace</dt><dd>{{.WorkspaceLine}}</dd>
-    <dt>Channel</dt><dd>{{.ChannelLine}}</dd>
-    <dt>Exported</dt><dd>{{.ExportedLine}}</dd>
-    <dt>Range</dt><dd>{{.RangeLine}}</dd>
-  </dl>
+  <details class="export-meta">
+    <summary>Export information</summary>
+    <dl>
+      <dt>Workspace</dt><dd>{{.WorkspaceLine}}</dd>
+      <dt>Channel</dt><dd>{{.ChannelLine}}</dd>
+      <dt>Exported</dt><dd>{{.ExportedLine}}</dd>
+      <dt>Range</dt><dd>{{.RangeLine}}</dd>
+    </dl>
+  </details>
 </header>
 <main class="timeline">
 {{- range .Items}}
@@ -86,15 +89,25 @@
     </div>
   </div>
   {{- if .Replies}}
-  <div class="thread-group">
-    <div class="thread-label"><span class="thread-label-icon" aria-hidden="true">↪</span><span>Thread ({{len .Replies}}{{if .RepliesTruncated}}+{{end}} message{{if or .RepliesTruncated (ne (len .Replies) 1)}}s{{end}})</span></div>
+  <details class="thread-group">
+    <summary class="thread-label">
+      {{- if .ThreadParticipants}}
+      <span class="thread-participants" aria-hidden="true">
+        {{- range .ThreadParticipants}}
+        <span class="thread-participant">{{if .AvatarPath}}<img src="{{.AvatarPath}}" alt="">{{else}}<span class="thread-participant-fallback">{{.AvatarInitial}}</span>{{end}}</span>
+        {{- end}}
+        {{- if gt .ThreadExtraParticipants 0}}<span class="thread-participant thread-participant-more">+{{.ThreadExtraParticipants}}</span>{{end}}
+      </span>
+      {{- end}}
+      <span class="thread-label-count">{{len .Replies}}{{if .RepliesTruncated}}+{{end}} message{{if or .RepliesTruncated (ne (len .Replies) 1)}}s{{end}}</span>
+    </summary>
     <div class="thread">
       {{- range .Replies}}
       {{- template "message" .}}
       {{- end}}
       {{- if .RepliesTruncated}}<div class="notice">取り扱える件数の上限に達しました。</div>{{end}}
     </div>
-  </div>
+  </details>
   {{- end}}
 {{- end}}
 {{- end}}

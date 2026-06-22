@@ -13,6 +13,16 @@
   --code-bg: #f8f8f8;
   --code-line: #dddddd;
   --thread-line: #d0d7de;
+  --thread-chip-bg: transparent;
+  --thread-chip-bg-hover: #f1f7fd;
+  --thread-chip-line: transparent;
+  --thread-chip-line-hover: #d8dee4;
+  --thread-summary-fg: var(--mention-fg);
+  --thread-summary-caret: #616061;
+  --thread-avatar-border: #ffffff;
+  --thread-avatar-bg: #7c3085;
+  --thread-avatar-fg: #ffffff;
+  --thread-avatar-more-bg: rgba(29, 28, 29, 0.72);
 }
 
 * { box-sizing: border-box; }
@@ -37,11 +47,33 @@ body {
 }
 .export-header h1 { margin: 0 0 8px; font-size: 22px; }
 .channel-hash { color: var(--muted); margin-right: 2px; }
+.export-meta summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.export-meta summary::-webkit-details-marker { display: none; }
+.export-meta summary::before {
+  content: "▸";
+  color: var(--mention-fg);
+  font-size: 11px;
+}
+.export-meta[open] summary::before { content: "▾"; }
+.export-meta summary:focus-visible {
+  outline: 2px solid var(--mention-fg);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
 .export-header dl {
   display: grid;
   grid-template-columns: 7.5em 1fr;
   gap: 2px 8px;
-  margin: 0;
+  margin: 6px 0 0;
   font-size: 13px;
   color: var(--muted);
 }
@@ -234,47 +266,87 @@ img.emoji {
 .thread-group {
   position: relative;
   margin: 8px 0 0 48px;
-  padding-left: 28px;
+  padding-left: 0;
 }
 .thread-group::before {
   content: "";
+  display: none;
   position: absolute;
-  top: 28px;
+  top: 34px;
   bottom: 4px;
   left: 8px;
   border-left: 2px solid var(--thread-line);
 }
+.thread-group[open]::before { display: block; }
 .thread-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  width: min(360px, 100%);
   color: var(--text);
+  background: var(--thread-chip-bg);
+  border: 1px solid var(--thread-chip-line);
+  border-radius: 6px;
+  padding: 3px 12px 3px 0;
+  font-size: 13px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin: 0 0 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.thread-label::-webkit-details-marker { display: none; }
+.thread-label:hover {
+  background: var(--thread-chip-bg-hover);
+  border-color: var(--thread-chip-line-hover);
 }
 .thread-label::after {
-  content: "";
-  flex: 1;
-  border-top: 1px solid var(--thread-line);
-  margin-left: 8px;
+  content: "▸";
+  flex: none;
+  margin-left: auto;
+  color: var(--thread-summary-caret);
+  font-size: 11px;
 }
-.thread-label-icon {
-  position: absolute;
-  left: 0;
+.thread-group[open] .thread-label {
+  background: var(--thread-chip-bg-hover);
+  border-color: var(--thread-chip-line-hover);
+}
+.thread-group[open] .thread-label::after { content: "▾"; }
+.thread-label:focus-visible {
+  outline: 2px solid var(--mention-fg);
+  outline-offset: 2px;
+}
+.thread-label-count { color: var(--thread-summary-fg); }
+.thread-participants {
+  display: inline-flex;
+  align-items: center;
+}
+.thread-participant {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--thread-line);
-  border-radius: 50%;
-  background: #ffffff;
-  color: var(--mention-fg);
-  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+  border: 1px solid var(--thread-avatar-border);
+  border-radius: 4px;
+  background: var(--thread-avatar-bg);
+  color: var(--thread-avatar-fg);
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
 }
+.thread-participant + .thread-participant { margin-left: -4px; }
+.thread-participant img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thread-participant-more {
+  background: var(--thread-avatar-more-bg);
+  color: var(--thread-avatar-fg);
+}
 .thread {
-  padding: 0 0 0 8px;
+  padding: 0 0 0 36px;
 }
 .thread .message {
   position: relative;

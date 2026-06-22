@@ -153,6 +153,25 @@ func TestRunIntegrationFencedCodeBlock(t *testing.T) {
 	mustNotContain(t, body, `<a href="https://example.com/api?id=42"`)
 }
 
+func TestRunIntegrationHeaderMetadataIsCollapsed(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1700000001.000000", User: "U01", Text: "Hello"},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<h1><span class="channel-hash">#</span>project-alpha</h1>`)
+	mustContain(t, body, `<details class="export-meta">`)
+	mustContain(t, body, `<summary>Export information</summary>`)
+	mustContain(t, body, `<dt>Workspace</dt><dd>Acme Workspace (acme.example.slack.com, TACME123)</dd>`)
+	mustNotContain(t, body, `<details class="export-meta" open>`)
+	assertOrder(t, body, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`)
+}
+
 // --- case 2: system rows render quietly and supplement missing actors --------
 
 func TestRunIntegrationSystemRows(t *testing.T) {
@@ -246,6 +265,7 @@ func TestRunIntegrationTombstoneParent(t *testing.T) {
 
 	mustContain(t, body, `<span class="author">(削除)</span>`)
 	mustContain(t, body, "(削除されたメッセージ)")
+	mustContain(t, body, `<details class="thread-group">`)
 	mustContain(t, body, `<div class="thread">`)
 	assertOrder(t, body,
 		"(削除されたメッセージ)",
@@ -389,8 +409,14 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 	mustContain(t, body, `This line was edited <span class="edited">(edited)</span>`)
 	mustContain(t, body, `Reply was edited <span class="edited">(edited)</span>`)
 	mustContain(t, body, `<div class="message-body me-message">waves edited <span class="edited">(edited)</span></div>`)
-	mustContain(t, body, `Thread (1 message)`)
-	mustNotContain(t, body, `Thread (1 messages)`)
+	mustContain(t, body, `<span class="thread-label-count">1 message</span>`)
+	mustNotContain(t, body, `Thread (1 message)`)
+	mustNotContain(t, body, `1 messages`)
+	mustContain(t, body, `<summary class="thread-label">`)
+	mustContain(t, body, `<span class="thread-participants" aria-hidden="true">`)
+	mustContain(t, body, `<span class="thread-participant-fallback">B</span>`)
+	mustContain(t, body, `<details class="thread-group">`)
+	mustNotContain(t, body, `<details class="thread-group" open>`)
 	assertOrder(t, body, `Preview without body`, `<div class="edited edited-fallback">(edited)</div>`)
 	mustNotContain(t, body, `</span><span class="edited">(edited)</span>`)
 	if n := strings.Count(body, "(edited)"); n != 4 {
@@ -444,7 +470,7 @@ func TestRunIntegrationThreadBroadcast(t *testing.T) {
 	if n := strings.Count(body, `<div class="thread">`); n != 1 {
 		t.Fatalf("thread block count = %d, want 1", n)
 	}
-	mustContain(t, body, `Thread (2 messages)`)
+	mustContain(t, body, `<span class="thread-label-count">2 messages</span>`)
 	assertThreadGroupOutsideParentMessage(t, body, "Parent post")
 	// One copy is inside the thread, after the non-broadcast reply.
 	assertOrder(t, body, `<div class="thread">`, "Normal reply", "Broadcast to channel")
@@ -459,7 +485,7 @@ func assertThreadGroupOutsideParentMessage(t *testing.T, body, parentText string
 		t.Fatalf("missing parent message body %q", parentText)
 	}
 	afterParent := body[parentIdx+len(parentMarker):]
-	threadIdx := strings.Index(afterParent, `<div class="thread-group">`)
+	threadIdx := strings.Index(afterParent, `<details class="thread-group">`)
 	if threadIdx < 0 {
 		t.Fatalf("missing thread group after parent message body %q", parentText)
 	}
@@ -705,7 +731,7 @@ func TestRunIntegrationRepliesTruncated(t *testing.T) {
 	if threadIdx < 0 || noticeIdx < 0 || noticeIdx < threadIdx {
 		t.Fatalf("truncation notice should render inside the thread: thread=%d notice=%d", threadIdx, noticeIdx)
 	}
-	mustContain(t, body, `Thread (1000+ messages)`)
+	mustContain(t, body, `<span class="thread-label-count">1000+ messages</span>`)
 }
 
 // --- case 13: standard emoji -> Unicode, unknown shortcode stays literal -----
