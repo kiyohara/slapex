@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-69-unfurl-service-bold
-- PR:
+- PR: #74
 - 最終更新: 2026-06-22
 
 ## 目的
@@ -13,6 +13,7 @@ GitHub Issue #69 に従い、URL preview の favicon 横に表示されるサー
 - Issue #69 の本文とコメントを MCP 経由で確認済み。
 - `progress.md` に Issue #69 の該当行はなく、Issue 本文にも依存指定はないため、依存なしの単発 design adjustment として進める。
 - `.unfurl-service` の CSS と CSS テストを更新済み。
+- PR #74 を作成済み。
 
 ## 決定事項
 
@@ -23,7 +24,7 @@ GitHub Issue #69 に従い、URL preview の favicon 横に表示されるサー
 
 ## 次にやること
 
-- PR を作成する。
+- レビュー待ち。
 
 ## 検証
 
