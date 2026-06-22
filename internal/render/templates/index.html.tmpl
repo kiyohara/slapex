@@ -85,7 +85,7 @@
       {{- end}}
       {{- if .Replies}}
       <div class="thread-group">
-        <div class="thread-label"><span class="thread-label-icon" aria-hidden="true">↪</span><span>Thread ({{len .Replies}}{{if .RepliesTruncated}}+{{end}} messages)</span></div>
+        <div class="thread-label"><span class="thread-label-icon" aria-hidden="true">↪</span><span>Thread ({{len .Replies}}{{if .RepliesTruncated}}+{{end}} message{{if or .RepliesTruncated (ne (len .Replies) 1)}}s{{end}})</span></div>
         <div class="thread">
           {{- range .Replies}}
           {{- template "message" .}}

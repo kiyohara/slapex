@@ -389,6 +389,8 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 	mustContain(t, body, `This line was edited <span class="edited">(edited)</span>`)
 	mustContain(t, body, `Reply was edited <span class="edited">(edited)</span>`)
 	mustContain(t, body, `<div class="message-body me-message">waves edited <span class="edited">(edited)</span></div>`)
+	mustContain(t, body, `Thread (1 message)`)
+	mustNotContain(t, body, `Thread (1 messages)`)
 	assertOrder(t, body, `Preview without body`, `<div class="edited edited-fallback">(edited)</div>`)
 	mustNotContain(t, body, `</span><span class="edited">(edited)</span>`)
 	if n := strings.Count(body, "(edited)"); n != 4 {
