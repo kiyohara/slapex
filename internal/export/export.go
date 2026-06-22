@@ -197,6 +197,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 			for i := range rs {
 				view.Replies = append(view.Replies, b.messageView(&rs[i]))
 			}
+			view.ThreadParticipants, view.ThreadExtraParticipants = threadParticipants(view.Replies)
 			replyCount += len(rs)
 			view.RepliesTruncated = repliesTruncated[m.TS]
 		}
@@ -255,6 +256,36 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	}
 	logf("  output: %s", abs)
 	return abs, nil
+}
+
+func threadParticipants(replies []*render.MessageView) ([]render.ThreadParticipantView, int) {
+	const maxParticipants = 3
+
+	seen := map[string]bool{}
+	var participants []render.ThreadParticipantView
+	uniqueCount := 0
+	for _, reply := range replies {
+		if reply == nil || reply.IsSystem || reply.Author == "" {
+			continue
+		}
+		key := reply.Author + "\x00" + reply.AvatarPath
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		uniqueCount++
+		if len(participants) < maxParticipants {
+			participants = append(participants, render.ThreadParticipantView{
+				Author:        reply.Author,
+				AvatarPath:    reply.AvatarPath,
+				AvatarInitial: reply.AvatarInitial,
+			})
+		}
+	}
+	if uniqueCount <= maxParticipants {
+		return participants, 0
+	}
+	return participants, uniqueCount - maxParticipants
 }
 
 // --- channel selection -----------------------------------------------------

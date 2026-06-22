@@ -16,7 +16,7 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - Issue 本文を github-op-integrated MCP tool で確認済み。
 - #68 / #70 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
 - 通常ルールは 1 Issue = 1 PR だが、ユーザー指示と既存の #60 / #64 同時対応前例により、同じ `details` / `summary` 導入として同一ブランチで扱う。
-- PR 作成後の目視フィードバックを受け、thread label の横罫線を廃止し、Slack の reaction / reply pill に近い控えめな chip 表現へ追加調整済み。commit / push 待ち。
+- PR 作成後の追加フィードバックを受け、thread label に返信者 avatar summary を入れる調整済み。commit / push 待ち。
 
 ## 決定事項
 
@@ -59,6 +59,16 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
   - 一時ローカル HTTP server で生成サンプル HTML をブラウザ確認
     - chip 左端が親本文左端と揃う
     - 展開後の返信本文は親本文から 76px 右へ下がる
+- thread avatar summary 追加後:
+  - `docker compose run --rm --no-deps dev gofmt -w internal/render/html.go internal/export/export.go internal/export/integration_rendering_test.go internal/render/html_test.go`
+  - `docker compose run --rm --no-deps dev gofmt -w internal/export/export_test.go`
+  - `docker compose run --rm --no-deps dev go test ./internal/render ./internal/export`
+  - `docker compose run --rm --no-deps dev go test ./...`
+  - 返信者 avatar を最大 3 件表示し、4 人以上は `+N` で表示する unit test を追加
+  - 一時ローカル HTTP server で生成サンプル HTML をブラウザ確認
+    - 通常時は `.thread-label` の枠線と背景が透明
+    - avatar 3 件と `+1` が表示される
+    - summary click 後に `.thread-group.open == true` となり、枠線と背景が表示される
 
 ## リスク・ブロッカー
 
@@ -73,3 +83,4 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - 2026-06-22: thread label を薄い青の chip 表現に変更し、CSS test とブラウザ確認で横罫線が消えていることを確認した。
 - 2026-06-22: 薄い青の chip はデザイナ案に寄りすぎているため、青はアイコンに限定し、背景と枠線は reaction pill に近いニュートラル寄りへ再調整した。
 - 2026-06-22: 目視確認で chip が右に寄りすぎ、下余白が詰まって見えたため、chip は親本文側へ寄せ、返信群側のインデントで階層を維持する方針に再調整した。
+- 2026-06-22: Slack の thread summary に寄せ、thread chip 内に返信者 avatar を最大 3 件表示し、残り人数を `+N` で表示する実装を追加した。

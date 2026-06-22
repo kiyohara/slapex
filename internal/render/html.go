@@ -38,21 +38,30 @@ type TimelineItem struct {
 
 // MessageView is one rendered message (timeline or thread reply).
 type MessageView struct {
-	IsSystem         bool
-	Author           string
-	AvatarPath       string
-	AvatarInitial    string
-	TimeLabel        string
-	TimeISO          string
-	Edited           bool
-	Italic           bool
-	Body             template.HTML
-	Images           []ImageView
-	FilesList        []FileView
-	Unfurls          []UnfurlView
-	Reactions        []ReactionView
-	Replies          []*MessageView
-	RepliesTruncated bool
+	IsSystem                bool
+	Author                  string
+	AvatarPath              string
+	AvatarInitial           string
+	TimeLabel               string
+	TimeISO                 string
+	Edited                  bool
+	Italic                  bool
+	Body                    template.HTML
+	Images                  []ImageView
+	FilesList               []FileView
+	Unfurls                 []UnfurlView
+	Reactions               []ReactionView
+	Replies                 []*MessageView
+	RepliesTruncated        bool
+	ThreadParticipants      []ThreadParticipantView
+	ThreadExtraParticipants int
+}
+
+// ThreadParticipantView is one compact avatar shown in a thread summary.
+type ThreadParticipantView struct {
+	Author        string
+	AvatarPath    string
+	AvatarInitial string
 }
 
 // ImageView is an uploaded image: thumbnail inline, original on click.

@@ -90,7 +90,17 @@
   </div>
   {{- if .Replies}}
   <details class="thread-group">
-    <summary class="thread-label"><span class="thread-label-icon" aria-hidden="true">↪</span><span>Thread ({{len .Replies}}{{if .RepliesTruncated}}+{{end}} message{{if or .RepliesTruncated (ne (len .Replies) 1)}}s{{end}})</span></summary>
+    <summary class="thread-label">
+      {{- if .ThreadParticipants}}
+      <span class="thread-participants" aria-hidden="true">
+        {{- range .ThreadParticipants}}
+        <span class="thread-participant">{{if .AvatarPath}}<img src="{{.AvatarPath}}" alt="">{{else}}<span class="thread-participant-fallback">{{.AvatarInitial}}</span>{{end}}</span>
+        {{- end}}
+        {{- if gt .ThreadExtraParticipants 0}}<span class="thread-participant thread-participant-more">+{{.ThreadExtraParticipants}}</span>{{end}}
+      </span>
+      {{- end}}
+      <span>Thread ({{len .Replies}}{{if .RepliesTruncated}}+{{end}} message{{if or .RepliesTruncated (ne (len .Replies) 1)}}s{{end}})</span>
+    </summary>
     <div class="thread">
       {{- range .Replies}}
       {{- template "message" .}}
