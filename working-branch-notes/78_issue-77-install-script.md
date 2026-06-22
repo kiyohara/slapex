@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `issue-77-install-script`
-- PR: (未採番)
+- PR: #78
 - 最終更新: 2026-06-22
 
 ## 目的
@@ -29,8 +29,8 @@ post-v1 改善（Issue #77、#50 案B）。README の手動インストール手
 
 ## 次にやること
 
-- 検証（shellcheck / Linux E2E / 検出テスト）を実行し下記に記録。
-- commit / push / PR 作成（`Closes #77`）、note 採番（`number-working-branch-note`）。
+- PR #78 のユーザーレビューと merge 待ち（agent は merge しない）。
+- レビュー指摘があれば対応する。
 
 ## 検証
 
@@ -52,3 +52,4 @@ post-v1 改善（Issue #77、#50 案B）。README の手動インストール手
 ## セッションログ
 
 - 2026-06-22: Issue #50 を案A/案B に分割（案B = #77 新規、#50 を案A に絞り込み）。`issue-77-install-script` ブランチ作成。install.sh / テスト / README / decision log 0041 / architecture / progress を実装。
+- 2026-06-22: 検証（shellcheck / 検出 + checksum テスト 11 件 / 実 v1.0.0 E2E）を Docker で実施し全合格。commit・push、PR #78 作成（`Closes #77`）。note を採番（draft → 78）。
