@@ -64,5 +64,5 @@ v1.0.0 公開後に PR #47 レビュー等で挙がった配布・導入まわ�
 
 | タスク | Issue | 状態 | PR |
 |---|---|---|---|
-| install script(`scripts/install.sh`)の提供(案B) | #77 | done | - |
+| install script(`scripts/install.sh`)の提供(案B) | #77 | done | #78 |
 | Homebrew tap の提供(案A) | #50 | todo | - |
