@@ -361,6 +361,14 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 				{ServiceName: "Example", Title: "Preview without body"},
 			},
 		},
+		{
+			Type:    "message",
+			Subtype: "me_message",
+			TS:      "1700000605.000000",
+			User:    "U02",
+			Text:    "waves edited",
+			Edited:  editedAt("1700000608.000000"),
+		},
 	}
 	sc.Replies = map[string][]slack.Message{
 		parentTS: {
@@ -380,10 +388,11 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 
 	mustContain(t, body, `This line was edited <span class="edited">(edited)</span>`)
 	mustContain(t, body, `Reply was edited <span class="edited">(edited)</span>`)
+	mustContain(t, body, `<div class="message-body me-message">waves edited <span class="edited">(edited)</span></div>`)
 	assertOrder(t, body, `Preview without body`, `<div class="edited edited-fallback">(edited)</div>`)
 	mustNotContain(t, body, `</span><span class="edited">(edited)</span>`)
-	if n := strings.Count(body, "(edited)"); n != 3 {
-		t.Fatalf("(edited) marker count = %d, want 3", n)
+	if n := strings.Count(body, "(edited)"); n != 4 {
+		t.Fatalf("(edited) marker count = %d, want 4", n)
 	}
 }
 

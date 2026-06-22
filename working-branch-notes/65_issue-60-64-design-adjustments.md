@@ -44,3 +44,4 @@ GitHub Issue #60 と #64 の小さな HTML デザイン調整を同一ブラン�
 - 2026-06-22: main から `issue-60-64-design-adjustments` を作成し、Issue #60 / #64 の本文と関連ファイルを確認した。
 - 2026-06-22: edited marker を本文末尾 / 本文なし fallback に移動し、thread 表示を URL preview と区別しやすい CSS に調整した。仕様とテストも更新した。
 - 2026-06-22: デザイナー画像フィードバックを確認。thread の淡い背景をやめ、ラベルと左ガイドラインで階層を示す方向に再調整し、上限打ち切り時は thread label に `+` を付けることにした。
+- 2026-06-22: review comment を確認。`me_message` の斜体が edited marker に継承される指摘は妥当と判断し、`.edited` で `font-style: normal` を明示した。CSS test と `me_message` + edited の統合テストを追加した。

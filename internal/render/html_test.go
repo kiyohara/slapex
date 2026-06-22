@@ -32,6 +32,9 @@ func TestWriteStyleCSSKeepsTimestampsFromWrapping(t *testing.T) {
 	systemContextBlock := cssBlock(t, css, ".system-context")
 	assertCSSDeclaration(t, systemContextBlock, "color", "var(--muted)")
 	assertCSSDeclaration(t, systemContextBlock, "font-size", "12px")
+
+	editedBlock := cssBlock(t, css, ".edited")
+	assertCSSDeclaration(t, editedBlock, "font-style", "normal")
 }
 
 func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
