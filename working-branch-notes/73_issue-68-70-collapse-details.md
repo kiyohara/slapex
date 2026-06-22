@@ -16,7 +16,7 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - Issue 本文を github-op-integrated MCP tool で確認済み。
 - #68 / #70 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
 - 通常ルールは 1 Issue = 1 PR だが、ユーザー指示と既存の #60 / #64 同時対応前例により、同じ `details` / `summary` 導入として同一ブランチで扱う。
-- PR 作成後の目視フィードバックを受け、thread label の横罫線を廃止して控えめな chip 表現へ追加調整済み。commit / push 待ち。
+- PR 作成後の目視フィードバックを受け、thread label の横罫線を廃止し、Slack の reaction / reply pill に近い控えめな chip 表現へ追加調整済み。commit / push 待ち。
 
 ## 決定事項
 
@@ -46,8 +46,9 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
   - `docker compose run --rm --no-deps dev go test ./internal/render ./internal/export`
   - `docker compose run --rm --no-deps dev go test ./...`
   - 一時ローカル HTTP server で生成サンプル HTML をブラウザ確認
-    - `.thread-label` が `inline-flex` の chip として表示される
+    - `.thread-label` が neutral な `inline-flex` の pill として表示される
     - `.thread-label::after` の横罫線が表示されない
+    - chip 文字色は本文色で、青は icon のみに限定される
     - summary click 後に `.thread-group.open == true` となり、返信本文が表示される
 
 ## リスク・ブロッカー
@@ -61,3 +62,4 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - 2026-06-22: Docker Compose 経由の対象テスト・全体テストと、一時ローカル HTTP server 経由のブラウザ確認を完了した。
 - 2026-06-22: thread label の右罫線が日付区切りと似て見えるという目視フィードバックを受け、横罫線を削除し、控えめな薄い青の chip 表現にする方針で追加調整を開始した。
 - 2026-06-22: thread label を薄い青の chip 表現に変更し、CSS test とブラウザ確認で横罫線が消えていることを確認した。
+- 2026-06-22: 薄い青の chip はデザイナ案に寄りすぎているため、青はアイコンに限定し、背景と枠線は reaction pill に近いニュートラル寄りへ再調整した。
