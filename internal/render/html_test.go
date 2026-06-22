@@ -59,6 +59,10 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, unfurlBlock, "padding", "6px 10px")
 	assertCSSDeclaration(t, unfurlBlock, "border-left", "4px solid var(--line)")
 
+	unfurlServiceBlock := cssBlock(t, css, ".unfurl-service")
+	assertCSSDeclaration(t, unfurlServiceBlock, "font-size", "12px")
+	assertCSSDeclaration(t, unfurlServiceBlock, "font-weight", "700")
+
 	threadGroupBlock := cssBlock(t, css, ".thread-group")
 	assertCSSDeclaration(t, threadGroupBlock, "margin", "8px 0 0 48px")
 	assertCSSDeclaration(t, threadGroupBlock, "padding-left", "0")

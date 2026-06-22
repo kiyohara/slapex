@@ -222,6 +222,7 @@ blockquote {
   gap: 4px;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 700;
 }
 .unfurl-service-icon {
   flex: none;
