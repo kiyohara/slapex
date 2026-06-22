@@ -43,6 +43,7 @@ post-v1 改善（Issue #77、#50 案B）。README の手動インストール手
   - checksum: 一致を受理し、不一致を中断。
 - **E2E（実 v1.0.0）**: `alpine:3`（aarch64）で `install.sh --version v1.0.0 --bin-dir /tmp/bin` を実行。`slapex_linux_arm64` を取得 → checksum 検証通過 → install → `slapex --version` が `slapex 1.0.0` を出力。stdout は install path のみ、進捗は stderr。
 - darwin 経路は実機未実行だが、検出ロジックを `--dry-run` + `uname` stub で確認（上記）。実バイナリ取得経路は darwin / linux で共通。
+- **install 先判定（PR #78 レビュー対応）**: 非 root ユーザーで既存の書込不可 `/usr/local/bin` を指定した場合、sudo 無しは friendly die（exit 1、raw な mv permission denied ではない）、passwordless sudo 有りは sudo fallback で install 成功し `slapex 1.0.0` 実行を確認（`alpine:3` / `ubuntu:24.04`）。happy path・shellcheck・テスト 11 件も回帰なし。
 
 ## リスク・ブロッカー
 
@@ -53,3 +54,4 @@ post-v1 改善（Issue #77、#50 案B）。README の手動インストール手
 
 - 2026-06-22: Issue #50 を案A/案B に分割（案B = #77 新規、#50 を案A に絞り込み）。`issue-77-install-script` ブランチ作成。install.sh / テスト / README / decision log 0041 / architecture / progress を実装。
 - 2026-06-22: 検証（shellcheck / 検出 + checksum テスト 11 件 / 実 v1.0.0 E2E）を Docker で実施し全合格。commit・push、PR #78 作成（`Closes #77`）。note を採番（draft → 78）。
+- 2026-06-22: PR #78 レビュー対応。install 先判定の bug を修正（既存の書込不可 dir で sudo fallback に落ちず通常 mv で失敗していた問題）。条件を `mkdir -p "$bin_dir" 2>/dev/null && [ -w "$bin_dir" ]` に変更し、mkdir 後に書込可否を再確認する形へ。非 root 再現を Docker で確認（sudo 無し → friendly die、passwordless sudo → sudo fallback で install 成功）。commit・push、レビューコメントに返信。

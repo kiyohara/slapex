@@ -202,7 +202,10 @@ main() {
 	chmod +x "$tmp/$asset"
 
 	dest="$bin_dir/slapex"
-	if { [ -d "$bin_dir" ] && [ -w "$bin_dir" ]; } || mkdir -p "$bin_dir" 2>/dev/null; then
+	# Use a plain mv only if we can actually write into bin_dir. mkdir -p on an
+	# existing but non-writable dir (e.g. root-owned /usr/local/bin) returns 0,
+	# so re-check writability after it to fall through to the sudo branch.
+	if mkdir -p "$bin_dir" 2>/dev/null && [ -w "$bin_dir" ]; then
 		mv "$tmp/$asset" "$dest"
 	elif have sudo; then
 		log "$bin_dir is not writable; using sudo (you may be prompted for your password)."
