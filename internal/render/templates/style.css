@@ -17,6 +17,12 @@
   --thread-chip-bg-hover: #f1f7fd;
   --thread-chip-line: transparent;
   --thread-chip-line-hover: #d8dee4;
+  --thread-summary-fg: var(--mention-fg);
+  --thread-summary-caret: #616061;
+  --thread-avatar-border: #ffffff;
+  --thread-avatar-bg: #7c3085;
+  --thread-avatar-fg: #ffffff;
+  --thread-avatar-more-bg: rgba(29, 28, 29, 0.72);
 }
 
 * { box-sizing: border-box; }
@@ -293,14 +299,23 @@ img.emoji {
   background: var(--thread-chip-bg-hover);
   border-color: var(--thread-chip-line-hover);
 }
+.thread-label::after {
+  content: "▸";
+  flex: none;
+  margin-left: auto;
+  color: var(--thread-summary-caret);
+  font-size: 11px;
+}
 .thread-group[open] .thread-label {
   background: var(--thread-chip-bg-hover);
   border-color: var(--thread-chip-line-hover);
 }
+.thread-group[open] .thread-label::after { content: "▾"; }
 .thread-label:focus-visible {
   outline: 2px solid var(--mention-fg);
   outline-offset: 2px;
 }
+.thread-label-count { color: var(--thread-summary-fg); }
 .thread-participants {
   display: inline-flex;
   align-items: center;
@@ -312,10 +327,10 @@ img.emoji {
   width: 20px;
   height: 20px;
   overflow: hidden;
-  border: 1px solid #ffffff;
+  border: 1px solid var(--thread-avatar-border);
   border-radius: 4px;
-  background: #7c3085;
-  color: #ffffff;
+  background: var(--thread-avatar-bg);
+  color: var(--thread-avatar-fg);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -327,8 +342,8 @@ img.emoji {
   object-fit: cover;
 }
 .thread-participant-more {
-  background: rgba(29, 28, 29, 0.72);
-  color: #ffffff;
+  background: var(--thread-avatar-more-bg);
+  color: var(--thread-avatar-fg);
 }
 .thread {
   padding: 0 0 0 36px;

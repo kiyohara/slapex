@@ -50,6 +50,11 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	}
 	css := string(data)
 
+	rootBlock := cssBlock(t, css, ":root")
+	assertCSSDeclaration(t, rootBlock, "--thread-summary-fg", "var(--mention-fg)")
+	assertCSSDeclaration(t, rootBlock, "--thread-avatar-bg", "#7c3085")
+	assertCSSDeclaration(t, rootBlock, "--thread-avatar-more-bg", "rgba(29, 28, 29, 0.72)")
+
 	unfurlBlock := cssBlock(t, css, ".unfurl")
 	assertCSSDeclaration(t, unfurlBlock, "padding", "6px 10px")
 	assertCSSDeclaration(t, unfurlBlock, "border-left", "4px solid var(--line)")
@@ -82,13 +87,31 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, threadLabelHoverBlock, "background", "var(--thread-chip-bg-hover)")
 	assertCSSDeclaration(t, threadLabelHoverBlock, "border-color", "var(--thread-chip-line-hover)")
 
+	threadLabelCaretBlock := cssBlock(t, css, ".thread-label::after")
+	assertCSSDeclaration(t, threadLabelCaretBlock, "content", `"▸"`)
+	assertCSSDeclaration(t, threadLabelCaretBlock, "margin-left", "auto")
+	assertCSSDeclaration(t, threadLabelCaretBlock, "color", "var(--thread-summary-caret)")
+
+	threadOpenCaretBlock := cssBlock(t, css, ".thread-group[open] .thread-label::after")
+	assertCSSDeclaration(t, threadOpenCaretBlock, "content", `"▾"`)
+
+	threadLabelCountBlock := cssBlock(t, css, ".thread-label-count")
+	assertCSSDeclaration(t, threadLabelCountBlock, "color", "var(--thread-summary-fg)")
+
 	threadParticipantsBlock := cssBlock(t, css, ".thread-participants")
 	assertCSSDeclaration(t, threadParticipantsBlock, "display", "inline-flex")
 
 	threadParticipantBlock := cssBlock(t, css, ".thread-participant")
 	assertCSSDeclaration(t, threadParticipantBlock, "width", "20px")
 	assertCSSDeclaration(t, threadParticipantBlock, "height", "20px")
+	assertCSSDeclaration(t, threadParticipantBlock, "border", "1px solid var(--thread-avatar-border)")
 	assertCSSDeclaration(t, threadParticipantBlock, "border-radius", "4px")
+	assertCSSDeclaration(t, threadParticipantBlock, "background", "var(--thread-avatar-bg)")
+	assertCSSDeclaration(t, threadParticipantBlock, "color", "var(--thread-avatar-fg)")
+
+	threadMoreParticipantBlock := cssBlock(t, css, ".thread-participant-more")
+	assertCSSDeclaration(t, threadMoreParticipantBlock, "background", "var(--thread-avatar-more-bg)")
+	assertCSSDeclaration(t, threadMoreParticipantBlock, "color", "var(--thread-avatar-fg)")
 
 	threadBlock := cssBlock(t, css, ".thread")
 	assertCSSDeclaration(t, threadBlock, "padding", "0 0 0 36px")

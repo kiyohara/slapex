@@ -80,6 +80,9 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - click target 拡大調整:
   - chip の左位置は維持したまま上下 padding を 3px に増やす
   - chip 幅を `min(360px, 100%)` にし、右側にもクリック可能な余白を確保する
+- PR review 対応:
+  - 静止状態でも開閉可能と分かるように、件数を link 色にし、右端に控えめな caret を追加する
+  - thread avatar 色を `:root` の CSS 変数へ集約する
 
 ## リスク・ブロッカー
 
@@ -97,3 +100,4 @@ GitHub Issue #68 と #70 の HTML デザイン調整を同一ブランチで実�
 - 2026-06-22: Slack の thread summary に寄せ、thread chip 内に返信者 avatar を最大 3 件表示し、残り人数を `+N` で表示する実装を追加した。
 - 2026-06-22: Slack 寄せの微調整として、label 文言から `Thread (` / `)` を外し、hover/open 枠線の角丸を小さくし、avatar 左端が親本文左端に揃うようにした。
 - 2026-06-22: thread summary が小さくクリックしづらいため、avatar 左端を維持したまま上下 padding と右側のクリック領域を拡大した。
+- 2026-06-22: PR review の指摘を受け、thread summary の静的アフォーダンスと avatar 配色変数化を追加した。
