@@ -54,6 +54,6 @@
 | v1-14 | リリース workflow(tag → Releases) | #28 | v1-13 | done | #46 |
 | v1-15 | README と LICENSE | #29 | v1-13 | done | #47 |
 | v1-16 | 実 token 総合 E2E(ユーザー協働) | #30 | v1-10〜v1-15 | done | #58 |
-| v1-17 | v1.0.0 リリース実施と事後整理(ユーザー協働) | #31 | v1-16 | done | 採番後に記入 |
+| v1-17 | v1.0.0 リリース実施と事後整理(ユーザー協働) | #31 | v1-16 | done | #76 |
 
 依存列は「その Issue の作業開始前に done であるべきタスク」の最小セット。直列運用では基本的に直前までの全タスクが done になっている想定。タスク完了時の表の更新方法は `doc/guidelines/issue-driven-task-execution.md` を参照。
