@@ -34,6 +34,29 @@ Slack App の作成、scope 設定、workspace への install、bot token 発行
 
 ## インストール
 
+macOS / Linux(amd64 / arm64)に対応しています。最短はインストールスクリプト、1 ステップずつ確認したい場合は手動手順を使ってください。
+
+### クイックインストール(install script)
+
+最新リリースを取得し、sha256 checksum を検証して `/usr/local/bin` に配置します:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh | sh
+```
+
+バージョンやインストール先を指定する場合は、パイプに `-s --` でオプションを渡します:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh \
+  | sh -s -- --version v1.0.0 --bin-dir "$HOME/.local/bin"
+```
+
+スクリプトは OS / arch を自動判定し、`slapex_<os>_<arch>` と `slapex_checksums.txt` を取得して checksum を照合してから配置します。`/usr/local/bin` に書き込めない場合は sudo を使うか、`--bin-dir` で書き込み可能なディレクトリを指定してください。全オプションは `--help`、実際の取得先を確認するだけなら `--dry-run` で表示できます。
+
+> 実行前にスクリプト内容を確認したい場合は、上記 URL を開くか `curl -fsSLO <URL>` で取得してから `sh install.sh` を実行してください。
+
+### 手動インストール(詳細版)
+
 [GitHub Releases](https://github.com/kiyohara/slapex/releases) から、OS / arch に合うバイナリをダウンロードします。配布物は単一バイナリと sha256 checksum(`slapex_checksums.txt`)です。
 
 | OS | arch | asset 名 |

@@ -41,6 +41,7 @@
 - 実装フェーズで goreleaser 設定と GitHub Actions release workflow を追加した。
 - `README.md` に GitHub Releases からの install 手順、checksum 確認、`--version` 確認を追加した。
 - v1.0.0 は GitHub Releases に `darwin/amd64` / `darwin/arm64` / `linux/amd64` / `linux/arm64` の単一バイナリと `slapex_checksums.txt` を添付して公開した。
+- 導入補助手段(install script の先行採用、Homebrew tap の後続実装)の方針は [0041-install-convenience.md](0041-install-convenience.md) に分離して記録した。本ログの主経路(GitHub Releases 単一バイナリ)は維持する。
 
 ## 後から見直す条件
 
