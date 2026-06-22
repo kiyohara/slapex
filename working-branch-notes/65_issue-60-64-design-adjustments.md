@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-60-64-design-adjustments
-- PR:
+- PR: #65
 - 最終更新: 2026-06-22
 
 ## 目的
@@ -16,7 +16,7 @@ GitHub Issue #60 と #64 の小さな HTML デザイン調整を同一ブラン�
 - Issue 本文を github-op-integrated MCP tool で確認済み。
 - #60 / #64 は `progress.md` の v1.0 リリース実装プラン表に含まれておらず、Issue 本文にも依存欄はない。
 - 通常ルールは 1 Issue = 1 PR だが、ユーザー指示により今回は 2 件の類似デザイン調整を同時対応する。
-- 実装と検証は完了。PR 作成待ち。
+- 実装、検証、PR 作成は完了。note 採番後の push 待ち。
 
 ## 決定事項
 
@@ -26,7 +26,7 @@ GitHub Issue #60 と #64 の小さな HTML デザイン調整を同一ブラン�
 
 ## 次にやること
 
-- PR を作成する。
+- note 採番 commit を push する。
 
 ## 検証
 
