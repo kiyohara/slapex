@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-50-homebrew-cask
-- PR:
+- PR: #80
 - 最終更新: 2026-06-24
 
 ## 目的
@@ -27,7 +27,7 @@ Issue #50 として、macOS 向け Homebrew tap 経由の導入を提供する�
 
 ## 次にやること
 
-- #50 の PR を作成する。
+- #80 のレビューと merge 判断をユーザーが行う。
 - 次回 release 時に Issue #79 として GoReleaser release 経路と tap repo 更新を検証する。
 
 ## 検証
