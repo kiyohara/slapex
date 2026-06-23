@@ -34,7 +34,21 @@ Slack App の作成、scope 設定、workspace への install、bot token 発行
 
 ## インストール
 
-macOS / Linux(amd64 / arm64)に対応しています。最短はインストールスクリプト、1 ステップずつ確認したい場合は手動手順を使ってください。
+macOS / Linux(amd64 / arm64)に対応しています。macOS では Homebrew Cask、macOS / Linux 共通ではインストールスクリプトを使えます。1 ステップずつ確認したい場合は手動手順を使ってください。
+
+### Homebrew Cask(macOS)
+
+Homebrew を使う場合は、tap から cask としてインストールします:
+
+```sh
+brew install --cask kiyohara/tap/slapex
+```
+
+インストール後の確認:
+
+```sh
+slapex --version
+```
 
 ### クイックインストール(install script)
 

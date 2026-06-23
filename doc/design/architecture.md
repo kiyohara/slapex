@@ -61,7 +61,7 @@ internal/emoji/    絵文字解決(組込みデータセット + emoji.list)
 - リリース時は `doc/guidelines/git-operation-guidelines.md` に従って署名付き tag `vX.Y.Z` を `git tag -s` で作成し、GitHub remote へ push する。
 - `v*` tag の push をトリガーに release workflow が goreleaser を実行し、GitHub Releases へ各 target のバイナリと checksum を添付する。
 - 導入補助として、OS / arch を自動判定し checksum を検証する install script(`scripts/install.sh`、`curl | sh`)を提供する(`decision-log/0041-install-convenience.md`)。
-- macOS 向け Homebrew tap は専用 tap repo を前提に後続で提供する(`decision-log/0034-distribution-method.md` / `decision-log/0041-install-convenience.md`)。
+- macOS 向け Homebrew tap は専用 tap repo（`kiyohara/homebrew-tap`）に cask として提供する(`decision-log/0034-distribution-method.md` / `decision-log/0041-install-convenience.md`)。
 - リリース workflow と tap の整備は PoC 後の実装フェーズで行う(`decision-log/0034-distribution-method.md`)。
 
 ## 参考
