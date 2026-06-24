@@ -30,7 +30,7 @@ Slack App の作成、scope 設定、workspace への install、bot token 発行
 
 - **Slack App 準備手順**: [`doc/help/slack-app-setup.md`](doc/help/slack-app-setup.md)
 
-必要な bot token scopes(public / private channel の取得、ファイル・絵文字・ユーザー情報の解決)の一覧と、manifest を使った一括設定例も上記 help に記載しています。private channel を取得する場合は、scope の付与に加えて bot をその channel に参加させる必要があります。
+必要な bot token scopes(public / private channel の取得、ファイル・絵文字・ユーザー情報の解決)の一覧と、manifest を使った一括設定例も上記 help に記載しています。public channel / private channel のどちらも、投稿を取得するには scope の付与に加えて bot をその channel に参加させる必要があります。
 
 ## インストール
 

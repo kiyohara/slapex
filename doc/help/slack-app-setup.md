@@ -10,7 +10,7 @@
 - App は取得対象の workspace に install する。
 - Enterprise org-wide install は初期対象外とする。
 - public channel と private channel の scope は同じ設定手順でまとめて設定する。
-- private channel を取得する場合は、scope だけでなく bot / app がその channel に参加している必要がある。
+- public channel と private channel のどちらも、投稿を取得するには scope だけでなく bot / app がその channel に参加している必要がある。
 
 ## アクセスするページ
 
@@ -30,37 +30,46 @@ Slack App は、個別に scope を追加するだけでなく、manifest を貼
 1. <https://api.slack.com/apps?new_app=1> を開く。
 2. `Create New App` で `From an app manifest` を選ぶ。
 3. 取得対象の workspace を選ぶ。
-4. 次の manifest を貼り付ける。
+4. manifest editor の format が `JSON` になっていることを確認し、次の manifest を貼り付ける。
 5. 表示された設定内容を確認して App を作成する。
-6. 作成後、`OAuth & Permissions` で `Install to Workspace` を実行する。
-7. install 後に表示される `Bot User OAuth Token` を取得する。
+6. 作成後、左メニューの `Install App` を開き、`Install to Workspace` を実行する。権限設定によって `Request to Install` が表示される場合は、workspace 管理者の承認を待つ。
+7. install / authorize 後、`Install App` または `OAuth & Permissions` に表示される `Bot User OAuth Token` を取得する。token は通常 `xoxb-` で始まる。
 8. bot / app を取得対象 channel に参加させる。
 9. bot token を secret manager または CI secrets に保存する。
 10. `SLACK_BOT_TOKEN` として `slapex` 実行時に渡す。
 
 Manifest の例:
 
-```yaml
-display_information:
-  name: slapex
-features:
-  bot_user:
-    display_name: slapex
-    always_online: false
-oauth_config:
-  scopes:
-    bot:
-      - channels:read
-      - channels:history
-      - groups:read
-      - groups:history
-      - files:read
-      - emoji:read
-      - users:read
-settings:
-  org_deploy_enabled: false
-  socket_mode_enabled: false
-  token_rotation_enabled: false
+```json
+{
+  "display_information": {
+    "name": "slapex"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "slapex",
+      "always_online": false
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "channels:read",
+        "channels:history",
+        "groups:read",
+        "groups:history",
+        "files:read",
+        "emoji:read",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
 ```
 
 `display_information.name` と `features.bot_user.display_name` は、workspace 上で分かりやすい名前に変更してよい。
@@ -72,8 +81,8 @@ manifest を使わずに設定する場合は、次の手順で作成する。
 1. <https://api.slack.com/apps?new_app=1> を開き、Slack API の App 管理画面で App を作成する。
 2. App を取得対象の workspace に紐付ける。
 3. App の OAuth & Permissions で Bot Token Scopes を設定する。
-4. App を workspace に install する。
-5. install 後に発行される bot token を取得する。
+4. 左メニューの `Install App` を開き、App を workspace に install する。権限設定によって `Request to Install` が表示される場合は、workspace 管理者の承認を待つ。
+5. install / authorize 後、`Install App` または `OAuth & Permissions` に表示される `Bot User OAuth Token` を取得する。token は通常 `xoxb-` で始まる。
 6. bot / app を取得対象 channel に参加させる。
 7. bot token を secret manager または CI secrets に保存する。
 8. `SLACK_BOT_TOKEN` として `slapex` 実行時に渡す。
@@ -95,11 +104,11 @@ manifest を使わずに設定する場合は、次の手順で作成する。
 
 scope を追加または変更した場合は、App を workspace に再 install し、更新された token を secret manager または CI secrets に反映する。
 
-## Private Channel
+## Channel への参加
 
-private channel の投稿を取得するには、`groups:read` と `groups:history` だけでは不十分な場合がある。
+public channel / private channel の投稿を bot token で取得するには、対応する scope だけでは不十分である。
 
-取得対象の private channel に bot / app が参加している必要がある。参加していない場合は、その private channel の参加者が Slack 上で bot / app を招待する。
+取得対象 channel に bot / app が参加している必要がある。参加していない場合は、Slack 上で bot / app を対象 channel に追加する。private channel の場合は、その private channel の参加者が bot / app を招待する。
 
 ## Token の渡し方
 
@@ -141,7 +150,7 @@ OAuth & Permissions で不足 scope を追加し、App を workspace に再 inst
 
 ### channel が見えない
 
-channel 名または channel ID を確認する。private channel の場合は、bot / app がその channel に参加しているか確認する。
+channel 名または channel ID を確認する。public channel / private channel のどちらも、bot / app がその channel に参加しているか確認する。
 
 ## 参考
 
