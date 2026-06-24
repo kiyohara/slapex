@@ -20,8 +20,8 @@ Slack App の作成と設定では、次の Slack API pages を使う。
 |---|---|
 | Slack App を新規作成する | <https://api.slack.com/apps?new_app=1> |
 | 作成済み Slack App を管理する | <https://api.slack.com/apps> |
-| App manifest の公式説明 | <https://api.slack.com/reference/manifests> |
-| Bot token / token types の公式説明 | <https://api.slack.com/concepts/token-types> |
+| App manifest の公式説明 | <https://docs.slack.dev/tools/app-manifests/> |
+| Bot token / token types の公式説明 | <https://docs.slack.dev/authentication/tokens/> |
 
 ## 推奨手順: manifest から App を作成する
 
