@@ -1,9 +1,11 @@
 # 0003 Workspace Selection
 
-- 状態: decided
+- 状態: superseded
 - 作成日: 2026-06-02
-- 最終更新日: 2026-06-02
+- 最終更新日: 2026-06-24
 - 関連: `../usage-flow.md`
+
+> 2026-06-24 追記: bot token を通常利用の前提とする方針は [0042-default-user-token.md](0042-default-user-token.md) で上書きした。workspace を token から解決し、workspace keyword を必須にしない考え方は維持するが、対象 token は bot token 固定ではなく user token / bot token の両方に広げる。
 
 ## 背景
 

@@ -6,14 +6,22 @@
 
 本ファイルの方針は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と保存対象は `output-format.md`、cache の扱いは `cache.md` を参照する。決定経緯は `decision-log/0025-slack-api-usage-policy.md` と `decision-log/0040-credential-scope-for-asset-downloads.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と保存対象は `output-format.md`、cache の扱いは `cache.md` を参照する。決定経緯は `decision-log/0025-slack-api-usage-policy.md`、`decision-log/0040-credential-scope-for-asset-downloads.md`、`decision-log/0042-default-user-token.md` を参照する。
 
 ## 前提とする token と App
 
-- 単一 workspace install の bot token(`xoxb-`)を前提とする(`decision-log/0003-workspace-selection.md`)。
-- App は利用者自身が作成・install する internal App とする(`decision-log/0009-user-managed-slack-app.md`)。
-- 2025-05 に発表された非 Marketplace「配布」アプリ向けの rate limit 強化(`conversations.history` / `conversations.replies` が 1 req/min、最大 15 件/req)は、internal App は対象外であることが公式に明言されている。slapex の「利用者自身が App を作成する」前提は、この点でも妥当である。
+- デフォルト利用方法は user token(`xoxp-`)とする(`decision-log/0042-default-user-token.md`)。
+- CI 実行、定期実行、チーム共通 automation、個人ユーザーに紐付けたくない運用では bot token(`xoxb-`)も正式サポートする。
+- App / token は利用者自身が管理する。ツール提供側は OAuth callback、token exchange、token storage を提供しない。
+- 2025-05 に発表された非 Marketplace「配布」アプリ向けの rate limit 強化(`conversations.history` / `conversations.replies` が 1 req/min、最大 15 件/req)は、internal customer-built apps は対象外であることが公式に明言されている。slapex の「利用者自身が App / token を管理する」前提は、この点でも妥当である。
 - ただし将来の方針変更に備え、実装は「低い rate limit・小さい page size しか許されない環境でも、時間をかければ完走できる」ことを設計条件とする。具体的には、page size をサーバー側が縮小しても cursor 継続で正しく動き、429 応答には待機で追従する。
+
+token type による主な違い:
+
+| token type | 主用途 | channel 履歴へのアクセス |
+|---|---|---|
+| user token(`xoxp-`) | 個人が自分の参照できる channel 履歴を手元に保存する | 認可したユーザー本人が見える範囲に従う |
+| bot token(`xoxb-`) | CI、定期実行、チーム共通 automation | 対応 scope に加えて、bot / app が対象 conversation の member である必要がある |
 
 出典:
 
@@ -83,6 +91,7 @@
 
 ## 参考
 
+- Slack Developer Docs: [Tokens](https://docs.slack.dev/authentication/tokens/)
 - Slack Developer Docs: [`auth.test`](https://docs.slack.dev/reference/methods/auth.test)
 - Slack Developer Docs: [`conversations.list`](https://docs.slack.dev/reference/methods/conversations.list)
 - Slack Developer Docs: [`conversations.history`](https://docs.slack.dev/reference/methods/conversations.history)

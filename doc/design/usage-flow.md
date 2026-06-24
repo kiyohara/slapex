@@ -16,7 +16,7 @@
 
 ## 想定する利用体験
 
-利用者は、channel を示すキーワードを指定する。ツールは `SLACK_BOT_TOKEN` から対象 workspace を解決し、その workspace 内の対象 channel から投稿、スレッド、添付画像、添付ファイルなどを取得して、ローカルに閲覧可能な HTML と assets 一式を保存する。channel を指定しない場合は、TTY で操作可能な環境では channel を選択できる。
+利用者は、channel を示すキーワードを指定する。ツールは実行時に渡された Slack OAuth token から対象 workspace を解決し、その workspace 内の対象 channel から投稿、スレッド、添付画像、添付ファイルなどを取得して、ローカルに閲覧可能な HTML と assets 一式を保存する。channel を指定しない場合は、TTY で操作可能な環境では channel を選択できる。
 
 ```sh
 slapex <channel-keyword>
@@ -24,13 +24,13 @@ slapex <channel-keyword>
 
 `<channel-keyword>` は channel 名、channel ID、または名前の一部を想定する。曖昧な指定で複数候補が見つかった場合、ツールは候補を表示し、利用者により具体的な指定を促す。
 
-通常の単一 workspace install で発行された bot token は install 先 workspace に紐付くため、利用者が workspace を指定する必要はない。ツールは `auth.test` などで token の workspace 名、workspace URL、`team_id` を確認し、出力ディレクトリ名や metadata に反映する。出力ディレクトリ名では ID そのものではなく、人間が読みやすい workspace / channel label を優先する。
+通常の単一 workspace 向け token は対象 workspace に紐付くため、利用者が workspace を指定する必要はない。ツールは `auth.test` などで token の workspace 名、workspace URL、`team_id` を確認し、出力ディレクトリ名や metadata に反映する。出力ディレクトリ名では ID そのものではなく、人間が読みやすい workspace / channel label を優先する。
 
-Enterprise Grid の org-wide install など、1 つの token が複数 workspace を表し得るケースは初期対象外とする。初期の How to Use 素案では、単一 workspace install の bot token を基本利用として扱う。
+Enterprise Grid の org-wide install など、1 つの token が複数 workspace を表し得るケースは初期対象外とする。
 
-## フェーズ 1: Slack App を準備する
+## フェーズ 1: Slack token を準備する
 
-Slack App の作成、scope 設定、workspace install、bot token 発行は手順が長いため、CLI のエラー出力には詳細なステップを表示しない。詳細手順は本リポジトリ内の help ページに分離し、GitHub 上で参照できるようにする。
+Slack App の作成、scope 設定、workspace install、user token / bot token の発行は手順が長いため、CLI のエラー出力には詳細なステップを表示しない。詳細手順は本リポジトリ内の help ページに分離し、GitHub 上で参照できるようにする。
 
 Help URL:
 
@@ -40,17 +40,11 @@ https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 
 token が未設定、無効、または必要な権限を持たない場合、ツールは短い原因説明と上記 help URL を表示する。
 
-初期利用手順では、利用者自身が自分用の Slack App を作成し、対象 workspace に install する前提にする。配布用 Slack App や OAuth flow は初期対象外とする。
+利用手順では、利用者自身が自分用の Slack App / token を用意し、実行時に token を渡す前提にする。配布用 Slack App、OAuth callback、token exchange、token storage は初期対象外とする。
 
-基本の準備は、help ページで次の内容として案内する。Slack App は <https://api.slack.com/apps?new_app=1> から作成し、個別に scope を設定する方法だけでなく、manifest を貼り付けて必要 scope をまとめて設定する方法を推奨する。
+デフォルトの利用方法は user token をベースとする。これは、利用者本人が参照できる channel 履歴を手元に保存する用途に合わせるためである。CI 実行、定期実行、チーム共通 automation、個人ユーザーに紐付けたくない運用では bot token も正式サポートする。
 
-1. Slack API の App 管理画面で Slack App を作成する。
-2. App を対象 workspace に紐付ける。
-3. manifest または OAuth & Permissions で bot token scopes を設定する。
-4. App を workspace に install し、bot token を発行する。
-5. bot を取得対象 channel に参加させる。
-6. 発行された bot token を secret manager または CI secrets に保存する。
-7. `SLACK_BOT_TOKEN` として実行時に渡す。
+後続作業では、help ページで user token と bot token の手順を分けて案内する。user token 側では user scope と本人の可視範囲、bot token 側では bot scope と channel 参加要件を説明する。
 
 想定する scope:
 
@@ -65,30 +59,30 @@ token が未設定、無効、または必要な権限を持たない場合、�
 | カスタム絵文字の一覧取得 | `emoji:read` |
 | 投稿者名や表示名の解決 | `users:read` |
 
-初期利用手順では、public channel と private channel の scope を同じ設定手順で扱い、上記 scope をまとめて設定する。private channel を扱う場合は、scope の付与だけでなく bot がその private channel に参加している必要がある。
+bot token を使う場合、public channel と private channel のどちらも、scope の付与だけでなく bot / app が対象 channel に参加している必要がある。user token を使う場合は、認可したユーザー本人が見える範囲がアクセス範囲になる。
 
 ## フェーズ 2: Slack API token を実行時に渡す
 
-Slack の投稿を取得するには、Slack App を workspace に install した後に発行される bot token が必要である。ツールは token 自体を保存せず、実行時に環境変数から受け取る。
+Slack の投稿を取得するには、必要な scope を持つ Slack OAuth token が必要である。ツールは token 自体を保存せず、実行時に環境変数から受け取る。
 
 想定する環境変数名:
 
 ```sh
-SLACK_BOT_TOKEN
+SLACK_TOKEN
 ```
 
 token をローカルの `.env` などに実値で保存することは推奨しない。ローカル実行では 1Password CLI などの secret manager から実行時に注入する。
 
 ```sh
-SLACK_BOT_TOKEN="op://<vault>/<item>/<field>" \
+SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex <channel-keyword>
 ```
 
-CI で実行する場合は、CI の secret store に `SLACK_BOT_TOKEN` を登録し、job の環境変数として渡す。ツールは interactive なブラウザ操作やローカル専用 credential store に依存しない。
+CI で実行する場合は、CI の secret store に Slack token を登録し、job の環境変数として渡す。CI では bot token の利用を基本候補とする。ツールは interactive なブラウザ操作やローカル専用 credential store に依存しない。
 
 ## フェーズ 3: 取得を実行する
 
-利用者は channel を指定または選択して取得を開始する。workspace は `SLACK_BOT_TOKEN` から解決される。
+利用者は channel を指定または選択して取得を開始する。workspace は Slack OAuth token から解決される。
 
 ```sh
 op run -- slapex <channel-keyword>
@@ -96,7 +90,7 @@ op run -- slapex <channel-keyword>
 
 ツールの想定動作:
 
-1. `SLACK_BOT_TOKEN` が存在するか確認する。
+1. Slack token が存在するか確認する。
 2. Slack の認証確認 API で token が有効か確認する。
 3. token が紐付く workspace を取得し、workspace 名、workspace URL、`team_id` を記録する。
 4. 確定した workspace 情報を表示する。
@@ -163,7 +157,7 @@ channel は、明示指定と選択の両方に対応する。
 
 非 0 exit code の具体値は `cli-interface.md` の exit code 仕様に従う(対象を確定できない場合は `2`)。
 
-候補表示では、少なくとも channel ID、channel 名、public/private、archived 状態、bot が member かどうかを表示する。private channel は、bot token から見える範囲だけが候補になる。
+候補表示では、少なくとも channel ID、channel 名、public/private、archived 状態、token から見たアクセス可否を表示する。bot token の場合は bot / app が member かどうかも表示する。private channel は、利用中の token から見える範囲だけが候補になる。
 
 ### TTY がある場合
 
@@ -219,22 +213,22 @@ Help URL:
 https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
-### `SLACK_BOT_TOKEN` が未設定
+### Slack token が未設定
 
 表示する内容:
 
-1. `SLACK_BOT_TOKEN` が環境変数として渡されていないことを表示する。
+1. Slack token が環境変数として渡されていないことを表示する。
 2. token を secret manager または CI secrets から実行時に注入するよう促す。
 3. Slack App の作成や token 発行が未完了の場合は help URL を参照するよう案内する。
 
 例:
 
 ```text
-SLACK_BOT_TOKEN is not set.
+SLACK_TOKEN is not set.
 
-Set SLACK_BOT_TOKEN from your secret manager or CI secrets, then run slapex again.
+Set SLACK_TOKEN from your secret manager or CI secrets, then run slapex again.
 
-Need to create a Slack App or issue a bot token?
+Need to create a Slack App or issue a Slack token?
 See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
@@ -252,9 +246,9 @@ See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 表示する内容:
 
 1. `auth.test` で確認した workspace 名、workspace URL、`team_id` を表示する。
-2. 複数 workspace を扱う場合は、それぞれの workspace に対応する bot token を使う。
-3. CI では job ごとに渡している `SLACK_BOT_TOKEN` が正しいか確認する。
-4. Enterprise org-wide install の token を使っている場合は、初期対象外であることを表示し、単一 workspace install の bot token を使うよう案内する。
+2. 複数 workspace を扱う場合は、それぞれの workspace に対応する Slack token を使う。
+3. CI では job ごとに渡している `SLACK_TOKEN` または互換用の token 環境変数が正しいか確認する。
+4. Enterprise org-wide install の token を使っている場合は、初期対象外であることを表示し、単一 workspace 向け token を使うよう案内する。
 
 通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。通常の export 実行でも各タイミングで workspace / channel label を表示する(表示タイミングと内容は「処理対象の表示」を参照)。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。
 
@@ -263,9 +257,10 @@ See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 表示する内容:
 
 1. channel 名または channel ID を確認する。
-2. private channel の場合、bot が channel に参加しているか確認する。
-3. private channel 用の scope が不足していないか確認する。
-4. archived channel を対象にするかどうかを確認する。
+2. user token の場合、認可したユーザーが対象 channel を参照できるか確認する。
+3. bot token の場合、bot / app が対象 channel に参加しているか確認する。
+4. 対象 conversation 種別に対応する scope が不足していないか確認する。
+5. archived channel を対象にするかどうかを確認する。
 
 ### channel 候補が複数ある
 
@@ -280,11 +275,12 @@ See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 表示する内容:
 
 1. Slack App の OAuth & Permissions に必要 scope を追加する。
-2. App を workspace に再 install する。
-3. 更新された token を secret manager または CI secrets に反映する。
-4. 詳細手順として help URL を表示する。
+2. user token の場合は、user scope を含む OAuth flow で再認可する。
+3. bot token の場合は、App を workspace に再 install する。
+4. 更新された token を secret manager または CI secrets に反映する。
+5. 詳細手順として help URL を表示する。
 
-### bot が channel に参加していない
+### bot token 利用時に bot が channel に参加していない
 
 表示する内容:
 
@@ -295,11 +291,11 @@ See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ## ローカル実行の例
 
 ```sh
-SLACK_BOT_TOKEN="op://<vault>/<item>/<field>" \
+SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering
 ```
 
-この例では、実 token の値は shell history や `.env` に残さず、1Password CLI が実行時だけ `SLACK_BOT_TOKEN` を解決する。
+この例では、実 token の値は shell history や `.env` に残さず、1Password CLI が実行時だけ `SLACK_TOKEN` を解決する。
 
 `--output` を省略した場合は、例えば次のような出力 root が作成される。この `20260602-1530` はコマンド実行時刻の例であり、取得対象投稿の日時ではない。
 
@@ -309,13 +305,13 @@ SLACK_BOT_TOKEN="op://<vault>/<item>/<field>" \
 
 ## CI 実行の例
 
-CI では secret store から `SLACK_BOT_TOKEN` を job に渡す。
+CI では secret store から Slack token を job に渡す。CI / automation では bot token の利用を基本候補とする。
 
 ```yaml
 steps:
   - name: Export Slack posts
     env:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
     run: |
       slapex \
         engineering \

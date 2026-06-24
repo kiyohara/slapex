@@ -21,9 +21,9 @@
 
 ## slapex での現在の方針
 
-- Slack Web API (`slack.com/api`) への request には Slack bot token を `Authorization: Bearer` で送る。
-- Slack private file URL (`files.slack.com`) への download には Slack bot token を送る。
-- URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL には Slack bot token を送らない。
+- Slack Web API (`slack.com/api`) への request には Slack OAuth token を `Authorization: Bearer` で送る。
+- Slack private file URL (`files.slack.com`) への download には Slack OAuth token を送る。
+- URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL には Slack OAuth token を送らない。
 - ツール自身による Open Graph fetch は初期対象外であり、将来追加する場合も同じ default deny 方針に従う。
 
 ## レビュー観点
