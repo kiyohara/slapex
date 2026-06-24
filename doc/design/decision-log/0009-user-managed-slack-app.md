@@ -1,9 +1,11 @@
 # 0009 User Managed Slack App
 
-- 状態: decided
+- 状態: superseded
 - 作成日: 2026-06-02
-- 最終更新日: 2026-06-02
+- 最終更新日: 2026-06-24
 - 関連: `../usage-flow.md`
+
+> 2026-06-24 追記: bot token 発行を通常利用の前提とする方針は [0042-default-user-token.md](0042-default-user-token.md) で上書きした。利用者自身が Slack App / token を管理し、ツール提供側は OAuth callback や token storage を提供しない考え方は維持する。新方針では user token をデフォルト利用方法とし、bot token も CI / automation 向けに正式サポートする。
 
 ## 背景
 

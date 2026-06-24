@@ -14,13 +14,13 @@
 |---|---|---|---|---|
 | 0001 | decided | 試作プロジェクトとの関係 | 既存の試作プロジェクトは参考資料として扱うが、そこでの方針を本リポジトリへ暗黙採用しない | [0001-relationship-to-prototype.md](0001-relationship-to-prototype.md) |
 | 0002 | decided | 開発基盤として Docker / Docker Compose を前提とする | サプライチェーン攻撃対策と環境再現性のため、開発コマンドは原則コンテナ経由とする(確定) | [0002-docker-compose-baseline.md](0002-docker-compose-baseline.md) |
-| 0003 | decided | workspace 指定の扱い | 初期利用手順では workspace keyword を必須にせず、単一 workspace install の bot token から workspace を解決する。Enterprise org-wide install は初期対象外とする | [0003-workspace-selection.md](0003-workspace-selection.md) |
+| 0003 | superseded | workspace 指定の扱い | bot token 固定の前提は 0042 で上書き。workspace keyword を必須にせず token から workspace を解決する考え方は維持する | [0003-workspace-selection.md](0003-workspace-selection.md), [0042-default-user-token.md](0042-default-user-token.md) |
 | 0004 | decided | channel 指定と選択 | channel は optional positional argument `[channel]` として受け取る。interactive selection は候補 10 件以下に制限し、11 件以上、non-TTY、または `--no-interactive` では候補と usage を表示して非 0 exit とする | [0004-channel-selection.md](0004-channel-selection.md) |
 | 0005 | decided | cache の扱い | 中間ファイルは `.cache/` 配下に置き、`--keep-cache` 指定時だけ成否に関係なく保持する。再利用 option を用意し、`--no-cache` は初期採用しない | [0005-cache-handling.md](0005-cache-handling.md) |
 | 0006 | decided | 初期 CLI の subcommand | 初期 CLI では subcommand を採用せず、root command に option を直接指定する。必要になったら将来再検討する | [0006-no-subcommands-initially.md](0006-no-subcommands-initially.md) |
 | 0007 | decided | CLI command name | CLI command name は `SLAck Posts EXporter` の略として `slapex` とする | [0007-cli-command-name.md](0007-cli-command-name.md) |
 | 0008 | decided | output root の既定値 | `--output` は省略可能とし、省略時はコマンド実行時刻を使って `slapex-<yyyymmdd>-<hhmm>` 形式の出力 root を作成する | [0008-default-output-root.md](0008-default-output-root.md) |
-| 0009 | decided | Slack App の作成主体 | 初期利用手順では、利用者自身が自分用の Slack App を作成し、workspace に install して bot token を発行する | [0009-user-managed-slack-app.md](0009-user-managed-slack-app.md) |
+| 0009 | superseded | Slack App の作成主体 | bot token を通常利用の前提にする方針は 0042 で上書き。利用者自身が Slack App / token を管理する考え方は維持する | [0009-user-managed-slack-app.md](0009-user-managed-slack-app.md), [0042-default-user-token.md](0042-default-user-token.md) |
 | 0010 | decided | 添付ファイルの保存対象 | 画像以外の添付ファイルも可能な限り保存対象に含め、`--max-attachment-size` default `10MB` を超えるものは保存せず HTML 上で置換メッセージを表示する | [0010-attachment-file-downloads.md](0010-attachment-file-downloads.md) |
 | 0011 | decided | HTML 粒度と取得範囲 | 初期出力は channel 単位 HTML とし、取得範囲は `--max-posts` と `--days` の AND で制限する。`--max-posts` は親投稿数だけを数え、thread replies は 1 thread 1000 件まで扱う | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
 | 0012 | decided | HTML 表示仕様 | `index.html` は JavaScript なしの静的 HTML とし、`style.css` を分離する。投稿は oldest から latest、thread replies は親投稿下に展開してインデント表示する | [0012-html-rendering-style.md](0012-html-rendering-style.md) |
@@ -51,8 +51,9 @@
 | 0037 | decided | Issue 駆動タスク消化の運用方式 | 1 Issue = 1 ブランチ = 1 PR の自己完結 Issue を直列消化する。共通手順は `doc/guidelines/issue-driven-task-execution.md`、索引は `progress.md` のタスク表、merge はユーザーが行う | [0037-issue-driven-task-execution.md](0037-issue-driven-task-execution.md) |
 | 0038 | decided | ライセンス選定 | 公開ライセンスは MIT(copyright `2026 Tomokazu Kiyohara`)に確定。repo root の `LICENSE` を `README.md` のライセンス節から参照する。特許付与が必要な利用形態が出れば Apache-2.0 を再検討 | [0038-license-selection.md](0038-license-selection.md) |
 | 0039 | decided | decision log の対象読者とリンク方針 | decision log は開発時参照の内部ドキュメント。利用者向けドキュメント(`README.md` / `doc/help/`)からは直接リンクしない。`doc/design/` spec からの決定経緯参照(0022)は許容 | [0039-decision-log-audience.md](0039-decision-log-audience.md) |
-| 0040 | decided | asset download 時の認証情報送信先 | Slack bot token は Slack Web API と Slack private file URL(`files.slack.com`)にだけ送る。URL preview 画像、service icon、avatar、emoji などの public asset URL には送らない | [0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md) |
+| 0040 | decided | asset download 時の認証情報送信先 | Slack OAuth token は Slack Web API と Slack private file URL(`files.slack.com`)にだけ送る。URL preview 画像、service icon、avatar、emoji などの public asset URL には送らない | [0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md) |
 | 0041 | decided | 導入手段の拡充 | 配布の主経路は GitHub Releases 単一バイナリ(0034)を維持しつつ、導入補助として install script(案B)を先行採用し、Homebrew tap(案A)は専用 tap repo 上の cask として後続実装する | [0041-install-convenience.md](0041-install-convenience.md) |
+| 0042 | decided | Slack token 種別の基本方針 | デフォルト利用方法は user token とし、bot token も CI / automation 向けに正式サポートする。環境変数名、互換性、scope、診断は Issue #81 で整理する | [0042-default-user-token.md](0042-default-user-token.md) |
 
 ## 未決事項
 
@@ -66,6 +67,7 @@
 | 出力制御 option | open | `--quiet` / `--verbose` / `--no-color` などを追加するか | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md) |
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
+| user token default への移行 | open | user token をデフォルト利用方法にするための CLI、ドキュメント、scope、診断、E2E の変更範囲を洗い出して実装する。Tracking: Issue #81 | [0042-default-user-token.md](0042-default-user-token.md) |
 
 解決済みの旧未決事項: 「`.cache/` 再利用時の整合性検証」は [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) で確定した。「code block 内の URL 構文の表示」は [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) の追記で方針を確定し、修正済み。「コンテナ実行時のタイムゾーン」は [0028-timestamp-timezone-display.md](0028-timestamp-timezone-display.md) の追記で、dev / E2E の Docker Compose 実行時に host の `TZ` を forward し、専用 CLI option は導入しない方針として確定した。「system メッセージの actor 表示」は [0027-message-subtypes-rendering.md](0027-message-subtypes-rendering.md) の追記で、`channel_topic` / `channel_purpose` / `channel_name` の actor prefix 補完として確定した。「Homebrew tap」は [0041-install-convenience.md](0041-install-convenience.md) で、導入補助の方針(install script を先行採用し、Homebrew tap を専用 tap repo 上の cask として後続実装)として確定した。
 

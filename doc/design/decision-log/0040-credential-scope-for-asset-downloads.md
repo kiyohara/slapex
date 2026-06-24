@@ -2,8 +2,10 @@
 
 - 状態: decided
 - 作成日: 2026-06-22
-- 最終更新日: 2026-06-22
+- 最終更新日: 2026-06-24
 - 関連: `../slack-api-usage.md`, `../../guidelines/credential-scope-guidelines.md`
+
+> 2026-06-24 追記: [0042-default-user-token.md](0042-default-user-token.md) でデフォルト利用方法を user token に変更したため、本ログで「Slack bot token」と書いている箇所は現在の仕様では「Slack OAuth token(user token または bot token)」として読む。認証情報を送る host を `slack.com/api` と `files.slack.com` に限定する方針は維持する。
 
 ## 背景
 

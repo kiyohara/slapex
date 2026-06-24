@@ -6,7 +6,7 @@
 
 本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md` と `decision-log/0031-supported-platforms.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md` を参照する。
 
 ## コマンド形式
 
@@ -21,7 +21,9 @@ slapex [channel] [options]
 
 | 変数 | 必須 | 用途 |
 |---|---|---|
-| `SLACK_BOT_TOKEN` | 必須 | 単一 workspace install で発行された bot token(通常 `xoxb-` で始まる) |
+| `SLACK_TOKEN` | 必須 | Slack OAuth token。デフォルト利用方法は user token(`xoxp-`)とし、CI / automation では bot token(`xoxb-`)も正式サポートする |
+
+`SLACK_BOT_TOKEN` は旧 bot token 前提設計で使っていた環境変数名である。後続の移行作業で、互換性の扱い、両方が指定された場合の優先順位、警告表示を確定する。
 
 token を CLI option や引数として受け取る経路は提供しない。プロセス一覧や shell history への漏えいを避けるため、受け渡しは環境変数だけにする。
 
@@ -70,7 +72,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `0` | 成功 | export が完了し、HTML と assets を書き込んだ |
 | `1` | その他の想定外の失敗 | 内部エラー、分類できない異常 |
 | `2` | 引数・指定の誤り、対象を確定できない | 不正な option、channel 候補が 11 件以上、該当 channel なし、non-TTY または `--no-interactive` で選択が必要になった |
-| `3` | 認証・権限の問題 | `SLACK_BOT_TOKEN` 未設定・無効、scope 不足、bot が対象 channel に未参加 |
+| `3` | 認証・権限の問題 | Slack token 未設定・無効、scope 不足、bot token 利用時に bot が対象 channel に未参加、user token 利用時にユーザーが対象 channel を参照できない |
 | `4` | 取得・保存の実行時失敗 | リトライ上限到達、ネットワーク断、出力先への書き込み失敗 |
 
 部分失敗の扱い: 個別 asset(添付ファイル、絵文字画像など)の取得失敗は exit code `4` にせず、HTML 上の置換表示と `.cache/assets_manifest.json` への記録で export を継続する(`output-format.md`)。メッセージ本文の取得が完了できない場合は exit code `4` で失敗とする。
