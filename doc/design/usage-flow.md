@@ -119,9 +119,15 @@ Workspace: Example Workspace (example.slack.com, T012345...)
 
 `team_id` は `auth.test` の戻り値や workspace URL にも現れる非機密情報である。進捗の繰り返し表示では上記のように短縮してよいが、workspace 確定直後、完了 summary、生成 HTML の冒頭では full の `team_id` を表示し、利用者が照合や将来の guard option のために正確な値をコピーできるようにする。
 
-画面表示用の channel label は、channel 名に加えて channel ID、public/private、archived 状態、bot membership を含める。
+画面表示用の channel label は、channel 名に加えて channel ID、public/private、archived 状態、token から見たアクセス可否を含める。bot token の場合、アクセス可否は bot / app が対象 channel の member かどうかで決まるため、member 状態として示す。
 
-例:
+例(user token / 既定):
+
+```text
+Target: Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, accessible)
+```
+
+bot token の場合は、アクセス可否を bot / app の member 状態として示す。
 
 ```text
 Target: Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, member)
