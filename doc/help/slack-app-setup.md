@@ -2,7 +2,7 @@
 
 このページは、`slapex` を使うために利用者自身が Slack App を作成し、Slack OAuth token を発行する手順をまとめる。
 
-`slapex` は token を保存しない。発行した Slack OAuth token は secret manager または CI secrets に保存し、実行時に `SLACK_TOKEN` として渡す。`SLACK_BOT_TOKEN` は使わない。
+`slapex` は token を保存しない。発行した Slack OAuth token は secret manager または CI secrets に保存し、実行時に `SLACK_TOKEN` として渡す。
 
 ## 前提
 
@@ -171,7 +171,7 @@ bot token を使う場合、public channel / private channel の投稿を取得�
 
 ローカルの `.env` などに token の実値を保存することは推奨しない。
 
-Slack OAuth token は `SLACK_TOKEN` として渡す。`SLACK_BOT_TOKEN` は使わない。
+Slack OAuth token は `SLACK_TOKEN` として渡す。
 
 1Password CLI を使う例:
 
@@ -195,7 +195,7 @@ steps:
 
 ### `SLACK_TOKEN` が未設定
 
-`SLACK_TOKEN` を環境変数として渡してから再実行する。`SLACK_BOT_TOKEN` は参照されない。
+`SLACK_TOKEN` を環境変数として渡してから再実行する。
 
 ### token が無効
 

@@ -120,7 +120,7 @@ slapex --version
 
 ## 使い方
 
-token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。`SLACK_BOT_TOKEN` は参照しません。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` などに保存することは推奨しません。ローカルでは 1Password CLI などの secret manager から実行時に注入します。
+token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` などに保存することは推奨しません。ローカルでは 1Password CLI などの secret manager から実行時に注入します。
 
 ```sh
 # 推奨: 1Password CLI で token を実行時に注入(実値を shell 履歴や .env に残さない)。

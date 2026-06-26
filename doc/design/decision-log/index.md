@@ -53,7 +53,7 @@
 | 0039 | decided | decision log の対象読者とリンク方針 | decision log は開発時参照の内部ドキュメント。利用者向けドキュメント(`README.md` / `doc/help/`)からは直接リンクしない。`doc/design/` spec からの決定経緯参照(0022)は許容 | [0039-decision-log-audience.md](0039-decision-log-audience.md) |
 | 0040 | decided | asset download 時の認証情報送信先 | Slack OAuth token は Slack Web API と Slack private file URL(`files.slack.com`)にだけ送る。URL preview 画像、service icon、avatar、emoji などの public asset URL には送らない | [0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md) |
 | 0041 | decided | 導入手段の拡充 | 配布の主経路は GitHub Releases 単一バイナリ(0034)を維持しつつ、導入補助として install script(案B)を先行採用し、Homebrew tap(案A)は専用 tap repo 上の cask として後続実装する | [0041-install-convenience.md](0041-install-convenience.md) |
-| 0042 | decided | Slack token 種別の基本方針 | デフォルト利用方法は user token とし、bot token も CI / automation 向けに正式サポートする。環境変数名は `SLACK_TOKEN` とし、`SLACK_BOT_TOKEN` 互換は維持しない | [0042-default-user-token.md](0042-default-user-token.md) |
+| 0042 | decided | Slack token 種別の基本方針 | デフォルト利用方法は user token とし、bot token も CI / automation 向けに正式サポートする。環境変数名は `SLACK_TOKEN` とする | [0042-default-user-token.md](0042-default-user-token.md) |
 
 ## 未決事項
 

@@ -43,3 +43,4 @@ Issue #81 の対応として、`slapex` のデフォルト利用方法を user t
 - 2026-06-26: `SLACK_TOKEN` 専用の CLI env 読み取りと未設定診断を実装し、`SLACK_BOT_TOKEN` fallback がないことをテストで固定。
 - 2026-06-26: README / Slack App setup help / design docs / decision log を user token default、bot token support、v1.0.1 方針へ更新。
 - 2026-06-26: PR #84 作成後、note を採番し、progress の PR 列を更新。
+- 2026-06-26: ユーザー向け docs から旧 env 名の移行説明を削除し、`SLACK_TOKEN` だけを案内する表現へ調整。
