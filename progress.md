@@ -67,4 +67,4 @@ v1.0.0 公開後に PR #47 レビュー等で挙がった配布・導入まわ�
 | install script(`scripts/install.sh`)の提供(案B) | #77 | done | #78 |
 | Homebrew tap の提供(案A: cask) | #50 | done | #80 |
 | Homebrew cask 自動更新経路の release 検証 | #79 | todo | - |
-| user token default への認証方針転換(v1.0.1) | #81 | done | - |
+| user token default への認証方針転換(v1.0.1) | #81 | done | #84 |
