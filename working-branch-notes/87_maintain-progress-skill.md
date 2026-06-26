@@ -26,6 +26,7 @@ v1.0.0 / v1.0.1 公開で v1 リリースプランが完了し、`progress.md` �
 - `progress.md` には恒久ルールを書かず **薄いポインタのみ**(`agent-configuration-management.md` の「入口に恒久ルールを複製しない」方針に沿う)。
 - skill 配置は `doc/guidelines/agent-configuration-management.md` の作成 checklist に従う。AGENTS.md への skill 登録は checklist 上「任意」かつ「ルールをシンプルに保つ」方針に沿って省略。
 - `progress.md` の note は自動実行ではなく運用上の合図。真の自動化(`/schedule` 等)はこのプロジェクトの手動・熟慮型運用には不要と判断。
+- スリム化で常設タスク表が無くなり、`doc/guidelines/issue-driven-task-execution.md` の手順 2 / 7(「`progress.md` のタスク表」前提)が実態と乖離するため、本 PR で手順を条件化(索引表があれば表で、無ければ Issue / PR の merge 済みで依存確認 / 単発 Issue は progress.md 更新不要)。これは post-v1 の単発 Issue 群で既に行われていた運用の明文化であり、新しい方針追加ではないため decision log は新設しない(0037 は v1 当時の決定の歴史記録としてそのまま据え置き)。
 
 ## 次にやること
 
@@ -49,3 +50,4 @@ v1.0.0 / v1.0.1 公開で v1 リリースプランが完了し、`progress.md` �
 
 - 2026-06-26: `progress.md` 削除の可否を調査。現役の規範参照(release skill / issue-driven-task-execution / 配置ルール / rule frontmatter / copilot)と歴史記録(working-branch-notes / decision log)を切り分け、単純削除は不可と判断。スリム化を選択し実施。
 - 2026-06-26: 定期メンテの標準化として `maintain-progress` skill を追加する方針をユーザーと合意。観点を 6 つに構造化して作成し、`progress.md` に薄いポインタを追加。ブランチ + PR 化に着手。
+- 2026-06-26: PR #87 作成、note 採番、サブエージェントによる medium 相当レビュー実施(必須指摘なし、`[fyi]` 1 件)。`[fyi]`(issue-driven 手順の表前提)について、推奨方針どおり `issue-driven-task-execution.md` の手順 2 / 7 と冒頭の適用範囲を条件化して本 PR に追加。レビューコメントにも返信。

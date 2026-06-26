@@ -1,6 +1,6 @@
 # Issue 駆動タスク実行ルール
 
-この文書は、GitHub Issue として登録されたタスクを AI agent が消化するときの共通正本である。直近の主対象は v1.0 リリース実装プラン(`progress.md` のタスク表)だが、同方式で運用するタスク全般に適用する。
+この文書は、GitHub Issue として登録されたタスクを AI agent が消化するときの共通正本である。`progress.md` の索引表で管理する横断タスクにも、表に載らない単発 Issue にも同じく適用する。
 
 ## 前提
 
@@ -11,12 +11,12 @@
 ## 進め方
 
 1. 対象 Issue を読む。GitHub 操作は `doc/guidelines/github-mcp-guidelines.md` に従い MCP を優先する。
-2. `progress.md` のタスク表で、Issue の「依存」に挙がるタスクがすべて done であることを確認する。未完了の依存があれば作業を始めず、その旨をユーザーに報告して終了する。
+2. Issue の「依存」に挙がるタスクがすべて done であることを確認する。該当タスクが `progress.md` の索引表にあればそれで確認し、無ければ各依存タスクの Issue / PR が merge 済みかで確認する。未完了の依存があれば作業を始めず、その旨をユーザーに報告して終了する。
 3. `main` を最新化し、Issue 記載のブランチ名で作業ブランチを作る(`doc/guidelines/git-operation-guidelines.md`)。
 4. `working-branch-notes/draft_<escaped-branch-name>.md` を作る(`doc/guidelines/working-branch-notes-handling.md` と `doc/guidelines/working-branch-notes-security.md` に従う)。
 5. Issue の「作業内容」を実施する。「スコープ外」の事項には手を付けない。開発コマンドは `doc/guidelines/development-command-guidelines.md` に従い Docker Compose 経由で実行する。
 6. Issue の「検証」をすべて実行し、結果を note の検証セクションに記録する。
-7. `progress.md` タスク表の該当行を更新する(状態を done にし、PR 列に番号を記入する。この PR が merge された時点で正になる内容でよい)。
+7. 対象タスクが `progress.md` の索引表にある場合は、該当行を更新する(状態を done にし、PR 列に番号を記入する。この PR が merge された時点で正になる内容でよい)。表に載らない単発 Issue は `progress.md` を更新しなくてよい。
 8. PR を作る(`doc/guidelines/pull-request-guidelines.md`)。description に `Closes #<Issue 番号>` を含める。
 9. PR 採番後、note を `<PR 番号>_<escaped-branch-name>.md` へ rename する(`number-working-branch-note` skill が使える場合は skill で行う)。
 10. PR の URL、検証結果の要約、未解決事項をユーザーに報告して終了する。merge はしない。
