@@ -12,10 +12,10 @@
 #
 # Or download first, then run:
 #   curl -fsSLO https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh
-#   sh install.sh --version v1.0.0
+#   sh install.sh --version v1.0.1
 #
 # Options:
-#   --version <tag>   Release tag to install (e.g. v1.0.0). Default: latest release.
+#   --version <tag>   Release tag to install (e.g. v1.0.1). Default: latest release.
 #   --bin-dir <dir>   Install directory. Default: /usr/local/bin.
 #   --dry-run         Print what would be installed (target, version, URLs) and exit.
 #   --help            Show this help and exit.
@@ -46,7 +46,7 @@ Usage:
   sh install.sh [--version <tag>] [--bin-dir <dir>] [--dry-run]
 
 Options:
-  --version <tag>   Release tag to install (e.g. v1.0.0). Default: latest release.
+  --version <tag>   Release tag to install (e.g. v1.0.1). Default: latest release.
   --bin-dir <dir>   Install directory. Default: /usr/local/bin.
   --dry-run         Print what would be installed and exit without changes.
   --help            Show this help and exit.

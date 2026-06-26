@@ -55,10 +55,10 @@ TZ=Asia/Tokyo docker compose run --rm dev go run ./cmd/slapex
 docker compose run --rm -e TZ=Asia/Tokyo dev go run ./cmd/slapex
 ```
 
-実行時に環境変数(例: `SLACK_BOT_TOKEN`)を渡す場合は、`-e` で host 環境から forward し、compose ファイルや repo 内に実値を書かない。
+実行時に環境変数(例: `SLACK_TOKEN`)を渡す場合は、`-e` で host 環境から forward し、compose ファイルや repo 内に実値を書かない。
 
 ```sh
-docker compose run --rm -e SLACK_BOT_TOKEN dev ./bin/slapex <channel>
+docker compose run --rm -e SLACK_TOKEN dev ./bin/slapex <channel>
 ```
 
 依存 service が不要な確認コマンドでは、不要な container 起動を避けるため `--no-deps` を付けてよい。

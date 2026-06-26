@@ -44,7 +44,7 @@ token が未設定、無効、または必要な権限を持たない場合、�
 
 デフォルトの利用方法は user token をベースとする。これは、利用者本人が参照できる channel 履歴を手元に保存する用途に合わせるためである。CI 実行、定期実行、チーム共通 automation、個人ユーザーに紐付けたくない運用では bot token も正式サポートする。
 
-後続作業では、help ページで user token と bot token の手順を分けて案内する。user token 側では user scope と本人の可視範囲、bot token 側では bot scope と channel 参加要件を説明する。
+help ページでは user token と bot token の手順を分けて案内する。user token 側では user scope と本人の可視範囲、bot token 側では bot scope と channel 参加要件を説明する。
 
 想定する scope:
 
@@ -253,7 +253,7 @@ See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 
 1. `auth.test` で確認した workspace 名、workspace URL、`team_id` を表示する。
 2. 複数 workspace を扱う場合は、それぞれの workspace に対応する Slack token を使う。
-3. CI では job ごとに渡している `SLACK_TOKEN` または互換用の token 環境変数が正しいか確認する。
+3. CI では job ごとに渡している `SLACK_TOKEN` が正しいか確認する。
 4. Enterprise org-wide install の token を使っている場合は、初期対象外であることを表示し、単一 workspace 向け token を使うよう案内する。
 
 通常実行では、ツール側に期待する workspace を示す入力がないため、workspace mismatch を自動検出するエラーにはしない。workspace 情報は、利用者や CI 運用者が token の向き先を確認するための診断情報として表示する。通常の export 実行でも各タイミングで workspace / channel label を表示する(表示タイミングと内容は「処理対象の表示」を参照)。`--reuse-cache` で以前の `.cache/` を再利用する場合だけ、cache に記録された workspace 情報との不一致を検出対象にできる。

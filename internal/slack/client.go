@@ -226,8 +226,9 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// Download fetches an asset URL. Slack private file URLs receive the bot token;
-// public third-party assets such as unfurl images and service icons do not.
+// Download fetches an asset URL. Slack private file URLs receive the Slack
+// OAuth token; public third-party assets such as unfurl images and service
+// icons do not.
 // When limit > 0 and the body exceeds it, ErrTooLarge is returned.
 func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.Writer) (written int64, contentType string, err error) {
 	if err := c.pace(ctx, "download"); err != nil {

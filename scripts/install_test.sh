@@ -32,7 +32,7 @@ EOF
 }
 
 run_installer() {
-	PATH="$stub_dir:$PATH" sh "$installer" --version v1.0.0 --dry-run
+	PATH="$stub_dir:$PATH" sh "$installer" --version v1.0.1 --dry-run
 }
 
 # expect_asset <kernel> <machine> <expected-asset>

@@ -42,7 +42,10 @@ var authErrorCodes = map[string]bool{
 	"ekm_access_denied": true,
 }
 
-const helpURL = "https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md"
+const (
+	helpURL       = "https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md"
+	slackTokenEnv = "SLACK_TOKEN"
+)
 
 var errUsage = errors.New("usage error")
 
@@ -75,15 +78,9 @@ func run() int {
 		return exitOK
 	}
 
-	token := os.Getenv("SLACK_BOT_TOKEN")
+	token := slackTokenFromEnv(os.Getenv)
 	if token == "" {
-		fmt.Fprintln(os.Stderr, "SLACK_BOT_TOKEN is not set.")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "Set SLACK_BOT_TOKEN from your secret manager or CI secrets, then run slapex again.")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "Need to create a Slack App or issue a bot token?")
-		fmt.Fprintln(os.Stderr, "See: "+helpURL)
-		return exitAuth
+		return reportMissingToken(os.Stderr)
 	}
 
 	logf := func(format string, args ...any) {
@@ -112,6 +109,20 @@ func run() int {
 	}
 	fmt.Fprintln(os.Stdout, dir)
 	return exitOK
+}
+
+func slackTokenFromEnv(getenv func(string) string) string {
+	return getenv(slackTokenEnv)
+}
+
+func reportMissingToken(w io.Writer) int {
+	fmt.Fprintf(w, "%s is not set.\n", slackTokenEnv)
+	fmt.Fprintln(w, "")
+	fmt.Fprintf(w, "Set %s from your secret manager or CI secrets, then run slapex again.\n", slackTokenEnv)
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Need to create a Slack App or issue a Slack token?")
+	fmt.Fprintln(w, "See: "+helpURL)
+	return exitAuth
 }
 
 // reportRunError writes the user-facing message for a failed export.Run to w
@@ -143,7 +154,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(diagnostics, "Usage: slapex [channel] [options]\n\n")
 		fmt.Fprintf(diagnostics, "Exports Slack channel posts as locally browsable HTML with assets.\n")
-		fmt.Fprintf(diagnostics, "The bot token is taken from the SLACK_BOT_TOKEN environment variable.\n\n")
+		fmt.Fprintf(diagnostics, "The Slack OAuth token is taken from the %s environment variable.\n\n", slackTokenEnv)
 		fmt.Fprintf(diagnostics, "Options:\n")
 		fs.PrintDefaults()
 	}

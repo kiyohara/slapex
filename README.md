@@ -4,7 +4,7 @@
 
 ## 概要
 
-`SLACK_BOT_TOKEN`(bot token)で対象 workspace を解決し、指定した channel の履歴を取得して、ローカルブラウザで開ける `index.html` と assets をまとめて出力します。
+`SLACK_TOKEN`(Slack OAuth token)で対象 workspace を解決し、指定した channel の履歴を取得して、ローカルブラウザで開ける `index.html` と assets をまとめて出力します。
 
 主な特徴:
 
@@ -17,20 +17,22 @@
 
 利用者の操作の流れ全体は [`doc/design/usage-flow.md`](doc/design/usage-flow.md) にまとめています。使い始めるまでの流れ:
 
-1. [事前準備](#事前準備-slack-app-と-bot-token) — Slack App を作成し bot token を発行する。
+1. [事前準備](#事前準備-slack-app-と-token) — Slack App を作成し Slack OAuth token を発行する。
 2. [インストール](#インストール) — バイナリを取得して PATH に置く。
-3. [使い方](#使い方) — `SLACK_BOT_TOKEN` を渡して channel を export する。
+3. [使い方](#使い方) — `SLACK_TOKEN` を渡して channel を export する。
 4. [出力](#出力) — 生成された `index.html` をブラウザで開いて確認する。
 
-## 事前準備: Slack App と bot token
+## 事前準備: Slack App と token
 
-`slapex` は、利用者自身が作成した Slack App の bot token を使います。token は保存せず、実行時に環境変数 `SLACK_BOT_TOKEN` から受け取ります。
+`slapex` は、利用者自身が作成した Slack App の Slack OAuth token を使います。token は保存せず、実行時に環境変数 `SLACK_TOKEN` から受け取ります。
 
-Slack App の作成、scope 設定、workspace への install、bot token 発行、対象 channel への bot 参加までの手順は help ページにまとめています。
+デフォルトの利用方法は user token(`xoxp-`)です。認可したユーザー本人が参照できる channel 履歴を保存する用途に向いています。CI、定期実行、チーム共通 automation、個人ユーザーに紐付けたくない運用では bot token(`xoxb-`)も正式サポートします。
+
+Slack App の作成、scope 設定、workspace への install、user token / bot token の発行手順は help ページにまとめています。
 
 - **Slack App 準備手順**: [`doc/help/slack-app-setup.md`](doc/help/slack-app-setup.md)
 
-必要な bot token scopes(public / private channel の取得、ファイル・絵文字・ユーザー情報の解決)の一覧と、manifest を使った一括設定例も上記 help に記載しています。public channel / private channel のどちらも、投稿を取得するには scope の付与に加えて bot をその channel に参加させる必要があります。
+必要な scopes(public / private channel の取得、ファイル・絵文字・ユーザー情報の解決)の一覧と、manifest を使った一括設定例も上記 help に記載しています。user token では認可したユーザー本人が見える範囲が対象です。bot token では public channel / private channel のどちらも、scope の付与に加えて bot / app がその channel に参加している必要があります。
 
 ## インストール
 
@@ -62,7 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/instal
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh \
-  | sh -s -- --version v1.0.0 --bin-dir "$HOME/.local/bin"
+  | sh -s -- --version v1.0.1 --bin-dir "$HOME/.local/bin"
 ```
 
 スクリプトは OS / arch を自動判定し、`slapex_<os>_<arch>` と `slapex_checksums.txt` を取得して checksum を照合してから配置します。`/usr/local/bin` に書き込めない場合は sudo を使うか、`--bin-dir` で書き込み可能なディレクトリを指定してください。全オプションは `--help`、実際の取得先を確認するだけなら `--dry-run` で表示できます。
@@ -83,7 +85,7 @@ curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/instal
 まずバイナリと checksum を取得します(`<version>` は対象のリリース tag、`ASSET` は上の表から自分の OS / arch に置き換える):
 
 ```sh
-VERSION=<version>          # 例: v1.0.0
+VERSION=<version>          # 例: v1.0.1
 ASSET=slapex_darwin_arm64  # 上の表から自分の OS / arch に合わせて選ぶ
 BASE="https://github.com/kiyohara/slapex/releases/download/${VERSION}"
 
@@ -118,19 +120,19 @@ slapex --version
 
 ## 使い方
 
-token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_BOT_TOKEN`(通常 `xoxb-` で始まる bot token)として渡します。token の実値を `.env` などに保存することは推奨しません。ローカルでは 1Password CLI などの secret manager から実行時に注入します。
+token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。`SLACK_BOT_TOKEN` は参照しません。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` などに保存することは推奨しません。ローカルでは 1Password CLI などの secret manager から実行時に注入します。
 
 ```sh
 # 推奨: 1Password CLI で token を実行時に注入(実値を shell 履歴や .env に残さない)。
 # channel keyword は channel 名・ID・名前の一部を指定する。
-SLACK_BOT_TOKEN="op://<vault>/<item>/<field>" \
+SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering
 
 # secret manager を使わない場合は、環境変数に設定してから実行する。
-export SLACK_BOT_TOKEN="xoxb-..."
+export SLACK_TOKEN="xoxp-..."
 slapex engineering
 
-# 以降の例は SLACK_BOT_TOKEN を設定済みの前提。出力先を固定する場合:
+# 以降の例は SLACK_TOKEN を設定済みの前提。出力先を固定する場合:
 slapex engineering --output ./exports
 ```
 
@@ -183,8 +185,8 @@ docker compose run --rm dev go test ./...
 # vet
 docker compose run --rm dev go vet ./...
 
-# ローカル実行(host の SLACK_BOT_TOKEN を forward)
-docker compose run --rm -e SLACK_BOT_TOKEN dev go run ./cmd/slapex engineering
+# ローカル実行(host の SLACK_TOKEN を forward)
+docker compose run --rm -e SLACK_TOKEN dev go run ./cmd/slapex engineering
 ```
 
 - ドキュメント配置の入口: [`doc/README.md`](doc/README.md)

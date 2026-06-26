@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-24
-- 最終更新日: 2026-06-24
+- 最終更新日: 2026-06-26
 - 関連: `../usage-flow.md`, `../cli-interface.md`, `../slack-api-usage.md`
 
 ## 背景
@@ -38,7 +38,9 @@ bot token は CI 実行、定期実行、チーム共通 automation、個人ユ�
 
 ツール提供側は、現時点では配布用 Slack App、OAuth callback、OAuth token exchange、token storage を提供しない。利用者が自分の管理下で Slack App / token を用意し、実行時に環境変数から渡す方式を維持する。
 
-今後の CLI とドキュメントでは、汎用の Slack OAuth token を受け取る前提へ改める。環境変数名、既存 `SLACK_BOT_TOKEN` との互換性、token type の診断表示、user token / bot token ごとの scope とエラー案内は、後続 Issue #81 で実装・整理する。
+今後の CLI とドキュメントでは、汎用の Slack OAuth token を受け取る前提へ改める。環境変数名は `SLACK_TOKEN` とし、旧 bot token 前提設計で使っていた `SLACK_BOT_TOKEN` との互換性は維持しない。bot token を使う場合も `SLACK_TOKEN` に渡す。
+
+2026-06-26 に Issue #81 で、user token / bot token ごとの scope、channel access、エラー案内、E2E 計画を整理し、次の修正リリースを v1.0.1 として進める方針を確定した。
 
 ## 理由
 
@@ -52,7 +54,7 @@ bot token は CI 実行、定期実行、チーム共通 automation、個人ユ�
 
 - `README.md` と `doc/help/slack-app-setup.md` は、user token を基本手順、bot token を CI / automation 向け手順として再構成する必要がある。
 - `usage-flow.md`、`cli-interface.md`、`slack-api-usage.md` は、bot token 固定の記述を Slack OAuth token / token type 別の記述に更新する必要がある。
-- 環境変数名は `SLACK_BOT_TOKEN` 固定から見直す必要がある。新しい主環境変数名と後方互換性の扱いは後続実装で確定する。
+- 環境変数名は `SLACK_TOKEN` とする。`SLACK_BOT_TOKEN` は参照しないため、旧環境変数を使っていた利用者は `SLACK_TOKEN` へ移行する必要がある。
 - token type ごとの scope、channel membership、エラー診断を分ける必要がある。
 - bot token では public / private のどちらも bot / app の channel 参加が必要であることを明記する必要がある。
 - user token と bot token の両方で実 token E2E を行い、`conversations.list`、`conversations.history`、`conversations.replies`、file download、emoji / user 解決の差分を確認する必要がある。

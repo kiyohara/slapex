@@ -67,7 +67,7 @@ Slack token、個人情報、顧客固有情報、出力 HTML に含まれる機
 
 - `Authorization` / `Cookie` / `X-API-Key` などの header 追加・変更は security-sensitive として扱う。
 - 認証情報は明示 allowlist の host にだけ送る。host 判定なしに共通 HTTP client / downloader へ認証情報を持たせる変更は `[must]` で指摘する。
-- URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL へ Slack bot token を送る変更は `[must]` で指摘する。
+- URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL へ Slack OAuth token を送る変更は `[must]` で指摘する。
 - 認証情報付与条件を広げる変更では、allowlist 外へ送られない negative test と、必要な host へ送られる positive test があるか確認する。
 
 ## 実装 PR が始まった後
