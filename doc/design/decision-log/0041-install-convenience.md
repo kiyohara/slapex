@@ -30,7 +30,7 @@
 - **案A（Homebrew tap）も採用方針として確定**し、専用 tap repo + cross-repo write token を前提に後続で実装する（Issue #50）。GoReleaser の現行方針に合わせ、formula ではなく cask を基本とする。
 - 0034 の未決事項「Homebrew tap」は、本ログで採用方針（後続実装）に更新する。
 
-2026-06-26 に v1.0.1 release workflow で GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.0.1"` へ自動更新されることを確認した。release workflow と tap repo への cross-repo publish は成功している。Issue #79 の完了には、別途 Homebrew 経由で `slapex --version` が対象 version になることの確認を残す。
+2026-06-26 に v1.0.1 release workflow で GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.0.1"` へ自動更新されることを確認した。release workflow と tap repo への cross-repo publish は成功している。さらに、ユーザー手元の Homebrew 環境で `brew upgrade --cask slapex` により 1.0.0 から 1.0.1 へ更新され、`slapex --version` が `slapex 1.0.1` を返すことを確認した。これにより Issue #79 の Homebrew cask 自動更新経路の release 検証は完了した。
 
 ## 理由
 
@@ -44,7 +44,7 @@
 
 - 実装: `scripts/install.sh`（POSIX sh、OS / arch 判定・checksum 検証・install 先指定・`--version` / `--bin-dir` / `--dry-run` / `--help`）と `scripts/install_test.sh`（検出マッピングのテスト）を追加（案B）。
 - ドキュメント: `README.md` のインストール節にクイックインストール（案B）を追加し、手動手順を詳細版として残す。`doc/design/architecture.md` の配布方式に install script を追記。
-- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 release で release workflow から tap repo への cask 自動更新を確認済み。
+- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
 - decision log: `index.md` の未決事項から「Homebrew tap」を移し、本ログを現在有効な主要方針に追加。0034 に関連を追記。
 
 ## 後から見直す条件
