@@ -11,3 +11,5 @@
 
 # slapex export outputs (default output roots)
 /slapex-*/
+
+.op/
