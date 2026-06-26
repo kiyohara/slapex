@@ -23,8 +23,6 @@ slapex [channel] [options]
 |---|---|---|
 | `SLACK_TOKEN` | 必須 | Slack OAuth token。デフォルト利用方法は user token(`xoxp-`)とし、CI / automation では bot token(`xoxb-`)も正式サポートする |
 
-`SLACK_BOT_TOKEN` は旧 bot token 前提設計で使っていた環境変数名である。後続の移行作業で、互換性の扱い、両方が指定された場合の優先順位、警告表示を確定する。
-
 token を CLI option や引数として受け取る経路は提供しない。プロセス一覧や shell history への漏えいを避けるため、受け渡しは環境変数だけにする。
 
 ## option 一覧

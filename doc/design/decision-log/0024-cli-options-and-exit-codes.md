@@ -2,8 +2,10 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-06-26
 - 関連: `doc/design/cli-interface.md`, `doc/design/usage-flow.md`
+
+> 2026-06-26 追記: Slack token 種別の方針転換は [0042-default-user-token.md](0042-default-user-token.md) で確定した。token は引き続き環境変数のみで受け取るが、現在の環境変数名は `SLACK_TOKEN` であり、旧 `SLACK_BOT_TOKEN` 互換は維持しない。
 
 ## 背景
 

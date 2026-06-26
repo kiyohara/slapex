@@ -135,6 +135,76 @@ func TestParseArgsUsageErrors(t *testing.T) {
 	}
 }
 
+func TestParseArgsHelpMentionsSlackToken(t *testing.T) {
+	var buf bytes.Buffer
+	_, err := parseCLIArgs([]string{"--help"}, &buf)
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("parseCLIArgs(--help) error = %v, want %v", err, flag.ErrHelp)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "SLACK_TOKEN") {
+		t.Fatalf("usage %q missing SLACK_TOKEN", out)
+	}
+	if strings.Contains(out, "SLACK_BOT_TOKEN") {
+		t.Fatalf("usage %q still mentions SLACK_BOT_TOKEN", out)
+	}
+}
+
+func TestSlackTokenFromEnv(t *testing.T) {
+	tests := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{
+			name: "SLACK_TOKEN",
+			env:  map[string]string{"SLACK_TOKEN": "xoxp-user-token"},
+			want: "xoxp-user-token",
+		},
+		{
+			name: "SLACK_BOT_TOKEN is not a fallback",
+			env:  map[string]string{"SLACK_BOT_TOKEN": "xoxb-bot-token"},
+			want: "",
+		},
+		{
+			name: "SLACK_TOKEN wins by being the only supported variable",
+			env: map[string]string{
+				"SLACK_TOKEN":     "xoxb-bot-token",
+				"SLACK_BOT_TOKEN": "xoxp-old-variable",
+			},
+			want: "xoxb-bot-token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := slackTokenFromEnv(func(key string) string {
+				return tt.env[key]
+			})
+			if got != tt.want {
+				t.Fatalf("slackTokenFromEnv() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReportMissingToken(t *testing.T) {
+	var buf bytes.Buffer
+	got := reportMissingToken(&buf)
+	if got != exitAuth {
+		t.Fatalf("reportMissingToken code = %d, want %d", got, exitAuth)
+	}
+	out := buf.String()
+	for _, want := range []string{"SLACK_TOKEN is not set.", "Set SLACK_TOKEN", helpURL} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output %q missing %q", out, want)
+		}
+	}
+	if strings.Contains(out, "SLACK_BOT_TOKEN") {
+		t.Fatalf("output %q still mentions SLACK_BOT_TOKEN", out)
+	}
+}
+
 func TestClassify(t *testing.T) {
 	tests := []struct {
 		name string
