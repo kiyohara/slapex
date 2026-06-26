@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `issue-79-homebrew-cask-release-verification`
-- PR: 未作成
+- PR: #85
 - 最終更新: 2026-06-26
 
 ## 目的
@@ -21,13 +21,11 @@ Issue #79 の Homebrew cask 自動更新経路の release 検証結果を記録�
 
 ## 次にやること
 
-- progress と decision log に完了結果を反映する。
-- PR 作成後に note を採番し、progress の PR 欄を更新する。
 - PR merge 後に Issue #79 が closed になったことを確認する。
 
 ## 検証
 
-- 未実施。
+- `git diff --check`
 
 ## リスク・ブロッカー
 
