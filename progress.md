@@ -18,15 +18,7 @@
 
 v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-現在は、開発ループ整備プラン(#88〜#90)を追跡中。#88 / #89 は完了済みで、#90 の PR review / merge 待ち。
-
-## 開発ループ整備プラン
-
-| ID | Issue | 状態 | 依存 | 次にやること | PR |
-|---|---|---|---|---|---|
-| dev-loop-01 | #88 progress.md に既存 Issue を登録する skill を追加する | done | PR #87 merged | 完了 | #92 |
-| dev-loop-02 | #89 Issue 番号だけで issue-driven task を開始できる skill を追加する | done | #88 | 完了 | #93 |
-| dev-loop-03 | #90 プロジェクトの開発ループを説明する入口ドキュメントを追加する | done | #88, #89 | PR review / merge 待ち | #94 |
+確認範囲では、現在 `progress.md` で追跡中の横断プランはない。新しい横断タスクが始まったら、状態・依存・Issue / PR 参照だけを持つ索引表を追加する。
 
 ## リリース履歴
 
@@ -43,3 +35,4 @@ v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バ�
 - 詳細仕様確定 / アーキテクチャ選定(Go + stdlib-first)/ PoC 実装による機能充足性確認 — done(decision log 0024〜0034)。
 - v1.0 リリース実装プラン(v1-01〜v1-17: CI・テスト整備・`--reuse-cache`・コンテナ TZ・goreleaser・README/LICENSE・総合 E2E・リリース実施)— 全 done(Issue #15〜#31 / PR #33〜#76)。運用方式は decision log 0036 / 0037。
 - post-v1 改善(配布・導入)— install script(#77 / PR #78)、Homebrew cask(#50 / PR #80)、cask 自動更新の release 検証(#79 / PR #85)、user token default 転換(#81 / PR #84)すべて done。経緯は decision log 0041。
+- 開発ループ整備 — 既存 Issue 登録 skill、Issue 駆動タスク実行 skill、開発ループ入口ドキュメントを追加済み(Issue #88〜#90 / PR #92〜#94)。
