@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `add-run-issue-task-skill`
-- PR: 未作成
+- PR: #93
 - 最終更新: 2026-06-29
 
 ## 目的
@@ -13,6 +13,7 @@ Issue #89 に従い、Issue 番号だけで issue-driven task の実行を開始
 - Issue #89 を GitHub MCP で取得済み。
 - 依存 Issue #88 は closed / completed、`main` には PR #92 merge 済み。
 - 作業ブランチ `add-run-issue-task-skill` を作成済み。
+- PR #93 を作成済み。
 
 ## 決定事項
 
@@ -22,8 +23,7 @@ Issue #89 に従い、Issue 番号だけで issue-driven task の実行を開始
 
 ## 次にやること
 
-- PR 作成後に note を PR 番号付きファイル名へ rename する。
-- `progress.md` の #89 行へ PR 番号を反映する。
+- PR #93 の review / merge 待ち。
 
 ## 検証
 
@@ -39,3 +39,4 @@ Issue #89 に従い、Issue 番号だけで issue-driven task の実行を開始
 
 - 2026-06-29: Issue #89 と依存 Issue #88 を GitHub MCP で確認。`main` を fetch し、`origin/main` と一致していることを確認してから作業ブランチを作成。
 - 2026-06-29: `run-issue-task` skill と Claude Code 用 symlink を追加し、Issue 指定の symlink / broken symlink / skill 本文観点を検証。
+- 2026-06-29: PR #93 を作成し、note を `working-branch-notes/93_add-run-issue-task-skill.md` へ rename。
