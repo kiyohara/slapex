@@ -18,15 +18,15 @@
 
 v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-現在は、開発ループ整備プラン(#88〜#90)を追跡中。
+現在は、開発ループ整備プラン(#88〜#90)を追跡中。#88 / #89 は完了済みで、#90 の PR review / merge 待ち。
 
 ## 開発ループ整備プラン
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| dev-loop-01 | #88 progress.md に既存 Issue を登録する skill を追加する | done | PR #87 merged | PR #92 の review / merge 待ち | #92 |
-| dev-loop-02 | #89 Issue 番号だけで issue-driven task を開始できる skill を追加する | done | #88 | PR #93 review / merge 待ち | #93 |
-| dev-loop-03 | #90 プロジェクトの開発ループを説明する入口ドキュメントを追加する | todo | #88, #89 | 開発ループの入口ドキュメントを追加する | - |
+| dev-loop-01 | #88 progress.md に既存 Issue を登録する skill を追加する | done | PR #87 merged | 完了 | #92 |
+| dev-loop-02 | #89 Issue 番号だけで issue-driven task を開始できる skill を追加する | done | #88 | 完了 | #93 |
+| dev-loop-03 | #90 プロジェクトの開発ループを説明する入口ドキュメントを追加する | done | #88, #89 | PR review / merge 待ち | #94 |
 
 ## リリース履歴
 

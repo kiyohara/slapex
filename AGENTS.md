@@ -9,6 +9,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 各 rule の本文はこの一覧の正本に置く。Codex は `AGENTS.md` 経由で正本に到達するため、新規 rule を作るときは必ずここに追加する。
 
 - Agent 設定管理ルール(skill / rule / MCP 共通資材の作成・削除・rename・配置): `doc/guidelines/agent-configuration-management.md`
+- 開発ループ入口(GitHub Issue / progress.md / skill / PR / release の流れ): `doc/guidelines/development-loop.md`
 - Git 操作ルール(1Password SSH agent / 署名(commit / tag) / GitHub SSH 通信): `doc/guidelines/git-operation-guidelines.md`
 - GitHub MCP 利用ルール(MCP 優先 / `gh` fallback / tool allowlist): `doc/guidelines/github-mcp-guidelines.md`
 - GitHub CLI 実行ルール(1Password op plugin 連携 / 実行環境制約 / MCP 不可時の fallback): `doc/guidelines/github-cli-guidelines.md`
@@ -51,6 +52,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 ## AI Agent 向けルール
 
 - AI agent 用の設定ファイル、rule、skill、agent 固有入口を作成・削除・rename するときは `doc/guidelines/agent-configuration-management.md` に従う。
+- 新しい作業の始め方、Issue 登録、Issue 実行、release、進捗整理の流れを確認するときは `doc/guidelines/development-loop.md` を読む。
 - commit 作成、署名付き tag 作成、GitHub の SSH remote を使う push / fetch / pull など、署名または GitHub との SSH remote 通信を伴う `git` 操作の前に `doc/guidelines/git-operation-guidelines.md` に従う。
 - GitHub の PR / issue / レビューコメントなどを操作するときは `doc/guidelines/github-mcp-guidelines.md` に従い、MCP を優先する。
 - `gh` コマンドを実行するときは `doc/guidelines/github-cli-guidelines.md` に従う。GitHub MCP 利用ルールでも `gh` fallback の経路はこの正本を参照する。
