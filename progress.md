@@ -18,7 +18,15 @@
 
 v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-現在、この表で追跡している進行中の横断プランはない。新しい横断タスクが始まったら、この下に作業表を追加する。
+現在は、開発ループ整備プラン(#88〜#90)を追跡中。
+
+## 開発ループ整備プラン
+
+| ID | Issue | 状態 | 依存 | 次にやること | PR |
+|---|---|---|---|---|---|
+| dev-loop-01 | #88 progress.md に既存 Issue を登録する skill を追加する | todo | PR #87 merged | `register-progress-issue` skill を追加する | - |
+| dev-loop-02 | #89 Issue 番号だけで issue-driven task を開始できる skill を追加する | todo | #88 | `run-issue-task` skill を追加する | - |
+| dev-loop-03 | #90 プロジェクトの開発ループを説明する入口ドキュメントを追加する | todo | #88, #89 | 開発ループの入口ドキュメントを追加する | - |
 
 ## リリース履歴
 
