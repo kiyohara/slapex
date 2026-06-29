@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: maintain-progress-after-dev-loop
-- PR: 未作成
+- PR: #95
 - 最終更新: 2026-06-29
 
 ## 目的
@@ -19,8 +19,7 @@
 
 ## 次にやること
 
-- commit / push し、PR を作成する。
-- PR 採番後に note を番号付きファイル名へ rename する。
+- PR #95 の review / merge を待つ。
 
 ## 検証
 
