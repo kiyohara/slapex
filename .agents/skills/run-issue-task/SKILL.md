@@ -66,7 +66,7 @@ GitHub Issue を 1 件選び、Issue 駆動タスクとして実行するため�
 
 1. `progress.md` の進行中タスク索引を読む。
 2. 候補を次の条件で絞る。
-   - 状態が `todo` または `in_progress` / `doing`。
+   - 状態が `todo` または `doing`。
    - 依存欄にある Issue / PR が完了済み。
    - ブロッカーや review / merge 待ちが無い。
 3. 候補の順序は、索引表に載っている順を優先する。

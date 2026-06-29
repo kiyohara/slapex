@@ -40,3 +40,4 @@ Issue #89 に従い、Issue 番号だけで issue-driven task の実行を開始
 - 2026-06-29: Issue #89 と依存 Issue #88 を GitHub MCP で確認。`main` を fetch し、`origin/main` と一致していることを確認してから作業ブランチを作成。
 - 2026-06-29: `run-issue-task` skill と Claude Code 用 symlink を追加し、Issue 指定の symlink / broken symlink / skill 本文観点を検証。
 - 2026-06-29: PR #93 を作成し、note を `working-branch-notes/93_add-run-issue-task-skill.md` へ rename。
+- 2026-06-29: review comment を受け、`progress.md` の状態語彙に合わせて推奨 Issue 選定条件を `todo` / `doing` に修正。
