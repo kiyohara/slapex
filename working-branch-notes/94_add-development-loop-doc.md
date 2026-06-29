@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: add-development-loop-doc
-- PR:
+- PR: #94
 - 最終更新: 2026-06-29
 
 ## 目的
@@ -22,7 +22,7 @@ Issue #90 に従い、slapex の開発ループを説明する入口ドキュメ
 
 ## 次にやること
 
-- PR 作成後に note を PR 番号付きへ rename する。
+- PR review / merge 待ち。
 
 ## 検証
 
@@ -38,3 +38,4 @@ Issue #90 に従い、slapex の開発ループを説明する入口ドキュメ
 ## セッションログ
 
 - 2026-06-29: Issue #90 を読み、依存 #88 / #89 が closed、PR #92 / #93 が merged であることを GitHub MCP で確認した。
+- 2026-06-29: PR #94 作成後、working branch note を `94_add-development-loop-doc.md` へ rename した。
