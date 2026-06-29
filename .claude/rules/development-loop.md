@@ -1,0 +1,6 @@
+# 開発ループ入口
+
+- 詳細は `doc/guidelines/development-loop.md`
+- 新しい作業を始める前、または Issue 群の登録・実行・release・進捗整理の流れを確認するときに読む。
+- 作業は GitHub Issue から始め、個別実行は `run-issue-task` skill、既存 Issue の索引登録は `register-progress-issue` skill を使う。
+- tool 固有入口だけに恒久ルールを書かない。

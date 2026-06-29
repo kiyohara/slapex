@@ -12,6 +12,8 @@
 
 作業状況の一覧は `progress.md`、ブランチ単位の作業メモは `working-branch-notes/` に置く。
 
+開発作業を始めるときは、GitHub Issue / `progress.md` / skill / PR / release の流れをまとめた `doc/guidelines/development-loop.md` を入口として読む。
+
 ## 方針
 
 AI agent 専用の説明を別ファイルとして分離せず、人間も読める `README.md` と `doc/guidelines/` を共通正本として扱う。
