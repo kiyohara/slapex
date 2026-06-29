@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: register-development-loop-issues
-- PR: 未作成
+- PR: #91
 - 最終更新: 2026-06-29
 
 ## 目的
@@ -26,8 +26,7 @@
 ## 次にやること
 
 - `progress.md` と本 note を commit する。
-- draft PR を作成する。
-- PR 採番後、この note を番号付きファイル名へ rename する。
+- PR #91 のレビューを受ける。
 
 ## 検証
 
@@ -42,3 +41,4 @@
 ## セッションログ
 
 - 2026-06-29: PR #87 の merge 済み内容、open Issue、`progress.md` の現状を確認。重複 Issue が無いことを確認し、#88〜#90 を作成して `progress.md` に登録した。
+- 2026-06-29: PR #91 を作成し、note を番号付きファイル名へ rename した。
