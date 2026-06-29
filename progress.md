@@ -25,7 +25,7 @@ v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バ�
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
 | dev-loop-01 | #88 progress.md に既存 Issue を登録する skill を追加する | done | PR #87 merged | PR #92 の review / merge 待ち | #92 |
-| dev-loop-02 | #89 Issue 番号だけで issue-driven task を開始できる skill を追加する | todo | #88 | `run-issue-task` skill を追加する | - |
+| dev-loop-02 | #89 Issue 番号だけで issue-driven task を開始できる skill を追加する | done | #88 | PR review / merge 待ち | - |
 | dev-loop-03 | #90 プロジェクトの開発ループを説明する入口ドキュメントを追加する | todo | #88, #89 | 開発ループの入口ドキュメントを追加する | - |
 
 ## リリース履歴
