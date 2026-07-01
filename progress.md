@@ -18,7 +18,14 @@
 
 v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-確認範囲では、現在 `progress.md` で追跡中の横断プランはない。新しい横断タスクが始まったら、状態・依存・Issue / PR 参照だけを持つ索引表を追加する。
+現在は 1Password integration 周りの使いやすさと token 注入 help の整備を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
+
+## 1Password integration 整備
+
+| ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
+|---|---|---|---|---|---|
+| 1p-01 | #53 | done | - | token 注入パターンの help 受け皿を作り README から辿れるようにする | #96 |
+| 1p-02 | #54 | todo | 1p-01 後が望ましい | `op run` 経由の interactive selection の扱いを実装 / help の両面で確認する | - |
 
 ## リリース履歴
 
