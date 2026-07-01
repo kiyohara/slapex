@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-54-op-run-interactive-selection
-- PR: -
+- PR: #98
 - 最終更新: 2026-07-02
 
 ## 目的
