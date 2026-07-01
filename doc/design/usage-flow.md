@@ -167,7 +167,9 @@ channel は、明示指定と選択の両方に対応する。
 
 ### TTY がある場合
 
-stdin と stdout が TTY で、利用者が操作可能な場合は、interactive selection を表示する。
+stdin と stderr が TTY で、利用者が操作可能な場合は、interactive selection を表示する。stdout は成功時の出力 path を 1 行だけ出す機械処理向け stream として扱い、interactive prompt や候補 list には使わない。
+
+このため、1Password CLI の `op run` のように stdout が secret masking や wrapper の都合で TTY として見えない環境でも、stdin と stderr が TTY として使える限り interactive selection を開始できる。
 
 `--no-interactive` が指定された場合は、TTY があっても interactive selection を開始しない。候補が複数ある場合や channel 引数が未指定の場合は、non-TTY と同じく候補と usage を表示し、非 0 exit code で終了する。
 
@@ -184,7 +186,7 @@ channel 引数が未指定で候補が 10 件以下の場合は、その候補�
 
 ### TTY がない場合
 
-stdin または stdout が TTY ではない場合は、interactive selection を開始しない。CI や script 実行で待ち状態に入らないことを優先する。
+stdin または stderr が TTY ではない場合は、interactive selection を開始しない。CI や script 実行で待ち状態に入らないことを優先する。
 
 この場合は、選択可能な候補を表示し、次に実行すべき usage を表示して、非 0 exit code で終了する。
 

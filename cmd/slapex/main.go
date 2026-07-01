@@ -98,9 +98,8 @@ func run() int {
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
 		NoInteractive:  opts.noInteractive,
-		Interactive: term.IsTerminal(int(os.Stdin.Fd())) &&
-			term.IsTerminal(int(os.Stdout.Fd())),
-		ToolVersion: version,
+		Interactive:    interactiveSelectionAvailable(os.Stdin, os.Stderr),
+		ToolVersion:    version,
 	}
 
 	dir, err := export.Run(context.Background(), client, exportOpts, logf)
@@ -113,6 +112,11 @@ func run() int {
 
 func slackTokenFromEnv(getenv func(string) string) string {
 	return getenv(slackTokenEnv)
+}
+
+func interactiveSelectionAvailable(stdin, stderr *os.File) bool {
+	return term.IsTerminal(int(stdin.Fd())) &&
+		term.IsTerminal(int(stderr.Fd()))
 }
 
 func reportMissingToken(w io.Writer) int {

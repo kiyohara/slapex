@@ -22,6 +22,22 @@ SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering --output ./exports
 ```
 
+channel を省略した場合や複数候補がある場合、terminal で stdin と stderr が使える環境では `op run` 経由でも interactive selection を表示する。
+
+```sh
+SLACK_TOKEN="op://<vault>/<item>/<field>" \
+  op run -- slapex
+```
+
+実行環境によって interactive selection が使えない場合は、候補一覧と再実行例が表示される。表示された channel ID またはより具体的な channel 名を指定して再実行する。
+
+```sh
+SLACK_TOKEN="op://<vault>/<item>/<field>" \
+  op run -- slapex C0123456789
+```
+
+1Password CLI の詳しい使い方は、1Password 公式 docs の [Load secrets into the environment](https://www.1password.dev/cli/secrets-environment-variables) と [`op run` reference](https://www.1password.dev/cli/reference/commands/run) を参照する。
+
 ## CI secrets を使う
 
 CI では、CI の secret store から `SLACK_TOKEN` を job に渡す。GitHub Actions では repository secret や environment secret に token を保存し、workflow では secret 名だけを参照する。

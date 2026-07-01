@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -185,6 +186,29 @@ func TestSlackTokenFromEnv(t *testing.T) {
 				t.Fatalf("slackTokenFromEnv() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestInteractiveSelectionAvailableRequiresStdinAndStderrTTY(t *testing.T) {
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() stdin: %v", err)
+	}
+	defer stdinR.Close()
+	defer stdinW.Close()
+
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() stderr: %v", err)
+	}
+	defer stderrR.Close()
+	defer stderrW.Close()
+
+	if interactiveSelectionAvailable(stdinR, os.Stderr) {
+		t.Fatal("interactiveSelectionAvailable() = true with non-TTY stdin, want false")
+	}
+	if interactiveSelectionAvailable(os.Stdin, stderrW) {
+		t.Fatal("interactiveSelectionAvailable() = true with non-TTY stderr, want false")
 	}
 }
 

@@ -49,7 +49,7 @@ type Options struct {
 	KeepCache      bool
 	ReuseCache     string
 	NoInteractive  bool
-	Interactive    bool // stdin and stdout are TTYs
+	Interactive    bool // stdin and stderr are TTYs
 	ToolVersion    string
 }
 
@@ -355,7 +355,7 @@ func selectChannel(candidates []slack.Channel) (slack.Channel, error) {
 			Title("Select a channel").
 			Options(opts...).
 			Value(&idx),
-	))
+	)).WithInput(os.Stdin).WithOutput(os.Stderr)
 	if err := form.Run(); err != nil {
 		return slack.Channel{}, usagef("channel selection cancelled")
 	}
