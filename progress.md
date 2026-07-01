@@ -25,7 +25,7 @@ v1.0.0 / v1.0.1 を GitHub Releases で公開済み。配布経路は単一バ�
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
 | 1p-01 | #53 | done | - | token 注入パターンの help 受け皿を作り README から辿れるようにする | #96 |
-| 1p-02 | #54 | done | 1p-01 後が望ましい | `op run` 経由の interactive selection の扱いを stdin + stderr TTY 判定として実装 / help に反映 | - |
+| 1p-02 | #54 | done | 1p-01 後が望ましい | `op run` 経由の interactive selection の扱いを stdin + stderr TTY 判定として実装 / help に反映 | #98 |
 
 ## リリース履歴
 
