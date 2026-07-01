@@ -28,9 +28,10 @@
 
 デフォルトの利用方法は user token(`xoxp-`)です。認可したユーザー本人が参照できる channel 履歴を保存する用途に向いています。CI、定期実行、チーム共通 automation、個人ユーザーに紐付けたくない運用では bot token(`xoxb-`)も正式サポートします。
 
-Slack App の作成、scope 設定、workspace への install、user token / bot token の発行手順は help ページにまとめています。
+Slack App の作成、scope 設定、workspace への install、user token / bot token の発行手順と、発行した token の渡し方は help ページにまとめています。
 
 - **Slack App 準備手順**: [`doc/help/slack-app-setup.md`](doc/help/slack-app-setup.md)
+- **Token の渡し方**: [`doc/help/token-injection.md`](doc/help/token-injection.md)
 
 必要な scopes(public / private channel の取得、ファイル・絵文字・ユーザー情報の解決)の一覧と、manifest を使った一括設定例も上記 help に記載しています。user token では認可したユーザー本人が見える範囲が対象です。bot token では public channel / private channel のどちらも、scope の付与に加えて bot / app がその channel に参加している必要があります。
 
@@ -120,17 +121,13 @@ slapex --version
 
 ## 使い方
 
-token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` などに保存することは推奨しません。ローカルでは 1Password CLI などの secret manager から実行時に注入します。
+token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` や shell history に残さないでください。1Password CLI、CI secrets、対話シェルでの一時注入など、用途別の手順は [`doc/help/token-injection.md`](doc/help/token-injection.md) を参照してください。
 
 ```sh
 # 推奨: 1Password CLI で token を実行時に注入(実値を shell 履歴や .env に残さない)。
 # channel keyword は channel 名・ID・名前の一部を指定する。
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering
-
-# secret manager を使わない場合は、環境変数に設定してから実行する。
-export SLACK_TOKEN="xoxp-..."
-slapex engineering
 
 # 以降の例は SLACK_TOKEN を設定済みの前提。出力先を固定する場合:
 slapex engineering --output ./exports

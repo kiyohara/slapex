@@ -169,7 +169,7 @@ bot token を使う場合、public channel / private channel の投稿を取得�
 
 ## Token の渡し方
 
-ローカルの `.env` などに token の実値を保存することは推奨しない。
+ローカルの `.env` や shell history に token の実値を残さない。
 
 Slack OAuth token は `SLACK_TOKEN` として渡す。
 
@@ -190,6 +190,8 @@ steps:
     run: |
       slapex engineering --output ./exports
 ```
+
+1Password CLI、CI secrets、secret manager 未利用時の一時注入など、用途別の詳しい手順は [`token-injection.md`](token-injection.md) を参照する。
 
 ## よくあるエラー
 
