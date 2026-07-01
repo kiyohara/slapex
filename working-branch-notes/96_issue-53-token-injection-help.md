@@ -24,11 +24,12 @@ Issue #53 に従い、Slack OAuth token を `SLACK_TOKEN` として安全に渡�
 
 ## 次にやること
 
-- レビュー待ち。
+- レビューコメント対応後の CI 確認待ち。
 
 ## 検証
 
 - `docker compose run --rm dev go test ./...` — pass
+- `docker compose run --rm dev go test ./...` — pass(レビューコメント対応後)
 
 ## リスク・ブロッカー
 
@@ -39,3 +40,4 @@ Issue #53 に従い、Slack OAuth token を `SLACK_TOKEN` として安全に渡�
 - 2026-07-02: Issue #53 を読み、明示依存・コメント・sub-issue がないことを確認した。
 - 2026-07-02: token 注入 help、README / setup help のリンク、progress 更新を実施し、Docker Compose 経由で Go test を実行した。
 - 2026-07-02: PR #96 作成後、working branch note を番号付きへ rename し、`progress.md` の PR 欄を更新した。
+- 2026-07-02: README の出力先固定例を `op run` 形式に揃えるレビューコメントへ対応した。

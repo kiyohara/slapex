@@ -129,8 +129,9 @@ token を CLI 引数では渡せません(プロセス一覧や shell history �
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering
 
-# 以降の例は SLACK_TOKEN を設定済みの前提。出力先を固定する場合:
-slapex engineering --output ./exports
+# 出力先を固定する場合も同じように op run 経由で渡す:
+SLACK_TOKEN="op://<vault>/<item>/<field>" \
+  op run -- slapex engineering --output ./exports
 ```
 
 channel を指定せずに実行した場合、TTY で操作可能な環境では channel を対話選択できます。CI など非 TTY 環境では候補と usage を表示し、非 0(exit 2)で終了します(exit code の一覧は [`doc/design/cli-interface.md`](doc/design/cli-interface.md))。
