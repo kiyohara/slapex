@@ -25,7 +25,7 @@ Issue #54 として、1Password CLI (`op run`) 経由でも channel の interact
 
 ## 次にやること
 
-- PR を作成し、PR 採番後に note を rename する。
+- PR #98 の review / merge 判断を待つ。
 
 ## 検証
 
