@@ -56,6 +56,7 @@
 | 0042 | decided | Slack token 種別の基本方針 | デフォルト利用方法は user token とし、bot token も CI / automation 向けに正式サポートする。環境変数名は `SLACK_TOKEN` とする | [0042-default-user-token.md](0042-default-user-token.md) |
 | 0043 | decided | interactive selection の stream 判定 | interactive selection は controlling terminal (`/dev/tty`) を開けるときだけ開始し、prompt の入出力も `/dev/tty` に固定する。stdin / stdout / stderr の TTY 状態は判定に使わない。stdout は成功時 path 専用のまま維持する | [0043-interactive-selection-streams.md](0043-interactive-selection-streams.md) |
 | 0044 | decided | SLACK_TOKEN 未設定時の対話入力 | `SLACK_TOKEN` 未設定時に controlling terminal (`/dev/tty`) を開けて `--no-interactive` でないときだけ、no-echo の token 入力プロンプトを `/dev/tty` に出す。入力値は in-memory のみで、ファイル・cache・log・HTML に保存しない。CI / pipe / `--no-interactive` は従来どおり未設定エラー(exit 3) | [0044-interactive-token-prompt.md](0044-interactive-token-prompt.md) |
+| 0045 | decided | CLI 出力スタイル | stderr の進捗・診断は styled(フェーズ行 + 状態記号 + braille spinner)/ plain(ASCII prefix の行追記のみ)の 2 モード。plain 化条件は `--no-color` / `NO_COLOR` / `TERM=dumb` / `CI` / 非 TTY。`--no-color` を正式 option 化。実装は `internal/ui` の自前 ANSI helper で新規依存なし | [0045-cli-output-style.md](0045-cli-output-style.md) |
 
 ## 未決事項
 
@@ -66,7 +67,7 @@
 | thread replies を含む全体取得量 | open | 取得前の見込み表示、または親投稿と thread replies を合わせた全体上限を設けるか | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
 | workspace mismatch の guard option | open | CI 等で誤 token を強制停止する要件が出た場合に `--expect-team-id` / `--expect-workspace-domain` を追加するか | [0020-target-label-display.md](0020-target-label-display.md) |
 | rich text(`blocks`)の完全レンダリング | open | `text` fallback で再現できない投稿が問題になった場合に、`blocks` の構造レンダリングへ対応するか | [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) |
-| 出力制御 option | open | `--quiet` / `--verbose` / `--no-color` などを追加するか | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md) |
+| 出力量の制御 option | open | `--quiet` / `--verbose` を追加するか(`--no-color` は 0045 で正式 option 化済み) | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md), [0045-cli-output-style.md](0045-cli-output-style.md) |
 | user 解決の最適化 | open | 多人数 channel で `users.info` の呼び出し回数が問題になった場合の一括取得への切り替え | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | Windows 対応 | open | 需要が確認できた場合の対応範囲(ファイル名制約、コンソール挙動、配布 target) | [0031-supported-platforms.md](0031-supported-platforms.md) |
 

@@ -6,7 +6,7 @@
 
 本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md` を参照する。
 
 ## コマンド形式
 
@@ -38,6 +38,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `--keep-cache` | flag | off | | `.cache/` を成否に関係なく残す(`cache.md`) |
 | `--reuse-cache <path>` | path | なし | | 以前の `.cache/` を再利用する(`cache.md`) |
 | `--no-interactive` | flag | off | | TTY があっても interactive prompt を開始しない(channel selection と、`SLACK_TOKEN` 未設定時の token 入力の両方が対象)(`usage-flow.md`) |
+| `--no-color` | flag | off | | stderr の進捗・診断を plain output にする(色に加えて、アイコン・spinner などの装飾全体を抑止する。「出力制御」を参照) |
 | `--version` | flag | | | version を表示して終了する |
 | `--help` | flag | | | usage を表示して終了する |
 
@@ -49,7 +50,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 
 以下は初期実装では採用せず、必要になった時点で再検討する。
 
-- `--quiet` / `--verbose` / `--no-color` などの出力制御。
+- `--quiet` / `--verbose` などの出力量の制御(`--no-color` は Issue #100 で正式 option 化した)。
 - `--expect-team-id` / `--expect-workspace-domain` などの workspace guard(`decision-log/0020-target-label-display.md`)。
 - 差分取得・再実行に関わる option(`decision-log/index.md` の未決事項)。
 - `--no-cache`(採用しない理由は `cache.md`)。
@@ -64,7 +65,34 @@ token を CLI option や引数として受け取る経路は提供しない。�
 
 この分離により、script や CI では `out=$(slapex ...)` の形で出力先 path を後続処理に渡せる。進捗や label の表示内容は `usage-flow.md` の「処理対象の表示」を参照する。
 
-色付けやカーソル制御は stderr が TTY の場合だけ使う。interactive selection は controlling terminal (`/dev/tty`) を開ける場合だけ開始し、prompt の入出力も `/dev/tty` に固定する。stdin / stdout / stderr の TTY 状態は判定に使わない。これは stdout の機械可読契約を維持しつつ、1Password CLI (`op run`) の既定 secret masking で stdout / stderr が pipe 化される実行経路でも prompt を出せるようにするためである。non-TTY ではプレーンテキストを出力する。
+interactive selection と token prompt は controlling terminal (`/dev/tty`) を開ける場合だけ開始し、prompt の入出力も `/dev/tty` に固定する。stdin / stdout / stderr の TTY 状態はこの prompt 可否判定に使わない。これは stdout の機械可読契約を維持しつつ、1Password CLI (`op run`) の既定 secret masking で stdout / stderr が pipe 化される実行経路でも prompt を出せるようにするためである。
+
+## 出力制御
+
+stderr の進捗・診断表示には styled / plain の 2 モードがあり、既定は自動判定(`auto`)とする(Issue #100、`decision-log/0045-cli-output-style.md`)。判定は実際の出力先である stderr を基準にし、stdout の状態や interactive prompt の可否判定(`/dev/tty`)とは独立させる。
+
+次のいずれかに該当する場合は plain output に倒し、それ以外で stderr が TTY の場合だけ styled output を使う。
+
+- `--no-color` が指定されている。
+- 環境変数 `NO_COLOR` が空でない値に設定されている。
+- `TERM=dumb` が設定されている。
+- 環境変数 `CI` が空でない値に設定されている(主要 CI サービスは `CI=true` を設定するが、それ以外の truthy 値を設定する環境もあるため、値は問わない)。
+- stderr が TTY ではない(pipe / redirect / non-TTY 実行)。
+
+### styled output(TTY)
+
+- 処理の各段階をフェーズ行(状態記号 + ラベル列 + 本文)で表示する。状態記号は `✓`(成功、green)/ `!`(警告、yellow)/ `✗`(エラー、red)を使う。
+- 色は基本 ANSI 8 色と bold / dim だけを使い、状態記号の着色・ラベルの bold・補足メタ情報の dim にとどめる(値そのものは端末デフォルト色)。256 色 / TrueColor は使わない。
+- 長く待つ可能性がある処理(Slack API rate limit 待機、履歴取得、asset download など)に限り、braille spinner(`⠋⠙⠹…`)で進行中のフェーズ行を上書き更新する。カーソル制御は「行頭復帰 + 行クリア」だけを使う。
+- 確定した情報は通常の行として積み、live 更新は進行中の 1 行に限定する。
+
+### plain output
+
+- ANSI escape sequence、spinner、CR による行上書き、装飾専用の記号(`✓` などの Unicode 記号)を一切出さない。
+- 1 イベント 1 行の追記のみとし、状態は ASCII prefix(`OK:` / `WARN:` / `ERROR:` / `INFO:`)で明示する。
+- 開始・待機・完了はそれぞれ独立した行として出力し、ログ収集環境で安定して読めるようにする。
+
+いずれのモードでも、token 実値、cookie、Authorization header、Slack private file URL などの機密情報は出力しない(`doc/guidelines/credential-scope-guidelines.md`)。
 
 ## exit code
 

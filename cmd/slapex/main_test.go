@@ -13,6 +13,7 @@ import (
 
 	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
+	"github.com/kiyohara/slapex/internal/ui"
 )
 
 func TestParseSize(t *testing.T) {
@@ -137,6 +138,36 @@ func TestParseArgsUsageErrors(t *testing.T) {
 	}
 }
 
+func TestParseArgsNoColor(t *testing.T) {
+	got, err := parseCLIArgs([]string{"--no-color", "general"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parseCLIArgs(--no-color) returned error: %v", err)
+	}
+	if !got.noColor {
+		t.Fatal("noColor = false, want true")
+	}
+	got, err = parseCLIArgs([]string{"general"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parseCLIArgs(general) returned error: %v", err)
+	}
+	if got.noColor {
+		t.Fatal("noColor = true by default, want false")
+	}
+}
+
+// The --help output must list --no-color (Issue #100 acceptance criteria,
+// doc/design/cli-interface.md option table).
+func TestParseArgsHelpMentionsNoColor(t *testing.T) {
+	var buf bytes.Buffer
+	_, err := parseCLIArgs([]string{"--help"}, &buf)
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("parseCLIArgs(--help) error = %v, want %v", err, flag.ErrHelp)
+	}
+	if !strings.Contains(buf.String(), "no-color") {
+		t.Fatalf("usage %q missing no-color option", buf.String())
+	}
+}
+
 func TestParseArgsHelpMentionsSlackToken(t *testing.T) {
 	var buf bytes.Buffer
 	_, err := parseCLIArgs([]string{"--help"}, &buf)
@@ -149,6 +180,61 @@ func TestParseArgsHelpMentionsSlackToken(t *testing.T) {
 	}
 	if strings.Contains(out, "SLACK_BOT_TOKEN") {
 		t.Fatalf("usage %q still mentions SLACK_BOT_TOKEN", out)
+	}
+}
+
+// captureStdio runs fn with os.Stdout / os.Stderr redirected to pipes and
+// returns what fn wrote to each. It guards the stream contract: stdout is
+// reserved for the machine-readable result (doc/design/cli-interface.md).
+func captureStdio(t *testing.T, fn func()) (stdout, stderr string) {
+	t.Helper()
+	origOut, origErr := os.Stdout, os.Stderr
+	outR, outW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("stdout pipe: %v", err)
+	}
+	errR, errW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("stderr pipe: %v", err)
+	}
+	os.Stdout, os.Stderr = outW, errW
+	defer func() { os.Stdout, os.Stderr = origOut, origErr }()
+
+	fn()
+
+	outW.Close()
+	errW.Close()
+	outB, _ := io.ReadAll(outR)
+	errB, _ := io.ReadAll(errR)
+	return string(outB), string(errB)
+}
+
+func TestRunStdoutCarriesOnlyTheResult(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	// --version: stdout carries exactly the version line, nothing else.
+	os.Args = []string{"slapex", "--version"}
+	var code int
+	stdout, _ := captureStdio(t, func() { code = run() })
+	if code != exitOK {
+		t.Fatalf("run(--version) = %d, want %d", code, exitOK)
+	}
+	if stdout != "slapex "+version+"\n" {
+		t.Fatalf("stdout = %q, want the version line only", stdout)
+	}
+
+	// Usage error: all diagnostics go to stderr, stdout stays empty.
+	os.Args = []string{"slapex", "--days", "0"}
+	stdout, stderr := captureStdio(t, func() { code = run() })
+	if code != exitUsage {
+		t.Fatalf("run(--days 0) = %d, want %d", code, exitUsage)
+	}
+	if stdout != "" {
+		t.Fatalf("stdout = %q, want empty on usage error", stdout)
+	}
+	if !strings.Contains(stderr, "--days must be between") {
+		t.Fatalf("stderr = %q, missing usage diagnostics", stderr)
 	}
 }
 
@@ -301,7 +387,7 @@ func TestOpenTerminalReturnsNilForNonTerminal(t *testing.T) {
 
 func TestReportMissingToken(t *testing.T) {
 	var buf bytes.Buffer
-	got := reportMissingToken(&buf)
+	got := reportMissingToken(ui.NewPrinter(&buf, false))
 	if got != exitAuth {
 		t.Fatalf("reportMissingToken code = %d, want %d", got, exitAuth)
 	}
@@ -423,7 +509,7 @@ func TestReportRunError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			got := reportRunError(&buf, tt.err)
+			got := reportRunError(ui.NewPrinter(&buf, false), tt.err)
 			if got != tt.wantCode {
 				t.Fatalf("reportRunError code = %d, want %d", got, tt.wantCode)
 			}

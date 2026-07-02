@@ -22,6 +22,7 @@ import (
 	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/render"
 	"github.com/kiyohara/slapex/internal/slack"
+	"github.com/kiyohara/slapex/internal/ui"
 )
 
 const (
@@ -54,32 +55,34 @@ type Options struct {
 }
 
 // Run performs the export and returns the absolute path of the directory
-// holding index.html.
-func Run(ctx context.Context, client *slack.Client, opts Options, logf func(string, ...any)) (string, error) {
+// holding index.html. Progress and diagnostics go through p; each stage is a
+// ui phase line (doc/design/usage-flow.md「処理対象の表示」).
+func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (string, error) {
 	now := time.Now()
 
+	p.StartPhase("Workspace", "checking token (auth.test) ...")
 	auth, err := client.AuthTest(ctx)
 	if err != nil {
 		return "", err
 	}
 	wsLine := fmt.Sprintf("%s (%s, %s)", auth.Team, hostOf(auth.URL), auth.TeamID)
-	logf("Workspace: %s", wsLine)
+	p.EndPhase(ui.StatusSuccess, "Workspace", auth.Team, hostOf(auth.URL)+", "+auth.TeamID)
 
-	logf("Listing channels...")
+	p.StartPhase("Channel", "listing channels ...")
 	channels, err := client.ListChannels(ctx)
 	if err != nil {
 		return "", err
 	}
-	ch, err := chooseChannel(channels, opts, wsLine, logf)
+	ch, err := chooseChannel(channels, opts, wsLine, p)
 	if err != nil {
 		return "", err
 	}
 	chLine := channelLine(ch)
-	logf("Target: %s / %s", wsLine, chLine)
+	p.EndPhase(ui.StatusSuccess, "Channel", "#"+ch.Name, channelMeta(ch))
 
 	var reuse *reusableCache
 	if opts.ReuseCache != "" {
-		reuse = resolveReuseCache(opts.ReuseCache, auth.TeamID, ch.ID, logf)
+		reuse = resolveReuseCache(opts.ReuseCache, auth.TeamID, ch.ID, p)
 	}
 
 	root, err := output.Root(opts.OutputDir, now)
@@ -94,22 +97,29 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	}
 
 	oldest := now.Add(-time.Duration(opts.Days) * 24 * time.Hour)
-	logf("Fetching messages since %s (--days %d, --max-posts %d)...",
-		oldest.Format("2006-01-02"), opts.Days, opts.MaxPosts)
+	since := oldest.Format("2006-01-02")
+	p.StartPhase("Messages", fmt.Sprintf("fetching since %s (--days %d, --max-posts %d) ...", since, opts.Days, opts.MaxPosts))
 	messages, truncated, err := client.History(ctx, ch.ID, slack.FormatTS(oldest.Unix()), opts.MaxPosts,
-		func(n int) { logf("  fetched %d timeline messages...", n) })
+		func(n int) { p.UpdatePhase(fmt.Sprintf("fetching since %s ... %d fetched", since, n)) })
 	if err != nil {
 		return "", err
 	}
 	sort.Slice(messages, func(i, j int) bool { return tsLess(messages[i].TS, messages[j].TS) })
-	logf("Fetched %d timeline messages (truncated by --max-posts: %v)", len(messages), truncated)
 
+	threadTotal := 0
+	for _, m := range messages {
+		if m.IsThreadParent() {
+			threadTotal++
+		}
+	}
 	replies := map[string][]slack.Message{}
 	repliesTruncated := map[string]bool{}
+	replyTotal := 0
 	for _, m := range messages {
 		if !m.IsThreadParent() {
 			continue
 		}
+		p.UpdatePhase(fmt.Sprintf("fetching thread replies ... %d/%d", len(replies)+1, threadTotal))
 		r, trunc, err := client.Replies(ctx, ch.ID, m.TS, maxThreadReplies)
 		if err != nil {
 			return "", err
@@ -117,11 +127,18 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 		sort.Slice(r, func(i, j int) bool { return tsLess(r[i].TS, r[j].TS) })
 		replies[m.TS] = r
 		repliesTruncated[m.TS] = trunc
-		logf("  thread %s: %d replies", m.TS, len(r))
+		replyTotal += len(r)
 	}
+	messagesStatus := ui.StatusSuccess
+	messagesMeta := fmt.Sprintf("threads %d, replies %d", threadTotal, replyTotal)
+	if truncated {
+		messagesStatus = ui.StatusWarn
+		messagesMeta += fmt.Sprintf(", truncated by --max-posts %d", opts.MaxPosts)
+	}
+	p.EndPhase(messagesStatus, "Messages", fmt.Sprintf("%d fetched since %s", len(messages), since), messagesMeta)
 
 	userIDs := collectUserIDs(messages, replies)
-	logf("Resolving %d users...", len(userIDs))
+	p.StartPhase("Users", fmt.Sprintf("resolving %d users ...", len(userIDs)))
 	users := map[string]*slack.User{}
 	reusedUsers := 0
 	for _, id := range userIDs {
@@ -134,25 +151,28 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 		}
 		u, err := client.UserInfo(ctx, id)
 		if err != nil {
-			logf("  warning: could not resolve user %s: %s", id, err)
+			p.Warnf("could not resolve user %s: %s", id, err)
 			continue
 		}
 		users[id] = u
 	}
+	usersMeta := ""
 	if reusedUsers > 0 {
-		logf("  reused %d user(s) from cache (skipped users.info)", reusedUsers)
+		usersMeta = fmt.Sprintf("%d from cache, users.info skipped", reusedUsers)
 	}
+	p.EndPhase(ui.StatusSuccess, "Users", fmt.Sprintf("%d resolved", len(users)), usersMeta)
 
 	var customEmoji map[string]string
 	if reuse != nil {
 		customEmoji = reuse.emoji
-		logf("Reusing custom emoji list from cache (%d entries, skipped emoji.list)", len(customEmoji))
+		p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(customEmoji)), "from cache, emoji.list skipped")
 	} else {
-		logf("Fetching custom emoji list...")
+		p.StartPhase("Emoji", "fetching custom emoji list ...")
 		customEmoji, err = client.EmojiList(ctx)
 		if err != nil {
 			return "", err
 		}
+		p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(customEmoji)), "")
 	}
 	emojiResolver, err := emoji.NewResolver(customEmoji)
 	if err != nil {
@@ -160,11 +180,12 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	}
 
 	assets := output.NewAssets(ctx, client, dir, opts.MaxAttachBytes)
-	assets.Logf = logf
+	assets.Logf = p.Warnf
 	if reuse != nil {
 		assets.SetReuseSource(reuse.reuseSource())
 	}
 
+	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
 	avatars := map[string]string{}
 	for id, u := range users {
 		if rel, ok := assets.Save(output.KindAvatar, avatarURL(u), output.AssetMeta{}); ok {
@@ -179,8 +200,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 		assets:  assets,
 		limit:   opts.MaxAttachBytes,
 	}
-
-	logf("Downloading assets and rendering HTML...")
 	var items []render.TimelineItem
 	lastDate := ""
 	threadCount := 0
@@ -234,6 +253,17 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	}
 
 	saved, skipped, failed := assets.Counts()
+	assetsStatus := ui.StatusSuccess
+	if skipped > 0 || failed > 0 {
+		assetsStatus = ui.StatusWarn
+	}
+	assetsMeta := ""
+	if n := assets.Reused(); n > 0 {
+		assetsMeta = fmt.Sprintf("%d copied from reused cache, no download", n)
+	}
+	p.EndPhase(assetsStatus, "Assets",
+		fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", saved, skipped, failed), assetsMeta)
+
 	if err := writeCaches(dir, now, auth, ch, opts, oldest, wsLabel, chLabel,
 		len(messages), threadCount, replyCount, saved, skipped, failed, users, customEmoji, assets); err != nil {
 		return "", err
@@ -248,13 +278,14 @@ func Run(ctx context.Context, client *slack.Client, opts Options, logf func(stri
 	if err != nil {
 		abs = dir
 	}
-	logf("Done: %s / %s", wsLine, chLine)
-	logf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
-	logf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
+	p.EndPhase(ui.StatusSuccess, "Done", fmt.Sprintf("%s / %s", wsLine, chLine),
+		fmt.Sprintf("in %s", time.Since(now).Round(time.Second)))
+	p.Plainf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
+	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
 	if n := assets.Reused(); n > 0 {
-		logf("    (of which %d copied from reused cache, no download)", n)
+		p.Plainf("    (of which %d copied from reused cache, no download)", n)
 	}
-	logf("  output: %s", abs)
+	p.Plainf("  output: %s", abs)
 	return abs, nil
 }
 
@@ -290,7 +321,7 @@ func threadParticipants(replies []*render.MessageView) ([]render.ThreadParticipa
 
 // --- channel selection -----------------------------------------------------
 
-func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf func(string, ...any)) (slack.Channel, error) {
+func chooseChannel(channels []slack.Channel, opts Options, wsLine string, p *ui.Printer) (slack.Channel, error) {
 	keyword := opts.ChannelKeyword
 	var candidates []slack.Channel
 	if keyword == "" {
@@ -317,30 +348,35 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 	}
 
 	if len(candidates) > maxSelectable {
-		logf("%d channels matched. Run again with a more specific channel name or a channel ID.", len(candidates))
+		p.StopPhase()
+		p.Warnf("%d channels matched. Run again with a more specific channel name or a channel ID.", len(candidates))
 		return slack.Channel{}, usagef("too many candidates (%d). Re-run as: slapex <channel-id-or-name>", len(candidates))
 	}
 
 	if opts.PromptTTY == nil || opts.NoInteractive {
+		p.StopPhase()
 		if keyword == "" {
-			logf("No channel specified. Select one of the following channels:")
+			p.Warnf("No channel specified. Select one of the following channels:")
 		} else {
-			logf("Multiple channels matched %q.", keyword)
+			p.Warnf("Multiple channels matched %q.", keyword)
 		}
-		logf("")
-		logf("Workspace: %s", wsLine)
-		logf("")
-		logf("Candidates:")
+		p.Plainf("")
+		p.Plainf("Workspace: %s", wsLine)
+		p.Plainf("")
+		p.Plainf("Candidates:")
 		for _, ch := range candidates {
-			logf("  %s", channelLine(ch))
+			p.Plainf("  %s", channelLine(ch))
 		}
-		logf("")
-		logf("Run again with a more specific channel:")
-		logf("")
-		logf("  slapex %s", candidates[0].ID)
+		p.Plainf("")
+		p.Plainf("Run again with a more specific channel:")
+		p.Plainf("")
+		p.Plainf("  slapex %s", candidates[0].ID)
 		return slack.Channel{}, usagef("channel selection required but interactive selection is unavailable")
 	}
 
+	// Stop the live phase line before huh draws its selection UI on the
+	// controlling terminal; a running spinner on stderr would fight it.
+	p.StopPhase()
 	return selectChannel(candidates, opts.PromptTTY)
 }
 
@@ -365,6 +401,12 @@ func selectChannel(candidates []slack.Channel, tty *os.File) (slack.Channel, err
 }
 
 func channelLine(ch slack.Channel) string {
+	return fmt.Sprintf("#%s (%s)", ch.Name, channelMeta(ch))
+}
+
+// channelMeta is the parenthesized channel detail shared by channelLine and
+// the Channel phase line (usage-flow.md「処理対象の表示」).
+func channelMeta(ch slack.Channel) string {
 	visibility := "public"
 	if ch.IsPrivate {
 		visibility = "private"
@@ -377,7 +419,7 @@ func channelLine(ch slack.Channel) string {
 	if ch.IsMember {
 		membership = "member"
 	}
-	return fmt.Sprintf("#%s (%s, %s, %s, %s)", ch.Name, ch.ID, visibility, state, membership)
+	return fmt.Sprintf("%s, %s, %s, %s", ch.ID, visibility, state, membership)
 }
 
 // --- view building ----------------------------------------------------------

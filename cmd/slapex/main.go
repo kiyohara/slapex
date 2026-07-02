@@ -16,6 +16,7 @@ import (
 
 	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
+	"github.com/kiyohara/slapex/internal/ui"
 )
 
 var version = "dev"
@@ -62,6 +63,7 @@ type cliOptions struct {
 	keepCache      bool
 	reuseCache     string
 	noInteractive  bool
+	noColor        bool
 	showVersion    bool
 }
 
@@ -87,16 +89,18 @@ func run() int {
 		defer promptTTY.Close()
 	}
 
+	// Decoration is decided from stderr itself (the stream progress goes to),
+	// never from stdout, keeping the stdout path contract independent
+	// (doc/design/cli-interface.md「出力制御」).
+	printer := ui.NewPrinter(os.Stderr, ui.Styled(os.Stderr, os.Getenv, opts.noColor))
+
 	token := resolveToken(slackTokenFromEnv(os.Getenv), promptTTY, opts.noInteractive, promptForToken)
 	if token == "" {
-		return reportMissingToken(os.Stderr)
+		return reportMissingToken(printer)
 	}
 
-	logf := func(format string, args ...any) {
-		fmt.Fprintf(os.Stderr, format+"\n", args...)
-	}
 	client := slack.New(token)
-	client.Logf = logf
+	client.Logf = printer.Noticef
 
 	exportOpts := export.Options{
 		ChannelKeyword: opts.channel,
@@ -111,9 +115,12 @@ func run() int {
 		ToolVersion:    version,
 	}
 
-	dir, err := export.Run(context.Background(), client, exportOpts, logf)
+	dir, err := export.Run(context.Background(), client, exportOpts, printer)
 	if err != nil {
-		return reportRunError(os.Stderr, err)
+		// A phase may still be live when Run fails; clear its spinner line so
+		// the error report starts on a clean line.
+		printer.StopPhase()
+		return reportRunError(printer, err)
 	}
 	fmt.Fprintln(os.Stdout, dir)
 	return exitOK
@@ -200,25 +207,25 @@ func openTerminal(path string) *os.File {
 	return f
 }
 
-func reportMissingToken(w io.Writer) int {
-	fmt.Fprintf(w, "%s is not set.\n", slackTokenEnv)
-	fmt.Fprintln(w, "")
-	fmt.Fprintf(w, "Set %s from your secret manager or CI secrets, then run slapex again.\n", slackTokenEnv)
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Need to create a Slack App or issue a Slack token?")
-	fmt.Fprintln(w, "See: "+helpURL)
+func reportMissingToken(p *ui.Printer) int {
+	p.Errorf("%s is not set.", slackTokenEnv)
+	p.Plainf("")
+	p.Plainf("Set %s from your secret manager or CI secrets, then run slapex again.", slackTokenEnv)
+	p.Plainf("")
+	p.Plainf("Need to create a Slack App or issue a Slack token?")
+	p.Plainf("See: " + helpURL)
 	return exitAuth
 }
 
-// reportRunError writes the user-facing message for a failed export.Run to w
+// reportRunError prints the user-facing message for a failed export.Run via p
 // and returns the process exit code (doc/design/cli-interface.md). Auth /
 // permission failures (exit 3) also point the user at the setup help page
 // (doc/design/usage-flow.md「情報が足りない場合の案内」).
-func reportRunError(w io.Writer, err error) int {
+func reportRunError(p *ui.Printer, err error) int {
 	code := classify(err)
-	fmt.Fprintf(w, "slapex: %s\n", err)
+	p.Errorf("slapex: %s", err)
 	if code == exitAuth {
-		fmt.Fprintln(w, "See: "+helpURL)
+		p.Plainf("See: " + helpURL)
 	}
 	return code
 }
@@ -234,6 +241,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
 		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept .cache/ directory (path to .cache/)")
 		noInteractive = fs.Bool("no-interactive", false, "never prompt interactively (channel selection or SLACK_TOKEN entry)")
+		noColor       = fs.Bool("no-color", false, "plain progress output: no colors, icons or animations (also via NO_COLOR, CI, TERM=dumb)")
 		showVersion   = fs.Bool("version", false, "print version and exit")
 	)
 	fs.Usage = func() {
@@ -292,6 +300,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		keepCache:      *keepCache,
 		reuseCache:     *reuseCache,
 		noInteractive:  *noInteractive,
+		noColor:        *noColor,
 		showVersion:    *showVersion,
 	}, nil
 }
