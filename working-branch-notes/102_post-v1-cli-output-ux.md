@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `post-v1/cli-output-ux`
-- PR: -
+- PR: #102
 - 最終更新: 2026-07-02
 
 ## 目的
@@ -16,7 +16,7 @@ Issue #100「CLI 出力をモダンなターミナル表示と CI 向け plain o
 
 ## 現在の状況
 
-- 調査完了。レポートを補助 note `draft_post-v1-cli-output-ux__modern-cli-research.md` にまとめた。
+- 調査完了。レポートを補助 note `102_post-v1-cli-output-ux__modern-cli-research.md` にまとめた。
 - レポート用の画像(SVG モック、キャプチャを元に再現)は `assets/cli-output-ux/` に置いた。note と同様に cleanup PR の整理対象とする。
 - ユーザー確認済みの方針(案 A / braille / 控えめ)で実装完了。検証も完了(下記)。
   - `internal/ui` パッケージ新設(styled / plain の 2 モード、フェーズ行 + braille spinner + ASCII prefix)。

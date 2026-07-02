@@ -1,7 +1,7 @@
 # 調査レポート: モダン CLI ツールの出力 UX(Issue #100 補助 note)
 
 - ブランチ: `post-v1/cli-output-ux`
-- 主 note: `draft_post-v1-cli-output-ux.md`
+- 主 note: `102_post-v1-cli-output-ux.md`
 - 最終更新: 2026-07-02
 
 Issue #100 の「モダンなターミナル表示」を具体化するため、代表的なモダン CLI ツールの出力表現を調査し、slapex への適用案を整理したレポート。画像は `assets/cli-output-ux/` 配下の SVG(キャプチャした実出力を元に手作業で再現したモック)を参照する。
