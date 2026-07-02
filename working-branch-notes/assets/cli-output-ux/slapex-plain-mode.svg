@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
+  <rect x="0" y="0" width="880" height="300" rx="10" fill="#14161b" stroke="#2b303b"/>
+  <text x="24" y="30" fill="#8b949e" font-size="12">plain mode(non-TTY / CI=true / TERM=dumb / NO_COLOR / --no-color)— どの案でも共通</text>
+
+  <text x="24" y="66" fill="#d6dbe3">INFO: workspace: Example Workspace (example.slack.com, T0123456789)</text>
+  <text x="24" y="87" fill="#d6dbe3">INFO: channel: #general (C0123456789, public, active, accessible)</text>
+  <text x="24" y="108" fill="#d6dbe3">INFO: fetching messages since 2026-06-02 (--days 30, --max-posts 1000)</text>
+  <text x="24" y="129" fill="#d6dbe3">INFO: fetched 345 timeline messages</text>
+  <text x="24" y="150" fill="#d6dbe3">INFO: resolving 12 users</text>
+  <text x="24" y="171" fill="#d6dbe3">INFO: downloading assets and rendering HTML</text>
+  <text x="24" y="192" fill="#d6dbe3">WARN: 2 assets skipped by size limit</text>
+  <text x="24" y="213" fill="#d6dbe3">OK: exported 345 messages and 30 assets in 42s</text>
+  <text x="24" y="234" fill="#d6dbe3">/home/ci/slapex-20260702-1030/example-workspace/general</text>
+
+  <text x="24" y="276" fill="#6e7681" font-size="12">ANSI escape・spinner・CR 上書き・装飾記号なし。1 イベント 1 行の追記のみ。状態は ASCII prefix(OK:/WARN:/ERROR:/INFO:)で明示。</text>
+</svg>

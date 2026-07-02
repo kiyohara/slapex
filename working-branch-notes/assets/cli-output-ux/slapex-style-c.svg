@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
+  <rect x="0" y="0" width="880" height="300" rx="10" fill="#14161b" stroke="#2b303b"/>
+  <text x="24" y="30" fill="#8b949e" font-size="12">案 C: npm 的ミニマル — 完了時の画面</text>
+
+  <text x="24" y="66" fill="#d6dbe3">Workspace: Example Workspace (example.slack.com, T0123456789)</text>
+  <text x="24" y="87" fill="#d6dbe3">Target: #general (C0123456789, public, active, accessible)</text>
+  <text x="24" y="108" fill="#d6dbe3">Fetching messages since 2026-06-02 (--days 30, --max-posts 1000)...</text>
+  <text x="24" y="129" fill="#d6dbe3">  fetched 240 timeline messages... <tspan fill="#6e7681">(実行中は npm 同様の ASCII spinner のみ)</tspan></text>
+  <text x="24" y="150" fill="#d6dbe3">Resolving 12 users...</text>
+  <text x="24" y="171" fill="#d6dbe3">Downloading assets and rendering HTML...</text>
+  <text x="24" y="192" fill="#d6dbe3"><tspan fill="#d29922">warn</tspan> 2 assets skipped by size limit</text>
+  <text x="24" y="213" fill="#d6dbe3">exported <tspan fill="#3fb950" font-weight="bold">345</tspan> messages and <tspan fill="#3fb950" font-weight="bold">30</tspan> assets in 42s</text>
+  <text x="24" y="234" fill="#d6dbe3">/Users/you/slapex-20260702-1030/example-workspace/general <tspan fill="#6e7681">← stdout</tspan></text>
+
+  <text x="24" y="276" fill="#6e7681" font-size="12">構造は現行のまま。色は warn/error の prefix と最終 summary の数値強調だけ。アイコン・Unicode 記号は使わない。</text>
+</svg>
