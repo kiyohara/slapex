@@ -60,7 +60,20 @@ CI log に token を出力しない。`set -x` など、コマンドや環境変
 
 ## Secret manager を使わず一時的に渡す
 
-個人評価や PoC で secret manager をまだ用意していない場合は、token の実値をコマンド行に直接書かず、対話入力で一時的に shell 変数へ入れる。
+個人評価や PoC で secret manager をまだ用意していない場合は、`SLACK_TOKEN` を設定せずに、操作可能な端末で `slapex` を実行する。`SLACK_TOKEN` が未設定で、controlling terminal (`/dev/tty`) を開けて `--no-interactive` を指定していないときは、slapex が token 入力プロンプトを表示する。
+
+```sh
+slapex engineering
+# SLACK_TOKEN is not set.
+# Paste a Slack OAuth token to use for this run only.
+# It is kept in memory only: not echoed, and not written to files, cache, logs or HTML.
+# For repeated use, provide it from a secret manager (e.g. 1Password CLI) or CI secrets.
+# Enter SLACK_TOKEN (input hidden): 
+```
+
+入力は echo されず、貼り付けた token はその 1 回の実行の中だけで使われ、設定ファイル・cache・log・HTML 出力には保存されない。実値をコマンド行や環境変数へ書かないため、shell history にも残らない。CI や pipe 実行など操作可能な端末が無い環境、または `--no-interactive` 指定時はプロンプトを表示せず、`SLACK_TOKEN` 未設定エラーで終了する。
+
+同じ token を複数コマンドで使い回したい場合は、実値をコマンド行に書かず、対話入力で一時的に shell 変数へ入れる方法もある。
 
 ```sh
 trap 'stty echo' EXIT
@@ -77,7 +90,7 @@ slapex engineering
 unset SLACK_TOKEN
 ```
 
-この方法でも、token は実行中の shell 環境に一時的に入る。実行が終わったら `unset SLACK_TOKEN` で消す。長期利用では secret manager または CI secrets に移す。
+この方法では、token は実行中の shell 環境に一時的に入る。使い終わったら `unset SLACK_TOKEN` で消す。いずれの方法も一時利用向けであり、長期利用では secret manager または CI secrets に移す。
 
 次のように token の実値をコマンド行へ直接書かない。
 

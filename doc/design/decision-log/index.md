@@ -54,7 +54,8 @@
 | 0040 | decided | asset download 時の認証情報送信先 | Slack OAuth token は Slack Web API と Slack private file URL(`files.slack.com`)にだけ送る。URL preview 画像、service icon、avatar、emoji などの public asset URL には送らない | [0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md) |
 | 0041 | decided | 導入手段の拡充 | 配布の主経路は GitHub Releases 単一バイナリ(0034)を維持しつつ、導入補助として install script と専用 tap repo 上の Homebrew cask を提供する。v1.0.1 release で tap repo への cask 自動更新と Homebrew upgrade を確認済み | [0041-install-convenience.md](0041-install-convenience.md) |
 | 0042 | decided | Slack token 種別の基本方針 | デフォルト利用方法は user token とし、bot token も CI / automation 向けに正式サポートする。環境変数名は `SLACK_TOKEN` とする | [0042-default-user-token.md](0042-default-user-token.md) |
-| 0043 | decided | interactive selection の stream 判定 | interactive selection は stdin と stderr が TTY の場合だけ開始し、UI は stderr に出す。stdout は成功時 path 専用のまま維持する | [0043-interactive-selection-streams.md](0043-interactive-selection-streams.md) |
+| 0043 | decided | interactive selection の stream 判定 | interactive selection は controlling terminal (`/dev/tty`) を開けるときだけ開始し、prompt の入出力も `/dev/tty` に固定する。stdin / stdout / stderr の TTY 状態は判定に使わない。stdout は成功時 path 専用のまま維持する | [0043-interactive-selection-streams.md](0043-interactive-selection-streams.md) |
+| 0044 | decided | SLACK_TOKEN 未設定時の対話入力 | `SLACK_TOKEN` 未設定時に controlling terminal (`/dev/tty`) を開けて `--no-interactive` でないときだけ、no-echo の token 入力プロンプトを `/dev/tty` に出す。入力値は in-memory のみで、ファイル・cache・log・HTML に保存しない。CI / pipe / `--no-interactive` は従来どおり未設定エラー(exit 3) | [0044-interactive-token-prompt.md](0044-interactive-token-prompt.md) |
 
 ## 未決事項
 

@@ -6,7 +6,7 @@
 
 本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md` を参照する。
 
 ## コマンド形式
 
@@ -25,6 +25,8 @@ slapex [channel] [options]
 
 token を CLI option や引数として受け取る経路は提供しない。プロセス一覧や shell history への漏えいを避けるため、受け渡しは環境変数だけにする。
 
+`SLACK_TOKEN` が未設定の場合、controlling terminal (`/dev/tty`) を開けて `--no-interactive` が指定されていないときに限り、token を対話入力するプロンプトを `/dev/tty` に表示する。入力は echo せず、値はそのプロセス内でだけ使い、設定ファイル・cache・log・HTML 出力には保存しない。これは secret manager をまだ用意していない個人評価・PoC 利用者が、token を shell history に残さず一時的に渡すための導線である(`decision-log/0044-interactive-token-prompt.md`)。この対話入力は token を CLI option / 引数で受け取る経路ではなく、環境変数以外の保存経路も追加しない。controlling terminal が無い環境(CI・pipe 実行など)や `--no-interactive` 指定時は、対話入力を行わず、従来どおり未設定エラー(exit code `3`)と案内を表示して終了する。
+
 ## option 一覧
 
 | option | 値 | default | 制約 | 目的 |
@@ -35,7 +37,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `--max-attachment-size <size>` | サイズ | `10MB` | `1KB` 以上 | 添付ファイル / original 画像 1 件あたりの保存上限(`output-format.md`) |
 | `--keep-cache` | flag | off | | `.cache/` を成否に関係なく残す(`cache.md`) |
 | `--reuse-cache <path>` | path | なし | | 以前の `.cache/` を再利用する(`cache.md`) |
-| `--no-interactive` | flag | off | | TTY があっても interactive selection を開始しない(`usage-flow.md`) |
+| `--no-interactive` | flag | off | | TTY があっても interactive prompt を開始しない(channel selection と、`SLACK_TOKEN` 未設定時の token 入力の両方が対象)(`usage-flow.md`) |
 | `--version` | flag | | | version を表示して終了する |
 | `--help` | flag | | | usage を表示して終了する |
 
@@ -58,7 +60,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 |---|---|
 | stdout | 機械処理しやすい最終結果だけを出力する。成功時に出力ディレクトリ(`<workspace-label>/<channel-label>/` まで)の絶対 path を 1 行出力する |
 | stderr | 進捗、診断、workspace / channel label、候補 list、エラー、完了 summary |
-| /dev/tty | interactive selection の prompt(controlling terminal がある場合のみ)。stdin / stdout / stderr の redirect や wrap から独立させるため |
+| /dev/tty | interactive selection の prompt と、`SLACK_TOKEN` 未設定時の token 入力 prompt(controlling terminal がある場合のみ)。stdin / stdout / stderr の redirect や wrap から独立させるため。token 入力は echo しない |
 
 この分離により、script や CI では `out=$(slapex ...)` の形で出力先 path を後続処理に渡せる。進捗や label の表示内容は `usage-flow.md` の「処理対象の表示」を参照する。
 

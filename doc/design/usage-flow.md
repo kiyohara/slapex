@@ -240,6 +240,8 @@ Need to create a Slack App or issue a Slack token?
 See: https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md
 ```
 
+ただし、利用者が操作可能な controlling terminal (`/dev/tty`) があり、`--no-interactive` が指定されていない場合は、上記のエラーで終了する代わりに、`/dev/tty` に token 入力プロンプトを表示する。入力は echo せず、入力した token はそのプロセス内でだけ使い、設定ファイル・cache・log・HTML 出力には保存しない。プロンプトには、継続利用では secret manager(例: 1Password CLI)や CI secrets を使う手段があることも短く示す。controlling terminal が無い環境(CI・pipe 実行など)や `--no-interactive` 指定時は、上記のとおり未設定エラーと案内を表示して終了する。判定と入出力は channel の interactive selection と同じ `/dev/tty` 機構を使う。詳細は `cli-interface.md` と `decision-log/0044-interactive-token-prompt.md` を参照する。
+
 ### token が無効
 
 表示する内容:
