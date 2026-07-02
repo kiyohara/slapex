@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-97-interactive-token-prompt
-- PR: (未採番)
+- PR: #99
 - 最終更新: 2026-07-02
 
 ## 目的
@@ -11,7 +11,7 @@ Issue #97: `SLACK_TOKEN` が未設定のとき、操作可能な端末がある�
 ## 現在の状況
 
 - 実装・ドキュメント・decision log・テストを一通り追加し、Docker 経由の build / vet / test まで完了。
-- PR 作成前。
+- PR #99 を作成済み。merge はユーザーが行う。
 
 ## 決定事項
 
@@ -23,7 +23,7 @@ Issue #97: `SLACK_TOKEN` が未設定のとき、操作可能な端末がある�
 
 ## 次にやること
 
-- PR 作成後、この note を `<PR 番号>_issue-97-interactive-token-prompt.md` へ rename する。
+- この note は PR 採番に合わせて `99_issue-97-interactive-token-prompt.md` へ rename 済み。
 - merge はユーザーが行う。
 
 ## 検証
@@ -41,3 +41,4 @@ Issue #97: `SLACK_TOKEN` が未設定のとき、操作可能な端末がある�
 ## セッションログ
 
 - 2026-07-02: Issue #97 着手。context 読み込み、`/dev/tty` 方針で実装方針確定。ブランチ作成、note 作成。
+- 2026-07-02: 実装・テスト・docs・decision log 0044 を commit、build / vet / test 通過。PR #99 作成。note を採番(`99_...`)。
