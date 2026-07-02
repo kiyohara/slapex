@@ -9,7 +9,7 @@
 
 利用者向け help / quickstart / README にコマンド実行例を追加する前に、CLI 出力 UX を確定する必要があった(Issue #100)。従来の stderr 出力は全行無装飾で、TTY での見やすさと CI ログの安定性のどちらにも最適化されていなかった。
 
-見栄えの具体化にあたり、モダン CLI ツール(npm / pnpm / yarn 4 / cargo / uv / gh)の実出力キャプチャと一次資料(GitHub CLI デザインガイドライン primer/cli、clig.dev、NO_COLOR)を調査した。調査レポートは PR #(Issue #100 の PR)の working branch note に残した。
+見栄えの具体化にあたり、モダン CLI ツール(npm / pnpm / yarn 4 / cargo / uv / gh)の実出力キャプチャと一次資料(GitHub CLI デザインガイドライン primer/cli、clig.dev、NO_COLOR)を調査した。調査レポートは PR #102 の working branch note に残した。
 
 ## 候補
 
