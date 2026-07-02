@@ -14,11 +14,12 @@ v1.1.0 release 後の検証結果を `progress.md` と decision log へ記録す
 - Release workflow run `28585758516` は success。
 - GitHub Release は公開済みで、期待する 5 assets が添付されている。
 - `kiyohara/homebrew-tap` の `Casks/slapex.rb` は `version "1.1.0"` へ更新済み。
+- ユーザー手元の Homebrew 環境で `slapex` が 1.0.1 から 1.1.0 へ upgrade されることを確認済み。
 
 ## 決定事項
 
 - 準備 PR は tag 前に merge 済みのため、検証結果は別ブランチ / 別 PR で記録する。
-- macOS binary 実行と Homebrew 経由 upgrade はユーザー手元での確認対象として残す。
+- macOS / Homebrew 経由の upgrade 確認結果も PR #104 に追記する。
 
 ## 次にやること
 
@@ -31,11 +32,13 @@ v1.1.0 release 後の検証結果を `progress.md` と decision log へ記録す
 - `op plugin run -- gh release view v1.1.0`: release は公開済みで draft / prerelease ではない。5 assets を確認。
 - `docker compose run --rm --no-deps -v /private/tmp/slapex-release-v1.1.0.2MmFps:/release dev sh -c 'cd /release && sha256sum --ignore-missing -c slapex_checksums.txt && chmod +x slapex_linux_arm64 && ./slapex_linux_arm64 --version'`: `slapex_linux_amd64: OK`、`slapex_linux_arm64: OK`、`slapex 1.1.0`。
 - `op plugin run -- gh api repos/kiyohara/homebrew-tap/contents/Casks/slapex.rb --jq '.content | @base64d'`: `version "1.1.0"` を確認。
+- ユーザー手元で `slapex --version`: `slapex 1.0.1`、`brew update && brew upgrade --cask slapex && slapex --version`: `slapex 1.1.0` を確認。
 
 ## リスク・ブロッカー
 
-- macOS binary の `--version` と `brew update && brew upgrade --cask slapex && slapex --version` は agent 環境では未実施。
+- なし。
 
 ## セッションログ
 
 - 2026-07-02: `v1.1.0` release workflow と公開物を検証し、記録用ブランチを作成。
+- 2026-07-02: ユーザー手元の Homebrew upgrade 結果を追記。

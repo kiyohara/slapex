@@ -36,7 +36,7 @@ v1.0.0 / v1.0.1 / v1.1.0 を GitHub Releases で公開済み。配布経路は�
 |---|---|---|
 | v1.0.0 | released | 初版。スコープは decision log 0036、リリース実施は PR #76 |
 | v1.0.1 | released | user token default への認証方針転換(Issue #81 / PR #84) |
-| v1.1.0 | released | token prompt / interactive selection / CLI output UX / 開発ループ整備を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新を確認済み |
+| v1.1.0 | released | token prompt / interactive selection / CLI output UX / 開発ループ整備を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 
 ## 完了済みフェーズ(参考)
 
