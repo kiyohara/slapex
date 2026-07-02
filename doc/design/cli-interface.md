@@ -57,11 +57,12 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | stream | 内容 |
 |---|---|
 | stdout | 機械処理しやすい最終結果だけを出力する。成功時に出力ディレクトリ(`<workspace-label>/<channel-label>/` まで)の絶対 path を 1 行出力する |
-| stderr | 進捗、診断、workspace / channel label、候補 list、interactive prompt、エラー、完了 summary |
+| stderr | 進捗、診断、workspace / channel label、候補 list、エラー、完了 summary |
+| /dev/tty | interactive selection の prompt(controlling terminal がある場合のみ)。stdin / stdout / stderr の redirect や wrap から独立させるため |
 
 この分離により、script や CI では `out=$(slapex ...)` の形で出力先 path を後続処理に渡せる。進捗や label の表示内容は `usage-flow.md` の「処理対象の表示」を参照する。
 
-色付けやカーソル制御は stderr が TTY の場合だけ使う。interactive selection は stdin と stderr が TTY の場合だけ開始し、stdout の TTY 状態は判定に使わない。これは stdout の機械可読契約を維持し、1Password CLI (`op run`) など stdout を wrapper する実行経路でも stderr に prompt を出せるようにするためである。non-TTY ではプレーンテキストを出力する。
+色付けやカーソル制御は stderr が TTY の場合だけ使う。interactive selection は controlling terminal (`/dev/tty`) を開ける場合だけ開始し、prompt の入出力も `/dev/tty` に固定する。stdin / stdout / stderr の TTY 状態は判定に使わない。これは stdout の機械可読契約を維持しつつ、1Password CLI (`op run`) の既定 secret masking で stdout / stderr が pipe 化される実行経路でも prompt を出せるようにするためである。non-TTY ではプレーンテキストを出力する。
 
 ## exit code
 

@@ -3,6 +3,7 @@ package export
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -58,7 +59,7 @@ func TestChooseChannel(t *testing.T) {
 		},
 		{
 			name:    "multiple partial matches no interactive",
-			opts:    Options{ChannelKeyword: "engin", Interactive: true, NoInteractive: true},
+			opts:    Options{ChannelKeyword: "engin", PromptTTY: os.Stdin, NoInteractive: true},
 			wantErr: true,
 			wantLogs: []string{
 				`Multiple channels matched "engin".`,
@@ -69,7 +70,7 @@ func TestChooseChannel(t *testing.T) {
 		{
 			name:     "too many partial matches",
 			channels: numberedChannels(11, "eng"),
-			opts:     Options{ChannelKeyword: "eng", Interactive: true},
+			opts:     Options{ChannelKeyword: "eng", PromptTTY: os.Stdin},
 			wantErr:  true,
 			wantLogs: []string{
 				"11 channels matched. Run again with a more specific channel name or a channel ID.",

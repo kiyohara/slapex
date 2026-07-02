@@ -165,11 +165,11 @@ channel は、明示指定と選択の両方に対応する。
 
 候補表示では、少なくとも channel ID、channel 名、public/private、archived 状態、token から見たアクセス可否を表示する。bot token の場合は bot / app が member かどうかも表示する。private channel は、利用中の token から見える範囲だけが候補になる。
 
-### TTY がある場合
+### 操作可能な端末がある場合
 
-stdin と stderr が TTY で、利用者が操作可能な場合は、interactive selection を表示する。stdout は成功時の出力 path を 1 行だけ出す機械処理向け stream として扱い、interactive prompt や候補 list には使わない。
+利用者が操作可能な controlling terminal (`/dev/tty`) がある場合は、interactive selection を表示する。interactive prompt は `/dev/tty` に直接入出力する。stdout は成功時の出力 path を 1 行だけ出す機械処理向け stream として扱い、stderr は進捗・診断・候補 list に使う。どちらも interactive prompt の描画には使わない。
 
-このため、1Password CLI の `op run` のように stdout が secret masking や wrapper の都合で TTY として見えない環境でも、stdin と stderr が TTY として使える限り interactive selection を開始できる。
+`/dev/tty` を直接使うため、1Password CLI の `op run` のように stdout / stderr が secret masking や wrapper の都合で pipe 化される実行経路でも、controlling terminal が使える限り interactive selection を開始できる(`op run` の既定 masking を無効化する必要はない)。
 
 `--no-interactive` が指定された場合は、TTY があっても interactive selection を開始しない。候補が複数ある場合や channel 引数が未指定の場合は、non-TTY と同じく候補と usage を表示し、非 0 exit code で終了する。
 
@@ -184,9 +184,9 @@ stdin と stderr が TTY で、利用者が操作可能な場合は、interactiv
 
 channel 引数が未指定で候補が 10 件以下の場合は、その候補から選択できる。候補が 11 件以上の場合は、`<channel-keyword>` を指定して再実行するよう促す。
 
-### TTY がない場合
+### 操作可能な端末がない場合
 
-stdin または stderr が TTY ではない場合は、interactive selection を開始しない。CI や script 実行で待ち状態に入らないことを優先する。
+controlling terminal (`/dev/tty`) を開けない場合(CI や pipe 実行など)は、interactive selection を開始しない。待ち状態に入らないことを優先する。
 
 この場合は、選択可能な候補を表示し、次に実行すべき usage を表示して、非 0 exit code で終了する。
 

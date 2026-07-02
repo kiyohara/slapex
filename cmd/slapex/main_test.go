@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -189,26 +190,19 @@ func TestSlackTokenFromEnv(t *testing.T) {
 	}
 }
 
-func TestInteractiveSelectionAvailableRequiresStdinAndStderrTTY(t *testing.T) {
-	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe() stdin: %v", err)
+func TestOpenTerminalReturnsNilForNonTerminal(t *testing.T) {
+	// A path that opens successfully but is not a terminal must yield nil, so
+	// interactive selection is not attempted on a pipe/regular file.
+	if f := openTerminal(os.DevNull); f != nil {
+		f.Close()
+		t.Fatalf("openTerminal(%q) = non-nil, want nil for non-terminal", os.DevNull)
 	}
-	defer stdinR.Close()
-	defer stdinW.Close()
-
-	stderrR, stderrW, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe() stderr: %v", err)
-	}
-	defer stderrR.Close()
-	defer stderrW.Close()
-
-	if interactiveSelectionAvailable(stdinR, os.Stderr) {
-		t.Fatal("interactiveSelectionAvailable() = true with non-TTY stdin, want false")
-	}
-	if interactiveSelectionAvailable(os.Stdin, stderrW) {
-		t.Fatal("interactiveSelectionAvailable() = true with non-TTY stderr, want false")
+	// A path that cannot be opened (no controlling terminal, e.g. CI) must
+	// yield nil rather than error out.
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	if f := openTerminal(missing); f != nil {
+		f.Close()
+		t.Fatal("openTerminal(nonexistent) = non-nil, want nil for open failure")
 	}
 }
 

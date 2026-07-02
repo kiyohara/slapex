@@ -49,7 +49,7 @@ type Options struct {
 	KeepCache      bool
 	ReuseCache     string
 	NoInteractive  bool
-	Interactive    bool // stdin and stderr are TTYs
+	PromptTTY      *os.File // controlling terminal for interactive prompts; nil when unavailable
 	ToolVersion    string
 }
 
@@ -321,7 +321,7 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 		return slack.Channel{}, usagef("too many candidates (%d). Re-run as: slapex <channel-id-or-name>", len(candidates))
 	}
 
-	if !opts.Interactive || opts.NoInteractive {
+	if opts.PromptTTY == nil || opts.NoInteractive {
 		if keyword == "" {
 			logf("No channel specified. Select one of the following channels:")
 		} else {
@@ -341,21 +341,23 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, logf f
 		return slack.Channel{}, usagef("channel selection required but interactive selection is unavailable")
 	}
 
-	return selectChannel(candidates)
+	return selectChannel(candidates, opts.PromptTTY)
 }
 
-func selectChannel(candidates []slack.Channel) (slack.Channel, error) {
+func selectChannel(candidates []slack.Channel, tty *os.File) (slack.Channel, error) {
 	opts := make([]huh.Option[int], len(candidates))
 	for i, ch := range candidates {
 		opts[i] = huh.NewOption(channelLine(ch), i)
 	}
 	idx := 0
+	// Drive the form entirely over the controlling terminal so selection works
+	// even when stdout/stderr are redirected or wrapped (e.g. `op run` masking).
 	form := huh.NewForm(huh.NewGroup(
 		huh.NewSelect[int]().
 			Title("Select a channel").
 			Options(opts...).
 			Value(&idx),
-	)).WithInput(os.Stdin).WithOutput(os.Stderr)
+	)).WithInput(tty).WithOutput(tty)
 	if err := form.Run(); err != nil {
 		return slack.Channel{}, usagef("channel selection cancelled")
 	}

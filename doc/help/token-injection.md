@@ -22,14 +22,14 @@ SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering --output ./exports
 ```
 
-channel を省略した場合や複数候補がある場合、terminal で stdin と stderr が使える環境では `op run` 経由でも interactive selection を表示する。
+channel を省略した場合や複数候補がある場合、操作可能な terminal がある環境では `op run` 経由でも interactive selection を表示する。slapex は prompt を controlling terminal (`/dev/tty`) に直接出すため、`op run` の既定の secret masking(`--no-masking` なし)のままでも対話選択を使える。
 
 ```sh
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex
 ```
 
-実行環境によって interactive selection が使えない場合は、候補一覧と再実行例が表示される。表示された channel ID またはより具体的な channel 名を指定して再実行する。
+controlling terminal が無い環境(CI や pipe 実行など)では interactive selection は使えず、候補一覧と再実行例が表示される。表示された channel ID またはより具体的な channel 名を指定して再実行する。
 
 ```sh
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
