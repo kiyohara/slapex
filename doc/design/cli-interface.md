@@ -37,7 +37,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `--max-attachment-size <size>` | サイズ | `10MB` | `1KB` 以上 | 添付ファイル / original 画像 1 件あたりの保存上限(`output-format.md`) |
 | `--keep-cache` | flag | off | | `.cache/` を成否に関係なく残す(`cache.md`) |
 | `--reuse-cache <path>` | path | なし | | 以前の `.cache/` を再利用する(`cache.md`) |
-| `--no-interactive` | flag | off | | TTY があっても interactive selection を開始しない(`usage-flow.md`) |
+| `--no-interactive` | flag | off | | TTY があっても interactive prompt を開始しない(channel selection と、`SLACK_TOKEN` 未設定時の token 入力の両方が対象)(`usage-flow.md`) |
 | `--version` | flag | | | version を表示して終了する |
 | `--help` | flag | | | usage を表示して終了する |
 
