@@ -41,29 +41,56 @@ body {
 
 /* header */
 .export-header {
-  border-bottom: 1px solid var(--line);
-  padding: 20px 0 12px;
+  padding: 20px 0 8px;
   margin-bottom: 8px;
 }
-.export-header h1 { margin: 0 0 8px; font-size: 22px; }
-.channel-hash { color: var(--muted); margin-right: 2px; }
-.export-meta summary {
-  display: inline-flex;
+.export-title-line {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+.export-title {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  font-size: 22px;
+}
+.workspace-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+.workspace-name,
+.channel-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.title-separator {
+  flex: none;
   color: var(--muted);
-  font-size: 13px;
+  white-space: pre;
+}
+.channel-hash { color: var(--muted); margin-right: 2px; }
+.export-meta { flex: none; }
+.export-meta summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--muted);
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   list-style: none;
 }
 .export-meta summary::-webkit-details-marker { display: none; }
-.export-meta summary::before {
-  content: "▸";
-  color: var(--mention-fg);
-  font-size: 11px;
-}
-.export-meta[open] summary::before { content: "▾"; }
+.export-meta[open] summary { color: var(--mention-fg); }
 .export-meta summary:focus-visible {
   outline: 2px solid var(--mention-fg);
   outline-offset: 2px;
@@ -376,9 +403,24 @@ img.emoji {
 a { color: var(--mention-fg); }
 
 .export-footer {
+  display: flex;
+  align-items: center;
   margin-top: 24px;
   padding-top: 8px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
+}
+.footer-project-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.footer-project-link:hover { color: var(--mention-fg); }
+.footer-logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
 }

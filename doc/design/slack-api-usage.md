@@ -34,6 +34,7 @@ token type による主な違い:
 | method / 経路 | 用途 | 呼び出しタイミング |
 |---|---|---|
 | `auth.test` | token 検証、workspace(`team_id`、名前、URL)の解決 | 起動時に 1 回 |
+| `team.info` | workspace icon URL の取得 | 起動時に 1 回。取得できない場合は警告して icon なしで継続 |
 | `conversations.list` | channel 一覧の取得と keyword 解決 | channel 確定まで(pagination) |
 | `conversations.history` | timeline 上の親投稿の取得 | 取得範囲制限に達するまで(pagination) |
 | `conversations.replies` | thread replies の取得 | thread を持つ親投稿ごと(pagination) |
@@ -43,6 +44,7 @@ token type による主な違い:
 
 - `files.info` は原則呼ばない。message 内の file object に必要な metadata(size、mimetype、thumbnail / original URL)が含まれるためである。file object に必要情報が欠けている場合だけ補完として呼ぶ。
 - `users.list` による一括解決は採用しない。大規模 workspace で過剰取得になるためである。多人数 channel で `users.info` の呼び出し回数が問題になる場合の最適化(閾値での `users.list` 切り替えなど)は将来検討とする。
+- `team.info` はヘッダーの workspace icon 表示にだけ使う補助情報であるため、scope 不足などで失敗しても export 全体は継続する。
 
 ## pagination
 
@@ -77,7 +79,7 @@ token type による主な違い:
 ## file / asset の取得
 
 - message の `files` 配列を情報源とし、`url_private_download`(無ければ `url_private`)へ `Authorization: Bearer` ヘッダ付きの HTTP GET で取得する。
-- URL preview 画像、URL preview service icon、avatar、emoji など、Slack private file ではない public asset URL へは `Authorization: Bearer` ヘッダを送らない。
+- URL preview 画像、URL preview service icon、workspace icon、avatar、emoji など、Slack private file ではない public asset URL へは `Authorization: Bearer` ヘッダを送らない。
 - 画像は表示用 thumbnail と original の両方を保存する(`decision-log/0017-uploaded-image-assets.md`)。
 - file object の `size` が `--max-attachment-size` を超えるものは download しない(`output-format.md`)。
 - 外部サービス連携ファイル(external file)など download URL を持たないものは、リンクのみの添付として扱い、manifest に記録する。

@@ -227,6 +227,27 @@ func TestListChannelsPagination(t *testing.T) {
 	}
 }
 
+func TestTeamInfo(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/team.info" {
+			t.Fatalf("path = %q, want /api/team.info", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"ok":true,"team":{"id":"T123","name":"Acme Workspace","domain":"acme","icon":{"image_68":"https://example.com/icon.png"}}}`)
+	}))
+	defer srv.Close()
+
+	c, _ := newTestClient(srv)
+	team, err := c.TeamInfo(context.Background())
+	if err != nil {
+		t.Fatalf("TeamInfo: %v", err)
+	}
+	if team.ID != "T123" || team.Name != "Acme Workspace" || team.Domain != "acme" || team.Icon.Image68 != "https://example.com/icon.png" {
+		t.Fatalf("TeamInfo() = %+v", team)
+	}
+}
+
 func TestHistoryPagination(t *testing.T) {
 	t.Parallel()
 

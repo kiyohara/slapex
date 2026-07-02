@@ -37,6 +37,7 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 	assertCacheFiles(t, got.OutputDir)
 	assertEndpointCounts(t, got.Server, map[string]int{
 		"/api/auth.test":             1,
+		"/api/team.info":             1,
 		"/api/conversations.list":    1,
 		"/api/conversations.history": 1,
 		"/api/conversations.replies": 1,
@@ -68,6 +69,7 @@ type exportRunResult struct {
 
 type exportScenario struct {
 	Auth     slack.AuthTest
+	TeamInfo *slack.TeamInfo
 	Channels []slack.Channel
 	Messages []slack.Message
 	Replies  map[string][]slack.Message
@@ -122,6 +124,14 @@ func happyPathScenario() exportScenario {
 			User:   "slapex",
 			UserID: "USLAPEX",
 			BotID:  "BSLAPEX",
+		},
+		TeamInfo: &slack.TeamInfo{
+			ID:     "TACME123",
+			Name:   "Acme Workspace",
+			Domain: "acme",
+			Icon: slack.TeamIcon{
+				Image68: "{{base}}/files/workspace-icon.png",
+			},
 		},
 		Channels: []slack.Channel{
 			{ID: "C999", Name: "random", IsMember: true},
@@ -219,6 +229,7 @@ func happyPathScenario() exportScenario {
 		Assets: map[string]fakeAsset{
 			"/files/avatar-u01.png":           {ContentType: "image/png", Body: "avatar-u01"},
 			"/files/avatar-u02.png":           {ContentType: "image/png", Body: "avatar-u02"},
+			"/files/workspace-icon.png":       {ContentType: "image/png", Body: "workspace-icon"},
 			"/files/emoji-party-sloth.png":    {ContentType: "image/png", Body: "custom-emoji"},
 			"/files/service-example-news.png": {ContentType: "image/png", Body: "service-icon", RejectAuth: true},
 			"/files/og-launch.png":            {ContentType: "image/png", Body: "og-image"},
@@ -268,6 +279,7 @@ func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
 	}
 	for _, path := range []string{
 		"/api/auth.test",
+		"/api/team.info",
 		"/api/conversations.list",
 		"/api/conversations.history",
 		"/api/conversations.replies",
@@ -314,6 +326,17 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api/auth.test":
 		writeSlackOK(w, f.sc.Auth)
+	case "/api/team.info":
+		team := f.sc.TeamInfo
+		if team == nil {
+			team = &slack.TeamInfo{
+				ID:     f.sc.Auth.TeamID,
+				Name:   f.sc.Auth.Team,
+				Domain: strings.TrimSuffix(hostOf(f.sc.Auth.URL), ".slack.com"),
+				Icon:   slack.TeamIcon{ImageDefault: true},
+			}
+		}
+		writeSlackOK(w, map[string]any{"team": team})
 	case "/api/conversations.list":
 		writeSlackOK(w, map[string]any{"channels": f.sc.Channels})
 	case "/api/conversations.history":
@@ -466,6 +489,15 @@ func (sc *exportScenario) replaceBaseURL(baseURL string) {
 		u.Profile.Image72 = repl(u.Profile.Image72)
 		sc.Users[id] = u
 	}
+	if sc.TeamInfo != nil {
+		sc.TeamInfo.Icon.Image34 = repl(sc.TeamInfo.Icon.Image34)
+		sc.TeamInfo.Icon.Image44 = repl(sc.TeamInfo.Icon.Image44)
+		sc.TeamInfo.Icon.Image68 = repl(sc.TeamInfo.Icon.Image68)
+		sc.TeamInfo.Icon.Image88 = repl(sc.TeamInfo.Icon.Image88)
+		sc.TeamInfo.Icon.Image102 = repl(sc.TeamInfo.Icon.Image102)
+		sc.TeamInfo.Icon.Image132 = repl(sc.TeamInfo.Icon.Image132)
+		sc.TeamInfo.Icon.Image230 = repl(sc.TeamInfo.Icon.Image230)
+	}
 	for name, rawURL := range sc.Emoji {
 		sc.Emoji[name] = repl(rawURL)
 	}
@@ -493,6 +525,8 @@ func assertOutputFiles(t *testing.T, dir string) {
 	for _, rel := range []string{
 		"index.html",
 		"style.css",
+		"assets/slapex-logo.svg",
+		"assets/workspace-icons",
 		"assets/avatars",
 		"assets/emoji",
 		"assets/service-icons",
@@ -523,6 +557,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 	for _, marker := range []string{
 		"Acme Workspace (acme.example.slack.com, TACME123)",
 		"#project-alpha (C123, public, active, member)",
+		`<span class="workspace-name">Acme Workspace</span><span class="title-separator"> - </span><span class="channel-title"><span class="channel-hash">#</span>project-alpha</span>`,
 		"First timeline note",
 		"Starting the launch thread with",
 		"Bob",
@@ -533,6 +568,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		`<span class="reaction-count">2</span>`,
 		dateDivider,
 		`assets/avatars/`,
+		`assets/workspace-icons/`,
 		`assets/emoji/`,
 		`assets/service-icons/`,
 		`assets/og-images/`,
@@ -604,15 +640,15 @@ func assertCacheFiles(t *testing.T, dir string) {
 	if metadata.Counts.TimelineMessages != 3 || metadata.Counts.Threads != 1 || metadata.Counts.Replies != 2 {
 		t.Fatalf("metadata counts = %+v, want 3 timeline / 1 thread / 2 replies", metadata.Counts)
 	}
-	if metadata.Counts.AssetsSaved < 7 {
-		t.Fatalf("metadata assets_saved = %d, want at least 7", metadata.Counts.AssetsSaved)
+	if metadata.Counts.AssetsSaved < 8 {
+		t.Fatalf("metadata assets_saved = %d, want at least 8", metadata.Counts.AssetsSaved)
 	}
 
 	var manifest struct {
 		Assets []manifestAsset `json:"assets"`
 	}
 	readJSON(t, filepath.Join(dir, ".cache/assets_manifest.json"), &manifest)
-	for _, kind := range []string{"avatar", "emoji", "service_icon", "og_image", "upload_thumb", "upload_original", "attachment"} {
+	for _, kind := range []string{"workspace_icon", "avatar", "emoji", "service_icon", "og_image", "upload_thumb", "upload_original", "attachment"} {
 		if !hasSavedAsset(manifest.Assets, kind) {
 			t.Fatalf("assets_manifest.json missing saved %s asset: %+v", kind, manifest.Assets)
 		}

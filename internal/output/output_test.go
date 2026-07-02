@@ -62,6 +62,7 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 			"https://example.com/emoji":           {body: "emoji", contentType: "image/gif"},
 			"https://example.com/og":              {body: "og", contentType: "image/png"},
 			"https://example.com/service-icon":    {body: "service-icon", contentType: "image/png"},
+			"https://example.com/workspace-icon":  {body: "workspace-icon", contentType: "image/png"},
 			"https://example.com/thumb":           {body: "thumb", contentType: "image/webp"},
 			"https://example.com/original":        {body: "original", contentType: "image/png"},
 			"https://example.com/attachment":      {body: "attachment", contentType: "application/octet-stream"},
@@ -82,6 +83,7 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 		{kind: KindEmoji, url: "https://example.com/emoji", dir: "assets/emoji", ext: ".gif", meta: AssetMeta{EmojiName: "party"}},
 		{kind: KindOGImage, url: "https://example.com/og", dir: "assets/og-images", ext: ".png"},
 		{kind: KindServiceIcon, url: "https://example.com/service-icon", dir: "assets/service-icons", ext: ".png"},
+		{kind: KindWorkspaceIcon, url: "https://example.com/workspace-icon", dir: "assets/workspace-icons", ext: ".png"},
 		{kind: KindUploadThumb, url: "https://example.com/thumb", dir: "assets/uploads/thumbs", ext: ".webp"},
 		{kind: KindUploadOriginal, url: "https://example.com/original", dir: "assets/uploads/originals", ext: ".png", meta: AssetMeta{FileID: "F001", OriginalName: "photo.png"}},
 		{kind: KindAttachment, url: "https://example.com/attachment", dir: "assets/attachments", ext: ".txt", meta: AssetMeta{FileID: "F002", OriginalName: "report.txt", Mimetype: "text/plain", SizeBytes: 42}},
@@ -137,6 +139,7 @@ func TestAssetsLimitFor(t *testing.T) {
 		{kind: KindAvatar, want: 0},
 		{kind: KindOGImage, want: publicPreviewAssetLimit},
 		{kind: KindServiceIcon, want: publicPreviewAssetLimit},
+		{kind: KindWorkspaceIcon, want: publicPreviewAssetLimit},
 		{kind: KindUploadOriginal, want: 10},
 		{kind: KindAttachment, want: 10},
 	}

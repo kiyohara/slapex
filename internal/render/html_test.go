@@ -148,6 +148,57 @@ func TestWriteStyleCSSStylesNativeDisclosureControls(t *testing.T) {
 	assertCSSDeclaration(t, threadLabelFocusBlock, "outline", "2px solid var(--mention-fg)")
 }
 
+func TestWriteStyleCSSStylesExportHeaderAndFooter(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	headerBlock := cssBlock(t, css, ".export-header")
+	if strings.Contains(headerBlock, "border-bottom") {
+		t.Fatalf(".export-header still has border-bottom: %s", headerBlock)
+	}
+
+	titleLineBlock := cssBlock(t, css, ".export-title-line")
+	assertCSSDeclaration(t, titleLineBlock, "display", "flex")
+	assertCSSDeclaration(t, titleLineBlock, "align-items", "center")
+
+	workspaceIconBlock := cssBlock(t, css, ".workspace-icon")
+	assertCSSDeclaration(t, workspaceIconBlock, "width", "24px")
+	assertCSSDeclaration(t, workspaceIconBlock, "height", "24px")
+
+	footerLinkBlock := cssBlock(t, css, ".footer-project-link")
+	assertCSSDeclaration(t, footerLinkBlock, "display", "inline-flex")
+	assertCSSDeclaration(t, footerLinkBlock, "text-decoration", "none")
+
+	footerLogoBlock := cssBlock(t, css, ".footer-logo")
+	assertCSSDeclaration(t, footerLogoBlock, "width", "16px")
+	assertCSSDeclaration(t, footerLogoBlock, "height", "16px")
+}
+
+func TestWriteStaticAssetsWritesFooterLogo(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStaticAssets(dir); err != nil {
+		t.Fatalf("WriteStaticAssets: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "assets", "slapex-logo.svg"))
+	if err != nil {
+		t.Fatalf("read slapex-logo.svg: %v", err)
+	}
+	if !strings.Contains(string(data), "slapex logo") {
+		t.Fatalf("slapex-logo.svg does not look like the embedded project logo")
+	}
+}
+
 func TestWriteStyleCSSLimitsImageLinkHitArea(t *testing.T) {
 	t.Parallel()
 

@@ -17,16 +17,20 @@ var templateFS embed.FS
 //go:embed templates/style.css
 var styleCSS []byte
 
+//go:embed templates/slapex-logo.svg
+var slapexLogo []byte
+
 // PageData is the root template input.
 type PageData struct {
-	WorkspaceName string
-	ChannelName   string
-	WorkspaceLine string
-	ChannelLine   string
-	ExportedLine  string
-	RangeLine     string
-	Items         []TimelineItem
-	Truncated     bool // --max-posts reached
+	WorkspaceName     string
+	WorkspaceIconPath string
+	ChannelName       string
+	WorkspaceLine     string
+	ChannelLine       string
+	ExportedLine      string
+	RangeLine         string
+	Items             []TimelineItem
+	Truncated         bool // --max-posts reached
 }
 
 // TimelineItem is either a date divider or a message.
@@ -109,4 +113,13 @@ func WriteHTML(w io.Writer, data *PageData) error {
 // WriteStyleCSS writes the bundled stylesheet next to index.html.
 func WriteStyleCSS(outDir string) error {
 	return os.WriteFile(filepath.Join(outDir, "style.css"), styleCSS, 0o644)
+}
+
+// WriteStaticAssets writes renderer-owned static assets referenced by the page.
+func WriteStaticAssets(outDir string) error {
+	dir := filepath.Join(outDir, "assets")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "slapex-logo.svg"), slapexLogo, 0o644)
 }

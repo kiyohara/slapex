@@ -65,6 +65,7 @@ Manifest の例:
         "groups:history",
         "files:read",
         "emoji:read",
+        "team:read",
         "users:read"
       ]
     }
@@ -116,6 +117,7 @@ Manifest の例:
         "groups:history",
         "files:read",
         "emoji:read",
+        "team:read",
         "users:read"
       ]
     }
@@ -157,6 +159,7 @@ public channel と private channel の両方を扱えるように、user token /
 | スレッド返信の取得 | 対象 conversation 種別に対応する `*:history` |
 | 画像・添付ファイルの情報取得と download | `files:read` |
 | カスタム絵文字の一覧取得 | `emoji:read` |
+| workspace icon の取得(任意。無い場合は icon なしで出力) | `team:read` |
 | 投稿者名や表示名の解決 | `users:read` |
 
 scope を追加または変更した場合は、App を workspace に再 install / 再 authorize し、更新された token を secret manager または CI secrets に反映する。
