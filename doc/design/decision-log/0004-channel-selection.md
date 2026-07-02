@@ -2,8 +2,8 @@
 
 - 状態: decided
 - 作成日: 2026-06-02
-- 最終更新日: 2026-06-02
-- 関連: `../usage-flow.md`, `0020-target-label-display.md`
+- 最終更新日: 2026-07-02
+- 関連: `../usage-flow.md`, `0020-target-label-display.md`, `0043-interactive-selection-streams.md`
 
 ## 背景
 
@@ -72,7 +72,7 @@ channel を positional argument にすると、ツールの主対象が CLI synt
 
 - `usage-flow.md` に channel selection の挙動を採用方針として記載する。
 - コマンド例は `slapex engineering` のような positional argument を基本にする。
-- 実装では stdin / stdout の TTY 判定が必要になる。
+- 実装では TTY 判定が必要になる。2026-07-02 に stdin / stderr 判定へ更新した(詳細は `0043-interactive-selection-streams.md`)。
 - non-TTY では候補と usage を出して非 0 exit code で終了する。
 - `--no-interactive` option を提供し、TTY がある script / 検証環境でも prompt を禁止できるようにする。
 - channel 候補の表示内容には channel ID、channel 名、public/private、archived 状態、bot membership を含める。

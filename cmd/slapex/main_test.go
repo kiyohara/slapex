@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -185,6 +187,22 @@ func TestSlackTokenFromEnv(t *testing.T) {
 				t.Fatalf("slackTokenFromEnv() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestOpenTerminalReturnsNilForNonTerminal(t *testing.T) {
+	// A path that opens successfully but is not a terminal must yield nil, so
+	// interactive selection is not attempted on a pipe/regular file.
+	if f := openTerminal(os.DevNull); f != nil {
+		f.Close()
+		t.Fatalf("openTerminal(%q) = non-nil, want nil for non-terminal", os.DevNull)
+	}
+	// A path that cannot be opened (no controlling terminal, e.g. CI) must
+	// yield nil rather than error out.
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	if f := openTerminal(missing); f != nil {
+		f.Close()
+		t.Fatal("openTerminal(nonexistent) = non-nil, want nil for open failure")
 	}
 }
 

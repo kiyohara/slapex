@@ -89,6 +89,11 @@ func run() int {
 	client := slack.New(token)
 	client.Logf = logf
 
+	promptTTY := openControllingTerminal()
+	if promptTTY != nil {
+		defer promptTTY.Close()
+	}
+
 	exportOpts := export.Options{
 		ChannelKeyword: opts.channel,
 		OutputDir:      opts.outputDir,
@@ -98,9 +103,8 @@ func run() int {
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
 		NoInteractive:  opts.noInteractive,
-		Interactive: term.IsTerminal(int(os.Stdin.Fd())) &&
-			term.IsTerminal(int(os.Stdout.Fd())),
-		ToolVersion: version,
+		PromptTTY:      promptTTY,
+		ToolVersion:    version,
 	}
 
 	dir, err := export.Run(context.Background(), client, exportOpts, logf)
@@ -113,6 +117,36 @@ func run() int {
 
 func slackTokenFromEnv(getenv func(string) string) string {
 	return getenv(slackTokenEnv)
+}
+
+// openControllingTerminal returns the process's controlling terminal for
+// interactive prompts, or nil when it is unavailable (no controlling terminal,
+// e.g. CI or a bare pipe).
+//
+// Interactive selection targets /dev/tty rather than the stdio streams so it
+// keeps working when stdout/stderr are redirected or wrapped. In particular,
+// 1Password's `op run` enables secret masking by default, which turns BOTH
+// stdout and stderr into pipes; /dev/tty still refers to the real terminal, so
+// channel selection works under `op run` without --no-masking. slapex targets
+// only macOS and Linux (see .goreleaser.yaml), where /dev/tty is available.
+func openControllingTerminal() *os.File {
+	return openTerminal("/dev/tty")
+}
+
+// openTerminal opens path for read/write and returns it only when it is a
+// terminal; otherwise it returns nil, closing the file if it was opened. It is
+// split from openControllingTerminal so the non-terminal and open-failure
+// branches can be unit tested without a real controlling terminal.
+func openTerminal(path string) *os.File {
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
+	if err != nil {
+		return nil
+	}
+	if !term.IsTerminal(int(f.Fd())) {
+		f.Close()
+		return nil
+	}
+	return f
 }
 
 func reportMissingToken(w io.Writer) int {

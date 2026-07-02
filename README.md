@@ -134,7 +134,7 @@ SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering --output ./exports
 ```
 
-channel を指定せずに実行した場合、TTY で操作可能な環境では channel を対話選択できます。CI など非 TTY 環境では候補と usage を表示し、非 0(exit 2)で終了します(exit code の一覧は [`doc/design/cli-interface.md`](doc/design/cli-interface.md))。
+channel を指定せずに実行した場合、操作可能な terminal がある環境では channel を対話選択できます。slapex は対話選択の prompt を controlling terminal (`/dev/tty`) に直接出すため、`op run` 経由でも既定の secret masking のまま対話選択を使えます。CI など terminal が無い環境では候補と usage を表示し、非 0(exit 2)で終了します(exit code の一覧は [`doc/design/cli-interface.md`](doc/design/cli-interface.md))。
 
 主要な option(全量と default・制約・exit code は [`doc/design/cli-interface.md`](doc/design/cli-interface.md) を参照):
 
