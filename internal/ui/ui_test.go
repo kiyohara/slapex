@@ -110,10 +110,10 @@ func TestStyledPhaseLifecycle(t *testing.T) {
 
 	out := buf.String()
 	for _, want := range []string{
-		"⠋",                       // initial spinner frame
-		"\r\x1b[2K",               // line rewrite, no other cursor control
-		"\x1b[32m✓\x1b[0m",        // green success glyph
-		"\x1b[1mMessages \x1b[0m", // bold label padded to the column width
+		"⠋",                          // initial spinner frame
+		"\r\x1b[2K",                  // line rewrite, no other cursor control
+		"\x1b[32m✓\x1b[0m",           // green success glyph
+		"\x1b[1mMessages \x1b[0m",    // bold label padded to the column width
 		"\x1b[2m(threads 12)\x1b[0m", // dim parenthesized meta
 	} {
 		if !strings.Contains(out, want) {
