@@ -23,7 +23,6 @@ package export
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -50,11 +49,11 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (export
 		logs   []string
 		sleeps []time.Duration
 	)
-	logf := func(format string, args ...any) {
+	printer := testPrinter(func(line string) {
 		mu.Lock()
-		logs = append(logs, fmt.Sprintf(format, args...))
+		logs = append(logs, line)
 		mu.Unlock()
-	}
+	})
 	client := slack.New(integrationTestToken,
 		slack.WithBaseURL(fake.URL()+"/api/"),
 		slack.WithSleeper(func(_ context.Context, d time.Duration) error {
@@ -64,9 +63,9 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (export
 			return nil
 		}),
 	)
-	client.Logf = logf
+	client.Logf = printer.Noticef
 
-	outDir, err := Run(context.Background(), client, opts, logf)
+	outDir, err := Run(context.Background(), client, opts, printer)
 
 	mu.Lock()
 	defer mu.Unlock()

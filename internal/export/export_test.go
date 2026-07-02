@@ -122,9 +122,9 @@ func TestChooseChannel(t *testing.T) {
 				testChannels = tt.channels
 			}
 			var logs []string
-			got, err := chooseChannel(testChannels, tt.opts, "Example Workspace", func(format string, args ...any) {
-				logs = append(logs, fmt.Sprintf(format, args...))
-			})
+			got, err := chooseChannel(testChannels, tt.opts, "Example Workspace", testPrinter(func(line string) {
+				logs = append(logs, line)
+			}))
 			if tt.wantErr {
 				var usage *UsageError
 				if !errors.As(err, &usage) {

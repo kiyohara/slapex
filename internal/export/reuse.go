@@ -8,6 +8,7 @@ import (
 
 	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/slack"
+	"github.com/kiyohara/slapex/internal/ui"
 )
 
 // reusableCache holds the parts of a previous run's .cache/ that --reuse-cache
@@ -28,17 +29,17 @@ type reusableCache struct {
 // problem — a load failure (missing / unparseable file) or a failed validation
 // condition — it logs a warning and returns nil so the run falls back to a
 // normal fetch instead of erroring out (doc/design/cache.md, decision log 0030).
-func resolveReuseCache(path, teamID, channelID string, logf func(string, ...any)) *reusableCache {
+func resolveReuseCache(path, teamID, channelID string, p *ui.Printer) *reusableCache {
 	rc, err := loadReuseCache(path)
 	if err != nil {
-		logf("warning: --reuse-cache %s cannot be used (%v); fetching normally", path, err)
+		p.Warnf("--reuse-cache %s cannot be used (%v); fetching normally", path, err)
 		return nil
 	}
 	if reason, ok := rc.validate(teamID, channelID); !ok {
-		logf("warning: --reuse-cache %s cannot be used (%s); fetching normally", path, reason)
+		p.Warnf("--reuse-cache %s cannot be used (%s); fetching normally", path, reason)
 		return nil
 	}
-	logf("Reusing cache from %s (cached users/emoji/assets; messages are re-fetched)", path)
+	p.Infof("Reusing cache from %s (cached users/emoji/assets; messages are re-fetched)", path)
 	return rc
 }
 

@@ -147,12 +147,15 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--keep-cache` | off | 中間ファイル `.cache/` を成否に関係なく残す。`--reuse-cache` で再利用する cache を作るときに使う |
 | `--reuse-cache <path>` | なし | 以前の `.cache/` を再利用する |
 | `--no-interactive` | off | TTY があっても対話選択を開始しない |
+| `--no-color` | off | 進捗表示を色・アイコン・アニメーションなしの plain output にする |
 | `--version` | | version を表示して終了する |
 | `--help` | | usage を表示して終了する |
 
 `.cache/` は通常実行の最後に削除されます。`--reuse-cache` で再利用するには、前回実行時に `--keep-cache` を付けて `.cache/` を残しておく必要があります(詳細は [`doc/design/cache.md`](doc/design/cache.md))。
 
 stdout には成功時に出力先ディレクトリ(`<workspace-label>/<channel-label>/` まで)の絶対 path を 1 行だけ出力し、進捗・診断・候補表示は stderr に出します。`out=$(slapex ...)` の形で出力先を後続処理へ渡せます。
+
+進捗表示は、ターミナルでは色・状態アイコン・進行中フェーズの spinner 付きで表示され、CI / pipe / redirect、`CI` / `NO_COLOR` / `TERM=dumb` 環境変数、`--no-color` 指定時には ANSI escape のないプレーンな行出力に自動で切り替わります(詳細は [`doc/design/cli-interface.md`](doc/design/cli-interface.md) の「出力制御」)。
 
 ## 出力
 

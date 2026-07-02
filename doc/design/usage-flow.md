@@ -111,26 +111,36 @@ op run -- slapex <channel-keyword>
 
 画面表示用の workspace label は、Slack 上の表示名だけに依存しない。可能な限り workspace 名、workspace URL または domain、短い `team_id` を組み合わせる。
 
-例:
+表示はフェーズ行形式(状態記号 + ラベル列 + 本文)とし、装飾と plain output の切替は `cli-interface.md`「出力制御」に従う。
+
+例(TTY の styled output。`✓` は green、括弧内のメタ情報は dim):
 
 ```text
-Workspace: Example Workspace (example.slack.com, T012345...)
+✓ Workspace  Example Workspace (example.slack.com, T012345...)
+✓ Channel    #engineering (C012345..., public, active, member)
+✓ Messages   345 fetched since 2026-06-02 (threads 12, replies 40)
+```
+
+例(plain output。CI / pipe / `--no-color` など):
+
+```text
+INFO: workspace: checking token (auth.test) ...
+OK: workspace: Example Workspace (example.slack.com, T012345...)
+OK: channel: #engineering (C012345..., public, active, member)
+OK: messages: 345 fetched since 2026-06-02 (threads 12, replies 40)
 ```
 
 `team_id` は `auth.test` の戻り値や workspace URL にも現れる非機密情報である。進捗の繰り返し表示では上記のように短縮してよいが、workspace 確定直後、完了 summary、生成 HTML の冒頭では full の `team_id` を表示し、利用者が照合や将来の guard option のために正確な値をコピーできるようにする。
 
 画面表示用の channel label は、channel 名に加えて channel ID、public/private、archived 状態、token から見たアクセス可否を含める。bot token の場合、アクセス可否は bot / app が対象 channel の member かどうかで決まるため、member 状態として示す。
 
-例(user token / 既定):
+完了時の summary では workspace / channel label を並べて表示する。
 
 ```text
-Target: Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, accessible)
-```
-
-bot token の場合は、アクセス可否を bot / app の member 状態として示す。
-
-```text
-Target: Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, member)
+✓ Done       Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, member) (in 42s)
+  messages: 345 (threads: 12, replies: 40)
+  assets: 30 saved, 2 skipped by size limit, 0 failed
+  output: /path/to/output/example-workspace/engineering
 ```
 
 表示タイミング:

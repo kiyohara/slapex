@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="360" viewBox="0 0 880 360" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
+  <rect x="0" y="0" width="880" height="360" rx="10" fill="#14161b" stroke="#2b303b"/>
+  <text x="24" y="30" fill="#8b949e" font-size="12">案 A: ステータス列+フェーズ行(gh のアイコン語彙 × cargo のラベル列 × uv の dim 使い)— 完了時の画面</text>
+
+  <text x="24" y="66" fill="#d6dbe3"><tspan fill="#3fb950">✓</tspan> <tspan font-weight="bold" fill="#f0f6fc">Workspace</tspan>  Example Workspace <tspan fill="#8b949e">(example.slack.com, T0123456789)</tspan></text>
+  <text x="24" y="87" fill="#d6dbe3"><tspan fill="#3fb950">✓</tspan> <tspan font-weight="bold" fill="#f0f6fc">Channel</tspan>    #general <tspan fill="#8b949e">(C0123456789, public, active, accessible)</tspan></text>
+  <text x="24" y="108" fill="#d6dbe3"><tspan fill="#3fb950">✓</tspan> <tspan font-weight="bold" fill="#f0f6fc">Messages</tspan>   345 fetched since 2026-06-02 <tspan fill="#8b949e">(threads 12, replies 40)</tspan></text>
+  <text x="24" y="129" fill="#d6dbe3"><tspan fill="#3fb950">✓</tspan> <tspan font-weight="bold" fill="#f0f6fc">Users</tspan>      12 resolved</text>
+  <text x="24" y="150" fill="#d6dbe3"><tspan fill="#3fb950">✓</tspan> <tspan font-weight="bold" fill="#f0f6fc">Emoji</tspan>      58 custom emoji</text>
+  <text x="24" y="171" fill="#d6dbe3"><tspan fill="#d29922">!</tspan> <tspan font-weight="bold" fill="#f0f6fc">Assets</tspan>     30 saved, <tspan fill="#d29922">2 skipped by size limit</tspan>, 0 failed</text>
+  <text x="24" y="192" fill="#d6dbe3"><tspan fill="#3fb950">✓</tspan> <tspan font-weight="bold" fill="#f0f6fc">Done</tspan>       345 messages, 30 assets in 42s</text>
+  <text x="24" y="213" fill="#d6dbe3">/Users/you/slapex-20260702-1030/example-workspace/general <tspan fill="#6e7681">← stdout(契約どおり path 1 行)</tspan></text>
+
+  <text x="24" y="255" fill="#8b949e" font-size="12">実行中は当該フェーズ行だけが spinner + dim で live 更新され、完了すると ✓ 行として確定する:</text>
+  <text x="24" y="279" fill="#d6dbe3"><tspan fill="#56d4dd">⠙</tspan> <tspan font-weight="bold" fill="#f0f6fc">Messages</tspan>   <tspan fill="#8b949e">fetching since 2026-06-02 … 240 fetched</tspan></text>
+  <text x="24" y="303" fill="#d6dbe3"><tspan fill="#56d4dd">⠴</tspan> <tspan font-weight="bold" fill="#f0f6fc">Messages</tspan>   <tspan fill="#8b949e">rate limited on conversations.history, waiting 30s …</tspan></text>
+
+  <text x="24" y="340" fill="#6e7681" font-size="12">色: 状態記号のみ着色(✓ green / ! yellow / ✗ red)。値は通常色、補足メタ情報は dim。ラベル列は bold。</text>
+</svg>

@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -288,7 +287,7 @@ func runReuseScenarioOpts(t *testing.T, sc exportScenario, opts1, opts2 Options,
 	}, assets...)
 
 	opts1.KeepCache = true
-	dir1, err := Run(context.Background(), client, opts1, func(string, ...any) {})
+	dir1, err := Run(context.Background(), client, opts1, testPrinter(func(string) {}))
 	if err != nil {
 		t.Fatalf("run 1 (populate cache) error: %v", err)
 	}
@@ -301,7 +300,9 @@ func runReuseScenarioOpts(t *testing.T, sc exportScenario, opts1, opts2 Options,
 
 	opts2.ReuseCache = cacheDir
 	var logs2 []string
-	dir2, err := Run(context.Background(), client, opts2, appendLogf(&logs2))
+	dir2, err := Run(context.Background(), client, opts2, testPrinter(func(line string) {
+		logs2 = append(logs2, line)
+	}))
 	if err != nil {
 		t.Fatalf("run 2 (reuse) error: %v\nlogs:\n%s", err, strings.Join(logs2, "\n"))
 	}
@@ -359,14 +360,6 @@ func snapshotCounts(fake *fakeSlackServer, paths []string) map[string]int {
 
 func delta(before, after map[string]int, path string) int {
 	return after[path] - before[path]
-}
-
-// appendLogf returns a logf that records formatted lines. Run logs sequentially
-// from a single goroutine, so no synchronisation is needed.
-func appendLogf(logs *[]string) func(string, ...any) {
-	return func(format string, args ...any) {
-		*logs = append(*logs, fmt.Sprintf(format, args...))
-	}
 }
 
 func rewriteJSON(t *testing.T, path string, mutate func(m map[string]any)) {
