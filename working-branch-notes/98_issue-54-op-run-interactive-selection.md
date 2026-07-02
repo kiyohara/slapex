@@ -31,8 +31,7 @@ Issue #54 として、1Password CLI (`op run`) 経由でも channel の interact
 
 ## 次にやること
 
-- 実 token + 実 `op run`(既定 masking)での対話選択 E2E を手動確認する(下記リスク参照)。
-- レビューコメントへの返信を残し、第三者チェック → merge 判断を待つ。
+- 第三者チェック → merge 判断を待つ(実装・doc・レビュー返信・手動 E2E は完了)。
 
 ## 検証
 
@@ -43,10 +42,11 @@ Issue #54 として、1Password CLI (`op run`) 経由でも channel の interact
 ## リスク・ブロッカー
 
 - 実 token / 実 `op run` の E2E は token 実値を扱うため、この PR では自動検証しない。
-- `/dev/tty` が既定 masking の `op run` 配下でも実端末を指すことは 1Password 公式 docs / コミュニティと controlling terminal の一般仕様から確認済みだが、`huh` の対話 UI を実際に `/dev/tty` で描画する挙動は TTY を要するため自動テスト対象外。手動 E2E で確認する。
+- `/dev/tty` が既定 masking の `op run` 配下でも実端末を指すことは 1Password 公式 docs / コミュニティと controlling terminal の一般仕様から確認済み。`huh` の対話 UI を実 `/dev/tty` で描画する挙動は TTY を要するため自動テスト対象外だが、2026-07-02 に実 token + 実 `op run`(既定 masking)で手動 E2E 確認済み(選択 UI 表示、stdout リダイレクト時も UI 表示・出力はディレクトリパス 1 行のみ)。
 
 ## セッションログ
 
 - 2026-07-02: Issue #54、依存 PR #96、関連仕様、1Password 公式 docs を確認して作業開始。
 - 2026-07-02: stdin + stderr TTY 判定へ実装変更し、README / help / design spec / decision log / progress を更新。Docker Compose 経由の test / build / vet 成功。
 - 2026-07-02: PR #98 の medium レビューで、既定 `op run` が stderr も pipe 化する点を裏取り。実装・doc を `/dev/tty`(controlling terminal)方式へ改訂(判定・prompt 入出力とも `/dev/tty`)。0043 を改訂、usage-flow / cli-interface / README / help / progress を追随。`openTerminal` の unit test 追加。Docker Compose 経由の build / vet / test 成功。
+- 2026-07-02: darwin/arm64 バイナリ(Docker Compose クロスコンパイル)を実 `op run`(既定 masking)で手動 E2E。channel 選択 UI が表示され、stdout リダイレクト時も UI は端末に出て出力はディレクトリパス 1 行のみ。修正が実機で意図どおり動作することを確認。
