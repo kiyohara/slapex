@@ -190,6 +190,99 @@ func TestSlackTokenFromEnv(t *testing.T) {
 	}
 }
 
+func TestResolveToken(t *testing.T) {
+	// A regular (non-terminal) file stands in for an available controlling
+	// terminal: resolveToken only checks tty for nil and hands it to prompt,
+	// so the prompt stub never touches the real terminal.
+	ttyFile, err := os.CreateTemp(t.TempDir(), "tty")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	defer ttyFile.Close()
+
+	tests := []struct {
+		name          string
+		envToken      string
+		tty           *os.File
+		noInteractive bool
+		promptReturns string
+		want          string
+		wantPrompted  bool
+	}{
+		{
+			name:     "env token wins without prompting",
+			envToken: "xoxp-env",
+			tty:      ttyFile,
+			want:     "xoxp-env",
+		},
+		{
+			name: "no controlling terminal yields empty without prompting",
+			tty:  nil,
+			want: "",
+		},
+		{
+			name:          "no-interactive suppresses the prompt",
+			tty:           ttyFile,
+			noInteractive: true,
+			want:          "",
+		},
+		{
+			name:          "prompts when unset and interactive",
+			tty:           ttyFile,
+			promptReturns: "xoxp-typed",
+			want:          "xoxp-typed",
+			wantPrompted:  true,
+		},
+		{
+			name:          "empty prompt input yields empty token",
+			tty:           ttyFile,
+			promptReturns: "",
+			want:          "",
+			wantPrompted:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prompted := false
+			prompt := func(f *os.File) string {
+				prompted = true
+				if f != tt.tty {
+					t.Fatalf("prompt received tty %v, want %v", f, tt.tty)
+				}
+				return tt.promptReturns
+			}
+			got := resolveToken(tt.envToken, tt.tty, tt.noInteractive, prompt)
+			if got != tt.want {
+				t.Fatalf("resolveToken() = %q, want %q", got, tt.want)
+			}
+			if prompted != tt.wantPrompted {
+				t.Fatalf("prompt called = %v, want %v", prompted, tt.wantPrompted)
+			}
+		})
+	}
+}
+
+func TestWriteTokenPrompt(t *testing.T) {
+	var buf bytes.Buffer
+	writeTokenPrompt(&buf)
+	out := buf.String()
+	// The prompt must name the variable, promise the value is not stored, and
+	// point to secret managers / CI secrets for repeated use (Issue #97).
+	for _, want := range []string{
+		slackTokenEnv,
+		"this run only",
+		"not echoed",
+		"not written to files, cache, logs or HTML",
+		"1Password",
+		"CI secrets",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("writeTokenPrompt output %q missing %q", out, want)
+		}
+	}
+}
+
 func TestOpenTerminalReturnsNilForNonTerminal(t *testing.T) {
 	// A path that opens successfully but is not a terminal must yield nil, so
 	// interactive selection is not attempted on a pipe/regular file.
