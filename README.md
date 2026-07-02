@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/slapex-logo-shadow.svg" width="160" height="160" alt="slapex logo">
+</p>
+
 # slapex
 
 `slapex` は、Slack channel の投稿・スレッド・画像・添付ファイルを、外部 URL に依存せずローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。
