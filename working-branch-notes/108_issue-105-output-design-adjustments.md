@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-105-output-design-adjustments
-- PR: -
+- PR: #108
 - 最終更新: 2026-07-03
 
 ## 目的
@@ -24,7 +24,7 @@ Issue #105 の出力 HTML デザイン調整を行う。
 
 ## 次にやること
 
-- PR 作成後、note を PR 番号付きへ rename する。
+- PR 番号付き note への rename は完了。
 
 ## 検証
 
