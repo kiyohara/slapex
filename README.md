@@ -26,6 +26,27 @@
 3. [使い方](#使い方) — `SLACK_TOKEN` を渡して channel を export する。
 4. [出力](#出力) — 生成された `index.html` をブラウザで開いて確認する。
 
+## 出力プレビュー
+
+Slack App や token を準備する前に、成果物の見た目をここで確認できます。全体の流れ:
+
+```mermaid
+flowchart LR
+    slack["Slack workspace"] -- "Slack API<br>(read 系 scope)" --> cli["slapex CLI"]
+    cli -- "export" --> html["静的 HTML + assets<br>(index.html)"]
+    html -- "ブラウザで開く" --> view["ローカルで閲覧<br>(外部 URL 非依存)"]
+```
+
+タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl):
+
+<p align="center"><img src="assets/screenshots/sample-timeline-ja.png" width="760" alt="サンプル export のタイムライン表示"></p>
+
+スレッド、コードブロック、bot 投稿、添付ファイル:
+
+<p align="center"><img src="assets/screenshots/sample-thread-ja.png" width="760" alt="サンプル export のスレッドと添付ファイル表示"></p>
+
+スクリーンショットは同梱の生成済みサンプル export(架空データ)のものです。リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html)、詳細は [`doc/samples/README.md`](doc/samples/README.md))。
+
 ## 事前準備: Slack App と token
 
 `slapex` は、利用者自身が作成した Slack App の Slack OAuth token を使います。token は保存せず、実行時に環境変数 `SLACK_TOKEN` から受け取ります。
@@ -174,7 +195,7 @@ slapex-20260602-1530/
         └── assets/         # 画像・絵文字・添付ファイルなど
 ```
 
-生成された `index.html` をブラウザで開くと、取得した投稿・スレッド・assets をローカルだけで閲覧できます。出力ディレクトリ構造、保存される assets、取得範囲、サイズ制限の詳細は [`doc/design/output-format.md`](doc/design/output-format.md) を参照してください。
+生成された `index.html` をブラウザで開くと、取得した投稿・スレッド・assets をローカルだけで閲覧できます(見た目は [出力プレビュー](#出力プレビュー) を参照)。出力ディレクトリ構造、保存される assets、取得範囲、サイズ制限の詳細は [`doc/design/output-format.md`](doc/design/output-format.md) を参照してください。
 
 ## 開発
 

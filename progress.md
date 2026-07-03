@@ -25,7 +25,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 を GitHub Releases で公開済み。配布�
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
 | help-00 | #100 | done | help-01 / help-03 / help-04 前が望ましい | (完了)CLI 出力を styled / plain の 2 モード化し `--no-color` を追加。方針は decision log 0045 | #102 |
-| help-01 | #51 | todo | help-00 後が望ましい | 出力プレビューと匿名化サンプル成果物を README / help から辿れるようにする | - |
+| help-01 | #51 | done | help-00 後が望ましい | (完了)README に出力プレビュー(スクリーンショット / フロー図)と ja/en サンプル export(`doc/samples/`、`tools/gensample` で生成)を追加。demo 実行は #113 に分離 | - |
 | help-02 | #48 | todo | - | Slack App セットアップ help にスクリーンショット付き UI 操作手順を追加する | - |
 | help-03 | #52 | todo | help-00 後が望ましい | 制限事項・FAQ help を作り README / design doc から要点だけ辿れるようにする | - |
 | help-04 | #49 | todo | help-00 / help-01 / help-02 / help-03 後が望ましい | 初回利用クイックスタートをチェックリスト形式で追加する | - |
