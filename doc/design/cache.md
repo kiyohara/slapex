@@ -72,7 +72,7 @@
 | option | 目的 |
 |---|---|
 | `--keep-cache` | export の成否に関係なく `.cache/` を削除せず残す |
-| `--reuse-cache <path>` | 以前に保存した `.cache/` を読み込み、取得済み情報や asset manifest を再利用する |
+| `--reuse-cache <path>` | 以前に保存した出力ディレクトリまたは `.cache/` を読み込み、取得済み情報や asset manifest を再利用する |
 
 通常動作では、export の成否に関係なく `.cache/` を削除する。原因調査や cache 再利用のために残したい場合は `--keep-cache` を指定する。process kill や OS 側の異常終了では、cleanup が実行されず `.cache/` が残る可能性がある。
 
@@ -80,7 +80,7 @@
 
 ## `--reuse-cache` の整合性検証
 
-`--reuse-cache <path>` で指定された cache は、次のすべてを満たす場合だけ再利用する。
+`--reuse-cache <path>` は、`metadata.json` が指定先直下に見つからない場合、指定先直下の `.cache/` を自動的に cache directory として扱う。指定された cache は、次のすべてを満たす場合だけ再利用する。
 
 1. `schema_version` が現在の実装の値と一致する。
 2. `metadata.json` の `team_id` が、今回 `auth.test` で解決した workspace と一致する。
