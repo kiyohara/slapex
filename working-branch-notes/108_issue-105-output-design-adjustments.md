@@ -23,6 +23,7 @@ Issue #105 の出力 HTML デザイン調整を行う。
 - footer logo は成果物だけで完結するよう、render package に静的 SVG として埋め込み `assets/slapex-logo.svg` に書き出す。
 - タイトル部の `#` は本文色を継承する。タイトル内で `#` だけ muted color にすると視線が割れるため。
 - `Export information` はヘッダーの icon ではなく footer 左側の text label details とする。
+- タイトル部の workspace 名は workspace URL、channel 名は `/archives/<channel ID>` へのリンクにし、どちらも別タブで開く。見た目は通常テキスト寄りにし、hover / focus 時だけリンクと分かるようにする。
 
 ## 次にやること
 
@@ -43,3 +44,4 @@ Issue #105 の出力 HTML デザイン調整を行う。
 - 2026-07-03: Issue #105 の依存確認を実施し、作業ブランチを作成した。
 - 2026-07-03: header / footer template、workspace icon 取得、静的 logo 出力、関連 tests / docs を更新した。
 - 2026-07-03: フィードバックを受け、タイトル区切りの `-` を削除し、`#` を本文色に揃え、Export information を footer 左側へ移した。
+- 2026-07-03: フィードバックを受け、タイトル部の workspace 名と channel 名を `target="_blank"` のリンクにした。

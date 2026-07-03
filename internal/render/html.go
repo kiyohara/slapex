@@ -24,7 +24,9 @@ var slapexLogo []byte
 type PageData struct {
 	WorkspaceName     string
 	WorkspaceIconPath string
+	WorkspaceHref     string
 	ChannelName       string
+	ChannelHref       string
 	WorkspaceLine     string
 	ChannelLine       string
 	ExportedLine      string

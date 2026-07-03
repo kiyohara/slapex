@@ -9,7 +9,7 @@
 <body>
 <header class="export-header">
   <div class="export-title-line">
-    <h1 class="export-title">{{if .WorkspaceIconPath}}<img class="workspace-icon" src="{{.WorkspaceIconPath}}" alt="">{{end}}<span class="workspace-name">{{.WorkspaceName}}</span><span class="channel-title"><span class="channel-hash">#</span>{{.ChannelName}}</span></h1>
+    <h1 class="export-title">{{if .WorkspaceIconPath}}<img class="workspace-icon" src="{{.WorkspaceIconPath}}" alt="">{{end}}{{if .WorkspaceHref}}<a class="title-link workspace-name" href="{{.WorkspaceHref}}" target="_blank" rel="noopener noreferrer">{{.WorkspaceName}}</a>{{else}}<span class="workspace-name">{{.WorkspaceName}}</span>{{end}}{{if .ChannelHref}}<a class="title-link channel-title" href="{{.ChannelHref}}" target="_blank" rel="noopener noreferrer"><span class="channel-hash">#</span>{{.ChannelName}}</a>{{else}}<span class="channel-title"><span class="channel-hash">#</span>{{.ChannelName}}</span>{{end}}</h1>
   </div>
 </header>
 <main class="timeline">

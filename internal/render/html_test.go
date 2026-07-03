@@ -182,6 +182,13 @@ func TestWriteStyleCSSStylesExportHeaderAndFooter(t *testing.T) {
 		t.Fatalf(".channel-hash should inherit text color: %s", channelHashBlock)
 	}
 
+	titleLinkBlock := cssBlock(t, css, ".title-link")
+	assertCSSDeclaration(t, titleLinkBlock, "color", "inherit")
+	assertCSSDeclaration(t, titleLinkBlock, "text-decoration", "none")
+
+	titleLinkHoverBlock := cssBlock(t, css, ".title-link:hover,\n.title-link:focus-visible")
+	assertCSSDeclaration(t, titleLinkHoverBlock, "text-decoration", "underline")
+
 	footerBlock := cssBlock(t, css, ".export-footer")
 	assertCSSDeclaration(t, footerBlock, "justify-content", "space-between")
 	assertCSSDeclaration(t, footerBlock, "align-items", "flex-start")

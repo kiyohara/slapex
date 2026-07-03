@@ -235,7 +235,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	page := &render.PageData{
 		WorkspaceName:     auth.Team,
 		WorkspaceIconPath: workspaceIconPath,
+		WorkspaceHref:     auth.URL,
 		ChannelName:       ch.Name,
+		ChannelHref:       channelURL(auth.URL, ch.ID),
 		WorkspaceLine:     wsLine,
 		ChannelLine:       chLine,
 		ExportedLine: fmt.Sprintf("%s (UTC%s) / %s",
@@ -836,6 +838,13 @@ func workspaceIconURL(teamInfo *slack.TeamInfo) string {
 		}
 	}
 	return ""
+}
+
+func channelURL(workspaceURL, channelID string) string {
+	if workspaceURL == "" || channelID == "" {
+		return ""
+	}
+	return strings.TrimRight(workspaceURL, "/") + "/archives/" + channelID
 }
 
 func tsTime(ts string) time.Time {
