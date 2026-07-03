@@ -31,7 +31,8 @@ Issue #115: ターミナル上での実行体験(token 入力プロンプト →
 - VHS 擬似端末での動作検証(Issue 記載の最初の検証ポイント)— probe tape で token prompt(/dev/tty、echo なし)と huh の channel 選択(矢印キー + Enter)が動作することをスクリーンショットで確認。CJK フォント(Noto Sans Mono CJK JP)の日本語描画も問題なし。代替手段(asciinema + agg / expect)は不要だった。
 - GIF 生成の再現性 — 記録した手順どおり `bash tools/demo/record.sh` を実行し、`assets/demo/slapex-demo-ja.gif` が再生成されることを確認。
 - GIF 内容 — フレーム抽出で確認: 架空 fixture(エージェントラボ)のデータのみ、入力 token は echo されず画面に映らない、`op` コマンドは登場しない。token prompt → channel 選択 → フェーズ進捗(spinner)→ 完了 summary まで収録。
-- GIF サイズ — 234KB(目安の数 MB 以内)。
+- GIF サイズ — 203KB(目安の数 MB 以内)。
+- レビュー指摘対応(先頭フレームへの準備コマンド映り込み)— tape の `Hide` 末尾の `clear` 後に `Sleep 2s` を入れてから `Show` するよう修正し再録画。先頭フレーム(f00001 / f00010)が空プロンプトのみであること、最終フレームが完了表示であることをフレーム抽出で確認。
 - `gensample` の生成モードが変更後も動くこと — `-out /tmp` で ja / en とも assets 14 saved / 0 failed。`doc/samples/` はこの PR では変更していない。
 
 ## リスク・ブロッカー

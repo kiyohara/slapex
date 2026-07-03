@@ -23,6 +23,9 @@ Type "export PATH=/vhs/tools/demo/bin:$PATH TZ=Asia/Tokyo SLAPEX_API_BASE_URL=ht
 Enter
 Type "unset SLACK_TOKEN NO_COLOR CI; gensample -serve -lang ja -asset-delay 250ms >/tmp/gensample-serve.log 2>&1 & sleep 1; cd; clear"
 Enter
+# clear の描画完了を待ってから可視キャプチャを再開する。待ちが無いと
+# 最初のフレームに準備コマンドが映り込む(PR #116 レビュー指摘)。
+Sleep 2s
 Show
 
 Sleep 1s
