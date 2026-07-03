@@ -37,6 +37,10 @@ flowchart LR
     html -- "ブラウザで開く" --> view["ローカルで閲覧<br>(外部 URL 非依存)"]
 ```
 
+ターミナルでの実行イメージ(token の対話入力 → channel の選択 → 進捗表示 → 完了):
+
+<p align="center"><img src="assets/demo/slapex-demo-ja.gif" width="760" alt="slapex をターミナルで実行する様子(token 入力、channel 選択、進捗表示)のデモ"></p>
+
 タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl):
 
 <p align="center"><img src="assets/screenshots/sample-timeline-ja.png" width="760" alt="サンプル export のタイムライン表示"></p>
@@ -45,7 +49,7 @@ flowchart LR
 
 <p align="center"><img src="assets/screenshots/sample-thread-ja.png" width="760" alt="サンプル export のスレッドと添付ファイル表示"></p>
 
-スクリーンショットは同梱の生成済みサンプル export(架空データ)のものです。リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html)、詳細は [`doc/samples/README.md`](doc/samples/README.md))。
+デモとスクリーンショットはいずれも同梱の生成済みサンプル export と同じ架空データのものです(実 workspace・実 token は使っていません)。リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html)、詳細は [`doc/samples/README.md`](doc/samples/README.md))。
 
 ## 事前準備: Slack App と token
 

@@ -46,6 +46,13 @@ var authErrorCodes = map[string]bool{
 const (
 	helpURL       = "https://github.com/kiyohara/slapex/blob/main/doc/help/slack-app-setup.md"
 	slackTokenEnv = "SLACK_TOKEN"
+	// apiBaseURLEnv overrides the Slack Web API base URL. Internal use only
+	// (local fixture servers for demo recordings, Issue #115; decision log
+	// 0046): it is not part of the public CLI surface and stays out of --help
+	// and user-facing docs. Overriding the base URL redirects the Slack token,
+	// so newSlackClient applies it only when the variable is explicitly
+	// non-empty (doc/guidelines/credential-scope-guidelines.md).
+	apiBaseURLEnv = "SLAPEX_API_BASE_URL"
 )
 
 var errUsage = errors.New("usage error")
@@ -99,7 +106,7 @@ func run() int {
 		return reportMissingToken(printer)
 	}
 
-	client := slack.New(token)
+	client := newSlackClient(token, os.Getenv)
 	client.Logf = printer.Noticef
 
 	exportOpts := export.Options{
@@ -128,6 +135,24 @@ func run() int {
 
 func slackTokenFromEnv(getenv func(string) string) string {
 	return getenv(slackTokenEnv)
+}
+
+// apiBaseURLFromEnv returns the Slack Web API base URL override, or "" when
+// unset (or whitespace-only), in which case the client keeps its default
+// https://slack.com/api/ target (internal/slack TestNewDefaults).
+func apiBaseURLFromEnv(getenv func(string) string) string {
+	return strings.TrimSpace(getenv(apiBaseURLEnv))
+}
+
+// newSlackClient builds the Slack client for token, honouring the internal
+// apiBaseURLEnv override. The token follows the base URL, so the override is
+// applied only when explicitly set; every other run targets the default
+// Slack host (doc/guidelines/credential-scope-guidelines.md).
+func newSlackClient(token string, getenv func(string) string) *slack.Client {
+	if base := apiBaseURLFromEnv(getenv); base != "" {
+		return slack.New(token, slack.WithBaseURL(base))
+	}
+	return slack.New(token)
 }
 
 // resolveToken returns the Slack token to use for this run. It prefers the

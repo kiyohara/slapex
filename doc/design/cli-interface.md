@@ -6,7 +6,7 @@
 
 本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md`、`decision-log/0046-api-base-url-override.md` を参照する。
 
 ## コマンド形式
 
@@ -24,6 +24,8 @@ slapex [channel] [options]
 | `SLACK_TOKEN` | 必須 | Slack OAuth token。デフォルト利用方法は user token(`xoxp-`)とし、CI / automation では bot token(`xoxb-`)も正式サポートする |
 
 token を CLI option や引数として受け取る経路は提供しない。プロセス一覧や shell history への漏えいを避けるため、受け渡しは環境変数だけにする。
+
+このほかに内部用途の環境変数として `SLAPEX_API_BASE_URL` がある。非空のときだけ Slack Web API の接続先 base URL を差し替える(未設定時は `https://slack.com/api/` のまま)。デモ録画・ローカル fixture 実行(`tools/gensample -serve` / `tools/demo/`)のためのもので、利用者向けドキュメントや `--help` には載せない。接続先の上書きは token の送信先が変わることを意味するため、変更時は `doc/guidelines/credential-scope-guidelines.md` の checklist(positive / negative test)に従う(`decision-log/0046-api-base-url-override.md`)。
 
 `SLACK_TOKEN` が未設定の場合、controlling terminal (`/dev/tty`) を開けて `--no-interactive` が指定されていないときに限り、token を対話入力するプロンプトを `/dev/tty` に表示する。入力は echo せず、値はそのプロセス内でだけ使い、設定ファイル・cache・log・HTML 出力には保存しない。これは secret manager をまだ用意していない個人評価・PoC 利用者が、token を shell history に残さず一時的に渡すための導線である(`decision-log/0044-interactive-token-prompt.md`)。この対話入力は token を CLI option / 引数で受け取る経路ではなく、環境変数以外の保存経路も追加しない。controlling terminal が無い環境(CI・pipe 実行など)や `--no-interactive` 指定時は、対話入力を行わず、従来どおり未設定エラー(exit code `3`)と案内を表示して終了する。
 

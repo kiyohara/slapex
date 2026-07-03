@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -273,6 +276,72 @@ func TestSlackTokenFromEnv(t *testing.T) {
 				t.Fatalf("slackTokenFromEnv() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestAPIBaseURLFromEnv is the negative half of the credential-scope tests
+// for the internal SLAPEX_API_BASE_URL override (decision log 0046): when the
+// variable is unset, empty or whitespace-only, no override is applied and the
+// client keeps its default https://slack.com/api/ target (asserted by
+// internal/slack TestNewDefaults), so the token is never redirected.
+func TestAPIBaseURLFromEnv(t *testing.T) {
+	tests := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{name: "unset", env: map[string]string{}, want: ""},
+		{name: "empty", env: map[string]string{apiBaseURLEnv: ""}, want: ""},
+		{name: "whitespace only", env: map[string]string{apiBaseURLEnv: "  \t"}, want: ""},
+		{
+			name: "set",
+			env:  map[string]string{apiBaseURLEnv: "http://127.0.0.1:8765/api/"},
+			want: "http://127.0.0.1:8765/api/",
+		},
+		{
+			name: "other variables are ignored",
+			env:  map[string]string{"SLACK_TOKEN": "xoxp-user-token"},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := apiBaseURLFromEnv(func(key string) string { return tt.env[key] })
+			if got != tt.want {
+				t.Fatalf("apiBaseURLFromEnv() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestNewSlackClientBaseURLOverride is the positive half of the
+// credential-scope tests for SLAPEX_API_BASE_URL: with the override set, API
+// requests (including the Authorization header) go to the override host.
+func TestNewSlackClientBaseURLOverride(t *testing.T) {
+	var gotPath, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"ok":true,"url":"https://demo.example.slack.com/","team":"Demo","team_id":"T1","user":"demo","user_id":"U1"}`)
+	}))
+	defer srv.Close()
+
+	client := newSlackClient("xoxp-test-fake", func(key string) string {
+		if key == apiBaseURLEnv {
+			return srv.URL + "/api/"
+		}
+		return ""
+	})
+	if _, err := client.AuthTest(context.Background()); err != nil {
+		t.Fatalf("AuthTest via override: %v", err)
+	}
+	if gotPath != "/api/auth.test" {
+		t.Fatalf("override server got path %q, want %q", gotPath, "/api/auth.test")
+	}
+	if gotAuth != "Bearer xoxp-test-fake" {
+		t.Fatalf("override server got Authorization %q, want the Bearer token", gotAuth)
 	}
 }
 

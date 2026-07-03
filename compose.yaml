@@ -10,6 +10,16 @@ services:
       CGO_ENABLED: "0"
       TZ: ${TZ:-}
 
+  # Terminal demo GIF recorder (Issue #115). Replays a tape script against
+  # the gensample fixture server, fully inside the container:
+  #   bash tools/demo/record.sh
+  vhs:
+    build:
+      context: tools/demo
+    working_dir: /vhs
+    volumes:
+      - .:/vhs
+
 volumes:
   go-mod-cache:
   go-build-cache:

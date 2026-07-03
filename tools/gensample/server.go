@@ -39,12 +39,25 @@ type sampleAsset struct {
 type fakeSlackServer struct {
 	srv *httptest.Server
 	sc  *scenario
+	// assetDelay is an artificial per-asset response delay used by -serve so
+	// the download progress indicator stays visible in demo recordings.
+	assetDelay time.Duration
+	// anyBearer accepts any non-empty Bearer token instead of the exact
+	// fakeToken. Only -serve sets it: demo recordings type an arbitrary fake
+	// value at the token prompt.
+	anyBearer bool
 }
 
 func newFakeSlackServer(sc *scenario) *fakeSlackServer {
 	f := &fakeSlackServer{sc: sc}
+	f.srv = httptest.NewServer(f.mux())
+	sc.replaceBaseURL(f.srv.URL)
+	return f
+}
+
+func (f *fakeSlackServer) mux() *http.ServeMux {
 	mux := http.NewServeMux()
-	for path := range sc.Assets {
+	for path := range f.sc.Assets {
 		mux.HandleFunc(path, f.handleAsset)
 	}
 	for _, path := range []string{
@@ -58,9 +71,7 @@ func newFakeSlackServer(sc *scenario) *fakeSlackServer {
 	} {
 		mux.HandleFunc(path, f.handleAPI)
 	}
-	f.srv = httptest.NewServer(mux)
-	sc.replaceBaseURL(f.srv.URL)
-	return f
+	return mux
 }
 
 func (f *fakeSlackServer) URL() string { return f.srv.URL }
@@ -71,7 +82,7 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if got := r.Header.Get("Authorization"); got != "Bearer "+fakeToken {
+	if !f.authorized(r.Header.Get("Authorization")) {
 		http.Error(w, "missing auth", http.StatusUnauthorized)
 		return
 	}
@@ -110,11 +121,25 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// authorized reports whether the Authorization header may use the API. Sample
+// generation requires the exact in-process fakeToken; -serve (anyBearer)
+// accepts any non-empty Bearer value.
+func (f *fakeSlackServer) authorized(header string) bool {
+	if f.anyBearer {
+		token, ok := strings.CutPrefix(header, "Bearer ")
+		return ok && strings.TrimSpace(token) != ""
+	}
+	return header == "Bearer "+fakeToken
+}
+
 func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 	asset, ok := f.sc.Assets[r.URL.Path]
 	if !ok {
 		http.NotFound(w, r)
 		return
+	}
+	if f.assetDelay > 0 {
+		time.Sleep(f.assetDelay)
 	}
 	w.Header().Set("Content-Type", asset.ContentType)
 	w.Write(asset.Body)

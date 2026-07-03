@@ -9,6 +9,12 @@
 // dates in the samples. Run via:
 //
 //	docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
+//
+// With -serve it instead keeps one scenario's fake Slack API running until
+// the process is stopped, so the demo GIF recording (Issue #115,
+// tools/demo/) can run the real slapex binary against it via the internal
+// SLAPEX_API_BASE_URL override. -asset-delay slows asset downloads so the
+// progress indicator stays visible on screen.
 package main
 
 import (
@@ -16,6 +22,8 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -31,11 +39,50 @@ const fakeToken = "xoxp-gensample-fake-token"
 
 func main() {
 	out := flag.String("out", "doc/samples", "directory that receives one sample export per language")
+	serve := flag.Bool("serve", false, "serve one scenario's fake Slack API until stopped (for demo recordings) instead of generating samples")
+	lang := flag.String("lang", "ja", "scenario to serve with -serve (ja or en)")
+	listen := flag.String("listen", "127.0.0.1:8765", "listen address for -serve")
+	assetDelay := flag.Duration("asset-delay", 0, "artificial delay per asset download in -serve mode (e.g. 350ms)")
 	flag.Parse()
+	if *serve {
+		if err := serveScenario(*lang, *listen, *assetDelay); err != nil {
+			fmt.Fprintln(os.Stderr, "gensample:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := run(*out); err != nil {
 		fmt.Fprintln(os.Stderr, "gensample:", err)
 		os.Exit(1)
 	}
+}
+
+// serveScenario serves the lang scenario's fake Slack API on addr until the
+// process is stopped. Unlike sample generation it accepts any Bearer token,
+// because demo recordings type an arbitrary fake value at the token prompt;
+// no real credential is involved either way, and the server only listens on
+// the given (loopback by default) address.
+func serveScenario(lang, addr string, assetDelay time.Duration) error {
+	var sc *scenario
+	switch lang {
+	case "ja":
+		sc = scenarioJA(time.Now())
+	case "en":
+		sc = scenarioEN(time.Now())
+	default:
+		return fmt.Errorf("unknown -lang %q (expected ja or en)", lang)
+	}
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	baseURL := "http://" + l.Addr().String()
+	sc.replaceBaseURL(baseURL)
+	f := &fakeSlackServer{sc: sc, assetDelay: assetDelay, anyBearer: true}
+	fmt.Printf("serving the %s sample scenario (channel #%s) on %s\n", lang, sc.ChannelName, baseURL)
+	fmt.Printf("run slapex against it with:\n\n  SLAPEX_API_BASE_URL=%s/api/ slapex\n\n", baseURL)
+	fmt.Println("stop with Ctrl-C")
+	return http.Serve(l, f.mux())
 }
 
 func run(out string) error {
