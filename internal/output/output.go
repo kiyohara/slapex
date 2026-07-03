@@ -60,6 +60,7 @@ const (
 	KindAttachment     = "attachment"
 	KindAvatar         = "avatar"
 	KindServiceIcon    = "service_icon"
+	KindWorkspaceIcon  = "workspace_icon"
 )
 
 const publicPreviewAssetLimit int64 = 5 << 20 // 5 MiB guard for third-party unfurl assets.
@@ -72,6 +73,7 @@ var kindDirs = map[string]string{
 	KindAttachment:     "assets/attachments",
 	KindAvatar:         "assets/avatars",
 	KindServiceIcon:    "assets/service-icons",
+	KindWorkspaceIcon:  "assets/workspace-icons",
 }
 
 // ManifestEntry mirrors the assets_manifest.json schema (doc/design/cache.md).
@@ -146,7 +148,7 @@ func (a *Assets) limitFor(kind string) int64 {
 	switch kind {
 	case KindEmoji, KindUploadThumb, KindAvatar:
 		return 0
-	case KindOGImage, KindServiceIcon:
+	case KindOGImage, KindServiceIcon, KindWorkspaceIcon:
 		return publicPreviewAssetLimit
 	default:
 		return a.limit

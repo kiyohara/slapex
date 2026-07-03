@@ -140,12 +140,92 @@ func TestWriteStyleCSSStylesNativeDisclosureControls(t *testing.T) {
 	exportSummaryBlock := cssBlock(t, css, ".export-meta summary")
 	assertCSSDeclaration(t, exportSummaryBlock, "cursor", "pointer")
 	assertCSSDeclaration(t, exportSummaryBlock, "list-style", "none")
+	assertCSSDeclaration(t, exportSummaryBlock, "font-size", "inherit")
+	assertCSSDeclaration(t, exportSummaryBlock, "font-weight", "400")
+
+	exportSummaryCaretBlock := cssBlock(t, css, ".export-meta summary::before")
+	assertCSSDeclaration(t, exportSummaryCaretBlock, "color", "var(--muted)")
+	assertCSSDeclaration(t, exportSummaryCaretBlock, "font-size", "10px")
+
+	exportSummaryHoverBlock := cssBlock(t, css, ".export-meta summary:hover")
+	assertCSSDeclaration(t, exportSummaryHoverBlock, "color", "var(--mention-fg)")
 
 	exportSummaryFocusBlock := cssBlock(t, css, ".export-meta summary:focus-visible")
 	assertCSSDeclaration(t, exportSummaryFocusBlock, "outline", "2px solid var(--mention-fg)")
 
 	threadLabelFocusBlock := cssBlock(t, css, ".thread-label:focus-visible")
 	assertCSSDeclaration(t, threadLabelFocusBlock, "outline", "2px solid var(--mention-fg)")
+}
+
+func TestWriteStyleCSSStylesExportHeaderAndFooter(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	headerBlock := cssBlock(t, css, ".export-header")
+	if strings.Contains(headerBlock, "border-bottom") {
+		t.Fatalf(".export-header still has border-bottom: %s", headerBlock)
+	}
+
+	titleLineBlock := cssBlock(t, css, ".export-title-line")
+	assertCSSDeclaration(t, titleLineBlock, "display", "flex")
+	assertCSSDeclaration(t, titleLineBlock, "align-items", "center")
+
+	workspaceIconBlock := cssBlock(t, css, ".workspace-icon")
+	assertCSSDeclaration(t, workspaceIconBlock, "width", "24px")
+	assertCSSDeclaration(t, workspaceIconBlock, "height", "24px")
+
+	channelTitleBlock := cssBlock(t, css, ".export-title .channel-title")
+	assertCSSDeclaration(t, channelTitleBlock, "margin-left", "10px")
+
+	channelHashBlock := cssBlock(t, css, ".channel-hash")
+	if strings.Contains(channelHashBlock, "color") {
+		t.Fatalf(".channel-hash should inherit text color: %s", channelHashBlock)
+	}
+
+	titleLinkBlock := cssBlock(t, css, ".title-link")
+	assertCSSDeclaration(t, titleLinkBlock, "color", "inherit")
+	assertCSSDeclaration(t, titleLinkBlock, "text-decoration", "none")
+
+	titleLinkHoverBlock := cssBlock(t, css, ".title-link:hover,\n.title-link:focus-visible")
+	assertCSSDeclaration(t, titleLinkHoverBlock, "text-decoration", "underline")
+
+	footerBlock := cssBlock(t, css, ".export-footer")
+	assertCSSDeclaration(t, footerBlock, "justify-content", "space-between")
+	assertCSSDeclaration(t, footerBlock, "align-items", "flex-start")
+
+	footerLinkBlock := cssBlock(t, css, ".footer-project-link")
+	assertCSSDeclaration(t, footerLinkBlock, "display", "inline-flex")
+	assertCSSDeclaration(t, footerLinkBlock, "flex", "none")
+	assertCSSDeclaration(t, footerLinkBlock, "text-decoration", "none")
+
+	footerLogoBlock := cssBlock(t, css, ".footer-logo")
+	assertCSSDeclaration(t, footerLogoBlock, "width", "16px")
+	assertCSSDeclaration(t, footerLogoBlock, "height", "16px")
+}
+
+func TestWriteStaticAssetsWritesFooterLogo(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStaticAssets(dir); err != nil {
+		t.Fatalf("WriteStaticAssets: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "assets", "slapex-logo.svg"))
+	if err != nil {
+		t.Fatalf("read slapex-logo.svg: %v", err)
+	}
+	if !strings.Contains(string(data), "slapex logo") {
+		t.Fatalf("slapex-logo.svg does not look like the embedded project logo")
+	}
 }
 
 func TestWriteStyleCSSLimitsImageLinkHitArea(t *testing.T) {

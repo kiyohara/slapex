@@ -65,6 +65,10 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	if err != nil {
 		return "", err
 	}
+	teamInfo, err := client.TeamInfo(ctx)
+	if err != nil {
+		p.Warnf("workspace icon unavailable: %s", err)
+	}
 	wsLine := fmt.Sprintf("%s (%s, %s)", auth.Team, hostOf(auth.URL), auth.TeamID)
 	p.EndPhase(ui.StatusSuccess, "Workspace", auth.Team, hostOf(auth.URL)+", "+auth.TeamID)
 
@@ -186,6 +190,10 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	}
 
 	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
+	workspaceIconPath := ""
+	if rel, ok := assets.Save(output.KindWorkspaceIcon, workspaceIconURL(teamInfo), output.AssetMeta{}); ok {
+		workspaceIconPath = rel
+	}
 	avatars := map[string]string{}
 	for id, u := range users {
 		if rel, ok := assets.Save(output.KindAvatar, avatarURL(u), output.AssetMeta{}); ok {
@@ -225,10 +233,13 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 
 	_, tzOffset := now.Zone()
 	page := &render.PageData{
-		WorkspaceName: auth.Team,
-		ChannelName:   ch.Name,
-		WorkspaceLine: wsLine,
-		ChannelLine:   chLine,
+		WorkspaceName:     auth.Team,
+		WorkspaceIconPath: workspaceIconPath,
+		WorkspaceHref:     auth.URL,
+		ChannelName:       ch.Name,
+		ChannelHref:       channelURL(auth.URL, ch.ID),
+		WorkspaceLine:     wsLine,
+		ChannelLine:       chLine,
 		ExportedLine: fmt.Sprintf("%s (UTC%s) / %s",
 			now.Format("2006-01-02 15:04"), offsetString(tzOffset), now.UTC().Format(time.RFC3339)),
 		RangeLine: fmt.Sprintf("since %s (--days %d, --max-posts %d, --max-attachment-size %s)",
@@ -249,6 +260,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		return "", err
 	}
 	if err := render.WriteStyleCSS(dir); err != nil {
+		return "", err
+	}
+	if err := render.WriteStaticAssets(dir); err != nil {
 		return "", err
 	}
 
@@ -804,6 +818,33 @@ func avatarURL(u *slack.User) string {
 		return u.Profile.Image72
 	}
 	return u.Profile.Image48
+}
+
+func workspaceIconURL(teamInfo *slack.TeamInfo) string {
+	if teamInfo == nil || teamInfo.Icon.ImageDefault {
+		return ""
+	}
+	for _, u := range []string{
+		teamInfo.Icon.Image68,
+		teamInfo.Icon.Image88,
+		teamInfo.Icon.Image102,
+		teamInfo.Icon.Image132,
+		teamInfo.Icon.Image230,
+		teamInfo.Icon.Image44,
+		teamInfo.Icon.Image34,
+	} {
+		if u != "" {
+			return u
+		}
+	}
+	return ""
+}
+
+func channelURL(workspaceURL, channelID string) string {
+	if workspaceURL == "" || channelID == "" {
+		return ""
+	}
+	return strings.TrimRight(workspaceURL, "/") + "/archives/" + channelID
 }
 
 func tsTime(ts string) time.Time {

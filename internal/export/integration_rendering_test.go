@@ -164,12 +164,12 @@ func TestRunIntegrationHeaderMetadataIsCollapsed(t *testing.T) {
 	got := runExportScenario(t, sc, renderingOptions(t))
 	body := readIndexHTML(t, got.OutputDir)
 
-	mustContain(t, body, `<h1><span class="channel-hash">#</span>project-alpha</h1>`)
+	mustContain(t, body, `<h1 class="export-title"><a class="title-link workspace-name" href="https://acme.example.slack.com/" target="_blank" rel="noopener noreferrer">Acme Workspace</a><a class="title-link channel-title" href="https://acme.example.slack.com/archives/C123" target="_blank" rel="noopener noreferrer"><span class="channel-hash">#</span>project-alpha</a></h1>`)
 	mustContain(t, body, `<details class="export-meta">`)
 	mustContain(t, body, `<summary>Export information</summary>`)
 	mustContain(t, body, `<dt>Workspace</dt><dd>Acme Workspace (acme.example.slack.com, TACME123)</dd>`)
 	mustNotContain(t, body, `<details class="export-meta" open>`)
-	assertOrder(t, body, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`)
+	assertOrder(t, body, `<h1 class="export-title">`, `<footer class="export-footer">`, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`, `<a class="footer-project-link"`)
 }
 
 // --- case 2: system rows render quietly and supplement missing actors --------

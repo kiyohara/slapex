@@ -203,6 +203,51 @@ func TestChannelLine(t *testing.T) {
 	}
 }
 
+func TestChannelURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		workspaceURL string
+		channelID    string
+		want         string
+	}{
+		{
+			name:         "builds archive URL",
+			workspaceURL: "https://acme.example.slack.com/",
+			channelID:    "C123",
+			want:         "https://acme.example.slack.com/archives/C123",
+		},
+		{
+			name:         "workspace URL without trailing slash",
+			workspaceURL: "https://acme.example.slack.com",
+			channelID:    "C123",
+			want:         "https://acme.example.slack.com/archives/C123",
+		},
+		{
+			name:         "missing workspace URL",
+			workspaceURL: "",
+			channelID:    "C123",
+			want:         "",
+		},
+		{
+			name:         "missing channel ID",
+			workspaceURL: "https://acme.example.slack.com/",
+			channelID:    "",
+			want:         "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := channelURL(tt.workspaceURL, tt.channelID); got != tt.want {
+				t.Fatalf("channelURL(%q, %q) = %q, want %q", tt.workspaceURL, tt.channelID, got, tt.want)
+			}
+		})
+	}
+}
+
 func testChannels(pairs ...string) []slack.Channel {
 	channels := make([]slack.Channel, 0, len(pairs)/2)
 	for i := 0; i < len(pairs); i += 2 {

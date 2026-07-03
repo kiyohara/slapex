@@ -39,6 +39,7 @@ option:
 |---|---|---|
 | 標準絵文字 | Slack message text / Unicode emoji mapping | 原則として Unicode に戻して HTML に直接表示する。Unicode fallback できない場合だけ画像 asset として扱う |
 | カスタム絵文字 | Slack API `emoji.list` | workspace 固有の絵文字画像として保存する |
+| workspace icon | Slack API `team.info` の icon URL | HTML header の workspace 名の横に小さく表示する。取得できない場合は icon なしで表示する |
 | URL preview 画像 | Slack message の unfurl / attachment 情報 | Slack 上で preview として表示されていた画像を保存する。ツール自身による Open Graph fetch は行わない |
 | URL preview service icon | Slack message の unfurl / attachment 情報 | `service_icon` など Slack API が返す service icon 相当 URL がある場合だけ保存し、service 名の横に表示する。ツール自身による favicon / Open Graph fetch は行わない |
 | ユーザーがアップロードした画像 | Slack message の `files` 情報、`files.info`、画像 thumbnail / original URL | thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする |
@@ -53,7 +54,7 @@ option:
 
 利用者が出力内容を把握しやすいように、ファイル名は URL hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。
 
-URL preview 画像と URL preview service icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像または service icon を表示しない。
+URL preview 画像、URL preview service icon、workspace icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像、service icon、workspace icon を表示しない。
 
 ## 添付ファイルのサイズ制限
 
@@ -84,6 +85,9 @@ slapex-<yyyymmdd>-<hhmm>/
         ├── index.html
         ├── style.css
         ├── assets/
+        │   ├── slapex-logo.svg
+        │   ├── workspace-icons/
+        │   │   └── <url-hash>.png
         │   ├── avatars/
         │   │   └── <url-hash>.jpg
         │   ├── emoji/

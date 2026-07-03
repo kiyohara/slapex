@@ -25,6 +25,36 @@ func (c *Client) AuthTest(ctx context.Context) (*AuthTest, error) {
 	return &out, nil
 }
 
+// TeamInfo is the team.info result used for workspace display details.
+type TeamInfo struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Domain string   `json:"domain"`
+	Icon   TeamIcon `json:"icon"`
+}
+
+// TeamIcon is the subset of team.info icon URLs slapex may render.
+type TeamIcon struct {
+	Image34      string `json:"image_34"`
+	Image44      string `json:"image_44"`
+	Image68      string `json:"image_68"`
+	Image88      string `json:"image_88"`
+	Image102     string `json:"image_102"`
+	Image132     string `json:"image_132"`
+	Image230     string `json:"image_230"`
+	ImageDefault bool   `json:"image_default"`
+}
+
+func (c *Client) TeamInfo(ctx context.Context) (*TeamInfo, error) {
+	var out struct {
+		Team TeamInfo `json:"team"`
+	}
+	if _, err := c.call(ctx, "team.info", url.Values{}, &out); err != nil {
+		return nil, err
+	}
+	return &out.Team, nil
+}
+
 // Channel is the subset of the conversations.list item slapex uses.
 type Channel struct {
 	ID         string `json:"id"`
