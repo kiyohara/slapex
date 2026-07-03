@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: output-preview-and-samples
-- PR: -
+- PR: #114
 - 最終更新: 2026-07-03
 
 ## 目的
@@ -14,7 +14,7 @@ Issue #51 の対応。README に成果物の視覚資料を追加し、Slack App
 
 ## 現在の状況
 
-- 実装完了。PR 作成待ち。
+- 実装完了。PR #114 作成済み、レビュー / merge 待ち(merge はユーザー)。
 - 追加物: `tools/gensample`(サンプル生成 tool)、`doc/samples/{ja,en}/`(生成済みサンプル)、`assets/screenshots/sample-*.png`(ja/en × タイムライン/スレッド の 4 枚)、README の「出力プレビュー」セクション(Mermaid フロー図 + ja スクリーンショット 2 枚 + サンプル導線)。
 - `doc/README.md` に `doc/samples/` の行を追加、`assets/README.md` に screenshots の説明を追加。
 
@@ -29,7 +29,7 @@ Issue #51 の対応。README に成果物の視覚資料を追加し、Slack App
 
 ## 次にやること
 
-- PR 作成、note rename、progress.md の PR 欄更新。
+- PR #114 のレビュー対応(必要ならスクリーンショット撮り直し)。
 
 ## 検証
 
@@ -49,3 +49,4 @@ Issue #51 の対応。README に成果物の視覚資料を追加し、Slack App
 
 - 2026-07-03: Issue #51 着手。スコープ確認(項目 1+2+4、項目 3 は #113 へ)、ブランチ・note 作成。
 - 2026-07-03: `tools/gensample` 実装、ja/en サンプル生成、SVG width/height と unfurl 見出しの表示不具合を修正、スクリーンショット 4 枚撮影、README / doc/README.md / assets/README.md / doc/samples/README.md 更新、検証一式実施。
+- 2026-07-03: PR #114 作成、note を採番 rename。
