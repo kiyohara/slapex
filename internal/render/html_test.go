@@ -174,8 +174,21 @@ func TestWriteStyleCSSStylesExportHeaderAndFooter(t *testing.T) {
 	assertCSSDeclaration(t, workspaceIconBlock, "width", "24px")
 	assertCSSDeclaration(t, workspaceIconBlock, "height", "24px")
 
+	channelTitleBlock := cssBlock(t, css, ".export-title .channel-title")
+	assertCSSDeclaration(t, channelTitleBlock, "margin-left", "10px")
+
+	channelHashBlock := cssBlock(t, css, ".channel-hash")
+	if strings.Contains(channelHashBlock, "color") {
+		t.Fatalf(".channel-hash should inherit text color: %s", channelHashBlock)
+	}
+
+	footerBlock := cssBlock(t, css, ".export-footer")
+	assertCSSDeclaration(t, footerBlock, "justify-content", "space-between")
+	assertCSSDeclaration(t, footerBlock, "align-items", "flex-start")
+
 	footerLinkBlock := cssBlock(t, css, ".footer-project-link")
 	assertCSSDeclaration(t, footerLinkBlock, "display", "inline-flex")
+	assertCSSDeclaration(t, footerLinkBlock, "flex", "none")
 	assertCSSDeclaration(t, footerLinkBlock, "text-decoration", "none")
 
 	footerLogoBlock := cssBlock(t, css, ".footer-logo")

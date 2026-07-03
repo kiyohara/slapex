@@ -557,7 +557,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 	for _, marker := range []string{
 		"Acme Workspace (acme.example.slack.com, TACME123)",
 		"#project-alpha (C123, public, active, member)",
-		`<span class="workspace-name">Acme Workspace</span><span class="title-separator"> - </span><span class="channel-title"><span class="channel-hash">#</span>project-alpha</span>`,
+		`<span class="workspace-name">Acme Workspace</span><span class="channel-title"><span class="channel-hash">#</span>project-alpha</span>`,
 		"First timeline note",
 		"Starting the launch thread with",
 		"Bob",

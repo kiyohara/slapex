@@ -70,33 +70,31 @@ body {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.title-separator {
-  flex: none;
-  color: var(--muted);
-  white-space: pre;
-}
-.channel-hash { color: var(--muted); margin-right: 2px; }
-.export-meta { flex: none; }
+.export-title .channel-title { margin-left: 10px; }
+.channel-hash { margin-right: 2px; }
 .export-meta summary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+  gap: 6px;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   list-style: none;
 }
 .export-meta summary::-webkit-details-marker { display: none; }
-.export-meta[open] summary { color: var(--mention-fg); }
+.export-meta summary::before {
+  content: "▸";
+  color: var(--mention-fg);
+  font-size: 11px;
+}
+.export-meta[open] summary::before { content: "▾"; }
 .export-meta summary:focus-visible {
   outline: 2px solid var(--mention-fg);
   outline-offset: 2px;
   border-radius: 3px;
 }
-.export-header dl {
+.export-meta dl {
   display: grid;
   grid-template-columns: 7.5em 1fr;
   gap: 2px 8px;
@@ -104,8 +102,8 @@ body {
   font-size: 13px;
   color: var(--muted);
 }
-.export-header dt { font-weight: 700; }
-.export-header dd { margin: 0; overflow-wrap: anywhere; }
+.export-meta dt { font-weight: 700; }
+.export-meta dd { margin: 0; overflow-wrap: anywhere; }
 
 /* timeline */
 .date-divider {
@@ -404,16 +402,22 @@ a { color: var(--mention-fg); }
 
 .export-footer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-top: 24px;
   padding-top: 8px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
 }
+.export-footer .export-meta {
+  min-width: 0;
+}
 .footer-project-link {
   display: inline-flex;
   align-items: center;
+  flex: none;
   gap: 6px;
   color: var(--muted);
   text-decoration: none;

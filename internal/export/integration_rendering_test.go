@@ -164,12 +164,12 @@ func TestRunIntegrationHeaderMetadataIsCollapsed(t *testing.T) {
 	got := runExportScenario(t, sc, renderingOptions(t))
 	body := readIndexHTML(t, got.OutputDir)
 
-	mustContain(t, body, `<h1 class="export-title"><span class="workspace-name">Acme Workspace</span><span class="title-separator"> - </span><span class="channel-title"><span class="channel-hash">#</span>project-alpha</span></h1>`)
+	mustContain(t, body, `<h1 class="export-title"><span class="workspace-name">Acme Workspace</span><span class="channel-title"><span class="channel-hash">#</span>project-alpha</span></h1>`)
 	mustContain(t, body, `<details class="export-meta">`)
-	mustContain(t, body, `<summary aria-label="Export information" title="Export information"><span aria-hidden="true">ⓘ</span></summary>`)
+	mustContain(t, body, `<summary>Export information</summary>`)
 	mustContain(t, body, `<dt>Workspace</dt><dd>Acme Workspace (acme.example.slack.com, TACME123)</dd>`)
 	mustNotContain(t, body, `<details class="export-meta" open>`)
-	assertOrder(t, body, `<h1 class="export-title">`, `<details class="export-meta">`, `<summary aria-label="Export information" title="Export information">`, `<dl>`, `<dt>Workspace</dt>`)
+	assertOrder(t, body, `<h1 class="export-title">`, `<footer class="export-footer">`, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`, `<a class="footer-project-link"`)
 }
 
 // --- case 2: system rows render quietly and supplement missing actors --------
