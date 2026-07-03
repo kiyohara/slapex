@@ -70,6 +70,30 @@ func TestRunIntegrationReuseCacheReducesRequests(t *testing.T) {
 	mustContain(t, body, "First timeline note")
 }
 
+func TestRunIntegrationReuseCacheAcceptsOutputDir(t *testing.T) {
+	t.Parallel()
+
+	r := runReuseScenarioWithReusePath(t, happyPathScenario(), nil, func(outputDir, _ string) string {
+		return outputDir
+	})
+
+	if d := delta(r.before, r.after, "/api/users.info"); d != 0 {
+		t.Fatalf("users.info delta = %d, want 0 (resolved users reused from cache)", d)
+	}
+	if d := delta(r.before, r.after, "/api/emoji.list"); d != 0 {
+		t.Fatalf("emoji.list delta = %d, want 0 (emoji reused from cache)", d)
+	}
+	for _, p := range r.assets {
+		if d := delta(r.before, r.after, p); d != 0 {
+			t.Fatalf("asset %s download delta = %d, want 0 (copied from cache)", p, d)
+		}
+	}
+	if !logsContain(r.logs2, "Reusing cache from") {
+		t.Fatalf("run 2 did not report cache reuse:\n%s", strings.Join(r.logs2, "\n"))
+	}
+	assertAssetsIdentical(t, r.dir1, r.dir2)
+}
+
 // --- cases 2-5: invalid / unusable cache falls back to a normal fetch --------
 
 // Each case makes the kept cache fail one of the validation conditions (or makes
@@ -262,6 +286,11 @@ func runReuseScenario(t *testing.T, sc exportScenario, tamper func(t *testing.T,
 	return runReuseScenarioOpts(t, sc, reuseOptions(t, true), reuseOptions(t, false), tamper)
 }
 
+func runReuseScenarioWithReusePath(t *testing.T, sc exportScenario, tamper func(t *testing.T, cacheDir string), reusePath func(outputDir, cacheDir string) string) reuseRun {
+	t.Helper()
+	return runReuseScenarioOptsWithReusePath(t, sc, reuseOptions(t, true), reuseOptions(t, false), tamper, reusePath)
+}
+
 // runReuseScenarioOpts runs the export twice against one shared fake server with
 // explicit options for each run: run 1 (opts1, cache forced kept) populates the
 // cache, an optional tamper mutates it, then run 2 (opts2) reuses it. It returns
@@ -269,6 +298,13 @@ func runReuseScenario(t *testing.T, sc exportScenario, tamper func(t *testing.T,
 // when the two runs need different options (e.g. a smaller --max-attachment-size
 // on reuse).
 func runReuseScenarioOpts(t *testing.T, sc exportScenario, opts1, opts2 Options, tamper func(t *testing.T, cacheDir string)) reuseRun {
+	t.Helper()
+	return runReuseScenarioOptsWithReusePath(t, sc, opts1, opts2, tamper, func(_ string, cacheDir string) string {
+		return cacheDir
+	})
+}
+
+func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, opts2 Options, tamper func(t *testing.T, cacheDir string), reusePath func(outputDir, cacheDir string) string) reuseRun {
 	t.Helper()
 
 	fake := newFakeSlackServer(t, &sc)
@@ -298,7 +334,7 @@ func runReuseScenarioOpts(t *testing.T, sc exportScenario, opts1, opts2 Options,
 		tamper(t, cacheDir)
 	}
 
-	opts2.ReuseCache = cacheDir
+	opts2.ReuseCache = reusePath(dir1, cacheDir)
 	var logs2 []string
 	dir2, err := Run(context.Background(), client, opts2, testPrinter(func(line string) {
 		logs2 = append(logs2, line)

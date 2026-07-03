@@ -149,13 +149,13 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--days <days>` | `30` | 現在時刻から何日前までを取得するか(1〜90) |
 | `--max-attachment-size <size>` | `10MB` | 添付ファイル / original 画像 1 件あたりの保存上限 |
 | `--keep-cache` | off | 中間ファイル `.cache/` を成否に関係なく残す。`--reuse-cache` で再利用する cache を作るときに使う |
-| `--reuse-cache <path>` | なし | 以前の `.cache/` を再利用する |
+| `--reuse-cache <path>` | なし | 以前の出力ディレクトリまたは `.cache/` を再利用する |
 | `--no-interactive` | off | TTY があっても対話選択を開始しない |
 | `--no-color` | off | 進捗表示を色・アイコン・アニメーションなしの plain output にする |
 | `--version` | | version を表示して終了する |
 | `--help` | | usage を表示して終了する |
 
-`.cache/` は通常実行の最後に削除されます。`--reuse-cache` で再利用するには、前回実行時に `--keep-cache` を付けて `.cache/` を残しておく必要があります(詳細は [`doc/design/cache.md`](doc/design/cache.md))。
+`.cache/` は通常実行の最後に削除されます。`--reuse-cache` で再利用するには、前回実行時に `--keep-cache` を付けて `.cache/` を残しておく必要があります。指定先は前回の出力ディレクトリでも、その直下の `.cache/` でも構いません(詳細は [`doc/design/cache.md`](doc/design/cache.md))。
 
 stdout には成功時に出力先ディレクトリ(`<workspace-label>/<channel-label>/` まで)の絶対 path を 1 行だけ出力し、進捗・診断・候補表示は stderr に出します。`out=$(slapex ...)` の形で出力先を後続処理へ渡せます。
 

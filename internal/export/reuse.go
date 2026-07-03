@@ -43,15 +43,16 @@ func resolveReuseCache(path, teamID, channelID string, p *ui.Printer) *reusableC
 	return rc
 }
 
-// loadReuseCache reads the three .cache/ files at path (a previous run's .cache/
-// directory). A missing, unparseable, or schema-mismatched file is returned as an
+// loadReuseCache reads the three .cache/ files at path. path may be either a
+// previous run's .cache/ directory or the previous output directory that contains
+// .cache/. A missing, unparseable, or schema-mismatched file is returned as an
 // error so the caller falls back to a normal fetch ("検証不能(ファイル欠落、parse
 // 不能)" / schema 不一致 in cache.md). All three files carry schema_version and
 // every one must match the current implementation before any of its data is
 // reused (decision log 0030). The asset files live next to the .cache/ directory,
-// so the previous channel directory is path's parent.
+// so the previous channel directory is the resolved cache directory's parent.
 func loadReuseCache(path string) (*reusableCache, error) {
-	clean := filepath.Clean(path)
+	clean := resolveReuseCacheDir(path)
 
 	var meta struct {
 		SchemaVersion int `json:"schema_version"`
@@ -107,6 +108,18 @@ func loadReuseCache(path string) (*reusableCache, error) {
 		savedAssets: saved,
 		oldDir:      filepath.Dir(clean),
 	}, nil
+}
+
+func resolveReuseCacheDir(path string) string {
+	clean := filepath.Clean(path)
+	if _, err := os.Stat(filepath.Join(clean, "metadata.json")); !os.IsNotExist(err) {
+		return clean
+	}
+	nested := filepath.Join(clean, ".cache")
+	if _, err := os.Stat(filepath.Join(nested, "metadata.json")); err == nil {
+		return nested
+	}
+	return clean
 }
 
 // checkSchema reports an error when a cache file's schema_version does not match
