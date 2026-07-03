@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: release-v1.1.1-verification
-- PR: 未作成
+- PR: #112
 - 最終更新: 2026-07-03
 
 ## 目的
@@ -15,6 +15,7 @@ v1.1.1 公開後の release 検証結果を `progress.md` と decision log 0041 
 - release workflow: success
 - GitHub Release: published
 - assets: darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt`
+- 検証結果記録 PR: #112
 
 ## 決定事項
 
@@ -23,9 +24,8 @@ v1.1.1 公開後の release 検証結果を `progress.md` と decision log 0041 
 
 ## 次にやること
 
-- 差分確認と情報統制チェック。
-- commit / push。
-- PR 作成後、working branch note を採番する。
+- PR #112 の CI / review を確認する。
+- ユーザーが PR #112 を merge する。
 
 ## 検証
 
