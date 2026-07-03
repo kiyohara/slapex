@@ -140,6 +140,15 @@ func TestWriteStyleCSSStylesNativeDisclosureControls(t *testing.T) {
 	exportSummaryBlock := cssBlock(t, css, ".export-meta summary")
 	assertCSSDeclaration(t, exportSummaryBlock, "cursor", "pointer")
 	assertCSSDeclaration(t, exportSummaryBlock, "list-style", "none")
+	assertCSSDeclaration(t, exportSummaryBlock, "font-size", "inherit")
+	assertCSSDeclaration(t, exportSummaryBlock, "font-weight", "400")
+
+	exportSummaryCaretBlock := cssBlock(t, css, ".export-meta summary::before")
+	assertCSSDeclaration(t, exportSummaryCaretBlock, "color", "var(--muted)")
+	assertCSSDeclaration(t, exportSummaryCaretBlock, "font-size", "10px")
+
+	exportSummaryHoverBlock := cssBlock(t, css, ".export-meta summary:hover")
+	assertCSSDeclaration(t, exportSummaryHoverBlock, "color", "var(--mention-fg)")
 
 	exportSummaryFocusBlock := cssBlock(t, css, ".export-meta summary:focus-visible")
 	assertCSSDeclaration(t, exportSummaryFocusBlock, "outline", "2px solid var(--mention-fg)")

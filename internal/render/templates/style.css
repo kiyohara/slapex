@@ -90,17 +90,18 @@ body {
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: inherit;
+  font-weight: 400;
   cursor: pointer;
   list-style: none;
 }
 .export-meta summary::-webkit-details-marker { display: none; }
 .export-meta summary::before {
   content: "▸";
-  color: var(--mention-fg);
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 10px;
 }
+.export-meta summary:hover { color: var(--mention-fg); }
 .export-meta[open] summary::before { content: "▾"; }
 .export-meta summary:focus-visible {
   outline: 2px solid var(--mention-fg);
@@ -112,7 +113,7 @@ body {
   grid-template-columns: 7.5em 1fr;
   gap: 2px 8px;
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: inherit;
   color: var(--muted);
 }
 .export-meta dt { font-weight: 700; }
