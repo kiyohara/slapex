@@ -112,14 +112,19 @@ func loadReuseCache(path string) (*reusableCache, error) {
 
 func resolveReuseCacheDir(path string) string {
 	clean := filepath.Clean(path)
-	if _, err := os.Stat(filepath.Join(clean, "metadata.json")); !os.IsNotExist(err) {
+	if cacheMetadataExists(clean) {
 		return clean
 	}
 	nested := filepath.Join(clean, ".cache")
-	if _, err := os.Stat(filepath.Join(nested, "metadata.json")); err == nil {
+	if cacheMetadataExists(nested) {
 		return nested
 	}
 	return clean
+}
+
+func cacheMetadataExists(dir string) bool {
+	info, err := os.Stat(filepath.Join(dir, "metadata.json"))
+	return err == nil && !info.IsDir()
 }
 
 // checkSchema reports an error when a cache file's schema_version does not match

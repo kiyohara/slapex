@@ -14,10 +14,12 @@ Issue #109 に対応し、`--reuse-cache` に output dir 相当のディレク�
 - 依存は本文上なし。
 - `--reuse-cache` に以前の出力ディレクトリを指定した場合、直下の `.cache/` を自動補完して再利用する実装・テストを追加済み。
 - README / CLI 仕様 / cache 仕様 / CLI help の説明を新しい指定方法に合わせて更新済み。
+- PR review の任意補足を受け、cache metadata の存在判定を `os.Stat` 成功時だけ採用する形に整理済み。
 
 ## 決定事項
 
 - `--reuse-cache` の指定先そのものに `metadata.json` がない場合に、指定先配下の `.cache` を fallback 候補として扱う。
+- `metadata.json` が通常ファイルとして存在する場合だけ cache metadata とみなし、それ以外は `.cache/metadata.json` の候補確認へ進める。
 
 ## 次にやること
 
@@ -26,6 +28,8 @@ Issue #109 に対応し、`--reuse-cache` に output dir 相当のディレク�
 ## 検証
 
 - `docker compose run --rm --no-deps dev go test ./internal/export -run ReuseCache -count=1`
+  - 結果: pass
+- `docker compose run --rm --no-deps dev go test ./internal/export -run 'TestResolveReuseCacheDir|ReuseCache' -count=1`
   - 結果: pass
 - `docker compose run --rm --no-deps dev go test ./...`
   - 結果: pass
@@ -38,3 +42,4 @@ Issue #109 に対応し、`--reuse-cache` に output dir 相当のディレク�
 
 - 2026-07-03: Issue #109 の内容と依存なしを確認し、作業ブランチを作成。
 - 2026-07-03: `--reuse-cache` の path 正規化、output dir 指定時の integration test、利用者向け説明更新を実施。Docker Compose 経由で対象テストと全体テストを確認。
+- 2026-07-03: PR review の任意補足を確認し、`resolveReuseCacheDir` の存在判定を単純化。単体テストを追加し、対象テストと全体テストを再実行。
