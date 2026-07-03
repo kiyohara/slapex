@@ -28,3 +28,15 @@ docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 ## README 用スクリーンショット
 
 `assets/screenshots/` の `sample-*.png` はこのサンプルを headless ブラウザで開いて撮影したもの。撮影時はスレッドを開いた状態(`<details class="thread-group" open>` に置換した一時コピー)で、幅 1100px・device scale 2x で全体を撮り、タイムライン先頭部とスレッド部分を切り出している。再生成した場合はスクリーンショットも撮り直す。
+
+## README 用デモ GIF
+
+`assets/demo/slapex-demo-ja.gif` は、このサンプルの ja fixture を配信する fake Slack API server(`tools/gensample -serve`)に対して実際の slapex バイナリを実行し、VHS で録画したターミナル操作デモ(Issue #115)。`SLACK_TOKEN` 未設定での起動 → token 入力プロンプト(入力する token は架空値で、echo されないため画面には映らない)→ channel の対話選択 → 各フェーズの進捗表示 → 完了、までを収録している。slapex は内部環境変数 `SLAPEX_API_BASE_URL` で接続先を fixture server に差し替えており(`doc/design/decision-log/0046-api-base-url-override.md`)、録画はコンテナ内で完結し外部通信は発生しない。
+
+再録画はリポジトリ root で次を実行する。
+
+```sh
+bash tools/demo/record.sh
+```
+
+dev container で linux 向けの `slapex` / `gensample` バイナリをビルドし、compose service `vhs`(`ghcr.io/charmbracelet/vhs` + CJK フォント。`tools/demo/Dockerfile`)で `tools/demo/demo-ja.tape` を再生して GIF を生成する。録画のシナリオ・待ち時間・画面サイズは tape 側で調整する。fixture の日時は実行時刻起点のため、再録画すると画面上の日付も更新される。
