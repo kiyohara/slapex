@@ -4,7 +4,7 @@
 
 # slapex
 
-`slapex` は、Slack channel の履歴を、ローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。投稿・スレッドの返信に加え、標準 / カスタム絵文字、reaction、添付ファイル、URL unfurl の preview 画像もまとめて取得します。
+`slapex` は、Slack channel の履歴を、外部 URL に依存せずローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。投稿・スレッドの返信に加え、標準 / カスタム絵文字、reaction、添付ファイル、URL unfurl の preview 画像もまとめて取得します。
 
 対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。
 
