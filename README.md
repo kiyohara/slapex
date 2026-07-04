@@ -63,7 +63,7 @@ Linux や install script、手動インストール(checksum 検証)などその
 用途別の詳細は次の help を参照してください。
 
 - **Slack のセットアップ**: [Slack App 準備手順](doc/help/slack-app-setup.md) — App の作成、scope 設定、install、token 発行。
-- **Token の渡し方**: [Token の渡し方](doc/help/token-injection.md) — 1Password CLI、CI secrets、対話入力。
+- **Token の渡し方**: [Token の渡し方](doc/help/token-injection.md) — 実行時の貼り付け(基本)、secret manager、CI secrets。
 - **インストール**: [インストール](doc/help/installation.md) — Homebrew Cask、install script、手動手順と checksum 検証。
 - **使い方**: [使い方](doc/help/usage.md) — 実行方法、option 一覧、cache、出力の構造。
 - **制限事項・FAQ**: [よくある質問・制限事項](doc/help/faq.md) — 取得範囲の default、再現されない表示、つまずいたときの対処。

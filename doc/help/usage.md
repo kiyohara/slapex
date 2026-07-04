@@ -15,18 +15,27 @@ slapex --demo --output ./slapex-demo
 
 ## 実行の基本形
 
-実際の workspace を export するときは token が必要です。token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` や shell history に残さないでください。1Password CLI、CI secrets、対話シェルでの一時注入など、用途別の手順は [Token の渡し方](token-injection.md) を参照してください。
+実際の workspace を export するときは token が必要です。token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。
+
+基本は `SLACK_TOKEN` を設定せずに実行し、表示された token 入力プロンプトにコピーした token を貼り付けます。入力は画面に表示(echo)されず、その 1 回の実行の中だけで使われます。
 
 ```sh
-# 推奨: 1Password CLI で token を実行時に注入(実値を shell 履歴や .env に残さない)。
 # channel keyword は channel 名・ID・名前の一部を指定する。
-SLACK_TOKEN="op://<vault>/<item>/<field>" \
-  op run -- slapex engineering
+slapex engineering
+```
 
-# 出力先を固定する場合も同じように op run 経由で渡す:
+channel を省略すると、操作可能な terminal がある環境では channel を対話選択できます。詳細は次の節を参照してください。
+
+## 補足: 継続利用(secret manager など)
+
+繰り返し使う場合は、1Password CLI などの secret manager から実行時に注入する方法を推奨します。token を都度コピーする必要がなくなり、実値を手元で扱う機会自体を減らせます。手順は [Token の渡し方](token-injection.md) を参照してください。
+
+```sh
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
   op run -- slapex engineering --output ./exports
 ```
+
+CI や定期実行では CI secrets から `SLACK_TOKEN` を渡します。こちらも [Token の渡し方](token-injection.md) を参照してください。
 
 ## channel の対話選択
 

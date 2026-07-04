@@ -60,7 +60,7 @@ slapex --demo --output ./slapex-demo
 完了の確認:
 
 - [ ] `xoxp-`(user token)で始まる token を取得しました(bot token の場合は `xoxb-`)。
-- [ ] token を secret manager(1Password など)または CI secrets に保存しました。`.env` や shell history に実値を残さないでください([Token の渡し方](token-injection.md))。
+- [ ] token をコピーしました。手順 3 では token 入力プロンプトに貼り付けて使います(追加ツールは不要です)。継続利用では secret manager(1Password など)や CI secrets への保存を推奨します([Token の渡し方](token-injection.md))。
 - [ ] bot token の場合のみ: 対象 channel で `/invite @slapex` を実行して [bot / app を channel に参加させました](slack-app-setup.md#bot--app-を-channel-に参加させる)。
 
 ## 3. 初回 export を実行する(1 分)
@@ -73,12 +73,7 @@ slapex <channel-keyword>
 
 - `SLACK_TOKEN` が未設定の場合、token の対話入力プロンプトが表示されます。入力は画面に表示(echo)されず、どこにも保存されません。手順 2 でコピーした token を貼り付けてください。
 - `<channel-keyword>` を省略すると、候補一覧から channel を対話選択できます。
-- 継続利用では、1Password CLI などの secret manager から実行時に注入する方法を推奨します(詳細は [Token の渡し方](token-injection.md))。
-
-```sh
-SLACK_TOKEN="op://<vault>/<item>/<field>" \
-  op run -- slapex <channel-keyword>
-```
+- 継続利用では、secret manager や CI secrets から実行時に注入する方法を推奨します(詳細は [Token の渡し方](token-injection.md))。
 
 完了の確認:
 
