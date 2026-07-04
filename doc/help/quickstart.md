@@ -117,11 +117,4 @@ Linux ではファイルマネージャから開くか、`xdg-open "<output-path
 
 ## つまずいたら
 
-典型的なつまずきと分岐先です。exit code の全一覧は [`doc/design/cli-interface.md`](../design/cli-interface.md) を参照してください。
-
-| 症状 | 主な原因 | 対処 |
-|---|---|---|
-| `SLACK_TOKEN is not set` などで exit code `3` | token 未設定・無効、scope 不足 | [よくあるエラー](slack-app-setup.md#よくあるエラー) を確認し、token の保存値と scope を見直す |
-| channel が見つからない(bot token 利用時) | bot / app が対象 channel に未参加 | 対象 channel で `/invite @slapex` を実行する([bot / app を channel に参加させる](slack-app-setup.md#bot--app-を-channel-に参加させる)) |
-| channel が見つからない(user token 利用時) | 認可したユーザーが対象 channel を参照できない | [Channel access](slack-app-setup.md#channel-access) を確認する |
-| 候補が多すぎると表示され exit code `2` | channel keyword が曖昧で候補が 11 件以上 | より具体的な channel 名の一部、または channel ID を指定して再実行する |
+典型的なつまずきと対処、および取得範囲や再現されない表示などの制限は [よくある質問・制限事項](faq.md) にまとめています。まず [うまくいかないとき](faq.md#うまくいかないとき) を確認してください。
