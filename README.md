@@ -10,9 +10,10 @@
 
 ## ターミナルでの実行例
 
-token の対話入力、channel の選択、進捗表示、完了までの流れ:
-
-<p align="center"><img src="assets/demo/slapex-demo-ja.gif" width="760" alt="slapex をターミナルで実行する様子(token 入力、channel 選択、進捗表示)のデモ"></p>
+<p align="center">
+  <img src="assets/demo/slapex-demo-ja.gif" width="760" alt="slapex をターミナルで実行する様子(token 入力、channel 選択、進捗表示)のデモ"><br>
+  <sub>token の対話入力、channel の選択、進捗表示、完了までの流れ</sub>
+</p>
 
 Slack App や token を用意する前に試す場合は、`--demo` で同梱サンプルから HTML export を生成できます。
 
@@ -20,19 +21,27 @@ Slack App や token を用意する前に試す場合は、`--demo` で同梱サ
 slapex --demo --output ./slapex-demo
 ```
 
-完了時には出力先ディレクトリの絶対 path が表示されます。Finder で開くと、`index.html`、`style.css`、`assets/` がローカルファイルとして並びます。
+完了時には出力先ディレクトリの絶対 path が表示されます。出力先ディレクトリ配下には、`index.html`、`style.css`、`assets/` がローカルファイルとして配置されます。
 
-<p align="center"><img src="assets/screenshots/output-dir-finder.png" width="760" alt="Finder で slapex の出力ディレクトリを開いた例"></p>
+<p align="center">
+  <img src="assets/screenshots/output-dir-finder.png" width="760" alt="ファイルマネージャーで slapex の出力ディレクトリを開いた例"><br>
+  <sub>出力先ディレクトリに生成される <code>index.html</code>、<code>style.css</code>、<code>assets/</code></sub>
+</p>
 
 ## 出力プレビュー
 
-タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl):
-
-<p align="center"><img src="assets/screenshots/sample-timeline-ja.png" width="760" alt="サンプル export のタイムライン表示"></p>
-
-スレッド、コードブロック、bot 投稿、添付ファイル:
-
-<p align="center"><img src="assets/screenshots/sample-thread-ja.png" width="760" alt="サンプル export のスレッドと添付ファイル表示"></p>
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/sample-timeline-ja.png" alt="サンプル export のタイムライン表示"><br>
+      <sub>タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl)</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/sample-thread-ja.png" alt="サンプル export のスレッドと添付ファイル表示"><br>
+      <sub>スレッド、コードブロック、bot 投稿、添付ファイル</sub>
+    </td>
+  </tr>
+</table>
 
 リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html))。[^sample-data]
 
