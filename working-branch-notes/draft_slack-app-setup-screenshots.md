@@ -12,8 +12,8 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 
 - 文書再構成(番号付き手順・画像参照・channel 招待節の独立・メンテ方針追記)完了。
 - 01〜08 の画像を受領・調整・組み込み済み(下の「受領済み画像と調整内容」参照)。06 の workspace 名・icon も追加でダミー化済み。撮影に使った token はユーザーが revoke 済み。
-- channel 招待手順を `/invite` に一本化(決定事項参照)。撮影残は 09(`/invite` 実行)と 10(再 install banner)の 2 枚のみで、この 2 つの画像リンクのみ意図的に broken のまま。
-- PR は 09〜10 組み込み・検証完了後に作成する。
+- channel 招待手順を `/invite` に一本化(決定事項参照)。09(`/invite` 実行)は受領・確認済み(入力欄周辺の tight crop、1050x274。workspace / channel 識別子の映り込みなしのため未加工で採用)。
+- 撮影残は 10(再 install banner)の 1 枚のみで、この画像リンクのみ意図的に broken のまま。PR は 10 組み込み・検証完了後に作成する。
 
 ## 決定事項
 
@@ -28,7 +28,7 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 
 ## 次にやること
 
-1. ユーザーから 09〜10 の画像を受領し、調整(必要ならマスク・高さカット)して配置。
+1. ユーザーから 10 の画像を受領し、調整(必要ならマスク・高さカット)して配置。
 2. 画像込みで help の表示確認(パス・alt・GitHub 上での見え方)。
 3. Issue の検証観点を実施し、本 note の検証セクションへ記録。
 4. `progress.md` の help-02 行を更新し、PR 作成(`Closes #48`)、note rename。
@@ -38,6 +38,7 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 - `01-create-new-app.png` / `02-pick-workspace.png`: 受領そのまま採用(機微情報なし)。
 - `03-paste-manifest-user/-bot.png`、`04-review-summary-user/-bot.png`: 受領そのまま採用。user / bot で manifest 内容と scope 見出し(`User Scopes` / `Bot Scopes`)が異なるため両方使用。
 - `06-authorize-user/-bot.png`: 本文中とドロップダウンの実 workspace 名をダミー(`myworkspace.` / `myworkspace`)に置換し、workspace icon を無地の丸 + `m` に置換。
+- `09-invite-app-to-channel.png`: 受領そのまま採用。入力欄に `/invite @slapex` を入力し、autocomplete に `slapex APP`(`Not in channel`)が表示された状態の tight crop。他と解像度が異なる(1050x274)が、識別子の映り込みがなく内容も本文手順と一致するため問題なし。
 - `05-install-to-workspace-user/-bot.png`: 全画面キャプチャ(高さ 6312px)を `OAuth Tokens` セクションまで(高さ 1840px)にカット。`Install to <実 workspace 名>` ボタンをダミー(`Install to myworkspace`)に置換。
 - `07-oauth-token-user.png` / `08-oauth-token-bot.png`(旧 `07-user-oauth-token.png` / `08-bot-oauth-token.png`): 高さ 6468px → 1985px にカット。token 実値をダミー(`xoxp-***...` / `xoxb-***...`)に置換。`Reinstall to <実 workspace 名>` ボタンをダミーに置換。
 - 未加工の原本は `/tmp/slack-app-setup-originals/` に退避(repo には入れない)。
