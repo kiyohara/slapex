@@ -51,3 +51,5 @@ Issue #52 (help-03) の対応。取得範囲の default(30 日 / 1000 件)、1 t
 ## セッションログ
 
 - 2026-07-04: Issue #52 を run-issue-task で開始。design doc から制限事項を洗い出し、note 作成。
+- 2026-07-04: PR #128 作成、note を採番。
+- 2026-07-04: レビュー指摘対応。利用者向け faq.md の本文から開発者向け `doc/design/` 直接リンクを外し、GitHub footnote(文末の脚注)へ移設して「開発者向け」と明示。user 向け help(slack-app-setup / token-injection / quickstart)への inline リンクは維持。quickstart「つまずいたら」からも `doc/design/cli-interface.md` 直リンクを外し、FAQ への誘導に一本化(exit code は faq.md の脚注で担保)。
