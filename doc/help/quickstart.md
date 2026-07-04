@@ -47,7 +47,7 @@ Slack App や token を用意する前に、同梱の架空サンプルから手
 slapex --demo --output ./slapex-demo
 ```
 
-生成された `index.html` をブラウザで開くと、手順 4 と同じ形の成果物を確認できます。このステップを飛ばしても完走には影響しません。
+実行の最後に、出力先ディレクトリ(この例では `./slapex-demo/<workspace-label>/<channel-label>/`)の絶対 path が 1 行表示されます。そのディレクトリの `index.html` をブラウザで開くと、手順 4 と同じ形の成果物を確認できます。このステップを飛ばしても完走には影響しません。
 
 ## 2. Slack App を作成して token を発行する(10 分)
 
