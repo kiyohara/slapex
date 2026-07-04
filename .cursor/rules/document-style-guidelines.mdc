@@ -1,0 +1,16 @@
+---
+description: 日本語ドキュメント(README / doc / progress.md / working-branch-notes)を作成・編集するときに読む文体(文末・トーン・用語表記)の共通正本への入口
+globs:
+  - "README.md"
+  - "doc/**/*.md"
+  - "progress.md"
+  - "working-branch-notes/**/*.md"
+  - "AGENTS.md"
+alwaysApply: false
+---
+
+# ドキュメント文体
+
+- 詳細は `doc/guidelines/document-style-guidelines.md`
+- 日本語ドキュメントを作成・編集する前に共通正本を読む。
+- tool 固有入口だけに恒久ルールを書かない
