@@ -213,6 +213,8 @@ slapex-20260602-1530/
 
 生成された `index.html` をブラウザで開くと、取得した投稿・スレッド・assets をローカルだけで閲覧できます(見た目は [出力プレビュー](#出力プレビュー) を参照)。出力ディレクトリ構造、保存される assets、取得範囲、サイズ制限の詳細は [`doc/design/output-format.md`](doc/design/output-format.md) を参照してください。
 
+取得範囲の default、再現されない表示、対応環境などの制限や、初回 export でつまずきやすい点は [よくある質問・制限事項](doc/help/faq.md) にまとめています。
+
 ## 開発
 
 開発環境は Docker / Docker Compose を前提とします(実装スタックは Go)。開発コマンドは repo root の `compose.yaml` の `dev` service 経由で実行します。
