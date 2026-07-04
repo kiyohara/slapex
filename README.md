@@ -96,7 +96,7 @@ curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/instal
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh \
-  | sh -s -- --version v1.1.1 --bin-dir "$HOME/.local/bin"
+  | sh -s -- --version v1.1.2 --bin-dir "$HOME/.local/bin"
 ```
 
 スクリプトは OS / arch を自動判定し、`slapex_<os>_<arch>` と `slapex_checksums.txt` を取得して checksum を照合してから配置します。`/usr/local/bin` に書き込めない場合は sudo を使うか、`--bin-dir` で書き込み可能なディレクトリを指定してください。全オプションは `--help`、実際の取得先を確認するだけなら `--dry-run` で表示できます。
@@ -117,7 +117,7 @@ curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/instal
 まずバイナリと checksum を取得します(`<version>` は対象のリリース tag、`ASSET` は上の表から自分の OS / arch に置き換える):
 
 ```sh
-VERSION=<version>          # 例: v1.1.1
+VERSION=<version>          # 例: v1.1.2
 ASSET=slapex_darwin_arm64  # 上の表から自分の OS / arch に合わせて選ぶ
 BASE="https://github.com/kiyohara/slapex/releases/download/${VERSION}"
 
