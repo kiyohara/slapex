@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: slack-app-setup-screenshots
-- PR: -
+- PR: #119
 - 最終更新: 2026-07-04
 
 ## 目的
@@ -28,7 +28,7 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 
 ## 次にやること
 
-1. `progress.md` の help-02 行を更新し、PR 作成(`Closes #48`)、note rename。
+1. PR #119 のレビュー対応。merge はユーザーが行う。
 
 ## 受領済み画像と調整内容(01〜08)
 
@@ -58,3 +58,4 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 - 2026-07-04: agent 単独での完遂可否を判断(不可)。ユーザーと分担案 A で合意。ブランチ作成、help 再構成、メンテ方針追記、撮影指示リスト作成。
 - 2026-07-04: 01〜08 受領。user / bot の画面差に合わせ命名規約を `-user` / `-bot` suffix に統一し、bot 節へ bot 版画像を埋め込み。05 / 07 / 08 に高さカット・workspace 名ダミー化・token マスクを実施して配置。
 - 2026-07-04: 06 の workspace 名・icon を追加でダミー化。private channel でも `/invite` が有効というユーザー実機確認を受けて事実関係を調査し、channel 招待手順を `/invite` に一本化(Issue 提案の public / private 分岐から変更)。撮影リストを 09〜10 の 2 枚に再編。
+- 2026-07-04: 09 / 10 受領・組み込み。`progress.md` help-02 を done へ更新し、PR #119 を作成。note を採番 rename。
