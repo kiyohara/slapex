@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: release-v1.1.2-verification
-- PR:
+- PR: #122
 - 最終更新: 2026-07-04
 
 ## 目的
@@ -15,6 +15,7 @@ v1.1.2 公開後の release 検証結果を `progress.md` と decision log 0041 
 - release workflow: run `28699514871` / success
 - GitHub Release: published
 - assets: darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt`
+- 検証結果記録 PR: #122
 
 ## 決定事項
 
@@ -23,7 +24,7 @@ v1.1.2 公開後の release 検証結果を `progress.md` と decision log 0041 
 
 ## 次にやること
 
-- 検証結果記録 PR を作成し CI / review を確認する。
+- PR #122 の CI / review を確認する。
 - ユーザーが PR を merge する。
 - ユーザー手元で macOS `--version` と `brew upgrade --cask slapex` を確認する(未実施)。
 
