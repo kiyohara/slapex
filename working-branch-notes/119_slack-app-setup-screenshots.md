@@ -59,3 +59,4 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 - 2026-07-04: 01〜08 受領。user / bot の画面差に合わせ命名規約を `-user` / `-bot` suffix に統一し、bot 節へ bot 版画像を埋め込み。05 / 07 / 08 に高さカット・workspace 名ダミー化・token マスクを実施して配置。
 - 2026-07-04: 06 の workspace 名・icon を追加でダミー化。private channel でも `/invite` が有効というユーザー実機確認を受けて事実関係を調査し、channel 招待手順を `/invite` に一本化(Issue 提案の public / private 分岐から変更)。撮影リストを 09〜10 の 2 枚に再編。
 - 2026-07-04: 09 / 10 受領・組み込み。`progress.md` help-02 を done へ更新し、PR #119 を作成。note を採番 rename。
+- 2026-07-04: PR #119 のレビュー指摘 7 件に対応。(1) スクリーンショット注記を「前提」節直後の文書レベルへ移動、(2) bot token 節の手順 1〜3 を推奨手順への参照に置き換え共通範囲の記述を正確化、(3) `Install App` メニューへの言及を install 手順に 1 文で復活(旧文書からの意図しない脱落だった)、(4) 「よくあるエラー」の invite 再掲を参照のみに変更、(5) `assets/README.md` のマスク文言重複を解消し正本を `doc/help/README.md` に一本化、(6) PNG 14 枚を lossless 再圧縮(計 4.64MB → 3.89MB、-16%。全ファイルで pixel hash 一致を確認)し `assets/README.md` に最適化規約を追記、(7) `progress.md` help-02 の PR 列を #119 に更新。
