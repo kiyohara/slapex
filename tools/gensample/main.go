@@ -1,7 +1,7 @@
 // Command gensample regenerates the anonymized sample exports under
 // doc/samples/ (Issue #51). Each sample is built from an entirely fictional
-// fixture (workspace, users, messages, assets), served by an in-process fake
-// Slack API server and run through the real export pipeline
+// fixture (workspace, users, messages, assets) in internal/demo, served by an
+// in-process fake Slack API server and run through the real export pipeline
 // (internal/export), so the committed samples always match the current
 // renderer output. No real Slack workspace or network access is involved.
 //
@@ -14,7 +14,9 @@
 // the process is stopped, so the demo GIF recording (Issue #115,
 // tools/demo/) can run the real slapex binary against it via the internal
 // SLAPEX_API_BASE_URL override. -asset-delay slows asset downloads so the
-// progress indicator stays visible on screen.
+// progress indicator stays visible on screen. The user-facing token-free demo
+// run instead uses the same fixtures in-process through `slapex --demo`
+// (Issue #113).
 package main
 
 import (
@@ -28,14 +30,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kiyohara/slapex/internal/export"
-	"github.com/kiyohara/slapex/internal/slack"
+	"github.com/kiyohara/slapex/internal/demo"
 	"github.com/kiyohara/slapex/internal/ui"
 )
-
-// fakeToken authenticates against the in-process fake server only; it is not
-// a real credential and never leaves the process.
-const fakeToken = "xoxp-gensample-fake-token"
 
 func main() {
 	out := flag.String("out", "doc/samples", "directory that receives one sample export per language")
@@ -58,36 +55,31 @@ func main() {
 }
 
 // serveScenario serves the lang scenario's fake Slack API on addr until the
-// process is stopped. Unlike sample generation it accepts any Bearer token,
-// because demo recordings type an arbitrary fake value at the token prompt;
-// no real credential is involved either way, and the server only listens on
-// the given (loopback by default) address.
+// process is stopped. Unlike sample generation it accepts any Bearer token
+// (demo.AllowAnyToken), because demo recordings type an arbitrary fake value at
+// the token prompt; no real credential is involved either way, and the server
+// only listens on the given (loopback by default) address.
 func serveScenario(lang, addr string, assetDelay time.Duration) error {
-	var sc *scenario
-	switch lang {
-	case "ja":
-		sc = scenarioJA(time.Now())
-	case "en":
-		sc = scenarioEN(time.Now())
-	default:
-		return fmt.Errorf("unknown -lang %q (expected ja or en)", lang)
+	sc, err := scenario(lang)
+	if err != nil {
+		return err
 	}
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 	baseURL := "http://" + l.Addr().String()
-	sc.replaceBaseURL(baseURL)
-	f := &fakeSlackServer{sc: sc, assetDelay: assetDelay, anyBearer: true}
+	sc.ReplaceBaseURL(baseURL)
+	handler := demo.Handler(sc, demo.AllowAnyToken(), demo.WithAssetDelay(assetDelay))
 	fmt.Printf("serving the %s sample scenario (channel #%s) on %s\n", lang, sc.ChannelName, baseURL)
 	fmt.Printf("run slapex against it with:\n\n  SLAPEX_API_BASE_URL=%s/api/ slapex\n\n", baseURL)
 	fmt.Println("stop with Ctrl-C")
-	return http.Serve(l, f.mux())
+	return http.Serve(l, handler)
 }
 
 func run(out string) error {
 	now := time.Now()
-	for _, sc := range []*scenario{scenarioJA(now), scenarioEN(now)} {
+	for _, sc := range []*demo.Scenario{demo.ScenarioJA(now), demo.ScenarioEN(now)} {
 		if err := buildSample(sc, out); err != nil {
 			return fmt.Errorf("%s: %w", sc.Lang, err)
 		}
@@ -95,27 +87,35 @@ func run(out string) error {
 	return nil
 }
 
-// buildSample runs the export pipeline against sc's fake server and replaces
-// out/<lang>/ with the generated index.html + style.css + assets/.
-func buildSample(sc *scenario, out string) error {
-	srv := newFakeSlackServer(sc)
-	defer srv.Close()
+// scenario returns the demo fixture for lang.
+func scenario(lang string) (*demo.Scenario, error) {
+	switch lang {
+	case "ja":
+		return demo.ScenarioJA(time.Now()), nil
+	case "en":
+		return demo.ScenarioEN(time.Now()), nil
+	default:
+		return nil, fmt.Errorf("unknown -lang %q (expected ja or en)", lang)
+	}
+}
 
+// buildSample runs the shared demo export driver against sc and replaces
+// out/<lang>/ with the generated index.html + style.css + assets/. It goes
+// through demo.Export so sample generation and `slapex --demo` share the exact
+// same fixture-serving wiring.
+func buildSample(sc *demo.Scenario, out string) error {
 	tmp, err := os.MkdirTemp("", "gensample-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmp)
 
-	client := slack.New(fakeToken, slack.WithBaseURL(srv.URL()+"/api/"))
 	printer := ui.NewPrinter(os.Stderr, false)
-	dir, err := export.Run(context.Background(), client, export.Options{
-		ChannelKeyword: sc.ChannelName,
+	dir, err := demo.Export(context.Background(), sc, demo.Options{
 		OutputDir:      tmp,
 		MaxPosts:       1000,
 		Days:           30,
 		MaxAttachBytes: 10 << 20,
-		NoInteractive:  true,
 		ToolVersion:    "gensample",
 	}, printer)
 	if err != nil {

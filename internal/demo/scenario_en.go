@@ -1,4 +1,4 @@
-package main
+package demo
 
 import (
 	"time"
@@ -6,17 +6,17 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-// scenarioEN is the English sample: the fictional open tech community
-// Agent Lab — students and early-career engineers sharing know-how about AI
-// agents — prepares its meetup event "Agent Night vol. 3". It mirrors the
-// Japanese scenario's pattern coverage (see scenarioJA), except the deleted
-// (tombstone) message: its replacement text is currently rendered in
-// Japanese by the exporter, so it is shown in the Japanese sample only.
-func scenarioEN(now time.Time) *scenario {
+// ScenarioEN is the English sample: the fictional open tech community Agent Lab
+// — students and early-career engineers sharing know-how about AI agents —
+// prepares its meetup event "Agent Night vol. 3". It mirrors the Japanese
+// scenario's pattern coverage (see ScenarioJA), except the deleted (tombstone)
+// message: its replacement text is currently rendered in Japanese by the
+// exporter, so it is shown in the Japanese sample only.
+func ScenarioEN(now time.Time) *Scenario {
 	day1 := now.AddDate(0, 0, -2)
 	day2 := now.AddDate(0, 0, -1)
 
-	assets := map[string]sampleAsset{
+	assets := map[string]Asset{
 		"/files/workspace-icon.svg": workspaceIconSVG("#5f3dc4", "#d6336c"),
 		"/files/avatar-alice.svg":   avatarSVG("A", "#e8590c"),
 		"/files/avatar-ben.svg":     avatarSVG("B", "#1971c2"),
@@ -50,7 +50,7 @@ func scenarioEN(now time.Time) *scenario {
 		Reactions:  []slack.Reaction{{Name: "eyes", Count: 3}},
 	}
 
-	return &scenario{
+	return &Scenario{
 		Lang:        "en",
 		ChannelName: "agent-night-vol3",
 		Auth: slack.AuthTest{

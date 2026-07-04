@@ -1,4 +1,4 @@
-package main
+package demo
 
 import (
 	"bytes"
@@ -12,14 +12,14 @@ import (
 
 const svgFont = "'Hiragino Sans','Noto Sans JP','Helvetica Neue',Arial,sans-serif"
 
-func svgAsset(body string) sampleAsset {
-	return sampleAsset{ContentType: "image/svg+xml", Body: []byte(body)}
+func svgAsset(body string) Asset {
+	return Asset{ContentType: "image/svg+xml", Body: []byte(body)}
 }
 
 // avatarSVG is a rounded square with a single initial, the classic default
 // avatar look. All SVG roots carry explicit width/height so they keep their
 // intrinsic size when referenced from <img>.
-func avatarSVG(initial, bg string) sampleAsset {
+func avatarSVG(initial, bg string) Asset {
 	return svgAsset(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">`+
 		`<rect width="96" height="96" rx="22" fill="%s"/>`+
 		`<text x="48" y="52" font-family="%s" font-size="44" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="central">%s</text>`+
@@ -28,7 +28,7 @@ func avatarSVG(initial, bg string) sampleAsset {
 
 // workspaceIconSVG is a rounded square with a white star on a two-stop
 // gradient.
-func workspaceIconSVG(from, to string) sampleAsset {
+func workspaceIconSVG(from, to string) Asset {
 	return svgAsset(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">`+
 		`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient></defs>`+
 		`<rect width="96" height="96" rx="22" fill="url(#g)"/>`+
@@ -37,7 +37,7 @@ func workspaceIconSVG(from, to string) sampleAsset {
 }
 
 // badgeEmojiSVG is a custom-emoji style rounded badge with short text.
-func badgeEmojiSVG(lines []string, bg string, fontSize int) sampleAsset {
+func badgeEmojiSVG(lines []string, bg string, fontSize int) Asset {
 	var texts strings.Builder
 	step := 64 / (len(lines) + 1)
 	for i, line := range lines {
@@ -50,7 +50,7 @@ func badgeEmojiSVG(lines []string, bg string, fontSize int) sampleAsset {
 }
 
 // cometEmojiSVG is a custom-emoji style comet mark.
-func cometEmojiSVG() sampleAsset {
+func cometEmojiSVG() Asset {
 	return svgAsset(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">` +
 		`<rect width="64" height="64" rx="14" fill="#1d2b53"/>` +
 		`<path d="M8 50 L40 22 L46 32 Z" fill="#ffd43b" opacity="0.7"/>` +
@@ -60,7 +60,7 @@ func cometEmojiSVG() sampleAsset {
 
 // packageArtSVG is the "uploaded design draft" image: night-sky gradient,
 // shooting star and product name.
-func packageArtSVG(title, subtitle string) sampleAsset {
+func packageArtSVG(title, subtitle string) Asset {
 	return svgAsset(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">`+
 		`<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1f4b"/><stop offset="1" stop-color="#4c3a8f"/></linearGradient></defs>`+
 		`<rect width="800" height="520" fill="url(#sky)"/>`+
@@ -73,7 +73,7 @@ func packageArtSVG(title, subtitle string) sampleAsset {
 }
 
 // chartSVG is the "uploaded results chart" image: a simple titled bar chart.
-func chartSVG(title string, labels []string, values []int, barColor string) sampleAsset {
+func chartSVG(title string, labels []string, values []int, barColor string) Asset {
 	const (
 		width   = 720
 		height  = 420
@@ -109,7 +109,7 @@ func chartSVG(title string, labels []string, values []int, barColor string) samp
 }
 
 // ogImageSVG is the unfurl preview image: gradient banner with a headline.
-func ogImageSVG(kicker, headline, from, to string) sampleAsset {
+func ogImageSVG(kicker, headline, from, to string) Asset {
 	return svgAsset(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">`+
 		`<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient></defs>`+
 		`<rect width="800" height="420" fill="url(#bg)"/>`+
@@ -120,7 +120,7 @@ func ogImageSVG(kicker, headline, from, to string) sampleAsset {
 }
 
 // serviceIconSVG is the small unfurl service icon.
-func serviceIconSVG(letter, bg string) sampleAsset {
+func serviceIconSVG(letter, bg string) Asset {
 	return svgAsset(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">`+
 		`<rect width="48" height="48" rx="10" fill="%s"/>`+
 		`<text x="24" y="26" font-family="%s" font-size="26" font-weight="800" fill="#ffffff" text-anchor="middle" dominant-baseline="central">%s</text>`+
@@ -129,7 +129,7 @@ func serviceIconSVG(letter, bg string) sampleAsset {
 
 // samplePDF builds a minimal one-page PDF with the given ASCII lines, so the
 // attachment link in the sample opens as a real document.
-func samplePDF(lines []string) sampleAsset {
+func samplePDF(lines []string) Asset {
 	var content strings.Builder
 	content.WriteString("BT /F1 18 Tf 72 720 Td 28 TL\n")
 	for i, line := range lines {
@@ -161,7 +161,7 @@ func samplePDF(lines []string) sampleAsset {
 		fmt.Fprintf(&buf, "%010d 00000 n \n", off)
 	}
 	fmt.Fprintf(&buf, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xref)
-	return sampleAsset{ContentType: "application/pdf", Body: buf.Bytes()}
+	return Asset{ContentType: "application/pdf", Body: buf.Bytes()}
 }
 
 func pdfEscape(s string) string {

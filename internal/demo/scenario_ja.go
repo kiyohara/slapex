@@ -1,4 +1,4 @@
-package main
+package demo
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-// scenarioJA is the Japanese sample: the fictional open tech community
+// ScenarioJA is the Japanese sample: the fictional open tech community
 // エージェントラボ — students and early-career engineers sharing know-how
 // about AI agents — prepares its meetup event "エージェントナイト vol.3".
 // Every name, user and asset is invented for this fixture; nothing comes
@@ -19,11 +19,11 @@ import (
 // participants, an inline image upload, a URL unfurl with preview image, a
 // PDF attachment, a bot message, a /me message and a deleted (tombstone)
 // message.
-func scenarioJA(now time.Time) *scenario {
+func ScenarioJA(now time.Time) *Scenario {
 	day1 := now.AddDate(0, 0, -2)
 	day2 := now.AddDate(0, 0, -1)
 
-	assets := map[string]sampleAsset{
+	assets := map[string]Asset{
 		"/files/workspace-icon.svg": workspaceIconSVG("#0b7285", "#1971c2"),
 		"/files/avatar-hikari.svg":  avatarSVG("ひ", "#e8590c"),
 		"/files/avatar-ren.svg":     avatarSVG("レ", "#1971c2"),
@@ -57,7 +57,7 @@ func scenarioJA(now time.Time) *scenario {
 		Reactions:  []slack.Reaction{{Name: "eyes", Count: 3}},
 	}
 
-	return &scenario{
+	return &Scenario{
 		Lang:        "ja",
 		ChannelName: "エージェントナイト-vol3",
 		Auth: slack.AuthTest{

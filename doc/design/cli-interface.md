@@ -41,6 +41,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `--reuse-cache <path>` | path | なし | | 以前の出力ディレクトリまたは `.cache/` を再利用する(`cache.md`) |
 | `--no-interactive` | flag | off | | TTY があっても interactive prompt を開始しない(channel selection と、`SLACK_TOKEN` 未設定時の token 入力の両方が対象)(`usage-flow.md`) |
 | `--no-color` | flag | off | | stderr の進捗・診断を plain output にする(色に加えて、アイコン・spinner などの装飾全体を抑止する。「出力制御」を参照) |
+| `--demo` | flag | off | | token / Slack App なしで同梱の架空サンプルを export する(「demo モード」を参照) |
 | `--version` | flag | | | version を表示して終了する |
 | `--help` | flag | | | usage を表示して終了する |
 
@@ -56,6 +57,18 @@ token を CLI option や引数として受け取る経路は提供しない。�
 - `--expect-team-id` / `--expect-workspace-domain` などの workspace guard(`decision-log/0020-target-label-display.md`)。
 - 差分取得・再実行に関わる option(`decision-log/index.md` の未決事項)。
 - `--no-cache`(採用しない理由は `cache.md`)。
+
+## demo モード(token 不要試用)
+
+`--demo` を指定すると、Slack App の作成や token 発行なしで、同梱の架空サンプルデータから HTML export を生成する(Issue #113、`decision-log/0047-token-free-demo-run.md`)。Slack App 準備前に、手元で実際の CLI を実行して成果物を確認するための導線である。
+
+- `SLACK_TOKEN` は不要とする。設定されていても demo モードでは使わない。
+- 実行時に in-process の fake Slack API server を起動し、内部専用の fake token でその server にだけ接続する。実 Slack host への通信や実 token の送信は行わない(`doc/guidelines/credential-scope-guidelines.md`)。接続先の指定は CLI 内部で直接行い、公開環境変数を経由しない。
+- サンプルデータは架空の workspace / channel / user / asset で構成し、実 workspace 名・個人名・実 token を含めない(#51 と同じ匿名化方針)。ja / en の 2 シナリオを同梱し、locale(`LC_ALL` → `LC_MESSAGES` → `LANG` の順に最初の非空値)が `ja` で始まる場合は日本語シナリオ、それ以外は英語シナリオを使う。
+- 対象 channel は 1 つに固定されるため channel selection は行わない(non-interactive で自動解決)。positional な `[channel]` 引数を渡しても demo では無視する。
+- 出力先(`--output`)、`--no-color`、取得範囲 option(`--max-posts` / `--days` / `--max-attachment-size` など)は通常実行と同じく尊重する。stdout の契約(成功時に出力ディレクトリ path を 1 行)も通常実行と同じで、token 不要の案内は stderr に出す。
+- fixture は in-process 配信で実際の rate limit が無いため、通常実行が行う Slack API pacing は demo では省略し、待ち時間を入れない。
+- デモ録画(`tools/demo/`)が使う内部環境変数 `SLAPEX_API_BASE_URL`(`decision-log/0046-api-base-url-override.md`)とは別経路である。録画は token 入力プロンプトを見せる目的でその機構を引き続き使い、demo モードは利用者向けの token 不要経路として別に提供する。
 
 ## 入出力ストリーム
 
