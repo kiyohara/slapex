@@ -4,7 +4,7 @@
 
 各ステップに所要時間の目安と「完了の確認」を付けている。詳細手順はこのページに複製せず、各ステップから正本の help へリンクする。
 
-先に成果物の見た目を確かめたい場合は、README の [出力プレビュー](../../README.md#出力プレビュー) を見る。インストール後であれば、Slack App や token を用意しなくても `slapex --demo` で同梱の架空サンプルから export を生成して試せる。
+先に成果物の見た目を確かめたい場合は、README の [出力プレビュー](../../README.md#出力プレビュー) を見る。
 
 ## 前提(1 分)
 
@@ -33,6 +33,21 @@ curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/instal
 完了の確認:
 
 - [ ] `slapex --version` がバージョンを表示する。
+
+```text
+$ slapex --version
+slapex 1.1.2
+```
+
+## 任意: token なしで試す(1 分)
+
+Slack App や token を用意する前に、同梱の架空サンプルから手元で export を生成して、成果物を実際に確かめられる(実 Slack への通信なし)。
+
+```sh
+slapex --demo --output ./slapex-demo
+```
+
+生成された `index.html` をブラウザで開くと、手順 4 と同じ形の成果物を確認できる。このステップを飛ばしても完走には影響しない。
 
 ## 2. Slack App を作成して token を発行する(10 分)
 
@@ -67,7 +82,15 @@ SLACK_TOKEN="op://<vault>/<item>/<field>" \
 
 完了の確認:
 
-- [ ] 進捗表示が完了し、最後に出力先ディレクトリの絶対 path が 1 行表示された(この path は stdout に出るため、script からも受け取れる)。
+- [ ] 進捗表示が次のような完了 summary で終わり、最後に出力先ディレクトリの絶対 path が 1 行表示された(この path は stdout に出るため、script からも受け取れる)。
+
+```text
+✓ Done       Example Workspace (example.slack.com, T012345...) / #engineering (C012345..., public, active, member) (in 42s)
+  messages: 345 (threads: 12, replies: 40)
+  assets: 30 saved, 2 skipped by size limit, 0 failed
+  output: /path/to/output/example-workspace/engineering
+/path/to/output/example-workspace/engineering
+```
 
 ## 4. 出力を閲覧する(1 分)
 
@@ -84,7 +107,13 @@ Linux ではファイルマネージャから開くか、`xdg-open "<output-path
 
 - [ ] 投稿・スレッド・画像・添付ファイルが、外部 URL に依存せずローカルだけで閲覧できる。
 
-これで完走。取得件数や期間、出力先などを調整したい場合は、README の [使い方](../../README.md#使い方) にある option 一覧を参照する。
+これで完走。
+
+## 次のステップ
+
+- 取得件数(`--max-posts`)、取得期間(`--days`)、出力先(`--output`)などを調整する: README の [使い方](../../README.md#使い方) の option 一覧。
+- 継続利用に向けて、token を毎回手入力せず secret manager(1Password CLI など)や CI secrets から注入する: [Token の渡し方](token-injection.md)。
+- CI・定期実行・チーム共通 automation で使う: [bot token の手順](slack-app-setup.md#bot-token-を使う場合)。
 
 ## つまずいたら
 
