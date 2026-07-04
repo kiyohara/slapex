@@ -14,6 +14,8 @@
 - user token では、認可したユーザー本人が参照できる範囲の conversation が対象になる。
 - bot token では、対応 scope に加えて bot / app が対象 conversation の member である必要がある。
 
+このページのスクリーンショットは撮影時点の Slack UI であり、実際の画面と細部が異なる場合がある。その場合は本文の手順を正として読み替える。スクリーンショット内の workspace 名(`myworkspace`)はダミーで、token はマスク済みである。実際の画面では自分の workspace 名と token 実値が表示される。
+
 ## アクセスするページ
 
 Slack App の作成と設定では、次の Slack API pages を使う。
@@ -39,15 +41,48 @@ Slack App の作成と設定では、次の Slack API pages を使う。
 
 Slack App は、個別に scope を追加するだけでなく、manifest を貼り付けて必要設定をまとめて作成できる。
 
+### 1. App を新規作成する
+
 1. <https://api.slack.com/apps?new_app=1> を開く。
-2. `Create New App` で `From an app manifest` を選ぶ。
-3. 取得対象の workspace を選ぶ。
-4. manifest editor の format が `JSON` になっていることを確認し、次の manifest を貼り付ける。
-5. 表示された設定内容を確認して App を作成する。
-6. 作成後、左メニューの `OAuth & Permissions` または `Install App` を開き、App を workspace に install / authorize する。権限設定によって承認 request が表示される場合は、workspace 管理者の承認を待つ。
-7. install / authorize 後、`OAuth & Permissions` に表示される `User OAuth Token` を取得する。token は通常 `xoxp-` で始まる。
-8. user token を secret manager または CI secrets に保存する。
-9. `SLACK_TOKEN` として `slapex` 実行時に渡す。
+2. `Create an app` ダイアログで `From a manifest` をクリックする。
+
+![Create an app ダイアログで From a manifest を選ぶ](../../assets/screenshots/slack-app-setup/01-create-new-app.png)
+
+3. workspace 選択画面で取得対象の workspace を選び、`Next` をクリックする。
+
+![取得対象の workspace を選ぶ](../../assets/screenshots/slack-app-setup/02-pick-workspace.png)
+
+### 2. manifest を貼り付ける
+
+1. manifest editor 上部の tab が `JSON` になっていることを確認する。
+2. editor の内容をすべて消し、下の「Manifest の例」を貼り付けて `Next` をクリックする。
+
+![JSON tab を選び manifest を貼り付ける](../../assets/screenshots/slack-app-setup/03-paste-manifest-user.png)
+
+3. Review summary に `User Scopes` の一覧が表示される。内容を確認して `Create` をクリックすると App が作成される。
+
+![Review summary を確認して Create をクリックする](../../assets/screenshots/slack-app-setup/04-review-summary-user.png)
+
+### 3. App を workspace に install する
+
+1. App 管理画面の左メニューから `OAuth & Permissions` を開く。
+2. ページ上部の `OAuth Tokens` にある `Install to <workspace 名>` ボタンをクリックする。同じ操作は左メニューの `Install App` からも行える。
+
+![OAuth & Permissions の Install to <workspace 名> をクリックする](../../assets/screenshots/slack-app-setup/05-install-to-workspace-user.png)
+
+3. 認可画面で要求される権限を確認し、`Allow` をクリックする。権限設定によって承認 request が表示される場合は、workspace 管理者の承認を待つ。
+
+![認可画面で Allow をクリックする](../../assets/screenshots/slack-app-setup/06-authorize-user.png)
+
+### 4. User OAuth Token を取得する
+
+1. install / authorize 後、`OAuth & Permissions` の `OAuth Tokens` に `User OAuth Token` が表示される。token は通常 `xoxp-` で始まる。
+2. `Copy` をクリックして token をコピーする。
+
+![OAuth Tokens に表示された User OAuth Token をコピーする](../../assets/screenshots/slack-app-setup/07-oauth-token-user.png)
+
+3. user token を secret manager または CI secrets に保存する。token をファイルや chat に貼らない。
+4. `SLACK_TOKEN` として `slapex` 実行時に渡す。
 
 Manifest の例:
 
@@ -84,16 +119,32 @@ Manifest の例:
 
 bot token は CI、定期実行、チーム共通 automation、個人ユーザーに紐付けたくない運用で使う。
 
-1. <https://api.slack.com/apps?new_app=1> を開く。
-2. `Create New App` で `From an app manifest` を選ぶ。
-3. 取得対象の workspace を選ぶ。
-4. manifest editor の format が `JSON` になっていることを確認し、次の manifest を貼り付ける。
-5. 表示された設定内容を確認して App を作成する。
-6. 作成後、左メニューの `Install App` を開き、`Install to Workspace` を実行する。権限設定によって承認 request が表示される場合は、workspace 管理者の承認を待つ。
-7. install / authorize 後、`Install App` または `OAuth & Permissions` に表示される `Bot User OAuth Token` を取得する。token は通常 `xoxb-` で始まる。
-8. bot / app を取得対象 channel に参加させる。
-9. bot token を secret manager または CI secrets に保存する。
-10. `SLACK_TOKEN` として `slapex` 実行時に渡す。
+user token の場合と共通なのは App 新規作成と workspace 選択の画面のみで、その先は bot token 用の manifest と画面で進める。
+
+1. 「推奨手順」の「1. App を新規作成する」と同じ手順で、App の新規作成を開始して取得対象の workspace を選ぶ。
+2. manifest editor の tab が `JSON` になっていることを確認し、下の「Manifest の例」を貼り付けて `Next` をクリックする。
+
+![JSON tab を選び bot token 用 manifest を貼り付ける](../../assets/screenshots/slack-app-setup/03-paste-manifest-bot.png)
+
+3. Review summary に `Bot Scopes` の一覧が表示される。内容を確認して `Create` をクリックすると App が作成される。
+
+![Review summary に Bot Scopes が表示される](../../assets/screenshots/slack-app-setup/04-review-summary-bot.png)
+
+4. 左メニューの `OAuth & Permissions` を開き、`OAuth Tokens` にある `Install to <workspace 名>` ボタンをクリックする。
+
+![OAuth & Permissions の Install to <workspace 名> をクリックする](../../assets/screenshots/slack-app-setup/05-install-to-workspace-bot.png)
+
+5. 認可画面で要求される権限を確認し、`Allow` をクリックする。権限設定によって承認 request が表示される場合は、workspace 管理者の承認を待つ。
+
+![認可画面で Allow をクリックする](../../assets/screenshots/slack-app-setup/06-authorize-bot.png)
+
+6. install / authorize 後、`OAuth & Permissions` の `OAuth Tokens` に表示される `Bot User OAuth Token` を取得する。token は通常 `xoxb-` で始まる。
+
+![OAuth Tokens に表示された Bot User OAuth Token をコピーする](../../assets/screenshots/slack-app-setup/08-oauth-token-bot.png)
+
+7. bot / app を取得対象 channel に参加させる(手順は「bot / app を channel に参加させる」を参照)。
+8. bot token を secret manager または CI secrets に保存する。
+9. `SLACK_TOKEN` として `slapex` 実行時に渡す。
 
 Manifest の例:
 
@@ -142,7 +193,7 @@ manifest を使わずに設定する場合は、次の手順で作成する。
 4. bot token を使う場合は、App の OAuth & Permissions で Bot Token Scopes を設定し、必要に応じて bot user を有効化する。
 5. App を workspace に install / authorize する。権限設定によって承認 request が表示される場合は、workspace 管理者の承認を待つ。
 6. user token では `User OAuth Token`、bot token では `Bot User OAuth Token` を取得する。
-7. bot token を使う場合は、bot / app を取得対象 channel に参加させる。
+7. bot token を使う場合は、bot / app を取得対象 channel に参加させる(手順は「bot / app を channel に参加させる」を参照)。
 8. token を secret manager または CI secrets に保存する。
 9. `SLACK_TOKEN` として `slapex` 実行時に渡す。
 
@@ -162,13 +213,36 @@ public channel と private channel の両方を扱えるように、user token /
 | workspace icon の取得(任意。無い場合は icon なしで出力) | `team:read` |
 | 投稿者名や表示名の解決 | `users:read` |
 
-scope を追加または変更した場合は、App を workspace に再 install / 再 authorize し、更新された token を secret manager または CI secrets に反映する。
+### scope 変更後の再 install
+
+scope を追加または変更すると、`OAuth & Permissions` の画面上部に再 install を促す banner が表示される。banner 内の `reinstall your app` リンク(または `OAuth Tokens` の `Reinstall to <workspace 名>` ボタン)から App を workspace に再 install / 再 authorize する。
+
+![scope 変更後に表示される再 install banner](../../assets/screenshots/slack-app-setup/10-reinstall-banner.png)
+
+再 install / 再 authorize すると token が更新される場合がある。`OAuth & Permissions` に表示されている現在の token を、secret manager または CI secrets に反映する。
+
+## bot / app を channel に参加させる
+
+bot token で channel の投稿を取得するには、scope に加えて bot / app が対象 channel の member である必要がある。
+
+public channel / private channel のどちらも、対象 channel のメッセージ入力欄で `/invite @<App 名>` を実行して追加する。この help の manifest どおりに作成した場合は `/invite @slapex` になる。
+
+![channel で /invite @slapex を実行して App を追加する](../../assets/screenshots/slack-app-setup/09-invite-app-to-channel.png)
+
+private channel は参加 member 以外には見えないため、その private channel に参加している member が `/invite` を実行する。
+
+次の方法でも同じ結果になる。
+
+- メッセージ入力欄に `@<App 名>` をメンションとして投稿し、表示される案内から channel に追加する。
+- channel 名をクリックして設定を開き、`Integrations` tab の `Add apps` から App を追加する。
+
+user token を使う場合、この操作は不要である(認可したユーザー本人が参照できる範囲が対象になる)。
 
 ## Channel access
 
 user token を使う場合、認可したユーザー本人が参照できる範囲がアクセス範囲になる。対象 channel が見えない場合は、そのユーザーが対象 channel を参照できるか、必要 scope が付いているかを確認する。
 
-bot token を使う場合、public channel / private channel の投稿を取得するには、対応する scope だけでは不十分である。取得対象 channel に bot / app が参加している必要がある。参加していない場合は、Slack 上で bot / app を対象 channel に追加する。private channel の場合は、その private channel の参加者が bot / app を招待する。
+bot token を使う場合、public channel / private channel の投稿を取得するには、対応する scope だけでは不十分である。取得対象 channel に bot / app が参加している必要がある。参加していない場合は「bot / app を channel に参加させる」の手順で追加する。
 
 ## Token の渡し方
 
@@ -208,7 +282,7 @@ secret manager または CI secrets に保存した token が正しいか確認�
 
 ### scope が不足している
 
-OAuth & Permissions で不足 scope を追加し、App を workspace に再 install / 再 authorize する。更新後の token を secret manager または CI secrets に反映する。
+OAuth & Permissions で不足 scope を追加し、App を workspace に再 install / 再 authorize する(手順は「scope 変更後の再 install」を参照)。更新後の token を secret manager または CI secrets に反映する。
 
 ### channel が見えない
 
@@ -216,7 +290,7 @@ channel 名または channel ID を確認する。user token の場合は、認�
 
 ### bot token 利用時に bot が channel に参加していない
 
-public channel の場合は Slack 上で bot / app を channel に追加する。private channel の場合は、その private channel の参加者が bot / app を招待する。
+「bot / app を channel に参加させる」の手順に従い、対象 channel に bot / app を追加する。
 
 ## 実 token E2E の確認計画
 
