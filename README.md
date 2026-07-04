@@ -22,7 +22,7 @@ slapex --demo --output ./slapex-demo
 
 完了時には出力先ディレクトリの絶対 path が表示されます。Finder で開くと、`index.html`、`style.css`、`assets/` がローカルファイルとして並びます。
 
-<p align="center"><img src="assets/screenshots/output-dir-finder-ja.png" width="760" alt="Finder で slapex の出力ディレクトリを開いた例"></p>
+<p align="center"><img src="assets/screenshots/output-dir-finder.png" width="760" alt="Finder で slapex の出力ディレクトリを開いた例"></p>
 
 ## 出力プレビュー
 

@@ -13,7 +13,7 @@
 
 `screenshots/` には README で使う出力プレビュー画像(`sample-*.png`)を置く。`doc/samples/` のサンプル export を撮影したもので、日本語版(`-ja`)と英語ページ準備用の英語版(`-en`)がある。再生成手順は `doc/samples/README.md` を参照。
 
-`screenshots/output-dir-finder-ja.png` は README でローカル出力ディレクトリの構造を示す Finder 風画像である。
+`screenshots/output-dir-finder.png` は README でローカル出力ディレクトリの構造を示す Finder 画像である。
 
 `screenshots/slack-app-setup/` には `doc/help/slack-app-setup.md` で使う Slack 管理画面 / Slack client の操作スクリーンショットを置く。実 Slack UI の手動撮影であり、スクリプトで再生成できない。更新方針(token などの秘密情報のマスクを含む)は `doc/help/README.md` の「スクリーンショットのメンテ方針」を参照。
 
