@@ -60,6 +60,7 @@
 | 0046 | decided | Slack API 接続先の内部 override | 内部環境変数 `SLAPEX_API_BASE_URL` が非空のときだけ base URL を差し替える。デモ録画・fixture 実行用の内部用途で、ユーザー向けドキュメント / `--help` には載せない。未指定時に default のままである negative test と指定時のみ差し替わる positive test を維持する。録画は引き続きこの機構を使い、利用者向けの token 不要試用は 0047 の `--demo` で別に提供する | [0046-api-base-url-override.md](0046-api-base-url-override.md) |
 | 0047 | decided | token 不要の demo 実行 | 公開 option `--demo` を追加し、token / Slack App なしで同梱の架空 fixture(`internal/demo`)を in-process fake server 経由で export する。fixture / fake server は `tools/gensample` から `internal/demo` へ切り出して共有。locale で ja / en を自動選択し、pacing は省略。stdout 契約と credential-scope(fake token を loopback にだけ送る)を維持 | [0047-token-free-demo-run.md](0047-token-free-demo-run.md) |
 | 0048 | decided | ドキュメント文体 | 利用者向け(README / `doc/help/`)はですます調、開発者・AI agent 向けは常体。トーンは簡潔・中立で絵文字なし、技術用語は英語表記のまま。正本は `doc/guidelines/document-style-guidelines.md`。既存文書への一括適用は #126 | [0048-document-style.md](0048-document-style.md) |
+| 0049 | decided | 利用者→開発者ドキュメントのリンク方針 | 利用者向け(README / `doc/help/`)の本文から開発者向け(`doc/design/` spec、decision log 等)へ直接リンクしない。必要時は文末の脚注に「開発者向け」と明示して置く。decision log 直リンク禁止(0039)は本方針に包含。正本は `document-style-guidelines.md`、既存棚卸しは #123 | [0049-user-doc-to-dev-doc-links.md](0049-user-doc-to-dev-doc-links.md) |
 
 ## 未決事項
 

@@ -38,7 +38,8 @@
 配置の正本は `doc/README.md` と各ディレクトリの `README.md` だが、文体判断に直結する要点を再掲する。
 
 - 利用者向け文書には、開発視点の情報(設計経緯、開発環境、実装詳細)を書かない。
-- 利用者向け文書から decision log へ直接リンクしない(`doc/guidelines/decision-log-guidelines.md`)。
+- 利用者向け文書(repo root `README.md` と `doc/help/` 配下)の本文から、開発者向けドキュメント(`doc/design/` の spec、decision log など)へ直接リンクしない。どうしても参照が必要な場合は、本文ではなく文末の脚注に置き、「開発者向け」であることを明示する。利用者に必要な情報は利用者向け文書の本文に書くか、利用者向けの help / spec へリンクする(方針は `doc/design/decision-log/0049-user-doc-to-dev-doc-links.md`)。
+- decision log への直接リンク禁止は、上記の開発者向けドキュメントへのリンク方針に包含される特例として維持する(`doc/guidelines/decision-log-guidelines.md`)。
 - 利用者向け help の内容方針(そのまま実行できる手順として書く等)は `doc/help/README.md` の「内容の方針」節を正とする。
 - 開発者向け情報への入口は repo root `README.md` の末尾に最小限のリンクとして置き、利用者向け本文に混ぜない。
 
