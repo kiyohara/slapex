@@ -16,6 +16,8 @@ Issue #118: 出力 HTML の footer `Export information` に、生成に使った
 
 - `PageData.ToolLine` に `slapex <version>` 形式(`--version` 出力と揃える)で渡す。
 - Export information の `<dl>` に `Tool` 行を追加する。
+- レビュー対応: `tools/gensample` の `ToolVersion` を `"gensample"` → `"dev"` に変更(footer が `slapex dev` になり `slapex <version>` の意図に合う)。
+- レビュー対応: テンプレート変更に合わせて `doc/samples/{ja,en}` を `gensample` で再生成し PR に含める。本文の投稿日時・テキスト・アバター見た目は不変で、変わるのは footer の `Exported` 時刻・`Tool` 行・アセットハッシュ名のみ。スクリーンショットは折りたたみ footer を含まない timeline / thread 部分の撮影のため撮り直し不要。
 
 ## 次にやること
 
