@@ -6,7 +6,7 @@
 
 `slapex` は、Slack channel の投稿・スレッド・画像・添付ファイルを、thread の返信、標準 / カスタム絵文字、reaction、URL unfurl の preview 画像ごと、ローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。
 
-対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。Windows は初期対象外です。
+対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。
 
 ## ターミナルでの実行例
 
@@ -15,17 +15,11 @@
   <sub>token の対話入力、channel の選択、進捗表示、完了までの流れ</sub>
 </p>
 
-Slack App や token を用意する前に試す場合は、`--demo` で同梱サンプルから HTML export を生成できます。
-
-```sh
-slapex --demo --output ./slapex-demo
-```
-
-完了時には出力先ディレクトリの絶対 path が表示されます。出力先ディレクトリ配下には、`index.html`、`style.css`、`assets/` がローカルファイルとして配置されます。
+完了時には出力先ディレクトリの絶対 path が表示されます。出力先ディレクトリ配下には、ローカルで閲覧できるファイル群が生成されます。
 
 <p align="center">
   <img src="assets/screenshots/output-dir-finder.png" width="760" alt="ファイルマネージャーで slapex の出力ディレクトリを開いた例"><br>
-  <sub>出力先ディレクトリに生成される <code>index.html</code>、<code>style.css</code>、<code>assets/</code></sub>
+  <sub>出力先ディレクトリに生成されるファイル群</sub>
 </p>
 
 ## 出力プレビュー
@@ -43,7 +37,13 @@ slapex --demo --output ./slapex-demo
   </tr>
 </table>
 
-リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html))。[^sample-data]
+Slack App や token を用意する前に試す場合は、`--demo` で同梱サンプルから HTML export を生成できます。
+
+```sh
+slapex --demo --output ./slapex-demo
+```
+
+リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます。[^sample-data]
 
 ## クイックスタート
 
