@@ -27,7 +27,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 | help-00 | #100 | done | help-01 / help-03 / help-04 前が望ましい | (完了)CLI 出力を styled / plain の 2 モード化し `--no-color` を追加。方針は decision log 0045 | #102 |
 | help-01 | #51 | done | help-00 後が望ましい | (完了)README に出力プレビュー(スクリーンショット / フロー図)と ja/en サンプル export(`doc/samples/`、`tools/gensample` で生成)を追加。demo 実行は #113 に分離 | #114 |
 | help-02 | #48 | done | - | (完了)Slack App セットアップ help にスクリーンショット付き UI 操作手順を追加。channel 招待は `/invite` に一本化(経緯は working branch note 参照) | #119 |
-| help-03 | #52 | done | help-00 後が望ましい | (完了)制限事項・FAQ help(`doc/help/faq.md`)を新設し、README / quickstart から誘導。quickstart「つまずいたら」のトラブル分岐リンクを FAQ へ集約(#52 コメント参照) | - |
+| help-03 | #52 | done | help-00 後が望ましい | (完了)制限事項・FAQ help(`doc/help/faq.md`)を新設し、README / quickstart から誘導。quickstart「つまずいたら」のトラブル分岐リンクを FAQ へ集約(#52 コメント参照) | #128 |
 | help-04 | #49 | done | help-00 / help-01 / help-02 / help-03 後が望ましい | (完了)初回利用クイックスタートを `doc/help/quickstart.md` にチェックリスト形式で追加し README から誘導。README 全体の再構成は #123(help-05)に分離 | #124 |
 | help-05 | #123 | todo | #49 / #52 / #125 後 | README をキャッチーな入口 + 誘導リンク集へ再構成し、インストール・使い方の詳細を `doc/help/` へ移設する | - |
 | help-06 | #125 | done | - | (完了)ドキュメント文体ガイドライン(読者層別の文末・トーン・用語表記)を制定。方針は decision log 0048 | #127 |
