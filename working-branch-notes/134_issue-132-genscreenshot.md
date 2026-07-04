@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-132-genscreenshot
-- PR: (未作成)
+- PR: #134
 - 最終更新: 2026-07-05
 
 ## 目的
@@ -13,7 +13,7 @@ Issue #132 の根本対応。README 用 timeline screenshot の右端に 1px 幅
 
 ## 現在の状況
 
-- `tools/genscreenshot` + compose service `screenshot` を実装し、4 枚の README 用 screenshot を再生成済み。検証まで完了し、PR 作成待ち。
+- `tools/genscreenshot` + compose service `screenshot` を実装し、4 枚の README 用 screenshot を再生成済み。検証まで完了し、PR #134 を作成済み(review / merge 待ち)。
 
 ## 決定事項
 
@@ -33,7 +33,7 @@ Issue #132 の根本対応。README 用 timeline screenshot の右端に 1px 幅
 - [x] screenshot 4 枚の再生成と目視確認
 - [x] `doc/samples/README.md` の手順更新
 - [x] go vet / build / test
-- [ ] PR 作成、note rename
+- [x] PR 作成(#134)、note rename
 
 ## 検証
 
