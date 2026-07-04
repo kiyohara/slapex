@@ -37,9 +37,9 @@ README 用のターミナルデモ GIF(Issue #115)は、実 workspace / 実 toke
 - 実装: `cmd/slapex/main.go` に `apiBaseURLEnv` / `apiBaseURLFromEnv` / `newSlackClient` を追加。
 - テスト: `cmd/slapex/main_test.go` に negative(`TestAPIBaseURLFromEnv`: 未設定・空・空白のみでは override しない)と positive(`TestNewSlackClientBaseURLOverride`: 指定時のみ override 先 host に Bearer token 付きで届く)を追加。default base URL 自体は `internal/slack` の既存 `TestNewDefaults` が担保する。
 - 利用: `tools/gensample -serve` と VHS 録画(`tools/demo/`)がこの override を使う。
-- Issue #113(token 不要 demo 実行)で接続先差し替えが必要になった場合は、この機構の共有を第一候補とする。ユーザー向け CLI 仕様にするかの判断は #113 側で行う。
+- Issue #113(token 不要 demo 実行)は 0047 で公開 option `--demo` として別経路で確定した。`--demo` は接続先を CLI 内部で直接指定し、この環境変数は経由しない。`SLAPEX_API_BASE_URL` は token 入力プロンプトを見せるデモ録画(`tools/demo/`)用として引き続き残す。
 
 ## 後から見直す条件
 
 - 利用者向けに接続先差し替えを公開する需要が出た場合(正式 option 化や allowlist の再設計を含めて再検討する)。
-- #113 の demo 実行仕様が確定し、この機構の位置づけ(内部用途のまま共有するか、demo 専用経路に置き換えるか)を判断する時点。
+- #113 の demo 実行仕様は 0047 で確定した(内部用途のまま録画に残し、利用者向けは `--demo` で別経路)。今後この棲み分けを再整理する必要が生じた場合は 0047 と併せて見直す。

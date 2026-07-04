@@ -11,9 +11,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/term"
 
+	"github.com/kiyohara/slapex/internal/demo"
 	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
@@ -71,6 +73,7 @@ type cliOptions struct {
 	reuseCache     string
 	noInteractive  bool
 	noColor        bool
+	demo           bool
 	showVersion    bool
 }
 
@@ -87,6 +90,18 @@ func run() int {
 		return exitOK
 	}
 
+	// Decoration is decided from stderr itself (the stream progress goes to),
+	// never from stdout, keeping the stdout path contract independent
+	// (doc/design/cli-interface.md「出力制御」).
+	printer := ui.NewPrinter(os.Stderr, ui.Styled(os.Stderr, os.Getenv, opts.noColor))
+
+	// --demo exports a bundled fictional fixture and needs neither a Slack
+	// token nor a controlling terminal, so it short-circuits before both
+	// (doc/design/cli-interface.md, Issue #113).
+	if opts.demo {
+		return runDemo(opts, printer, os.Getenv)
+	}
+
 	// Open the controlling terminal once; it drives both the interactive
 	// missing-token prompt below and interactive channel selection in
 	// export.Run. It is nil when unavailable (CI, pipe), keeping both paths
@@ -95,11 +110,6 @@ func run() int {
 	if promptTTY != nil {
 		defer promptTTY.Close()
 	}
-
-	// Decoration is decided from stderr itself (the stream progress goes to),
-	// never from stdout, keeping the stdout path contract independent
-	// (doc/design/cli-interface.md「出力制御」).
-	printer := ui.NewPrinter(os.Stderr, ui.Styled(os.Stderr, os.Getenv, opts.noColor))
 
 	token := resolveToken(slackTokenFromEnv(os.Getenv), promptTTY, opts.noInteractive, promptForToken)
 	if token == "" {
@@ -131,6 +141,69 @@ func run() int {
 	}
 	fmt.Fprintln(os.Stdout, dir)
 	return exitOK
+}
+
+// runDemo exports a bundled fictional fixture through the real export pipeline
+// without a Slack token (Issue #113, decision log 0047). It starts an
+// in-process fake Slack API server for the fixture and points the client at it
+// with an internal fake token, so nothing reaches a real Slack host and the
+// user needs neither a Slack App nor a token to see the output. The stdout
+// contract is unchanged: on success the output directory path is printed to
+// stdout. The fixture has a single channel, so selection is non-interactive.
+func runDemo(opts *cliOptions, printer *ui.Printer, getenv func(string) string) int {
+	sc := demoScenario(getenv)
+	printer.Noticef("Running the bundled demo fixture (#%s, fictional data, no Slack token used).", sc.ChannelName)
+
+	srv := demo.NewServer(sc)
+	defer srv.Close()
+
+	// The fixture is served in-process with no real rate limits, so skip the
+	// Slack API pacing a real run applies; the demo stays snappy.
+	client := slack.New(demo.FakeToken,
+		slack.WithBaseURL(srv.APIBaseURL()),
+		slack.WithSleeper(demo.NoPacing),
+	)
+	client.Logf = printer.Noticef
+
+	dir, err := export.Run(context.Background(), client, export.Options{
+		ChannelKeyword: sc.ChannelName,
+		OutputDir:      opts.outputDir,
+		MaxPosts:       opts.maxPosts,
+		Days:           opts.days,
+		MaxAttachBytes: opts.maxAttachBytes,
+		KeepCache:      opts.keepCache,
+		ReuseCache:     opts.reuseCache,
+		NoInteractive:  true,
+		ToolVersion:    version,
+	}, printer)
+	if err != nil {
+		printer.StopPhase()
+		return reportRunError(printer, err)
+	}
+	fmt.Fprintln(os.Stdout, dir)
+	return exitOK
+}
+
+// demoScenario picks the bundled demo fixture. It prefers the Japanese fixture
+// when the environment's locale starts with "ja" and the English one otherwise,
+// so the demo reads naturally for either audience without adding a public
+// option.
+func demoScenario(getenv func(string) string) *demo.Scenario {
+	if demoPrefersJapanese(getenv) {
+		return demo.ScenarioJA(time.Now())
+	}
+	return demo.ScenarioEN(time.Now())
+}
+
+// demoPrefersJapanese reports whether the environment's locale
+// (LC_ALL / LC_MESSAGES / LANG, in POSIX precedence order) selects Japanese.
+func demoPrefersJapanese(getenv func(string) string) bool {
+	for _, key := range []string{"LC_ALL", "LC_MESSAGES", "LANG"} {
+		if v := getenv(key); v != "" {
+			return strings.HasPrefix(strings.ToLower(v), "ja")
+		}
+	}
+	return false
 }
 
 func slackTokenFromEnv(getenv func(string) string) string {
@@ -267,12 +340,14 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept cache (path to output directory or .cache/)")
 		noInteractive = fs.Bool("no-interactive", false, "never prompt interactively (channel selection or SLACK_TOKEN entry)")
 		noColor       = fs.Bool("no-color", false, "plain progress output: no colors, icons or animations (also via NO_COLOR, CI, TERM=dumb)")
+		demoMode      = fs.Bool("demo", false, "export a bundled fictional sample without a Slack token or Slack App")
 		showVersion   = fs.Bool("version", false, "print version and exit")
 	)
 	fs.Usage = func() {
 		fmt.Fprintf(diagnostics, "Usage: slapex [channel] [options]\n\n")
 		fmt.Fprintf(diagnostics, "Exports Slack channel posts as locally browsable HTML with assets.\n")
-		fmt.Fprintf(diagnostics, "The Slack OAuth token is taken from the %s environment variable.\n\n", slackTokenEnv)
+		fmt.Fprintf(diagnostics, "The Slack OAuth token is taken from the %s environment variable.\n", slackTokenEnv)
+		fmt.Fprintf(diagnostics, "To try it first without a Slack App or token, run: slapex --demo\n\n")
 		fmt.Fprintf(diagnostics, "Options:\n")
 		fs.PrintDefaults()
 	}
@@ -326,6 +401,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		reuseCache:     *reuseCache,
 		noInteractive:  *noInteractive,
 		noColor:        *noColor,
+		demo:           *demoMode,
 		showVersion:    *showVersion,
 	}, nil
 }

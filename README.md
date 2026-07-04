@@ -51,6 +51,8 @@ flowchart LR
 
 デモとスクリーンショットはいずれも同梱の生成済みサンプル export と同じ架空データのものです(実 workspace・実 token は使っていません)。リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html)、詳細は [`doc/samples/README.md`](doc/samples/README.md))。
 
+`slapex` を[インストール](#インストール)済みなら、Slack App や token を用意する前に `slapex --demo` を実行するだけで、この架空サンプルから手元で HTML export を生成して試せます(token 不要)。詳細は [使い方](#使い方) を参照してください。
+
 ## 事前準備: Slack App と token
 
 `slapex` は、利用者自身が作成した Slack App の Slack OAuth token を使います。token は保存せず、実行時に環境変数 `SLACK_TOKEN` から受け取ります。
@@ -150,7 +152,14 @@ slapex --version
 
 ## 使い方
 
-token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` や shell history に残さないでください。1Password CLI、CI secrets、対話シェルでの一時注入など、用途別の手順は [`doc/help/token-injection.md`](doc/help/token-injection.md) を参照してください。
+Slack App や token を用意する前にまず試したい場合は、`--demo` で同梱の架空サンプルから export を生成できます(token 不要、実 Slack への通信なし)。ロケール(`LANG` など)が `ja` で始まる環境では日本語サンプル、それ以外では英語サンプルを使います。
+
+```sh
+# token なしで同梱サンプルを export(出力先を指定する例):
+slapex --demo --output ./slapex-demo
+```
+
+実際の workspace を export するときは token が必要です。token を CLI 引数では渡せません(プロセス一覧や shell history への漏えいを避けるため)。実行時に環境変数 `SLACK_TOKEN` として渡します。user token は通常 `xoxp-`、bot token は通常 `xoxb-` で始まります。token の実値を `.env` や shell history に残さないでください。1Password CLI、CI secrets、対話シェルでの一時注入など、用途別の手順は [`doc/help/token-injection.md`](doc/help/token-injection.md) を参照してください。
 
 ```sh
 # 推奨: 1Password CLI で token を実行時に注入(実値を shell 履歴や .env に残さない)。
@@ -177,6 +186,7 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--reuse-cache <path>` | なし | 以前の出力ディレクトリまたは `.cache/` を再利用する |
 | `--no-interactive` | off | TTY があっても対話選択を開始しない |
 | `--no-color` | off | 進捗表示を色・アイコン・アニメーションなしの plain output にする |
+| `--demo` | off | token なしで同梱の架空サンプルを export する(実 Slack に接続しない) |
 | `--version` | | version を表示して終了する |
 | `--help` | | usage を表示して終了する |
 
