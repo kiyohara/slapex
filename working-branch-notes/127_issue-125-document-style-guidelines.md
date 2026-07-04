@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-125-document-style-guidelines
-- PR: -
+- PR: #127
 - 最終更新: 2026-07-04
 
 ## 目的
