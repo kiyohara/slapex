@@ -16,7 +16,7 @@
 
 ## 現況
 
-v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 を GitHub Releases で公開済み。v1.1.2 は release 準備中。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
+v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
 現在は post-v1 の CLI 出力 UX と利用者向け help / サンプル整備を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
 
@@ -38,7 +38,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 を GitHub Releases で公開済み。v1.1.2 �
 | v1.0.1 | released | user token default への認証方針転換(Issue #81 / PR #84) |
 | v1.1.0 | released | token prompt / interactive selection / CLI output UX / 開発ループ整備を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.1.1 | released | `--reuse-cache` の出力ディレクトリ検出改善、exported HTML header / footer 調整、logo asset 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
-| v1.1.2 | preparing | 出力プレビュー・匿名化サンプル、token 不要 `--demo`、Slack App セットアップ help スクリーンショット、export footer への tool version 追加を含む patch release 準備中 |
+| v1.1.2 | released | 出力プレビュー・匿名化サンプル、token 不要 `--demo`、Slack App セットアップ help スクリーンショット、export footer への tool version 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 
 ## 完了済みフェーズ(参考)
 
