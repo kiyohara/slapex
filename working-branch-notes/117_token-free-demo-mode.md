@@ -53,3 +53,4 @@ Issue #113: token 不要で試せる demo / fixture 実行経路を提供する�
 
 - 2026-07-04: Issue #113 着手。依存 #51(help-01, done)確認済み。実現方式を `--demo` flag に確定。branch 作成、note 作成。
 - 2026-07-04: `internal/demo` 抽出、`--demo` 実装、pacing 省略、docs(cli-interface / decision log 0047 / index / 0046 追記 / README)、テスト追加、Docker Compose 検証まで完了。
+- 2026-07-04: PR #117 レビュー対応。[must] 指摘「demo の `--days` が効いていない(fake `conversations.history` が `oldest` を無視して全件返す)」を修正。`filterSince`(`internal/demo/scenario.go`)で `oldest` 以降のメッセージだけ返すようにし、`server.go` の `conversations.history` handler に適用。回帰テスト `TestFilterSince` を追加。手動確認: `--days 30` は day1 メッセージあり、`--days 1` は day1(now-2d)メッセージが消える。docs の「取得範囲 option を尊重」と実装が一致。

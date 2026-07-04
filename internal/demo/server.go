@@ -129,7 +129,7 @@ func (f *fakeServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	case "/api/conversations.list":
 		writeSlackOK(w, map[string]any{"channels": f.sc.Channels})
 	case "/api/conversations.history":
-		writeSlackOK(w, map[string]any{"messages": f.sc.Messages})
+		writeSlackOK(w, map[string]any{"messages": filterSince(f.sc.Messages, r.PostForm.Get("oldest"))})
 	case "/api/conversations.replies":
 		replies, ok := f.sc.Replies[r.PostForm.Get("ts")]
 		if !ok {

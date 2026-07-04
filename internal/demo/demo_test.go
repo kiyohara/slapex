@@ -61,6 +61,35 @@ func TestScenariosRenderEndToEnd(t *testing.T) {
 	}
 }
 
+// TestFilterSince guards that the fake conversations.history honours the
+// "oldest" bound the export pipeline sends for --days, so demo mode respects
+// the fetch window like a real run (regression for the --days demo gap).
+func TestFilterSince(t *testing.T) {
+	msgs := []slack.Message{
+		{TS: "100.000000", Text: "old"},
+		{TS: "200.000000", Text: "mid"},
+		{TS: "300.000000", Text: "new"},
+	}
+
+	// oldest at 200 drops the older message and keeps 200 (inclusive) and 300.
+	got := filterSince(msgs, "200.000000")
+	gotTexts := make([]string, len(got))
+	for i, m := range got {
+		gotTexts[i] = m.Text
+	}
+	if strings.Join(gotTexts, ",") != "mid,new" {
+		t.Fatalf("filterSince(oldest=200) kept %v, want [mid new]", gotTexts)
+	}
+
+	// An empty or unparseable oldest keeps every message.
+	if n := len(filterSince(msgs, "")); n != len(msgs) {
+		t.Fatalf("filterSince(oldest=\"\") kept %d, want %d", n, len(msgs))
+	}
+	if n := len(filterSince(msgs, "not-a-ts")); n != len(msgs) {
+		t.Fatalf("filterSince(oldest=\"not-a-ts\") kept %d, want %d", n, len(msgs))
+	}
+}
+
 // TestAuthorized covers the fake server's token check, including the
 // AllowAnyToken relaxation used only by demo recordings.
 func TestAuthorized(t *testing.T) {
