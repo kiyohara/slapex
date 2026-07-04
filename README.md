@@ -4,7 +4,7 @@
 
 # slapex
 
-`slapex` は、Slack channel の投稿・スレッド・画像・添付ファイルを、thread の返信、標準 / カスタム絵文字、reaction、URL unfurl の preview 画像ごと、ローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。
+`slapex` は、Slack channel の履歴を、ローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。投稿・スレッドの返信に加え、標準 / カスタム絵文字、reaction、添付ファイル、URL unfurl の preview 画像もまとめて取得します。
 
 対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。
 
@@ -15,7 +15,7 @@
   <sub>token の対話入力、channel の選択、進捗表示、完了までの流れ</sub>
 </p>
 
-完了時には出力先ディレクトリの絶対 path が表示されます。出力先ディレクトリ配下には、ローカルで閲覧できるファイル群が生成されます。
+完了時には出力先ディレクトリの絶対 path が表示されます。その配下に、ローカルで閲覧できるファイル群が生成されます。
 
 <p align="center">
   <img src="assets/screenshots/output-dir-finder.png" width="760" alt="ファイルマネージャーで slapex の出力ディレクトリを開いた例"><br>
