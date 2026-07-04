@@ -10,34 +10,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
 )
 
-// TestScenariosRenderEndToEnd runs both bundled fixtures through the real
-// export pipeline against an in-process fake server, the same path slapex
-// --demo takes. It guards that the fixtures stay renderable and that no
-// {{base}} placeholder leaks into the output.
+// TestScenariosRenderEndToEnd runs both bundled fixtures through the shared
+// Export driver, the same path slapex --demo and gensample take. It guards
+// that the fixtures stay renderable and that no {{base}} placeholder leaks
+// into the output.
 func TestScenariosRenderEndToEnd(t *testing.T) {
 	now := time.Now()
 	for _, sc := range []*Scenario{ScenarioJA(now), ScenarioEN(now)} {
 		t.Run(sc.Lang, func(t *testing.T) {
-			srv := NewServer(sc)
-			defer srv.Close()
-
-			client := slack.New(FakeToken, slack.WithBaseURL(srv.APIBaseURL()), slack.WithSleeper(NoPacing))
-			dir, err := export.Run(context.Background(), client, export.Options{
-				ChannelKeyword: sc.ChannelName,
+			dir, err := Export(context.Background(), sc, Options{
 				OutputDir:      t.TempDir(),
 				MaxPosts:       1000,
 				Days:           30,
 				MaxAttachBytes: 10 << 20,
-				NoInteractive:  true,
 				ToolVersion:    "test",
 			}, ui.NewPrinter(io.Discard, false))
 			if err != nil {
-				t.Fatalf("export.Run: %v", err)
+				t.Fatalf("demo.Export: %v", err)
 			}
 
 			html, err := os.ReadFile(filepath.Join(dir, "index.html"))

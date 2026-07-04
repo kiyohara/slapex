@@ -47,7 +47,7 @@ Issue #51 で README のスクリーンショット・フロー図と同梱サ�
 
 ## 影響
 
-- 実装: `tools/gensample/{server,scenario_ja,scenario_en,assets}.go` を `internal/demo` へ移動し、`Scenario` / `Asset` / `ScenarioJA` / `ScenarioEN` / `FakeToken` / `NewServer` / `Handler` / `AllowAnyToken` / `WithAssetDelay` / `NoPacing` を公開。`cmd/slapex/main.go` に `--demo` と `runDemo` / `demoScenario` / `demoPrefersJapanese` を追加。`tools/gensample/main.go` は `internal/demo` を使う形に整理。
+- 実装: `tools/gensample/{server,scenario_ja,scenario_en,assets}.go` を `internal/demo` へ移動し、`Scenario` / `Asset` / `ScenarioJA` / `ScenarioEN` / `FakeToken` / `NewServer` / `Handler` / `AllowAnyToken` / `WithAssetDelay` / `NoPacing` を公開。fixture を配信して export pipeline を回す共通ドライバ `demo.Export`(+ `demo.Options`)を追加し、`cmd/slapex` の `--demo`(`runDemo`)と `tools/gensample` のサンプル生成(`buildSample`)の双方をこれに集約。fake server / fake token / base URL / pacing 省略 / 単一 channel の non-interactive 解決という不変部分を 1 か所に閉じ、一方だけ直して他方が取り残される状態を避ける。`cmd/slapex/main.go` に `--demo` と `runDemo` / `demoScenario` / `demoPrefersJapanese` を追加。demo の取得窓は fake `conversations.history` を `oldest` で filtering(`filterSince`)して通常実行と揃える。
 - テスト: `internal/demo` に fixture の end-to-end レンダリング(ja / en)、fake server の認証、placeholder 置換のテストを追加。`cmd/slapex` に `--demo` の parse / help 掲載 / locale 選択 / end-to-end の stdout 契約テストを追加。credential-scope の既存テスト(`SLAPEX_API_BASE_URL` の positive / negative)は維持。
 - ドキュメント: `cli-interface.md` に `--demo` と「demo モード」節を追加。`README.md` の出力プレビュー・使い方に token 不要試用の案内を追加。
 - 運用: `SLAPEX_API_BASE_URL`(0046)は録画用途としてそのまま残す。

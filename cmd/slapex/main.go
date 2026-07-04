@@ -154,26 +154,13 @@ func runDemo(opts *cliOptions, printer *ui.Printer, getenv func(string) string) 
 	sc := demoScenario(getenv)
 	printer.Noticef("Running the bundled demo fixture (#%s, fictional data, no Slack token used).", sc.ChannelName)
 
-	srv := demo.NewServer(sc)
-	defer srv.Close()
-
-	// The fixture is served in-process with no real rate limits, so skip the
-	// Slack API pacing a real run applies; the demo stays snappy.
-	client := slack.New(demo.FakeToken,
-		slack.WithBaseURL(srv.APIBaseURL()),
-		slack.WithSleeper(demo.NoPacing),
-	)
-	client.Logf = printer.Noticef
-
-	dir, err := export.Run(context.Background(), client, export.Options{
-		ChannelKeyword: sc.ChannelName,
+	dir, err := demo.Export(context.Background(), sc, demo.Options{
 		OutputDir:      opts.outputDir,
 		MaxPosts:       opts.maxPosts,
 		Days:           opts.days,
 		MaxAttachBytes: opts.maxAttachBytes,
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
-		NoInteractive:  true,
 		ToolVersion:    version,
 	}, printer)
 	if err != nil {

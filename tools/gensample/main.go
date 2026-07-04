@@ -31,8 +31,6 @@ import (
 	"time"
 
 	"github.com/kiyohara/slapex/internal/demo"
-	"github.com/kiyohara/slapex/internal/export"
-	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
 )
 
@@ -101,27 +99,23 @@ func scenario(lang string) (*demo.Scenario, error) {
 	}
 }
 
-// buildSample runs the export pipeline against sc's fake server and replaces
-// out/<lang>/ with the generated index.html + style.css + assets/.
+// buildSample runs the shared demo export driver against sc and replaces
+// out/<lang>/ with the generated index.html + style.css + assets/. It goes
+// through demo.Export so sample generation and `slapex --demo` share the exact
+// same fixture-serving wiring.
 func buildSample(sc *demo.Scenario, out string) error {
-	srv := demo.NewServer(sc)
-	defer srv.Close()
-
 	tmp, err := os.MkdirTemp("", "gensample-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmp)
 
-	client := slack.New(demo.FakeToken, slack.WithBaseURL(srv.APIBaseURL()))
 	printer := ui.NewPrinter(os.Stderr, false)
-	dir, err := export.Run(context.Background(), client, export.Options{
-		ChannelKeyword: sc.ChannelName,
+	dir, err := demo.Export(context.Background(), sc, demo.Options{
 		OutputDir:      tmp,
 		MaxPosts:       1000,
 		Days:           30,
 		MaxAttachBytes: 10 << 20,
-		NoInteractive:  true,
 		ToolVersion:    "gensample",
 	}, printer)
 	if err != nil {
