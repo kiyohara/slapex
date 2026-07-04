@@ -244,6 +244,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			now.Format("2006-01-02 15:04"), offsetString(tzOffset), now.UTC().Format(time.RFC3339)),
 		RangeLine: fmt.Sprintf("since %s (--days %d, --max-posts %d, --max-attachment-size %s)",
 			oldest.Format("2006-01-02"), opts.Days, opts.MaxPosts, humanBytes(opts.MaxAttachBytes)),
+		ToolLine:  fmt.Sprintf("slapex %s", opts.ToolVersion),
 		Items:     items,
 		Truncated: truncated,
 	}

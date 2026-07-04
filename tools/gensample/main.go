@@ -116,7 +116,7 @@ func buildSample(sc *demo.Scenario, out string) error {
 		MaxPosts:       1000,
 		Days:           30,
 		MaxAttachBytes: 10 << 20,
-		ToolVersion:    "gensample",
+		ToolVersion:    "dev",
 	}, printer)
 	if err != nil {
 		return err

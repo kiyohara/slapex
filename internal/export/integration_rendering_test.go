@@ -168,8 +168,9 @@ func TestRunIntegrationHeaderMetadataIsCollapsed(t *testing.T) {
 	mustContain(t, body, `<details class="export-meta">`)
 	mustContain(t, body, `<summary>Export information</summary>`)
 	mustContain(t, body, `<dt>Workspace</dt><dd>Acme Workspace (acme.example.slack.com, TACME123)</dd>`)
+	mustContain(t, body, `<dt>Tool</dt><dd>slapex test</dd>`)
 	mustNotContain(t, body, `<details class="export-meta" open>`)
-	assertOrder(t, body, `<h1 class="export-title">`, `<footer class="export-footer">`, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`, `<a class="footer-project-link"`)
+	assertOrder(t, body, `<h1 class="export-title">`, `<footer class="export-footer">`, `<details class="export-meta">`, `<summary>Export information</summary>`, `<dl>`, `<dt>Workspace</dt>`, `<dt>Tool</dt>`, `<a class="footer-project-link"`)
 }
 
 // --- case 2: system rows render quietly and supplement missing actors --------
