@@ -16,7 +16,7 @@ slapex engineering
 # Paste a Slack OAuth token to use for this run only.
 # It is kept in memory only: not echoed, and not written to files, cache, logs or HTML.
 # For repeated use, provide it from a secret manager (e.g. 1Password CLI) or CI secrets.
-# Enter SLACK_TOKEN (input hidden): 
+# Enter SLACK_TOKEN (input hidden):
 ```
 
 入力は画面に表示(echo)されず、貼り付けた token はその 1 回の実行の中だけで使われます。設定ファイル・cache・log・HTML 出力には保存されず、コマンド行に書かないため shell history にも残りません。

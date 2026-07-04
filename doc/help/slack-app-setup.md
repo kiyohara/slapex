@@ -219,7 +219,7 @@ scope を追加または変更すると、`OAuth & Permissions` の画面上部�
 
 ![scope 変更後に表示される再 install banner](../../assets/screenshots/slack-app-setup/10-reinstall-banner.png)
 
-再 install / 再 authorize すると token が更新される場合がある。`OAuth & Permissions` に表示されている現在の token を、secret manager または CI secrets に反映する。
+再 install / 再 authorize すると token が更新される場合がある。`OAuth & Permissions` に表示されている現在の token を、利用中の方法に反映する([Token の渡し方](token-injection.md) の「token を更新したとき」)。
 
 ## bot / app を channel に参加させる
 
@@ -248,9 +248,20 @@ bot token を使う場合、public channel / private channel の投稿を取得�
 
 ローカルの `.env` や shell history に token の実値を残さない。
 
-Slack OAuth token は `SLACK_TOKEN` として渡す。
+追加ツールなしで実行する場合は、`SLACK_TOKEN` を設定せずに `slapex` を実行し、表示される token 入力プロンプトへコピーした token を貼り付ける。
 
-1Password CLI を使う例:
+```sh
+slapex engineering
+# SLACK_TOKEN is not set.
+# Paste a Slack OAuth token to use for this run only.
+# It is kept in memory only: not echoed, and not written to files, cache, logs or HTML.
+# For repeated use, provide it from a secret manager (e.g. 1Password CLI) or CI secrets.
+# Enter SLACK_TOKEN (input hidden):
+```
+
+入力は画面に表示(echo)されず、貼り付けた token はその 1 回の実行の中だけで使われる。設定ファイル・cache・log・HTML 出力には保存されず、コマンド行に書かないため shell history にも残らない。
+
+継続利用では、1Password CLI などの secret manager から実行時に注入する方法を推奨する。
 
 ```sh
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
@@ -268,7 +279,7 @@ steps:
       slapex engineering --output ./exports
 ```
 
-1Password CLI、CI secrets、secret manager 未利用時の一時注入など、用途別の詳しい手順は [`token-injection.md`](token-injection.md) を参照する。
+実行時の貼り付け、shell 環境変数への一時設定、1Password CLI、CI secrets など、用途別の詳しい手順は [`token-injection.md`](token-injection.md) を参照する。
 
 ## よくあるエラー
 
