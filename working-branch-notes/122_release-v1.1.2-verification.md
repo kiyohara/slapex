@@ -25,8 +25,7 @@ v1.1.2 公開後の release 検証結果を `progress.md` と decision log 0041 
 ## 次にやること
 
 - PR #122 の CI / review を確認する。
-- ユーザーが PR を merge する。
-- ユーザー手元で macOS `--version` と `brew upgrade --cask slapex` を確認する(未実施)。
+- ユーザーが PR #122 を merge する。
 
 ## 検証
 
@@ -36,12 +35,13 @@ v1.1.2 公開後の release 検証結果を `progress.md` と decision log 0041 
 - Linux asset checksum: `slapex_linux_amd64: OK`。
 - Linux `--version`: `slapex 1.1.2`。
 - Homebrew tap: `Casks/slapex.rb` が `version "1.1.2"`。
-- ユーザー手元の macOS / Homebrew: 未確認。
+- ユーザー手元の macOS / Homebrew: upgrade 前 `slapex 1.1.1`、upgrade 後 `slapex 1.1.2`。
 
 ## リスク・ブロッカー
 
-- macOS binary の `--version` と Homebrew upgrade 後の `slapex --version` はユーザー分担。
+- なし。
 
 ## セッションログ
 
 - 2026-07-04: v1.1.2 tag push 後の release workflow / assets / checksum / Linux version / Homebrew cask を確認。
+- 2026-07-04: ユーザー手元の macOS / Homebrew upgrade を確認。
