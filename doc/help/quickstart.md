@@ -28,7 +28,7 @@ macOS / Linux 共通(install script。checksum 検証込みで `/usr/local/bin` 
 curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh | sh
 ```
 
-1 ステップずつ確認したい場合やインストール先を変えたい場合は、README の [インストール](../../README.md#インストール) にある手動手順・オプションを使ってください。
+1 ステップずつ確認したい場合やインストール先を変えたい場合は、[インストール](installation.md) にある手動手順・オプションを使ってください。
 
 完了の確認:
 
@@ -111,7 +111,7 @@ Linux ではファイルマネージャから開くか、`xdg-open "<output-path
 
 ## 次のステップ
 
-- 取得件数(`--max-posts`)、取得期間(`--days`)、出力先(`--output`)などの調整: README の [使い方](../../README.md#使い方) の option 一覧。
+- 取得件数(`--max-posts`)、取得期間(`--days`)、出力先(`--output`)などの調整: [使い方](usage.md#主要な-option) の option 一覧。
 - 継続利用に向けて、token を毎回手入力せず secret manager(1Password CLI など)や CI secrets から注入する方法: [Token の渡し方](token-injection.md)。
 - CI・定期実行・チーム共通 automation での利用: [bot token の手順](slack-app-setup.md#bot-token-を使う場合)。
 

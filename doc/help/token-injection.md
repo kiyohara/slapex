@@ -1,6 +1,6 @@
 # Token の渡し方
 
-`slapex` は Slack OAuth token を保存しない。token は CLI 引数ではなく、実行時に環境変数 `SLACK_TOKEN` として渡す。
+`slapex` は Slack OAuth token を保存しない。token は CLI 引数ではなく、実行時に環境変数 `SLACK_TOKEN` として渡す。[^spec-env]
 
 token の実値を `.env`、shell history、作業メモ、PR、Issue、ログに残さない。値の例示が必要な場合は `op://<vault>/<item>/<field>` や `xoxp-...` のような placeholder だけを使う。
 
@@ -110,4 +110,5 @@ Slack App の scope を追加または変更した場合、App を workspace に
 ## 関連
 
 - Slack App と token の発行手順: [`slack-app-setup.md`](slack-app-setup.md)
-- CLI が読む環境変数の仕様: [`../design/cli-interface.md`](../design/cli-interface.md)
+
+[^spec-env]: 仕様の正本(開発者向け): [`doc/design/cli-interface.md` の環境変数](../design/cli-interface.md#環境変数)。
