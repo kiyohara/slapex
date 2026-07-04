@@ -219,33 +219,26 @@ public channel と private channel の両方を扱えるように、user token /
 
 scope を追加または変更すると、`OAuth & Permissions` の画面上部に再 install を促す banner が表示される。banner 内のリンク(または `Install to Workspace` / `Reinstall to Workspace`)から App を workspace に再 install / 再 authorize する。
 
-![scope 変更後に表示される再 install banner](../../assets/screenshots/slack-app-setup/11-reinstall-banner.png)
+![scope 変更後に表示される再 install banner](../../assets/screenshots/slack-app-setup/10-reinstall-banner.png)
 
 再 install / 再 authorize すると token が更新される場合がある。`OAuth & Permissions` に表示されている現在の token を、secret manager または CI secrets に反映する。
 
 ## bot / app を channel に参加させる
 
-bot token で channel の投稿を取得するには、scope に加えて bot / app が対象 channel の member である必要がある。参加のさせ方は public channel と private channel で異なる。
+bot token で channel の投稿を取得するには、scope に加えて bot / app が対象 channel の member である必要がある。
+
+public channel / private channel のどちらも、対象 channel のメッセージ入力欄で `/invite @<App 名>` を実行して追加する。この help の manifest どおりに作成した場合は `/invite @slapex` になる。
+
+![channel で /invite @slapex を実行して App を追加する](../../assets/screenshots/slack-app-setup/09-invite-app-to-channel.png)
+
+private channel は参加 member 以外には見えないため、その private channel に参加している member が `/invite` を実行する。
+
+次の方法でも同じ結果になる。
+
+- メッセージ入力欄に `@<App 名>` をメンションとして投稿し、表示される案内から channel に追加する。
+- channel 名をクリックして設定を開き、`Integrations` tab の `Add apps` から App を追加する。
 
 user token を使う場合、この操作は不要である(認可したユーザー本人が参照できる範囲が対象になる)。
-
-### public channel の場合
-
-対象 channel のメッセージ入力欄で `/invite @<App 名>` を実行する。この help の manifest どおりに作成した場合は `/invite @slapex` になる。
-
-![public channel で /invite @slapex を実行する](../../assets/screenshots/slack-app-setup/09-invite-public-channel.png)
-
-メッセージ入力欄に `@<App 名>` をメンションとして投稿し、表示される案内から channel に追加する方法でもよい。
-
-### private channel の場合
-
-private channel には、その channel の参加者が App を追加する。
-
-1. 対象 private channel を開き、channel 名をクリックして設定を開く。
-2. `Integrations` tab を開く。
-3. `Add apps` から対象 App(この help の例では `slapex`)を追加する。
-
-![private channel の Integrations tab から App を追加する](../../assets/screenshots/slack-app-setup/10-invite-private-channel.png)
 
 ## Channel access
 
@@ -299,7 +292,7 @@ channel 名または channel ID を確認する。user token の場合は、認�
 
 ### bot token 利用時に bot が channel に参加していない
 
-「bot / app を channel に参加させる」の手順で追加する。public channel は `/invite @<App 名>`、private channel はその channel の参加者が `Integrations` tab から追加する。
+「bot / app を channel に参加させる」の手順に従い、対象 channel で `/invite @<App 名>` を実行して追加する。private channel の場合は、その channel に参加している member が実行する。
 
 ## 実 token E2E の確認計画
 
