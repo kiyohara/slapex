@@ -13,6 +13,8 @@
 
 `screenshots/` には README で使う出力プレビュー画像(`sample-*.png`)を置く。`doc/samples/` のサンプル export を撮影したもので、日本語版(`-ja`)と英語ページ準備用の英語版(`-en`)がある。再生成手順は `doc/samples/README.md` を参照。
 
+`screenshots/slack-app-setup/` には `doc/help/slack-app-setup.md` で使う Slack 管理画面 / Slack client の操作スクリーンショットを置く。実 Slack UI の手動撮影であり、スクリプトで再生成できない。更新方針は `doc/help/README.md` の「スクリーンショットのメンテ方針」を参照。token などの秘密情報はマスクした状態でコミットする。
+
 ## デモ GIF
 
 `demo/` には README で使うターミナル操作デモ(`slapex-demo-ja.gif`)を置く。`doc/samples/` と同じ架空 fixture を配信する fake server に対して実際の slapex を実行し、VHS(`tools/demo/`)で録画したもの。再録画手順は `doc/samples/README.md` を参照。
