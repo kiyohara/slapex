@@ -217,7 +217,7 @@ public channel と private channel の両方を扱えるように、user token /
 
 ### scope 変更後の再 install
 
-scope を追加または変更すると、`OAuth & Permissions` の画面上部に再 install を促す banner が表示される。banner 内のリンク(または `Install to Workspace` / `Reinstall to Workspace`)から App を workspace に再 install / 再 authorize する。
+scope を追加または変更すると、`OAuth & Permissions` の画面上部に再 install を促す banner が表示される。banner 内の `reinstall your app` リンク(または `OAuth Tokens` の `Reinstall to <workspace 名>` ボタン)から App を workspace に再 install / 再 authorize する。
 
 ![scope 変更後に表示される再 install banner](../../assets/screenshots/slack-app-setup/10-reinstall-banner.png)
 

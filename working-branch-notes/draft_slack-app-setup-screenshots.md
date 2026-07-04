@@ -13,7 +13,7 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 - 文書再構成(番号付き手順・画像参照・channel 招待節の独立・メンテ方針追記)完了。
 - 01〜08 の画像を受領・調整・組み込み済み(下の「受領済み画像と調整内容」参照)。06 の workspace 名・icon も追加でダミー化済み。撮影に使った token はユーザーが revoke 済み。
 - channel 招待手順を `/invite` に一本化(決定事項参照)。09(`/invite` 実行)は受領・確認済み(入力欄周辺の tight crop、1050x274。workspace / channel 識別子の映り込みなしのため未加工で採用)。
-- 撮影残は 10(再 install banner)の 1 枚のみで、この画像リンクのみ意図的に broken のまま。PR は 10 組み込み・検証完了後に作成する。
+- 10(再 install banner)も受領・確認済み。予定していた画像 10 枚(user / bot 変種込みで 14 ファイル)がすべて揃った。
 
 ## 決定事項
 
@@ -28,10 +28,7 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 
 ## 次にやること
 
-1. ユーザーから 10 の画像を受領し、調整(必要ならマスク・高さカット)して配置。
-2. 画像込みで help の表示確認(パス・alt・GitHub 上での見え方)。
-3. Issue の検証観点を実施し、本 note の検証セクションへ記録。
-4. `progress.md` の help-02 行を更新し、PR 作成(`Closes #48`)、note rename。
+1. `progress.md` の help-02 行を更新し、PR 作成(`Closes #48`)、note rename。
 
 ## 受領済み画像と調整内容(01〜08)
 
@@ -39,18 +36,10 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 - `03-paste-manifest-user/-bot.png`、`04-review-summary-user/-bot.png`: 受領そのまま採用。user / bot で manifest 内容と scope 見出し(`User Scopes` / `Bot Scopes`)が異なるため両方使用。
 - `06-authorize-user/-bot.png`: 本文中とドロップダウンの実 workspace 名をダミー(`myworkspace.` / `myworkspace`)に置換し、workspace icon を無地の丸 + `m` に置換。
 - `09-invite-app-to-channel.png`: 受領そのまま採用。入力欄に `/invite @slapex` を入力し、autocomplete に `slapex APP`(`Not in channel`)が表示された状態の tight crop。他と解像度が異なる(1050x274)が、識別子の映り込みがなく内容も本文手順と一致するため問題なし。
+- `10-reinstall-banner.png`: 受領そのまま採用。scope 変更後に `OAuth & Permissions` 上部へ出る黄色 banner(`You've changed the permission scopes ... Please reinstall your app ...`)が映った状態。識別子の映り込みなし。本文の記述を banner の実文言(`reinstall your app` リンク)に合わせて微修正した。
 - `05-install-to-workspace-user/-bot.png`: 全画面キャプチャ(高さ 6312px)を `OAuth Tokens` セクションまで(高さ 1840px)にカット。`Install to <実 workspace 名>` ボタンをダミー(`Install to myworkspace`)に置換。
 - `07-oauth-token-user.png` / `08-oauth-token-bot.png`(旧 `07-user-oauth-token.png` / `08-bot-oauth-token.png`): 高さ 6468px → 1985px にカット。token 実値をダミー(`xoxp-***...` / `xoxb-***...`)に置換。`Reinstall to <実 workspace 名>` ボタンをダミーに置換。
 - 未加工の原本は `/tmp/slack-app-setup-originals/` に退避(repo には入れない)。
-
-## 残りの撮影指示リスト(09〜10)
-
-共通条件: ブラウザ幅 1280px 程度、ライトモード、PNG。09 は bot token 用 App(bot user 有効)を install 済みの workspace が必要。
-
-| # | ファイル名 | 画面 / URL | 撮りたい状態 |
-|---|---|---|---|
-| 09 | `09-invite-app-to-channel.png` | Slack client の channel | 入力欄に `/invite @slapex` を入力した状態(送信直前または招待完了のシステムメッセージ)。channel 名が映る場合はダミー名の channel を推奨 |
-| 10 | `10-reinstall-banner.png` | `OAuth & Permissions` | scope 変更後に画面上部へ出る再 install を促す banner が見える状態 |
 
 ## 検証
 
@@ -58,10 +47,10 @@ Issue #48 の対応。`doc/help/slack-app-setup.md` に Slack 管理画面 / Sla
 - 2026-07-04: 07 / 08 の加工後画像を目視確認し、token 実値が残っていないこと(マスク文字列のみ)、workspace 実名がボタンから消えていることを確認。
 - 2026-07-04: 06 の加工後画像を目視確認し、workspace 実名と icon が本文・ドロップダウンから消えていることを確認。撮影に使った token はユーザーが revoke 済み。
 - 2026-07-04: private channel でも `/invite @slapex` で App を追加できることをユーザーが実機確認(手順一本化の根拠)。
+- 2026-07-04: 09 / 10 受領後、help 内の画像参照 14 件すべてが実ファイルに解決することを確認(broken リンクなし)。
 
 ## リスク・ブロッカー
 
-- 09〜10 のスクリーンショット受領待ち(ユーザー撮影)。受領までこの 2 件の画像リンクは broken。
 - Slack UI は変更されうるため、画像と本文ラベルの食い違いがあれば本文側を実画面に合わせて微修正する。
 
 ## セッションログ
