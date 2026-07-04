@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-118-export-tool-version
-- PR:
+- PR: #120
 - 最終更新: 2026-07-04
 
 ## 目的
@@ -10,7 +10,7 @@ Issue #118: 出力 HTML の footer `Export information` に、生成に使った
 
 ## 現在の状況
 
-依存なし。`progress.md` 索引外の単発 Issue。作業開始。
+実装完了。PR #120 作成済み。
 
 ## 決定事項
 
@@ -19,11 +19,13 @@ Issue #118: 出力 HTML の footer `Export information` に、生成に使った
 
 ## 次にやること
 
-- render / export / テストを更新し、検証する。
+- merge 待ち。
 
 ## 検証
 
-(未実施)
+- `docker compose run --rm --no-deps dev go test ./...` 成功
+- `docker compose run --rm --no-deps dev go vet ./...` 成功
+- `docker compose run --rm --no-deps dev go build ./...` 成功
 
 ## リスク・ブロッカー
 
@@ -32,3 +34,4 @@ Issue #118: 出力 HTML の footer `Export information` に、生成に使った
 ## セッションログ
 
 - 2026-07-04: Issue #118 の依存確認を実施し、作業ブランチを作成した。
+- 2026-07-04: footer Export information に Tool 行を追加し、PR #120 を作成した。
