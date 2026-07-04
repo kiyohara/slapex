@@ -8,6 +8,7 @@ CLI のエラー出力や `--help` から URL で案内する文書は、この�
 
 - 初回セットアップ手順
 - Slack App / token 発行など、CLI に全文表示すると長すぎる手順
+- インストール・使い方(option、cache、出力)など、repo root `README.md` から誘導する利用者向け詳細(README は入口とリンク集に留め、詳細はここに置く)
 - 利用者向けの how-to
 - よくあるエラーと対処
 

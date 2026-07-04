@@ -61,6 +61,7 @@
 | 0047 | decided | token 不要の demo 実行 | 公開 option `--demo` を追加し、token / Slack App なしで同梱の架空 fixture(`internal/demo`)を in-process fake server 経由で export する。fixture / fake server は `tools/gensample` から `internal/demo` へ切り出して共有。locale で ja / en を自動選択し、pacing は省略。stdout 契約と credential-scope(fake token を loopback にだけ送る)を維持 | [0047-token-free-demo-run.md](0047-token-free-demo-run.md) |
 | 0048 | decided | ドキュメント文体 | 利用者向け(README / `doc/help/`)はですます調、開発者・AI agent 向けは常体。トーンは簡潔・中立で絵文字なし、技術用語は英語表記のまま。正本は `doc/guidelines/document-style-guidelines.md`。既存文書への一括適用は #126 | [0048-document-style.md](0048-document-style.md) |
 | 0049 | decided | 利用者→開発者ドキュメントのリンク方針 | 利用者向け(README / `doc/help/`)の本文から開発者向け(`doc/design/` spec、decision log 等)へ直接リンクしない。必要時は文末の脚注に「開発者向け」と明示して置く。decision log 直リンク禁止(0039)は本方針に包含。正本は `document-style-guidelines.md`、既存棚卸しは #123 | [0049-user-doc-to-dev-doc-links.md](0049-user-doc-to-dev-doc-links.md) |
+| 0050 | decided | SLACK_TOKEN の渡し方の説明順位 | 利用者向けドキュメントでは token 入力プロンプトへの都度コピー & ペーストを基本とし、環境変数への一時設定と secret manager 連携を補足に置く。継続利用の推奨手段は secret manager 連携のまま | [0050-token-passing-doc-order.md](0050-token-passing-doc-order.md) |
 
 ## 未決事項
 

@@ -29,7 +29,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 | help-02 | #48 | done | - | (完了)Slack App セットアップ help にスクリーンショット付き UI 操作手順を追加。channel 招待は `/invite` に一本化(経緯は working branch note 参照) | #119 |
 | help-03 | #52 | done | help-00 後が望ましい | (完了)制限事項・FAQ help(`doc/help/faq.md`)を新設し、README / quickstart から誘導。quickstart「つまずいたら」のトラブル分岐リンクを FAQ へ集約(#52 コメント参照) | #128 |
 | help-04 | #49 | done | help-00 / help-01 / help-02 / help-03 後が望ましい | (完了)初回利用クイックスタートを `doc/help/quickstart.md` にチェックリスト形式で追加し README から誘導。README 全体の再構成は #123(help-05)に分離 | #124 |
-| help-05 | #123 | todo | #49 / #52 / #125 / #129 後 | README をキャッチーな入口 + 誘導リンク集へ再構成し、インストール・使い方の詳細を `doc/help/` へ移設する。再構成時は #129(decision log 0049)の利用者→開発者ドキュメントのリンク方針(本文リンク回避 / 必要時は文末脚注)に従う | - |
+| help-05 | #123 | done | #49 / #52 / #125 / #129 後 | (完了)README をキャッチーな入口 + 誘導リンク集へ再構成し、インストール詳細を `doc/help/installation.md`、使い方・出力詳細を `doc/help/usage.md` へ移設。利用者向け文書の開発者向けリンクは #129 の方針(文末脚注)へ統一 | #131 |
 | help-06 | #125 | done | - | (完了)ドキュメント文体ガイドライン(読者層別の文末・トーン・用語表記)を制定。方針は decision log 0048 | #127 |
 | help-07 | #126 | todo | #125 後 | 既存の利用者向け文書(slack-app-setup / token-injection / README)の文体を一括修正する。quickstart は PR #124 内で新文体に合わせるため対象外 | - |
 | help-08 | #129 | done | #52 / #128 後 | (完了)利用者→開発者ドキュメントのリンク方針を制定(本文リンク回避 / 必要時は文末脚注で「開発者向け」明示)。decision log 0049 と `document-style-guidelines.md` に明文化。既存文書の棚卸しは #123 | #130 |

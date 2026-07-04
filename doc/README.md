@@ -8,7 +8,7 @@
 |---|---|
 | `doc/guidelines/` | AI agent と人間が共通で従う作業ルール、運用ガイドライン |
 | `doc/design/` | `slapex` の仕様設計、利用体験設計、設計判断の記録 |
-| `doc/help/` | 利用者が GitHub 上で直接読む help / how-to |
+| `doc/help/` | 利用者が GitHub 上で直接読む help / how-to。インストール・使い方などの利用者向け詳細もここに置く(repo root `README.md` は入口と誘導リンク集に留める) |
 | `doc/samples/` | 生成済みサンプル export(架空データ。`tools/gensample` で再生成) |
 
 作業状況の一覧は `progress.md`、ブランチ単位の作業メモは `working-branch-notes/` に置く。

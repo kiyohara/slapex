@@ -6,6 +6,15 @@
 
 先に成果物の見た目を確かめたい場合は、README の [出力プレビュー](../../README.md#出力プレビュー) を見てください。
 
+全体の流れ:
+
+```mermaid
+flowchart LR
+    slack["Slack workspace"] -- "Slack API<br>(read 系 scope)" --> cli["slapex CLI"]
+    cli -- "export" --> html["静的 HTML + assets<br>(index.html)"]
+    html -- "ブラウザで開く" --> view["ローカルで閲覧<br>(外部 URL 非依存)"]
+```
+
 ## 前提(1 分)
 
 - [ ] macOS または Linux(amd64 / arm64)を使っています(Windows は初期対象外)。
@@ -28,7 +37,7 @@ macOS / Linux 共通(install script。checksum 検証込みで `/usr/local/bin` 
 curl -fsSL https://raw.githubusercontent.com/kiyohara/slapex/main/scripts/install.sh | sh
 ```
 
-1 ステップずつ確認したい場合やインストール先を変えたい場合は、README の [インストール](../../README.md#インストール) にある手動手順・オプションを使ってください。
+1 ステップずつ確認したい場合やインストール先を変えたい場合は、[インストール](installation.md) にある手動手順・オプションを使ってください。
 
 完了の確認:
 
@@ -60,7 +69,7 @@ slapex --demo --output ./slapex-demo
 完了の確認:
 
 - [ ] `xoxp-`(user token)で始まる token を取得しました(bot token の場合は `xoxb-`)。
-- [ ] token を secret manager(1Password など)または CI secrets に保存しました。`.env` や shell history に実値を残さないでください([Token の渡し方](token-injection.md))。
+- [ ] token をコピーしました。手順 3 では token 入力プロンプトに貼り付けて使います(追加ツールは不要です)。継続利用では secret manager(1Password など)や CI secrets への保存を推奨します([Token の渡し方](token-injection.md))。
 - [ ] bot token の場合のみ: 対象 channel で `/invite @slapex` を実行して [bot / app を channel に参加させました](slack-app-setup.md#bot--app-を-channel-に参加させる)。
 
 ## 3. 初回 export を実行する(1 分)
@@ -73,12 +82,7 @@ slapex <channel-keyword>
 
 - `SLACK_TOKEN` が未設定の場合、token の対話入力プロンプトが表示されます。入力は画面に表示(echo)されず、どこにも保存されません。手順 2 でコピーした token を貼り付けてください。
 - `<channel-keyword>` を省略すると、候補一覧から channel を対話選択できます。
-- 継続利用では、1Password CLI などの secret manager から実行時に注入する方法を推奨します(詳細は [Token の渡し方](token-injection.md))。
-
-```sh
-SLACK_TOKEN="op://<vault>/<item>/<field>" \
-  op run -- slapex <channel-keyword>
-```
+- 継続利用では、secret manager や CI secrets から実行時に注入する方法を推奨します(詳細は [Token の渡し方](token-injection.md))。
 
 完了の確認:
 
@@ -111,7 +115,7 @@ Linux ではファイルマネージャから開くか、`xdg-open "<output-path
 
 ## 次のステップ
 
-- 取得件数(`--max-posts`)、取得期間(`--days`)、出力先(`--output`)などの調整: README の [使い方](../../README.md#使い方) の option 一覧。
+- 取得件数(`--max-posts`)、取得期間(`--days`)、出力先(`--output`)などの調整: [使い方](usage.md#主要な-option) の option 一覧。
 - 継続利用に向けて、token を毎回手入力せず secret manager(1Password CLI など)や CI secrets から注入する方法: [Token の渡し方](token-injection.md)。
 - CI・定期実行・チーム共通 automation での利用: [bot token の手順](slack-app-setup.md#bot-token-を使う場合)。
 

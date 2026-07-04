@@ -2,7 +2,7 @@
 
 このページは、`slapex` を使うために利用者自身が Slack App を作成し、Slack OAuth token を発行する手順をまとめる。
 
-`slapex` は token を保存しない。発行した Slack OAuth token は secret manager または CI secrets に保存し、実行時に `SLACK_TOKEN` として渡す。
+`slapex` は token を保存しない。発行した Slack OAuth token は実行時に渡す(基本は token 入力プロンプトへの貼り付け)。継続利用では secret manager または CI secrets への保存を推奨する([Token の渡し方](token-injection.md))。
 
 ## 前提
 
@@ -81,8 +81,8 @@ Slack App は、個別に scope を追加するだけでなく、manifest を貼
 
 ![OAuth Tokens に表示された User OAuth Token をコピーする](../../assets/screenshots/slack-app-setup/07-oauth-token-user.png)
 
-3. user token を secret manager または CI secrets に保存する。token をファイルや chat に貼らない。
-4. `SLACK_TOKEN` として `slapex` 実行時に渡す。
+3. 取得した token をコピーします。初回実行では token 入力プロンプトに貼り付けて使えます。継続利用では secret manager または CI secrets に保存することを推奨します([Token の渡し方](token-injection.md))。token をファイルや chat に貼らないでください。
+4. [Token の渡し方](token-injection.md) に従って実行時に渡します。
 
 Manifest の例:
 
@@ -143,8 +143,8 @@ user token の場合と共通なのは App 新規作成と workspace 選択の�
 ![OAuth Tokens に表示された Bot User OAuth Token をコピーする](../../assets/screenshots/slack-app-setup/08-oauth-token-bot.png)
 
 7. bot / app を取得対象 channel に参加させる(手順は「bot / app を channel に参加させる」を参照)。
-8. bot token を secret manager または CI secrets に保存する。
-9. `SLACK_TOKEN` として `slapex` 実行時に渡す。
+8. bot token をコピーします。初回実行では token 入力プロンプトに貼り付けて使えます。継続利用では secret manager または CI secrets に保存することを推奨します([Token の渡し方](token-injection.md))。
+9. [Token の渡し方](token-injection.md) に従って実行時に渡します。
 
 Manifest の例:
 
@@ -194,8 +194,8 @@ manifest を使わずに設定する場合は、次の手順で作成する。
 5. App を workspace に install / authorize する。権限設定によって承認 request が表示される場合は、workspace 管理者の承認を待つ。
 6. user token では `User OAuth Token`、bot token では `Bot User OAuth Token` を取得する。
 7. bot token を使う場合は、bot / app を取得対象 channel に参加させる(手順は「bot / app を channel に参加させる」を参照)。
-8. token を secret manager または CI secrets に保存する。
-9. `SLACK_TOKEN` として `slapex` 実行時に渡す。
+8. 取得した token をコピーします。初回実行では token 入力プロンプトに貼り付けて使えます。継続利用では secret manager または CI secrets に保存することを推奨します([Token の渡し方](token-injection.md))。
+9. [Token の渡し方](token-injection.md) に従って実行時に渡します。
 
 ## Scopes
 
@@ -219,7 +219,7 @@ scope を追加または変更すると、`OAuth & Permissions` の画面上部�
 
 ![scope 変更後に表示される再 install banner](../../assets/screenshots/slack-app-setup/10-reinstall-banner.png)
 
-再 install / 再 authorize すると token が更新される場合がある。`OAuth & Permissions` に表示されている現在の token を、secret manager または CI secrets に反映する。
+再 install / 再 authorize すると token が更新される場合がある。`OAuth & Permissions` に表示されている現在の token を、利用中の方法に反映する([Token の渡し方](token-injection.md) の「token を更新したとき」)。
 
 ## bot / app を channel に参加させる
 
@@ -248,9 +248,20 @@ bot token を使う場合、public channel / private channel の投稿を取得�
 
 ローカルの `.env` や shell history に token の実値を残さない。
 
-Slack OAuth token は `SLACK_TOKEN` として渡す。
+追加ツールなしで実行する場合は、`SLACK_TOKEN` を設定せずに `slapex` を実行し、表示される token 入力プロンプトへコピーした token を貼り付ける。
 
-1Password CLI を使う例:
+```sh
+slapex engineering
+# SLACK_TOKEN is not set.
+# Paste a Slack OAuth token to use for this run only.
+# It is kept in memory only: not echoed, and not written to files, cache, logs or HTML.
+# For repeated use, provide it from a secret manager (e.g. 1Password CLI) or CI secrets.
+# Enter SLACK_TOKEN (input hidden):
+```
+
+入力は画面に表示(echo)されず、貼り付けた token はその 1 回の実行の中だけで使われる。設定ファイル・cache・log・HTML 出力には保存されず、コマンド行に書かないため shell history にも残らない。
+
+継続利用では、1Password CLI などの secret manager から実行時に注入する方法を推奨する。
 
 ```sh
 SLACK_TOKEN="op://<vault>/<item>/<field>" \
@@ -268,21 +279,21 @@ steps:
       slapex engineering --output ./exports
 ```
 
-1Password CLI、CI secrets、secret manager 未利用時の一時注入など、用途別の詳しい手順は [`token-injection.md`](token-injection.md) を参照する。
+実行時の貼り付け、shell 環境変数への一時設定、1Password CLI、CI secrets など、用途別の詳しい手順は [`token-injection.md`](token-injection.md) を参照する。
 
 ## よくあるエラー
 
 ### `SLACK_TOKEN` が未設定
 
-`SLACK_TOKEN` を環境変数として渡してから再実行する。
+操作可能な端末では、`SLACK_TOKEN` を設定せずに実行すると token 入力プロンプトが表示されます。コピーした token を貼り付けてください。CI や `--no-interactive` など prompt が使えない環境では、環境変数として渡す必要があります([Token の渡し方](token-injection.md))。
 
 ### token が無効
 
-secret manager または CI secrets に保存した token が正しいか確認する。App を uninstall した場合や scope を変更した場合は、再 install / 再 authorize して token を更新する。
+取得した token が正しいか確認します。secret manager や CI secrets に保存している場合は、保存値も確認してください。App を uninstall した場合や scope を変更した場合は、再 install / 再 authorize して token を更新します。
 
 ### scope が不足している
 
-OAuth & Permissions で不足 scope を追加し、App を workspace に再 install / 再 authorize する(手順は「scope 変更後の再 install」を参照)。更新後の token を secret manager または CI secrets に反映する。
+OAuth & Permissions で不足 scope を追加し、App を workspace に再 install / 再 authorize する(手順は「scope 変更後の再 install」を参照)。更新後の token を利用中の方法に反映する([Token の渡し方](token-injection.md) の「token を更新したとき」)。
 
 ### channel が見えない
 
