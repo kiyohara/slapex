@@ -19,6 +19,8 @@
 
 対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。Windows は初期対象外です。
 
+**初めて使う場合は、チェックリスト形式の [クイックスタート](doc/help/quickstart.md) に沿って進めると、インストールから初回 export・閲覧までを 1 ページで完走できます(所要 15 分程度)。**
+
 利用者の操作の流れ全体は [`doc/design/usage-flow.md`](doc/design/usage-flow.md) にまとめています。使い始めるまでの流れ:
 
 1. [事前準備](#事前準備-slack-app-と-token) — Slack App を作成し Slack OAuth token を発行する。
