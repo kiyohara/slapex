@@ -17,9 +17,11 @@ CLI のエラー出力や `--help` から URL で案内する文書は、この�
 - 仕様検討の素案: `doc/design/` に置く
 - AI agent / Git / GitHub / PR などの作業ルール: `doc/guidelines/` に置く
 
-## 文体
+## 内容の方針
 
 利用者がそのまま実行できる手順として書く。設計上の迷いや検討経緯は書かず、必要な場合は decision log へ分ける。decision log は開発時参照の内部ドキュメントとして扱い、利用者向け help から直接リンクしない(方針は `doc/guidelines/decision-log-guidelines.md`)。
+
+文末・トーン・用語表記は `doc/guidelines/document-style-guidelines.md` に従う(このディレクトリの利用者向け文書はですます調。この `README.md` 自体は開発者向けのため常体)。
 
 ## スクリーンショットのメンテ方針
 

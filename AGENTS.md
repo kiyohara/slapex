@@ -16,6 +16,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - 開発コマンド実行ルール(Docker Compose 優先 / host OS 上での開発環境の直接構築・実行を抑止): `doc/guidelines/development-command-guidelines.md`
 - 認証情報の送信先スコープルール(token / cookie / Authorization header の送信先 allowlist / public asset への送信禁止): `doc/guidelines/credential-scope-guidelines.md`
 - Pull Request 作成ガイドライン: `doc/guidelines/pull-request-guidelines.md`
+- ドキュメント文体ガイドライン(読者層別の文末・トーン・用語表記): `doc/guidelines/document-style-guidelines.md`
 - Decision log 記録ルール(方針決定ログの作成・更新・index 管理): `doc/guidelines/decision-log-guidelines.md`
 - Working branch notes 取り扱いルール(性質・整合性スコープ・ライフサイクル・メンテコスト判断): `doc/guidelines/working-branch-notes-handling.md`
 - Working branch notes 情報統制ルール(`working-branch-notes/**/*.md` のセキュリティ禁則): `doc/guidelines/working-branch-notes-security.md`
@@ -61,6 +62,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
 - GitHub Issue を指定されてタスクを消化するときは `doc/guidelines/issue-driven-task-execution.md` に従う。
 - ドキュメントを作成・移動・分類変更するときは、まず `doc/README.md` と該当ディレクトリの `README.md` を確認する。
+- 日本語ドキュメントを作成・編集するときは `doc/guidelines/document-style-guidelines.md` に従い、読者層別の文末(利用者向けはですます調、開発者向けは常体)とトーンを守る。
 - 設計判断、方針変更、重要な検討経緯を記録するときは `doc/guidelines/decision-log-guidelines.md` に従う。
 - Decision log を記録するときは、まず `doc/design/decision-log/index.md` を読み、必要に応じて個別ログを作成または更新する。
 - `working-branch-notes/**/*.md` を作成・編集・レビューするときは `doc/guidelines/working-branch-notes-handling.md` と `doc/guidelines/working-branch-notes-security.md` の両方に従う。
