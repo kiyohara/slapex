@@ -27,7 +27,20 @@ docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 
 ## README 用スクリーンショット
 
-`assets/screenshots/` の `sample-*.png` はこのサンプルを headless ブラウザで開いて撮影したもの。撮影時はスレッドを開いた状態(`<details class="thread-group" open>` に置換した一時コピー)で、幅 1100px・device scale 2x で全体を撮り、タイムライン先頭部とスレッド部分を切り出している。再生成した場合はスクリーンショットも撮り直す。
+`assets/screenshots/` の `sample-*.png` は `tools/genscreenshot` で生成する。compose service `screenshot`(`tools/genscreenshot/Dockerfile`、headless Chromium + Noto CJK / emoji フォント)がこのサンプルの一時コピーを開き、撮影から切り出しまでをコンテナ内で完結させる。host のブラウザや macOS 固有の画像 tool には依存しない。
+
+```sh
+docker compose run --rm screenshot
+```
+
+撮影・検証の要点(詳細は `tools/genscreenshot/main.go` を正とする):
+
+- viewport 幅 1100px・device scale 2x・scrollbar 非表示(`--hide-scrollbars`)で撮影し、幅 1600px へ縮小する。
+- timeline 画像はページ先頭から最初の 1 日分(2 つ目の日付区切りの手前)まで。crop 境界は固定 pixel 値ではなく、ページに注入した測定スクリプトで block 位置を測って決める。
+- thread 画像はスレッド親メッセージと、`<details class="thread-group" open>` に置換した一時コピーの展開スレッド部分。
+- 生成後に画像 4 辺の pixel 検査を行い、右端の濃色 1px 縦線(Issue #132)のような境界 artifact が混入した場合は生成を失敗させる。
+
+サンプルを再生成した場合はスクリーンショットも再生成する。フォントはコンテナ内の Noto フォントで決まるため、host 環境の違いで見た目が変わることはない。
 
 ## README 用デモ GIF
 

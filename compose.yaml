@@ -20,6 +20,21 @@ services:
     volumes:
       - .:/vhs
 
+  # README sample screenshot generator (Issue #132). Renders doc/samples/
+  # with headless Chromium and rewrites assets/screenshots/sample-*.png:
+  #   docker compose run --rm screenshot
+  screenshot:
+    build:
+      context: tools/genscreenshot
+    working_dir: /work
+    volumes:
+      - .:/work
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      CGO_ENABLED: "0"
+    command: go run ./tools/genscreenshot
+
 volumes:
   go-mod-cache:
   go-build-cache:
