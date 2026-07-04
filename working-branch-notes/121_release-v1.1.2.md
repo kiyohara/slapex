@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: release/v1.1.2
-- PR:
+- PR: #121
 - 最終更新: 2026-07-04
 
 ## 目的
@@ -14,6 +14,7 @@ v1.1.2 release 前の doc bump を 1 PR にまとめる。README の install 例
 - 直前 tag: `v1.1.1`
 - 対象 version: `v1.1.2`(ユーザー指定)
 - 最新 main CI: run `28699329364` / success / headSha `49c46d565e139543d837f08ce036228d1babb946`
+- release 準備 PR: #121
 
 ## 決定事項
 
@@ -24,7 +25,7 @@ v1.1.2 release 前の doc bump を 1 PR にまとめる。README の install 例
 
 ## 次にやること
 
-- release 準備 PR を作成し CI / review を確認する。
+- PR #121 の CI / review を確認する。
 - ユーザーが PR を merge する。
 - merge 後に main HEAD を確認し、署名付き `v1.1.2` tag の作成と tag push へ進む。
 
