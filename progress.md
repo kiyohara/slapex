@@ -29,8 +29,8 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 | help-02 | #48 | done | - | (完了)Slack App セットアップ help にスクリーンショット付き UI 操作手順を追加。channel 招待は `/invite` に一本化(経緯は working branch note 参照) | #119 |
 | help-03 | #52 | todo | help-00 後が望ましい | 制限事項・FAQ help を作り README / design doc から要点だけ辿れるようにする | - |
 | help-04 | #49 | todo | help-00 / help-01 / help-02 / help-03 後が望ましい | 初回利用クイックスタートをチェックリスト形式で追加する | - |
-| help-06 | #125 | done | - | (完了)ドキュメント文体ガイドライン(読者層別の文末・トーン・用語表記)を制定。方針は decision log 0048 | - |
-| help-07 | #126 | todo | #125 / PR #124 merge 後 | 既存の利用者向け文書(quickstart / slack-app-setup / token-injection / README)の文体を一括修正する | - |
+| help-06 | #125 | done | - | (完了)ドキュメント文体ガイドライン(読者層別の文末・トーン・用語表記)を制定。方針は decision log 0048 | #127 |
+| help-07 | #126 | todo | #125 後 | 既存の利用者向け文書(slack-app-setup / token-injection / README)の文体を一括修正する。quickstart は PR #124 内で新文体に合わせるため対象外 | - |
 
 ## リリース履歴
 

@@ -41,7 +41,7 @@
 ## 影響
 
 - 新規・編集する日本語ドキュメントはこのガイドラインに従う。
-- 既存の `doc/help/`(quickstart / slack-app-setup / token-injection)と README の混在箇所は #126 で一括修正する。
+- 既存の `doc/help/`(slack-app-setup / token-injection)と README の混在箇所は #126 で一括修正する。#49 で追加する quickstart は merge 前に PR #124 内で本ガイドラインへ合わせる。
 - `doc/help/README.md` の「文体」節は内容方針の定義として「内容の方針」へ改名し、語調は本ガイドラインを参照する。
 - README 再構成(#123)と制限事項・FAQ(#52)は本ガイドラインに従って書く。
 
