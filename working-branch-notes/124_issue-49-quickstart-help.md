@@ -46,3 +46,4 @@ Issue #49 の初回利用クイックスタートガイド(チェックリスト
 - 2026-07-04: Issue #49 読解、方針総評をユーザーへ提示。README 再構成は別 Issue 切り出しで進める方針を確定。ブランチと note を作成。
 - 2026-07-04: quickstart.md 作成、README へ誘導追加、リンク検証。Issue #123(README 再構成)起票、#52 へ引き継ぎコメント、progress.md 更新(help-04 done / help-05 追加)。
 - 2026-07-04: 有名 CLI の quickstart 事例調査(補助 note 参照)を実施し、期待出力例・`--demo` 任意ステップ・「次のステップ」セクションを quickstart に反映。
+- 2026-07-04: PR #127(文体ガイドライン)のレビュー対応に合わせ、merge 順(#127 → #124)前提で `origin/issue-125-document-style-guidelines` を本ブランチへ merge(progress.md の conflict は両ブランチの行を統合し、help-04 の PR 列に #124 を記入)。quickstart 本文を新ガイドライン(利用者向けはですます調)に合わせて書き換え。表のセルと「次のステップ」の見出し的な語句は体言止めを維持。
