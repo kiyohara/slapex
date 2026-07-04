@@ -6,6 +6,15 @@
 
 先に成果物の見た目を確かめたい場合は、README の [出力プレビュー](../../README.md#出力プレビュー) を見てください。
 
+全体の流れ:
+
+```mermaid
+flowchart LR
+    slack["Slack workspace"] -- "Slack API<br>(read 系 scope)" --> cli["slapex CLI"]
+    cli -- "export" --> html["静的 HTML + assets<br>(index.html)"]
+    html -- "ブラウザで開く" --> view["ローカルで閲覧<br>(外部 URL 非依存)"]
+```
+
 ## 前提(1 分)
 
 - [ ] macOS または Linux(amd64 / arm64)を使っています(Windows は初期対象外)。

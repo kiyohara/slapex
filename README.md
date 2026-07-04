@@ -4,31 +4,27 @@
 
 # slapex
 
-`slapex` は、Slack channel の投稿・スレッド・画像・添付ファイルを、外部 URL に依存せずローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。
-
-主な特徴:
-
-- **単一バイナリ** — ランタイム不要。GitHub Releases から OS / arch に合うバイナリを 1 つ取得するだけで動作します。
-- **JavaScript なしの静的 HTML** — 生成物は素の HTML + CSS + assets。ブラウザで `index.html` を開くだけで閲覧でき、外部 URL に依存しません。
-- **read 系 scope のみ** — Slack へは履歴・ファイル・絵文字・ユーザー情報の取得など read 系 scope だけを使います。
-- **スレッド・絵文字・reaction・unfurl 対応** — thread の返信、標準 / カスタム絵文字、reaction、URL unfurl の preview 画像なども取得して描画します。
+`slapex` は、Slack channel の投稿・スレッド・画像・添付ファイルを、thread の返信、標準 / カスタム絵文字、reaction、URL unfurl の preview 画像ごと、ローカルで閲覧できる静的 HTML + assets 一式として export(書き出し)する CLI です。
 
 対象プラットフォームは macOS と Linux(それぞれ amd64 / arm64)です。Windows は初期対象外です。
 
-## 出力プレビュー
+## ターミナルでの実行例
 
-全体の流れ:
-
-```mermaid
-flowchart LR
-    slack["Slack workspace"] -- "Slack API<br>(read 系 scope)" --> cli["slapex CLI"]
-    cli -- "export" --> html["静的 HTML + assets<br>(index.html)"]
-    html -- "ブラウザで開く" --> view["ローカルで閲覧<br>(外部 URL 非依存)"]
-```
-
-ターミナルでの実行イメージ(token の対話入力 → channel の選択 → 進捗表示 → 完了):
+token の対話入力、channel の選択、進捗表示、完了までの流れ:
 
 <p align="center"><img src="assets/demo/slapex-demo-ja.gif" width="760" alt="slapex をターミナルで実行する様子(token 入力、channel 選択、進捗表示)のデモ"></p>
+
+Slack App や token を用意する前に試す場合は、`--demo` で同梱サンプルから HTML export を生成できます。
+
+```sh
+slapex --demo --output ./slapex-demo
+```
+
+完了時には出力先ディレクトリの絶対 path が表示されます。Finder で開くと、`index.html`、`style.css`、`assets/` がローカルファイルとして並びます。
+
+<p align="center"><img src="assets/screenshots/output-dir-finder-ja.png" width="760" alt="Finder で slapex の出力ディレクトリを開いた例"></p>
+
+## 出力プレビュー
 
 タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl):
 
@@ -38,13 +34,7 @@ flowchart LR
 
 <p align="center"><img src="assets/screenshots/sample-thread-ja.png" width="760" alt="サンプル export のスレッドと添付ファイル表示"></p>
 
-デモとスクリーンショットはいずれも同梱の生成済みサンプル export と同じ架空データのものです(実 workspace・実 token は使っていません)。リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html))。
-
-インストール済みなら、Slack App や token を用意する前に `--demo` を実行するだけで、この架空サンプルから手元で HTML export を生成して試せます(token 不要):
-
-```sh
-slapex --demo --output ./slapex-demo
-```
+リポジトリを clone して [`doc/samples/ja/index.html`](doc/samples/ja/index.html) をブラウザで開くと、この出力をそのまま閲覧できます(英語版サンプルは [`doc/samples/en/index.html`](doc/samples/en/index.html))。[^sample-data]
 
 ## クイックスタート
 
@@ -76,3 +66,5 @@ Linux や install script、手動インストール(checksum 検証)などその
 ## ライセンス
 
 MIT License。詳細は [`LICENSE`](LICENSE) を参照してください。
+
+[^sample-data]: `--demo` とスクリーンショットは、同梱の生成済みサンプル export と同じ架空データを使います。
