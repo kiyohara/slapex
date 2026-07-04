@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-123-readme-restructure
-- PR: -
+- PR: #131
 - 最終更新: 2026-07-04
 
 ## 目的
@@ -10,7 +10,7 @@ Issue #123。README をキャッチーな入口 + 誘導リンク集へ再構成
 
 ## 現在の状況
 
-- 実装・検証完了。PR 作成待ち。
+- 実装・検証完了。PR #131 作成済み、レビュー待ち。
 - `doc/help/installation.md`(Homebrew / install script / 手動 + checksum 検証)と `doc/help/usage.md`(`--demo` / 実行基本形 / 対話選択 / option 表 / cache / stdout・stderr / 出力構造)を新設し、README の詳細を移設。
 - README はキャッチー部(ロゴ・一言説明・特徴・出力プレビュー)→ クイックスタート誘導 → 利用方法の詳細(リンク集)→ 開発者向けリンク(2 行)→ ライセンスの構成へ再構成。「開発」節のコマンド例は削除(開発者は `doc/README.md` / `AGENTS.md` から到達)。
 - README 本文の開発者向けリンク(`doc/design/usage-flow.md` / `cli-interface.md` / `cache.md` / `output-format.md`)を除去し、移設先 help の文末脚注(開発者向け明示)へ置換。`doc/help/token-injection.md` の「関連」に残っていた design 直リンクも脚注化(#129 方針の棚卸し対象)。
