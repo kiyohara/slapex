@@ -10,9 +10,9 @@ Issue #136: README の「出力プレビュー」から table レイアウト由
 
 ## 現在の状況
 
-- `README.md` の 2 枚横並び `<table>` を、他セクションと同様の縦並び `<p align="center">` に変更。
-- 枠線は GitHub sanitizer を通る `<kbd>` で画像を囲んで付与(`img border` と `style` は除去される)。
-- `doc/samples/README.md` に枠線が README HTML 側にある旨を追記。
+- `README.md` の 2 枚横並び `<table>` を縦並び `<p align="center">` + `<kbd><img ...></kbd>` へ変更済み。
+- `doc/samples/README.md` に枠線が README HTML 側にある旨を追記済み。
+- 実装・検証・PR 作成(#142)・note rename・progress.md 更新まで完了。merge 待ち。
 
 ## 決定事項
 
@@ -21,7 +21,7 @@ Issue #136: README の「出力プレビュー」から table レイアウト由
 
 ## 次にやること
 
-- PR 作成、note rename、progress.md 更新。
+- 特になし(merge 待ち)。
 
 ## 検証
 
@@ -32,8 +32,9 @@ Issue #136: README の「出力プレビュー」から table レイアウト由
 
 ## リスク・ブロッカー
 
-- `border="1"` の見た目は GitHub テーマ依存。merge 前に GitHub 上で目視確認する。
+- `<kbd>` 枠線の見た目は GitHub テーマ依存。GitHub preview 上で目視確認済み。未解決のブロッカーは無い。
 
 ## セッションログ
 
 - 2026-07-05: sanitizer 検証で `img border="1"` が除去されることを確認。`<kbd>` ラッパーへ変更し GitHub preview で枠線表示を確認。
+- 2026-07-05: review 指摘に従い note の「次にやること」「リスク・ブロッカー」を最終状態へ更新。
