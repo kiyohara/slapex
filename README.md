@@ -24,18 +24,15 @@
 
 ## 出力プレビュー
 
-<table>
-  <tr>
-    <td width="50%" align="center">
-      <img src="assets/screenshots/sample-timeline-ja.png" alt="サンプル export のタイムライン表示"><br>
-      <sub>タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl)</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="assets/screenshots/sample-thread-ja.png" alt="サンプル export のスレッドと添付ファイル表示"><br>
-      <sub>スレッド、コードブロック、bot 投稿、添付ファイル</sub>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <kbd><img src="assets/screenshots/sample-timeline-ja.png" alt="サンプル export のタイムライン表示"></kbd><br>
+  <sub>タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl)</sub>
+</p>
+
+<p align="center">
+  <kbd><img src="assets/screenshots/sample-thread-ja.png" alt="サンプル export のスレッドと添付ファイル表示"></kbd><br>
+  <sub>スレッド、コードブロック、bot 投稿、添付ファイル</sub>
+</p>
 
 Slack App や token を用意する前に試す場合は、`--demo` で同梱サンプルから HTML export を生成できます。
 
