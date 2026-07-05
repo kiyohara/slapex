@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-144-split-token-e2e-help
-- PR: 未作成
+- PR: #146
 - 最終更新: 2026-07-05
 
 ## 目的
@@ -22,7 +22,7 @@
 
 ## 次にやること
 
-- PR を作成し、採番後に note を rename する。
+- PR description の note 参照を更新し、採番 commit を push する。
 
 ## 検証
 
@@ -30,7 +30,7 @@
 - `sed -n '1,160p' doc/guidelines/credential-scope-guidelines.md`: 移設先が開発者向け常体であることを確認。
 - `rg -n "## 実 token E2E の確認計画|リリース前に、実 token|PR や working branch note" doc/help/slack-app-setup.md`: 該当なし。
 - `git diff --check`: 成功。
-- `rg -n "password|secret|token|cookie|session|PRIVATE KEY|xox[abp]-|https?://[^ )]+[?][^ )]+" working-branch-notes/draft_issue-144-split-token-e2e-help.md`: 用語としての `token` のみ検出。実値や署名付き URL はなし。
+- `rg -n "password|secret|token|cookie|session|PRIVATE KEY|xox[abp]-|https?://[^ )]+[?][^ )]+" working-branch-notes/146_issue-144-split-token-e2e-help.md`: 用語としての `token` のみ検出。実値や署名付き URL はなし。
 
 ## リスク・ブロッカー
 
