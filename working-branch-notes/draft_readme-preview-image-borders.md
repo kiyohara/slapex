@@ -11,13 +11,13 @@ Issue #136: README の「出力プレビュー」から table レイアウト由
 ## 現在の状況
 
 - `README.md` の 2 枚横並び `<table>` を、他セクションと同様の縦並び `<p align="center">` に変更。
-- 枠線は GitHub sanitizer を通る `<img border="1">` で付与(`style` 属性は除去されるため未使用)。
+- 枠線は GitHub sanitizer を通る `<kbd>` で画像を囲んで付与(`img border` と `style` は除去される)。
 - `doc/samples/README.md` に枠線が README HTML 側にある旨を追記。
 
 ## 決定事項
 
 - 横並び維持より table 枠線除去と sanitizer 通過を優先し、縦並びレイアウトを採用。
-- 枠線色の細かい指定は sanitizer 上困難なため、HTML `border` 属性のデフォルト表示を使う。
+- 枠線色の細かい指定は sanitizer 上困難なため、`<kbd>` 要素の GitHub 既定スタイルを使う。
 
 ## 次にやること
 
@@ -25,10 +25,10 @@ Issue #136: README の「出力プレビュー」から table レイアウト由
 
 ## 検証
 
-- [ ] GitHub README 表示で table 由来のセル枠線が無いこと
-- [ ] preview 画像周囲に HTML 由来の枠線が表示されること
-- [ ] screenshot PNG に変更が無いこと
-- [ ] caption が読みにくくなっていないこと
+- [x] GitHub README 表示で table 由来のセル枠線が無いこと — `<table>` を除去し、preview 領域に table 要素が無いことを DOM で確認。
+- [x] preview 画像周囲に HTML 由来の枠線が表示されること — `<kbd>` ラッパーが `border: 1px solid rgba(209, 217, 224, 0.7)` で残ることを GitHub preview で確認。初版の `img border="1"` は sanitizer で除去されたため `<kbd>` に変更。
+- [x] screenshot PNG に変更が無いこと — `git diff main...HEAD` に PNG 変更なし。
+- [x] caption が読みにくくなっていないこと — `<sub>` caption は従来どおり画像直下に配置。
 
 ## リスク・ブロッカー
 
@@ -36,4 +36,4 @@ Issue #136: README の「出力プレビュー」から table レイアウト由
 
 ## セッションログ
 
-- 2026-07-05: Issue #136 を run-issue-task で開始。HTML `border` 属性方針で README / doc/samples/README.md を更新。
+- 2026-07-05: sanitizer 検証で `img border="1"` が除去されることを確認。`<kbd>` ラッパーへ変更し GitHub preview で枠線表示を確認。
