@@ -66,7 +66,7 @@ export は単発実行で、取得開始時点のスナップショットとし�
 | 症状 | 主な原因 | 対処 |
 |---|---|---|
 | `SLACK_TOKEN is not set` などで終了する | token 未設定、または interactive prompt が使えない環境 | [Token の渡し方](token-injection.md) を確認し、実行環境に合う方法で `SLACK_TOKEN` を渡します |
-| token が無効、または権限不足で終了する | token の保存値が古い、scope 不足、App の再 install 未実施 | token の保存値は [token を更新したとき](token-injection.md#token-を更新したとき)、scope と再 install は [Slack App 準備手順](slack-app-setup.md#scope-変更後の再-install) を確認します |
+| token が無効、または権限不足で終了する | token の保存値が古い、App の uninstall / token revoke、scope 不足、App の再 install 未実施 | token の確認・更新は [token が無効なとき](token-injection.md#token-が無効なとき)、scope と再 install は [Slack App 準備手順](slack-app-setup.md#scope-変更後の再-install) を確認します |
 | channel が見つからない(bot token 利用時) | bot / app が対象 channel に未参加 | 対象 channel で `/invite @slapex` を実行します([bot / app を channel に参加させる](slack-app-setup.md#bot--app-を-channel-に参加させる)) |
 | channel が見つからない(user token 利用時) | 認可したユーザーが対象 channel を参照できない | [Channel access](slack-app-setup.md#channel-access) を確認します |
 | 候補が多すぎると表示されて終了する | channel keyword が曖昧で候補が 11 件以上 | より具体的な channel 名の一部、または channel ID を指定して再実行します |

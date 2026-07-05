@@ -14,6 +14,7 @@
 - `main` は PR #146 merge 後の `origin/main` に fast-forward 済み。
 - `doc/README.md`、`doc/help/README.md`、文体 guideline、対象 help 3 ファイルを確認済み。
 - `slack-app-setup.md` の token 渡し方とエラー対処を短縮し、`faq.md` の入口表を調整済み。`token-injection.md` は既存内容で正本として不足なしと判断した。
+- Cursor Bugbot の指摘を受け、無効 token の診断・対処を `token-injection.md` に補足する方針へ変更した。
 
 ## 決定事項
 
@@ -36,6 +37,13 @@
 - `git diff --check`: 成功。
 - `rg -n "password|secret|token|cookie|session|PRIVATE KEY|xox[abp]-|https?://[^ )]+[?][^ )]+" working-branch-notes/147_issue-145-simplify-slack-setup-help.md`: 用語としての `token` のみ検出。実値や署名付き URL はなし。
 
+レビュー対応後:
+
+- `sed -n '82,135p' doc/help/token-injection.md`: `token が無効なとき` 節で保存値確認、App uninstall / token revoke / scope 変更後の再発行、利用中の方法への反映を案内していることを確認。
+- `sed -n '65,72p' doc/help/faq.md`: 無効 token / 権限不足の行が `token が無効なとき` と Slack App setup の再 install 手順へ誘導していることを確認。
+- `rg -n '^(##|###) (token が無効なとき|scope 変更後の再 install)' doc/help/token-injection.md doc/help/slack-app-setup.md`: 関連 anchor の見出しが存在することを確認。
+- `git diff --check`: 成功。
+
 ## リスク・ブロッカー
 
 現時点ではなし。
@@ -43,3 +51,4 @@
 ## セッションログ
 
 - 2026-07-05: Issue #145 を開始。`main` を最新化し、作業ブランチを作成した。
+- 2026-07-05: Cursor Bugbot の「無効 token 対処手順の欠落」指摘を確認。`token-injection.md` に `token が無効なとき` 節を追加し、FAQ の入口表から直接リンクする対応を開始した。
