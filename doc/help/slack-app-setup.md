@@ -303,17 +303,6 @@ channel 名または channel ID を確認します。user token の場合は、�
 
 「bot / app を channel に参加させる」の手順に従い、対象 channel に bot / app を追加します。
 
-## 実 token E2E の確認計画
-
-リリース前に、実 token の値を記録しない形で次を確認します。
-
-| token type | 確認内容 |
-|---|---|
-| user token | public channel、参加済み private channel、thread replies、file download、emoji、user 解決 |
-| bot token | bot / app 参加済み public channel、bot / app 参加済み private channel、thread replies、file download、emoji、user 解決 |
-
-確認結果を PR や working branch note に残す場合は、token 実値、workspace 固有の非公開情報、channel 固有の非公開情報を書かないでください。
-
 ## 参考
 
 - Slack Developer Docs: [Creating apps with manifests](https://docs.slack.dev/tools/app-manifests/)

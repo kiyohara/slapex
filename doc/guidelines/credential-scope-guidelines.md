@@ -26,6 +26,17 @@
 - URL preview 画像、URL preview service icon、avatar、emoji などの public asset URL には Slack OAuth token を送らない。
 - ツール自身による Open Graph fetch は初期対象外であり、将来追加する場合も同じ default deny 方針に従う。
 
+## 実 token E2E の確認と記録
+
+リリース前や token 周りの変更時に実 token E2E を行う場合は、実 token の値を記録しない形で次を確認する。
+
+| token type | 確認内容 |
+|---|---|
+| user token | public channel、参加済み private channel、thread replies、file download、emoji、user 解決 |
+| bot token | bot / app 参加済み public channel、bot / app 参加済み private channel、thread replies、file download、emoji、user 解決 |
+
+確認結果を PR や working branch note に残す場合は、token 実値、workspace 固有の非公開情報、channel 固有の非公開情報を書かない。必要な文脈は抽象化し、成功 / 失敗、未確認項目、再現に必要な公開可能な条件だけを記録する。
+
 ## レビュー観点
 
 - `Authorization` / `Cookie` / `X-API-Key` などの header 追加は security-sensitive として扱う。
