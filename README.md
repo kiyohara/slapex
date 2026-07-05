@@ -25,12 +25,12 @@
 ## 出力プレビュー
 
 <p align="center">
-  <img src="assets/screenshots/sample-timeline-ja.png" alt="サンプル export のタイムライン表示" border="1"><br>
+  <kbd><img src="assets/screenshots/sample-timeline-ja.png" alt="サンプル export のタイムライン表示"></kbd><br>
   <sub>タイムライン表示(日付区切り、システムメッセージ、mrkdwn 装飾、メンション、絵文字、reaction、画像、URL unfurl)</sub>
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/sample-thread-ja.png" alt="サンプル export のスレッドと添付ファイル表示" border="1"><br>
+  <kbd><img src="assets/screenshots/sample-thread-ja.png" alt="サンプル export のスレッドと添付ファイル表示"></kbd><br>
   <sub>スレッド、コードブロック、bot 投稿、添付ファイル</sub>
 </p>
 

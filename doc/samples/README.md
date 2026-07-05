@@ -40,7 +40,7 @@ docker compose run --rm screenshot
 - thread 画像はスレッド親メッセージと、`<details class="thread-group" open>` に置換した一時コピーの展開スレッド部分。
 - 生成後に画像 4 辺の pixel 検査を行い、右端の濃色 1px 縦線(Issue #132)のような境界 artifact が混入した場合は生成を失敗させる。
 
-repo root `README.md` の「出力プレビュー」で見える preview 画像の枠線は、PNG ではなく README 側の HTML(`<img border="1">`)で付ける。GitHub README の sanitizer は `style` 属性を除去するため、枠線は HTML 属性で指定する。
+repo root `README.md` の「出力プレビュー」で見える preview 画像の枠線は、PNG ではなく README 側の HTML(`<kbd>` で画像を囲む)で付ける。GitHub README の sanitizer は `style` 属性や `img` の `border` 属性を除去するため、通過実績のある HTML 要素で枠線を表現する。
 
 サンプルを再生成した場合はスクリーンショットも再生成する。フォントはコンテナ内の Noto フォントで決まるため、host 環境の違いで見た目が変わることはない。
 
