@@ -246,50 +246,11 @@ bot token を使う場合、public channel / private channel の投稿を取得�
 
 ## Token の渡し方
 
-ローカルの `.env` や shell history に token の実値を残さないでください。
+取得した token は、token 入力プロンプトへの貼り付け、または環境変数 `SLACK_TOKEN` で `slapex` に渡します。token の実値をローカルの `.env` や shell history に残さないでください。
 
-追加ツールなしで実行する場合は、`SLACK_TOKEN` を設定せずに `slapex` を実行し、表示される token 入力プロンプトへコピーした token を貼り付けます。
-
-```sh
-slapex engineering
-# SLACK_TOKEN is not set.
-# Paste a Slack OAuth token to use for this run only.
-# It is kept in memory only: not echoed, and not written to files, cache, logs or HTML.
-# For repeated use, provide it from a secret manager (e.g. 1Password CLI) or CI secrets.
-# Enter SLACK_TOKEN (input hidden):
-```
-
-入力は画面に表示(echo)されず、貼り付けた token はその 1 回の実行の中だけで使われます。設定ファイル・cache・log・HTML 出力には保存されず、コマンド行に書かないため shell history にも残りません。
-
-継続利用では、1Password CLI などの secret manager から実行時に注入する方法を推奨します。
-
-```sh
-SLACK_TOKEN="op://<vault>/<item>/<field>" \
-  op run -- slapex engineering
-```
-
-CI では secret store から `SLACK_TOKEN` を job に渡します。CI / automation では bot token を `SLACK_TOKEN` に入れる運用を基本候補とします。
-
-```yaml
-steps:
-  - name: Export Slack posts
-    env:
-      SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-    run: |
-      slapex engineering --output ./exports
-```
-
-実行時の貼り付け、shell 環境変数への一時設定、1Password CLI、CI secrets など、用途別の詳しい手順は [`token-injection.md`](token-injection.md) を参照してください。
+実行時の貼り付け、shell 環境変数への一時設定、1Password CLI、CI secrets など、用途別の詳しい手順は [Token の渡し方](token-injection.md) を参照してください。
 
 ## よくあるエラー
-
-### `SLACK_TOKEN` が未設定
-
-操作可能な端末では、`SLACK_TOKEN` を設定せずに実行すると token 入力プロンプトが表示されます。コピーした token を貼り付けてください。CI や `--no-interactive` など prompt が使えない環境では、環境変数として渡す必要があります([Token の渡し方](token-injection.md))。
-
-### token が無効
-
-取得した token が正しいか確認します。secret manager や CI secrets に保存している場合は、保存値も確認してください。App を uninstall した場合や scope を変更した場合は、再 install / 再 authorize して token を更新します。
 
 ### scope が不足している
 
@@ -302,6 +263,8 @@ channel 名または channel ID を確認します。user token の場合は、�
 ### bot token 利用時に bot が channel に参加していない
 
 「bot / app を channel に参加させる」の手順に従い、対象 channel に bot / app を追加します。
+
+token 未設定、token の渡し方、interactive prompt が使えない環境での実行については [Token の渡し方](token-injection.md) を参照してください。初回 export でつまずきやすい症状から探す場合は [よくある質問・制限事項](faq.md#うまくいかないとき) を参照してください。
 
 ## 参考
 

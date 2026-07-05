@@ -103,6 +103,16 @@ CI、定期実行、チーム共通 automation では bot token(`xoxb-`)を基�
 
 CI log に token を出力しないでください。`set -x` など、コマンドや環境変数を log に出す設定を有効にしたまま token を扱わないでください。
 
+## token が無効なとき
+
+`invalid_auth` など token が無効であることを示すエラーが出た場合は、利用中の方法に入っている token を確認し、現在の token に更新します。
+
+- 実行時に貼り付ける場合: Slack App 管理画面の `OAuth & Permissions` で現在の token をコピーし直し、次回実行時に貼り付けます。
+- 1Password CLI を使う場合: 1Password item の token field が現在の token になっているか確認し、古い場合は更新します。
+- CI secrets を使う場合: repository secret または environment secret が現在の token になっているか確認し、古い場合は更新します。
+
+App を uninstall した場合、token を revoke した場合、scope を追加・変更した場合は、App を workspace に再 install / 再 authorize して token を再発行し、利用中の方法に反映します。scope 不足が疑われる場合は [Slack App 準備手順の scope 変更後の再 install](slack-app-setup.md#scope-変更後の再-install) を確認してください。
+
 ## token を更新したとき
 
 Slack App の scope を追加または変更した場合、App を workspace に再 install / 再 authorize し、更新された token を利用中の方法に反映します。
