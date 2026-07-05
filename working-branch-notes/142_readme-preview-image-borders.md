@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: readme-preview-image-borders
-- PR:
+- PR: #142
 - 最終更新: 2026-07-05
 
 ## 目的

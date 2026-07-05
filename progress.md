@@ -32,7 +32,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 |---|---|---|---|---|---|
 | help-01 | #126 | todo | #125 done | 既存の利用者向け文書の文体を一括修正する | - |
 | sample-01 | #135 | todo | - | asset ファイル名を内容 hash ベースにしてサンプル再生成 diff を安定化する | - |
-| sample-02 | #136 | done | - | README 出力プレビューから table 枠線を外し、HTML/CSS で画像枠線を付ける | -
+| sample-02 | #136 | done | - | README 出力プレビューから table 枠線を外し、HTML/CSS で画像枠線を付ける | #142 |
 | sample-03 | #137 | todo | #135 後 | 同梱サンプル export 更新 skill と利用ルールを整備する | - |
 | sample-04 | #138 | todo | #136 / #137 後 | README 出力プレビュー画像更新 skill と利用ルールを整備する | - |
 | sample-05 | #139 | todo | #137 後 | README ターミナルデモ GIF 更新 skill と利用ルールを整備する | - |
