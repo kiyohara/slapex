@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-126-user-doc-style
-- PR: -
+- PR: #143
 - 最終更新: 2026-07-05
 
 ## 目的
@@ -13,7 +13,7 @@ Issue #126 に従い、利用者向け文書の文末・トーンを `doc/guidel
 - Issue #126 の依存である #125 と PR #124 は完了済み。
 - `doc/help/slack-app-setup.md` の常体混在をですます調へ修正した。
 - `quickstart.md` / `token-injection.md` / `README.md` は確認のみで、追加修正は不要と判断した。
-- `progress.md` の #126 行を done に更新した(PR 番号は採番後に追記する)。
+- `progress.md` の #126 行を done に更新し、PR 欄へ #143 を追記した。
 
 ## 決定事項
 
@@ -22,8 +22,8 @@ Issue #126 に従い、利用者向け文書の文末・トーンを `doc/guidel
 
 ## 次にやること
 
-- 変更を commit / push して PR を作成する。
-- PR 採番後に note を番号付きファイルへ rename し、`progress.md` の PR 欄を更新する。
+- 採番後の note rename / `progress.md` 更新を commit / push する。
+- PR description の note 参照を番号付きファイル名へ更新する。
 
 ## 検証
 
@@ -40,3 +40,4 @@ Issue #126 に従い、利用者向け文書の文末・トーンを `doc/guidel
 
 - 2026-07-05: Issue #126 / #125 / PR #124 と関連 guideline を確認。依存完了を確認して作業ブランチを作成した。
 - 2026-07-05: `doc/help/slack-app-setup.md` の文末を利用者向けのですます調に統一し、対象文書のリンク・文末確認を実施した。
+- 2026-07-05: PR #143 作成後、working branch note を番号付きファイル名へ rename した。
