@@ -18,21 +18,25 @@
 
 v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-現在は post-v1 の CLI 出力 UX と利用者向け help / サンプル整備を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
+現在は worktree / project MCP 整備と、利用者向け help / サンプル更新運用を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
+
+## Agent / 開発環境整備
+
+| ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
+|---|---|---|---|---|---|
+| agent-env-01 | #8 | todo | - | worktree 利用時の project MCP local config セットアップ方針・script・docs を整備する | - |
 
 ## 利用者向け help / サンプル整備
 
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
-| help-00 | #100 | done | help-01 / help-03 / help-04 前が望ましい | (完了)CLI 出力を styled / plain の 2 モード化し `--no-color` を追加。方針は decision log 0045 | #102 |
-| help-01 | #51 | done | help-00 後が望ましい | (完了)README に出力プレビュー(スクリーンショット / フロー図)と ja/en サンプル export(`doc/samples/`、`tools/gensample` で生成)を追加。demo 実行は #113 に分離 | #114 |
-| help-02 | #48 | done | - | (完了)Slack App セットアップ help にスクリーンショット付き UI 操作手順を追加。channel 招待は `/invite` に一本化(経緯は working branch note 参照) | #119 |
-| help-03 | #52 | done | help-00 後が望ましい | (完了)制限事項・FAQ help(`doc/help/faq.md`)を新設し、README / quickstart から誘導。quickstart「つまずいたら」のトラブル分岐リンクを FAQ へ集約(#52 コメント参照) | #128 |
-| help-04 | #49 | done | help-00 / help-01 / help-02 / help-03 後が望ましい | (完了)初回利用クイックスタートを `doc/help/quickstart.md` にチェックリスト形式で追加し README から誘導。README 全体の再構成は #123(help-05)に分離 | #124 |
-| help-05 | #123 | done | #49 / #52 / #125 / #129 後 | (完了)README をキャッチーな入口 + 誘導リンク集へ再構成し、インストール詳細を `doc/help/installation.md`、使い方・出力詳細を `doc/help/usage.md` へ移設。利用者向け文書の開発者向けリンクは #129 の方針(文末脚注)へ統一 | #131 |
-| help-06 | #125 | done | - | (完了)ドキュメント文体ガイドライン(読者層別の文末・トーン・用語表記)を制定。方針は decision log 0048 | #127 |
-| help-07 | #126 | todo | #125 後 | 既存の利用者向け文書(slack-app-setup / token-injection / README)の文体を一括修正する。quickstart は PR #124 内で新文体に合わせるため対象外 | - |
-| help-08 | #129 | done | #52 / #128 後 | (完了)利用者→開発者ドキュメントのリンク方針を制定(本文リンク回避 / 必要時は文末脚注で「開発者向け」明示)。decision log 0049 と `document-style-guidelines.md` に明文化。既存文書の棚卸しは #123 | #130 |
+| help-01 | #126 | todo | #125 done | 既存の利用者向け文書の文体を一括修正する | - |
+| sample-01 | #135 | todo | - | asset ファイル名を内容 hash ベースにしてサンプル再生成 diff を安定化する | - |
+| sample-02 | #136 | todo | - | README 出力プレビューから table 枠線を外し、画像側に枠線を持たせる | - |
+| sample-03 | #137 | todo | #135 後 | 同梱サンプル export 更新 skill と利用ルールを整備する | - |
+| sample-04 | #138 | todo | #136 / #137 後 | README 出力プレビュー画像更新 skill と利用ルールを整備する | - |
+| sample-05 | #139 | todo | #137 後 | README ターミナルデモ GIF 更新 skill と利用ルールを整備する | - |
+| sample-06 | #140 | todo | - | quickstart の Mermaid フロー図を利用者向け画像へ置き換える | - |
 
 ## リリース履歴
 
@@ -54,3 +58,4 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 - post-v1 改善(配布・導入)— install script(#77 / PR #78)、Homebrew cask(#50 / PR #80)、cask 自動更新の release 検証(#79 / PR #85)、user token default 転換(#81 / PR #84)すべて done。経緯は decision log 0041。
 - 1Password integration 整備 — token 注入 help と `op run` 経由の interactive selection を整備済み(Issue #53〜#54 / PR #96・#98)。
 - 開発ループ整備 — 既存 Issue 登録 skill、Issue 駆動タスク実行 skill、開発ループ入口ドキュメントを追加済み(Issue #88〜#90 / PR #92〜#94)。
+- CLI 出力 UX / 利用者向け help 基盤 / サンプル表示の初期整備 — styled/plain 出力(#100 / PR #102)、README 出力プレビューと同梱サンプル(#51 / PR #114)、Slack App セットアップ画像 help(#48 / PR #119)、FAQ(#52 / PR #128)、quickstart(#49 / PR #124)、README 再構成(#123 / PR #131)、文体・リンク方針(#125 / PR #127、#129 / PR #130)を整備済み。方針は decision log 0045 / 0048 / 0049。
