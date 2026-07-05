@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-145-simplify-slack-setup-help
-- PR: 未作成
+- PR: #147
 - 最終更新: 2026-07-05
 
 ## 目的
@@ -24,7 +24,7 @@
 
 ## 次にやること
 
-- PR を作成し、採番後に note を rename する。
+- PR description の note 参照を更新し、採番 commit を push する。
 
 ## 検証
 
@@ -34,6 +34,7 @@
 - `ls doc/help/token-injection.md doc/help/faq.md doc/help/slack-app-setup.md`: リンク先ファイルの存在を確認。
 - `rg -n '^(##|###) ' doc/help/slack-app-setup.md doc/help/token-injection.md doc/help/faq.md`: 関連 anchor の見出しが存在することを確認。
 - `git diff --check`: 成功。
+- `rg -n "password|secret|token|cookie|session|PRIVATE KEY|xox[abp]-|https?://[^ )]+[?][^ )]+" working-branch-notes/147_issue-145-simplify-slack-setup-help.md`: 用語としての `token` のみ検出。実値や署名付き URL はなし。
 
 ## リスク・ブロッカー
 
