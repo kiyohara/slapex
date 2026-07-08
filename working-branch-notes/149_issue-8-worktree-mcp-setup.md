@@ -33,6 +33,10 @@ fail-loud に停止する。これを allowlist + setup script で補う。
 - 自動化 hook は今回入れない。worktree 手順は
   `doc/guidelines/agent-configuration-management.md` に集約し、MCP README に補足を置く。
 - 方針は decision log 0051 に記録する(0023 が据え置いた worktree provisioning の実装)。
+- [PR #149 レビュー対応] `.worktreeinclude` は「repo root 相対 path」を安全境界にするため、
+  絶対 path(`/` 始まり)や `..` segment を含む entry は path traversal リスクとして
+  fail-loud(exit 2)で拒否する。source/dst 組み立て前に `case` で検証。
+  missing>0 の fail-soft(exit 0)は 0051 の意図どおり維持(`--strict` は将来必要時)。
 
 ## 次にやること
 
@@ -56,6 +60,10 @@ main の working dir にだけ存在、という実環境と同じ構成)で確�
 - TEST 5: 不正 arg は exit 2、`--help` は exit 0。
 - セキュリティ: ダミー config に埋めた marker 文字列が script 出力に一切現れないことを確認
   (file 内容を出力・log しない)。
+- [PR #149 レビュー対応] path traversal: `../escaped.conf` / `.config/../../x.conf` /
+  絶対 path `/tmp/x.conf` / `foo/..` はすべて exit 2 で拒否し、worktree 外に何も書かない。
+  正常 entry(`.config/dummy.conf`)は従来どおりコピー。filename 内の `..`
+  (`.config/..hidden.conf`、segment ではない)は誤検知せず許可、を確認。
 
 環境依存で本ブランチ内フル検証していない点:
 
@@ -74,4 +82,7 @@ main の working dir にだけ存在、という実環境と同じ構成)で確�
 
 - 2026-07-08: Issue #8 着手。context 確認、branch 作成、方針確定、実装。
   `.worktreeinclude` / `worktree-setup.sh` / decision log 0051 / guideline・MCP README 更新。
-  実 worktree で挙動検証(TEST 1-5 + セキュリティ)を pass。PR 作成へ。
+  実 worktree で挙動検証(TEST 1-5 + セキュリティ)を pass。PR #149 作成。
+- 2026-07-08: PR #149 レビュー対応。Codex [must] 指摘の path traversal を
+  `worktree-setup.sh` に検証追加(絶対 path / `..` segment を exit 2 で拒否)。
+  `.worktreeinclude` の contract もコメントに明記。traversal / regression / 誤検知を再検証。

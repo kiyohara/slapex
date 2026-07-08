@@ -89,6 +89,15 @@ while IFS= read -r raw || [ -n "$raw" ]; do
   line="${line%"${line##*[![:space:]]}"}"
   [ -n "$line" ] || continue
 
+  # allowlist は repo root からの相対 path だけを許可する安全境界。絶対 path や
+  # `..` segment を含む entry は repo root 外(worktree 外)を指し得るため拒否する。
+  case "$line" in
+    /*|..|../*|*/../*|*/..)
+      echo "$self: allowlist entry が repo root 外を指し得るため拒否: $line" >&2
+      echo "  .worktreeinclude は repo root からの相対 path のみ許可する('/' 始まりや '..' segment は不可)。" >&2
+      exit 2 ;;
+  esac
+
   src="$source_dir/$line"
   dst="$dest_dir/$line"
 

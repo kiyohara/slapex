@@ -2,3 +2,9 @@
 command = "./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
 startup_timeout_sec = 30
 tool_timeout_sec = 60
+
+[mcp_servers.github-op-integrated.tools.pull_request_review_write]
+approval_mode = "approve"
+
+[mcp_servers.github-op-integrated.tools.add_comment_to_pending_review]
+approval_mode = "approve"
