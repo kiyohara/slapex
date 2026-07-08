@@ -4,7 +4,7 @@ package output
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -99,7 +99,7 @@ type AssetMeta struct {
 	SizeBytes    int64
 }
 
-// Assets downloads asset URLs into the per-kind directories with URL-hash
+// Assets downloads asset URLs into the per-kind directories with content-hash
 // file names, deduplicates by source URL, and records every outcome.
 type Assets struct {
 	ctx     context.Context
@@ -180,10 +180,6 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 		}
 	}
 
-	sum := md5.Sum([]byte(srcURL))
-	base := hex.EncodeToString(sum[:])
-	rel := filepath.Join(kindDirs[kind], base) // extension added after download
-
 	tmp, err := os.CreateTemp(a.dir, "asset-*")
 	if err != nil {
 		a.record(kind, srcURL, meta, "", "failed", err.Error())
@@ -191,7 +187,13 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	}
 	defer os.Remove(tmp.Name())
 
-	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), tmp)
+	// Hash the downloaded bytes (not the source URL) so the saved file name is a
+	// content hash: identical content resolves to the same name, and regenerating
+	// the samples does not churn file names just because a signed URL or the
+	// fixture's base URL changed (decision log 0016 / 0052). The hash is computed
+	// during the download via a MultiWriter, so the temp file is not re-read.
+	h := sha256.New()
+	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h))
 	tmp.Close()
 	if err != nil {
 		status := "failed"
@@ -203,7 +205,8 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 		return "", false
 	}
 
-	rel += extensionFor(meta, srcURL, contentType)
+	base := hex.EncodeToString(h.Sum(nil))
+	rel := filepath.Join(kindDirs[kind], base+extensionFor(meta, srcURL, contentType))
 	dst := filepath.Join(a.dir, rel)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		a.record(kind, srcURL, meta, "", "failed", err.Error())
@@ -235,10 +238,13 @@ func (a *Assets) record(kind, srcURL string, meta AssetMeta, rel, status, errMsg
 
 // copyFromReuse copies an asset that a previous run already saved into this
 // run's output instead of downloading it, when --reuse-cache matched (decision
-// log 0030). It reuses the old LocalPath verbatim so the deterministic
-// md5+extension layout (and therefore the HTML references) stays identical
-// across runs. It returns false — so Save falls back to a normal download — when
-// srcURL was not a saved asset before or the previous file is gone.
+// log 0030). It reuses the old LocalPath verbatim so the previous run's file
+// name (and therefore the HTML references) stays identical across runs. Because
+// the asset content is unchanged, a fresh download would resolve to the same
+// content hash anyway (decision log 0052); reusing a cache written by an older
+// URL-hash build simply keeps that build's names for the copied assets. It
+// returns false — so Save falls back to a normal download — when srcURL was not
+// a saved asset before or the previous file is gone.
 func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, bool) {
 	entry, ok := a.reuse.Entries[srcURL]
 	if !ok || entry.LocalPath == "" {

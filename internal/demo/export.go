@@ -2,6 +2,7 @@ package demo
 
 import (
 	"context"
+	"time"
 
 	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
@@ -20,6 +21,11 @@ type Options struct {
 	KeepCache      bool
 	ReuseCache     string
 	ToolVersion    string
+	// Now overrides the export clock (footer timestamp, fetch window). Zero means
+	// time.Now(). gensample sets it (from its -time flag) when a sample
+	// regeneration is pinned for reproducibility; slapex --demo leaves it zero so
+	// a user's demo shows current dates.
+	Now time.Time
 }
 
 // Export runs the real export pipeline against sc, served by an in-process fake
@@ -50,5 +56,6 @@ func Export(ctx context.Context, sc *Scenario, o Options, printer *ui.Printer) (
 		ReuseCache:     o.ReuseCache,
 		NoInteractive:  true,
 		ToolVersion:    o.ToolVersion,
+		Now:            o.Now,
 	}, printer)
 }

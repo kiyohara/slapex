@@ -52,13 +52,22 @@ type Options struct {
 	NoInteractive  bool
 	PromptTTY      *os.File // controlling terminal for interactive prompts; nil when unavailable
 	ToolVersion    string
+	// Now overrides the export clock used for the footer "Exported" line, the
+	// --days oldest boundary and the default output-root name. Zero means
+	// time.Now(). gensample sets it from its -time flag when a sample
+	// regeneration is pinned for reproducibility; normal runs and slapex --demo
+	// leave it zero.
+	Now time.Time
 }
 
 // Run performs the export and returns the absolute path of the directory
 // holding index.html. Progress and diagnostics go through p; each stage is a
 // ui phase line (doc/design/usage-flow.md「処理対象の表示」).
 func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (string, error) {
-	now := time.Now()
+	now := opts.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
 
 	p.StartPhase("Workspace", "checking token (auth.test) ...")
 	auth, err := client.AuthTest(ctx)

@@ -2,7 +2,7 @@ package output
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -94,7 +94,8 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 		if !ok {
 			t.Fatalf("Save(%s, %s) ok = false", tc.kind, tc.url)
 		}
-		want := filepath.ToSlash(filepath.Join(tc.dir, md5Hex(tc.url)+tc.ext))
+		// The file name is the sha256 of the downloaded content, not of the URL.
+		want := filepath.ToSlash(filepath.Join(tc.dir, sha256Hex(dl.content[tc.url].body)+tc.ext))
 		if got != want {
 			t.Fatalf("Save(%s, %s) = %q, want %q", tc.kind, tc.url, got, want)
 		}
@@ -123,6 +124,54 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 	assertEntry(t, entries, "https://example.com/large", "skipped_size", "")
 	assertEntry(t, entries, "https://example.com/fail", "failed", "")
 	assertEntry(t, entries, "https://example.com/too-large-error", "skipped_size", "")
+}
+
+func TestAssetsSaveContentHashDeduplicatesByContent(t *testing.T) {
+	t.Parallel()
+
+	outDir := t.TempDir()
+	dl := &fakeDownloader{
+		content: map[string]fakeDownload{
+			"https://a.example.com/photo.png": {body: "same-bytes", contentType: "image/png"},
+			"https://b.example.com/photo.png": {body: "same-bytes", contentType: "image/png"},
+			"https://c.example.com/photo.png": {body: "different-bytes", contentType: "image/png"},
+		},
+	}
+	assets := NewAssets(context.Background(), dl, outDir, 0)
+
+	// Two different source URLs with identical content and extension resolve to the
+	// same content-hash file name, so the sample diff stays stable when only the
+	// URL changed (Issue #135).
+	first, ok := assets.Save(KindUploadOriginal, "https://a.example.com/photo.png", AssetMeta{})
+	if !ok {
+		t.Fatalf("Save(a) ok = false")
+	}
+	want := filepath.ToSlash(filepath.Join("assets/uploads/originals", sha256Hex("same-bytes")+".png"))
+	if first != want {
+		t.Fatalf("content-hash path = %q, want %q", first, want)
+	}
+	second, ok := assets.Save(KindUploadOriginal, "https://b.example.com/photo.png", AssetMeta{})
+	if !ok {
+		t.Fatalf("Save(b) ok = false")
+	}
+	if first != second {
+		t.Fatalf("identical content saved to different paths: %q vs %q", first, second)
+	}
+
+	// Different content resolves to a different file name.
+	third, ok := assets.Save(KindUploadOriginal, "https://c.example.com/photo.png", AssetMeta{})
+	if !ok {
+		t.Fatalf("Save(c) ok = false")
+	}
+	if third == first {
+		t.Fatalf("different content saved to the same path %q", third)
+	}
+
+	// Both deduplicated source URLs are recorded in the manifest, each pointing at
+	// the same local_path.
+	entries := assets.Entries()
+	assertEntry(t, entries, "https://a.example.com/photo.png", "saved", first)
+	assertEntry(t, entries, "https://b.example.com/photo.png", "saved", first)
 }
 
 func TestAssetsLimitFor(t *testing.T) {
@@ -305,8 +354,8 @@ func (f *fakeDownloader) Download(_ context.Context, srcURL string, _ int64, w i
 	return int64(n), item.contentType, nil
 }
 
-func md5Hex(s string) string {
-	sum := md5.Sum([]byte(s))
+func sha256Hex(s string) string {
+	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:])
 }
 

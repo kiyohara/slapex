@@ -63,3 +63,9 @@ user / emoji 解決結果」)を変えるものではないため、`cache.md` �
 
 - 差分取得・再実行(`index.md` 未決事項)を設計する場合。
 - assets 再利用で「同じ URL だが内容が更新された」ケースが実害になった場合(現状は URL hash ベースのファイル名により同一視される)。
+
+## 追記(2026-07-08)
+
+本ログ本文が前提とする「`local_path` は `md5(source_url)` + 拡張子」という asset ファイル名のレイアウトは、[0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md) で download 内容の sha256 hash ベースへ変更した。本文は当時の記録としてそのまま残す。
+
+`--reuse-cache` の再利用ロジック自体は変わらない。旧 `assets_manifest.json` の `local_path` をそのまま新出力へコピーする挙動を維持しており、同一 asset は内容が同じなので fresh download でも同じ content hash に解決され、内部整合は保たれる(詳細は 0052 の「影響」)。

@@ -27,7 +27,7 @@
 | 0013 | decided | 出力 directory の label | `<workspace-label>` と `<channel-label>` は ID そのものではなく人間が読みやすい label から作り、衝突や取得不能時だけ ID を suffix / fallback として使う | [0013-output-directory-labels.md](0013-output-directory-labels.md) |
 | 0014 | decided | URL preview の取得元 | URL preview 画像は Slack API で取得できる unfurl / attachment 情報だけを使い、ツール自身による Open Graph fetch は行わない | [0014-url-preview-source.md](0014-url-preview-source.md) |
 | 0015 | decided | channel scope 設定 | 初期利用手順では public / private channel の scope を同じ設定手順で扱い、`channels:*` と `groups:*` をまとめて案内する | [0015-channel-scope-setup.md](0015-channel-scope-setup.md) |
-| 0016 | decided | asset ファイル名 | asset ファイル名は PoC と同じ URL hash ベースにし、人間向け情報は manifest と HTML 表示に保持する | [0016-asset-filenames.md](0016-asset-filenames.md) |
+| 0016 | decided | asset ファイル名 | asset は種別ごとの分類ディレクトリに保存し、人間向け情報は manifest と HTML 表示に保持する。ファイル名の hash 対象は 0052 で URL hash → 内容 hash へ変更 | [0016-asset-filenames.md](0016-asset-filenames.md), [0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md) |
 | 0017 | decided | uploaded image assets | ユーザーアップロード画像は thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする | [0017-uploaded-image-assets.md](0017-uploaded-image-assets.md) |
 | 0018 | decided | CLI help pages | Slack App セットアップ手順は GitHub 上で参照できる help ページに分離し、CLI エラーは短い診断と URL 案内に絞る | [0018-cli-help-pages.md](0018-cli-help-pages.md) |
 | 0019 | decided | document directory structure | 設計文書は `doc/design/`、利用者向け help は `doc/help/`、作業状況は root の `progress.md` に分ける | [0019-document-directory-structure.md](0019-document-directory-structure.md) |
@@ -63,6 +63,7 @@
 | 0049 | decided | 利用者→開発者ドキュメントのリンク方針 | 利用者向け(README / `doc/help/`)の本文から開発者向け(`doc/design/` spec、decision log 等)へ直接リンクしない。必要時は文末の脚注に「開発者向け」と明示して置く。decision log 直リンク禁止(0039)は本方針に包含。正本は `document-style-guidelines.md`、既存棚卸しは #123 | [0049-user-doc-to-dev-doc-links.md](0049-user-doc-to-dev-doc-links.md) |
 | 0050 | decided | SLACK_TOKEN の渡し方の説明順位 | 利用者向けドキュメントでは token 入力プロンプトへの都度コピー & ペーストを基本とし、環境変数への一時設定と secret manager 連携を補足に置く。継続利用の推奨手段は secret manager 連携のまま | [0050-token-passing-doc-order.md](0050-token-passing-doc-order.md) |
 | 0051 | decided | worktree の local config 配置 | tracked な MCP 起動定義は worktree に入るが gitignored な `.config/github-op-integrated.conf` は入らない。`.worktreeinclude` allowlist と `.agents/scripts/worktree-setup.sh` で、明示した local config だけを main worktree からコピーする。raw secret を含むファイルは載せない。0023 が据え置いた worktree provisioning の実装 | [0051-worktree-local-config-provisioning.md](0051-worktree-local-config-provisioning.md) |
+| 0052 | decided | asset ファイル名の内容 hash 化 | asset のローカルファイル名を元 URL の hash ではなく download 内容の sha256 hash にし、サンプル再生成 diff を実内容の変化に近づける。0016 の URL hash 部分を上書きし、分類ディレクトリ / manifest 方針は 0016 のまま維持 | [0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md) |
 
 ## 未決事項
 
