@@ -23,7 +23,7 @@ wrapper には通常引数が不要で、設定は project root の `.config/git
 }
 ```
 
-`.mcp.json` / `.codex/config.toml` と揃えて project root 基準の相対 `command` を使う。Cursor IDE は `${workspaceFolder}` 展開に対応するが、cursor-agent(CLI / Agent chat)はこの変数を展開せず、文字列のまま spawn して `ENOENT` になる。相対 path は IDE / agent の両方で project root を基準に解決されるため、こちらに統一する。wrapper 起動後は wrapper 自身の配置から project root を再解決するため、command の書き方には依存しない。経緯は `doc/design/decision-log/0053-cursor-mcp-config-path.md`。
+`.mcp.json` / `.codex/config.toml` と揃えて project root 基準の相対 `command` を使う。cursor-agent(CLI / Agent chat)では `${workspaceFolder}` は利用できない。経緯は `doc/design/decision-log/0053-cursor-mcp-config-path.md`。
 
 ## Claude Code — repo root の `.mcp.json`
 
