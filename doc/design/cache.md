@@ -51,11 +51,13 @@
 |---|---|
 | `kind` | `emoji` / `og_image` / `service_icon` / `workspace_icon` / `upload_thumb` / `upload_original` / `attachment` / `avatar` |
 | `source_url` | 元 URL |
-| `local_path` | 出力ディレクトリからの相対 path(未保存なら `null`) |
+| `local_path` | 出力ディレクトリからの相対 path(未保存なら `null`)。保存名は download 内容の sha256 hash + extension(`output-format.md`) |
 | `file_id` / `emoji_name` | Slack file ID または絵文字名(該当する場合のみ) |
 | `original_name` / `mimetype` / `size_bytes` | 元の表示ファイル名と metadata |
 | `status` | `saved` / `skipped_size` / `failed` |
 | `error` | 失敗理由(失敗時のみ) |
+
+`assets` の各要素は元 URL 単位で記録する。ファイル名は内容 hash ベースのため、内容が同じ複数の `source_url` が同一 `local_path` を指すことがある(決定経緯は `decision-log/0052-content-hash-asset-filenames.md`)。`--reuse-cache` は保存済み asset の `local_path` をそのまま再利用してファイルをコピーする。内容が同じ asset は再取得しても同じ内容 hash に解決されるため、この verbatim 再利用は内部整合を保つ。
 
 ### `slack_api_cache.json`
 

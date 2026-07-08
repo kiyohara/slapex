@@ -1,9 +1,9 @@
 # 0016 asset ファイル名
 
-- 状態: decided
+- 状態: decided(hash の対象は 0052 で URL hash → 内容 hash へ変更)
 - 作成日: 2026-06-02
-- 最終更新日: 2026-06-03
-- 関連: `../output-format.md`, `../slack_posts_dumper`
+- 最終更新日: 2026-07-08
+- 関連: `../output-format.md`, `../slack_posts_dumper`, `0052-content-hash-asset-filenames.md`
 
 ## 背景
 
@@ -60,3 +60,9 @@ HTML 生成時は、Slack API から得た asset URL を URL hash に変換し�
 URL に短時間で失効する署名付き query parameter が含まれ、同じ実体の asset が実行ごとに別 hash になる問題が大きい場合は、hash 対象の正規化ルールを検討する。
 
 利用者が assets directory を直接読む用途が強くなり、人間可読なファイル名の価値が衝突リスクを上回る場合は、表示名ベースの alias や追加 index の導入を検討する。
+
+## 追記(2026-07-08)
+
+本ログの「asset ファイル名を **URL hash** ベースにする」という部分は、[0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md) で **内容(content)hash** ベース(sha256)へ変更した。「後から見直す条件」に挙げていた「実行ごとに URL が変わり同一実体が別 hash になる問題」が、同梱サンプルの再生成(`tools/gensample`)で顕在化したためである。
+
+種別ごとの分類ディレクトリ、`assets/emoji/` への絵文字集約、人間向け情報を manifest と HTML 表示に持たせる方針は本ログのまま維持する。変わったのは hash の対象(URL → 内容)と algorithm(md5 → sha256)だけである。詳細は 0052 を参照する。

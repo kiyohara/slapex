@@ -48,11 +48,11 @@ option:
 
 標準絵文字とカスタム絵文字については、関連評価実装である `slack_posts_dumper` に PoC 実装がある。PoC では `AssetManager` が `output/assets/<url-md5>.<ext>` のような URL hash ベースのファイル名を生成し、`output/assets_manifest.json` に元 URL、ローカルパス、metadata を記録する。`EmojiResolver` は `emoji.list` でカスタム絵文字を解決し、標準絵文字は Slack の標準絵文字 URL を組み立てている。
 
-本リポジトリでも、asset ファイル名は PoC と同じく URL hash ベースにする。元 URL が同じ asset は同じファイル名へ解決されるため、重複 download と重複保存を避けやすい。asset 種別、元 URL、Slack file ID、emoji 名、元の表示ファイル名、content type、取得成否などの人間が読むための情報は `.cache/assets_manifest.json` と HTML 側の表示に保持する。
+本リポジトリでは、asset ファイル名は download した内容の hash(sha256)ベースにする。内容が同じ asset は同じファイル名へ解決されるため重複保存を避けやすく、元 URL が実行ごとに変わっても(署名付き query や、同梱サンプル生成時に実行ごとに変わる base URL など)、内容が変わらない限りファイル名は変わらない。asset 種別、元 URL、Slack file ID、emoji 名、元の表示ファイル名、content type、取得成否などの人間が読むための情報は `.cache/assets_manifest.json` と HTML 側の表示に保持する。当初の URL hash 方針から内容 hash 方針へ変更した決定経緯は `decision-log/0016-asset-filenames.md` と `decision-log/0052-content-hash-asset-filenames.md` を参照する(開発者向け)。
 
 標準絵文字は原則として Unicode に戻して HTML に直接表示する。カスタム絵文字や Unicode fallback できない絵文字は画像 asset として保存するが、利用者にとって custom かどうかは重要な分類ではないため、保存先は `assets/emoji/` に集約する。
 
-利用者が出力内容を把握しやすいように、ファイル名は URL hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。
+利用者が出力内容を把握しやすいように、ファイル名は内容 hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。同一内容・同一 extension の asset は同一 kind ディレクトリ内で同じファイルへ集約され、複数の元 URL が同じローカル path を指すことがある(manifest は元 URL 単位で記録する)。
 
 URL preview 画像、URL preview service icon、workspace icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像、service icon、workspace icon を表示しない。
 
@@ -87,22 +87,22 @@ slapex-<yyyymmdd>-<hhmm>/
         ├── assets/
         │   ├── slapex-logo.svg
         │   ├── workspace-icons/
-        │   │   └── <url-hash>.png
+        │   │   └── <content-hash>.png
         │   ├── avatars/
-        │   │   └── <url-hash>.jpg
+        │   │   └── <content-hash>.jpg
         │   ├── emoji/
-        │   │   └── <url-hash>.gif
+        │   │   └── <content-hash>.gif
         │   ├── og-images/
-        │   │   └── <url-hash>.jpg
+        │   │   └── <content-hash>.jpg
         │   ├── service-icons/
-        │   │   └── <url-hash>.png
+        │   │   └── <content-hash>.png
         │   ├── uploads/
         │   │   ├── thumbs/
-        │   │   │   └── <url-hash>.jpg
+        │   │   │   └── <content-hash>.jpg
         │   │   └── originals/
-        │   │       └── <url-hash>.<ext>
+        │   │       └── <content-hash>.<ext>
         │   └── attachments/
-        │       └── <url-hash>.<ext>
+        │       └── <content-hash>.<ext>
         └── .cache/
             ├── assets_manifest.json
             ├── metadata.json
