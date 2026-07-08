@@ -278,3 +278,26 @@ git ls-files | xargs rg -l "<server-name>" 2>/dev/null
 - `.cursor/mcp.json` / `.mcp.json` / `.codex/config.toml` に恒久ルール、実 vault 名、実 item 名、実 token、個人環境の絶対 path を入れる。
 - project root の `.config/<server-name>.conf.example` に実 vault 名、実 item 名、実 token を入れる(`op://<VAULT>/<ITEM>/<FIELD>` のような完全 placeholder に留める)。
 - wrapper script から secret を直接 echo / log する。
+
+## worktree での ignored local config
+
+tracked な MCP 起動定義(`.mcp.json` / `.cursor/mcp.json` / `.codex/config.toml`)は worktree に入るが、gitignored な local config(例: `.config/github-op-integrated.conf`)は worktree へ自動配置されない。fresh worktree ではこの local config が無く、MCP wrapper が config file を見つけられず fail-loud で停止する。
+
+これを allowlist と setup script で補う。方針の経緯は `doc/design/decision-log/0051-worktree-local-config-provisioning.md`。
+
+- `.worktreeinclude`(repo root, commit): worktree へコピーしてよい gitignored local config を 1 行 1 path で allowlist する。**raw secret を含むファイルは載せない**(1Password secret reference を書いた config だけを対象にする)。`.gitignore` 全体はコピーしない。
+- `.agents/scripts/worktree-setup.sh`(commit / 実行権限): `.worktreeinclude` を読み、列挙ファイルが main worktree に存在する場合だけ現在の worktree へコピーする。既定は上書きしない(`--force` で上書き)。ファイル内容は出力・log しない。
+
+### worktree を使うときの手順
+
+1. worktree を作る(Claude Code は `.claude/worktrees/` 配下、Codex / Cursor は各 tool の手順)。
+2. 作成した worktree の中で setup script を実行する。
+
+   ```sh
+   .agents/scripts/worktree-setup.sh
+   ```
+
+   main worktree に対象 local config があればコピーされる。無い場合は作成手順が表示されるので、main worktree で用意してから再実行する。
+3. MCP host を起動 / 再起動し、`github-op-integrated` の tool が使えることを確認する。worktree 初期化時に MCP を起動する tool(例: Codex)では、setup script 実行後に MCP を再起動する。
+
+新しい allowlist 対象を足すときは `.worktreeinclude` に path を 1 行追加する。raw secret を含むファイルは足さない。

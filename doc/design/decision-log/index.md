@@ -62,6 +62,7 @@
 | 0048 | decided | ドキュメント文体 | 利用者向け(README / `doc/help/`)はですます調、開発者・AI agent 向けは常体。トーンは簡潔・中立で絵文字なし、技術用語は英語表記のまま。正本は `doc/guidelines/document-style-guidelines.md`。既存文書への一括適用は #126 | [0048-document-style.md](0048-document-style.md) |
 | 0049 | decided | 利用者→開発者ドキュメントのリンク方針 | 利用者向け(README / `doc/help/`)の本文から開発者向け(`doc/design/` spec、decision log 等)へ直接リンクしない。必要時は文末の脚注に「開発者向け」と明示して置く。decision log 直リンク禁止(0039)は本方針に包含。正本は `document-style-guidelines.md`、既存棚卸しは #123 | [0049-user-doc-to-dev-doc-links.md](0049-user-doc-to-dev-doc-links.md) |
 | 0050 | decided | SLACK_TOKEN の渡し方の説明順位 | 利用者向けドキュメントでは token 入力プロンプトへの都度コピー & ペーストを基本とし、環境変数への一時設定と secret manager 連携を補足に置く。継続利用の推奨手段は secret manager 連携のまま | [0050-token-passing-doc-order.md](0050-token-passing-doc-order.md) |
+| 0051 | decided | worktree の local config 配置 | tracked な MCP 起動定義は worktree に入るが gitignored な `.config/github-op-integrated.conf` は入らない。`.worktreeinclude` allowlist と `.agents/scripts/worktree-setup.sh` で、明示した local config だけを main worktree からコピーする。raw secret を含むファイルは載せない。0023 が据え置いた worktree provisioning の実装 | [0051-worktree-local-config-provisioning.md](0051-worktree-local-config-provisioning.md) |
 
 ## 未決事項
 

@@ -24,7 +24,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
-| agent-env-01 | #8 | todo | - | worktree 利用時の project MCP local config セットアップ方針・script・docs を整備する | - |
+| agent-env-01 | #8 | done | - | `.worktreeinclude` + `worktree-setup.sh` + docs を整備。PR レビュー / merge 待ち | - |
 
 ## 利用者向け help / サンプル整備
 
