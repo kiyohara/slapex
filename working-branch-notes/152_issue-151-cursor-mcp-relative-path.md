@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: issue-151-cursor-mcp-relative-path
-- PR: -
+- PR: #152
 - 最終更新: 2026-07-08
 
 ## 目的
