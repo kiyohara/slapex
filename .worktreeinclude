@@ -1,0 +1,15 @@
+# worktree-setup がコピーする gitignored な local config の allowlist。
+#
+# 1 行 1 path、repo root からの相対 path で書く。'#' で始まる行と空行は無視する。
+# '/' 始まりの絶対 path や '..' segment を含む entry は、repo root 外を指し得るため
+# worktree-setup が拒否する(exit 2)。
+#
+# 安全策:
+#   - raw secret を含むファイルは載せない。1Password secret reference
+#     (op://...)だけを書いた config を対象にする。
+#   - `.gitignore` 全体はコピーしない。ここに明示したファイルだけを扱う。
+#
+# 詳細: doc/guidelines/agent-configuration-management.md の
+#       「worktree での ignored local config」セクション。
+
+.config/github-op-integrated.conf

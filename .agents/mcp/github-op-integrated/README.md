@@ -49,6 +49,16 @@ MCP host 用の project 設定ファイル(`.cursor/mcp.json`、repo root の `.
 
 3. MCP host を再起動し、tool 一覧に `github-op-integrated` の tool が現れることを確認する。
 
+## worktree での利用
+
+gitignored な `.config/github-op-integrated.conf` は新しい worktree へ自動配置されないため、worktree では wrapper が config file を見つけられず fail-loud で停止する。worktree を作成したら、その worktree の中で setup script を実行して local config を配置する。
+
+```sh
+.agents/scripts/worktree-setup.sh
+```
+
+main worktree に `.config/github-op-integrated.conf` があればコピーされる。無い場合は、上の「セットアップ」を先に main worktree で済ませてから再実行する。allowlist と script の詳細は `doc/guidelines/agent-configuration-management.md` の「worktree での ignored local config」を参照する。
+
 ## tool allowlist の方針
 
 `.config/github-op-integrated.conf.example` のデフォルト `GITHUB_TOOLS` は、本プロジェクトの初期 MCP 化スコープ(利用頻度の高い collaboration write 操作と、それらを行うために必要な read)を反映している。
