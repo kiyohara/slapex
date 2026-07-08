@@ -2,7 +2,7 @@
   "mcpServers": {
     "github-op-integrated": {
       "type": "stdio",
-      "command": "${workspaceFolder}/.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
+      "command": "./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
     }
   }
 }

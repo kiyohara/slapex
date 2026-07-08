@@ -34,7 +34,7 @@
 | 0020 | decided | 処理対象 workspace / channel の表示 | token から解決した workspace と確定した channel を実行中、完了時、生成 HTML に表示する。画面表示用 label と directory 用 label は役割を分ける | [0020-target-label-display.md](0020-target-label-display.md) |
 | 0021 | decided | 仕様文書の分割 | `usage-flow.md` を利用者の操作の流れに絞り、出力形式・HTML 表示仕様・cache を `output-format.md` / `html-rendering.md` / `cache.md` に分割する | [0021-spec-document-split.md](0021-spec-document-split.md) |
 | 0022 | decided | 正本と参照の関係の明文化 | 仕様の正本は `doc/design/` 直下の spec 文書、decision log は参考ログと位置づけ、guideline / template / index / rule shim に明記して取り違えを防ぐ | [0022-spec-vs-decision-log-authority.md](0022-spec-vs-decision-log-authority.md) |
-| 0023 | decided | project MCP config | secret-free な MCP host 設定は project 設定として git 管理し、`github-op-integrated` の secret reference は MCP 専用 `.config/github-op-integrated.conf` で管理する | [0023-project-mcp-config.md](0023-project-mcp-config.md) |
+| 0023 | decided | project MCP config | secret-free な MCP host 設定は project 設定として git 管理し、`github-op-integrated` の secret reference は MCP 専用 `.config/github-op-integrated.conf` で管理する。Cursor の command path は 0053 で相対 path へ補正 | [0023-project-mcp-config.md](0023-project-mcp-config.md), [0053-cursor-mcp-config-path.md](0053-cursor-mcp-config-path.md) |
 | 0024 | decided | CLI option と exit code | option 一覧と default を `cli-interface.md` に確定。token は環境変数のみ、exit code は 0/1/2/3/4 の 5 分類、stdout は出力 path のみで進捗・診断は stderr | [0024-cli-options-and-exit-codes.md](0024-cli-options-and-exit-codes.md) |
 | 0025 | decided | Slack API 利用方針 | 使用 method、cursor pagination、429 + Retry-After 遵守と指数バックオフを確定。2025 年の非 Marketplace 配布アプリ向け rate limit 強化は internal App が対象外であることを確認 | [0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md) |
 | 0026 | decided | mrkdwn → HTML 変換 | 本文は `text`(mrkdwn)を正とし対応表に従って変換。全テキストをエスケープ後に自前マークアップのみ生成し、href は http/https のみ。`blocks` 完全対応は将来検討 | [0026-mrkdwn-html-conversion.md](0026-mrkdwn-html-conversion.md) |
@@ -64,6 +64,7 @@
 | 0050 | decided | SLACK_TOKEN の渡し方の説明順位 | 利用者向けドキュメントでは token 入力プロンプトへの都度コピー & ペーストを基本とし、環境変数への一時設定と secret manager 連携を補足に置く。継続利用の推奨手段は secret manager 連携のまま | [0050-token-passing-doc-order.md](0050-token-passing-doc-order.md) |
 | 0051 | decided | worktree の local config 配置 | tracked な MCP 起動定義は worktree に入るが gitignored な `.config/github-op-integrated.conf` は入らない。`.worktreeinclude` allowlist と `.agents/scripts/worktree-setup.sh` で、明示した local config だけを main worktree からコピーする。raw secret を含むファイルは載せない。0023 が据え置いた worktree provisioning の実装 | [0051-worktree-local-config-provisioning.md](0051-worktree-local-config-provisioning.md) |
 | 0052 | decided | asset ファイル名の内容 hash 化 | asset のローカルファイル名を元 URL の hash ではなく download 内容の sha256 hash にし、サンプル再生成 diff を実内容の変化に近づける。0016 の URL hash 部分を上書きし、分類ディレクトリ / manifest 方針は 0016 のまま維持 | [0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md) |
+| 0053 | decided | Cursor MCP 設定の command path | `.cursor/mcp.json` の `github-op-integrated` 起動 command を `${workspaceFolder}` から project root 基準の相対 path へ統一。cursor-agent が変数を展開せず `ENOENT` になる問題(Issue #151)を解消。0023 の Cursor path 推奨を補正 | [0053-cursor-mcp-config-path.md](0053-cursor-mcp-config-path.md) |
 
 ## 未決事項
 

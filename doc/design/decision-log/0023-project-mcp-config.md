@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-06-04
 - 最終更新日: 2026-06-04
-- 関連: `doc/guidelines/agent-configuration-management.md`, `doc/guidelines/github-mcp-guidelines.md`, `.agents/mcp/github-op-integrated/`
+- 関連: `doc/guidelines/agent-configuration-management.md`, `doc/guidelines/github-mcp-guidelines.md`, `.agents/mcp/github-op-integrated/`, [0053-cursor-mcp-config-path.md](0053-cursor-mcp-config-path.md)
 
 ## 背景
 

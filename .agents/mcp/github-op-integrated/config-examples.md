@@ -17,13 +17,13 @@ wrapper には通常引数が不要で、設定は project root の `.config/git
   "mcpServers": {
     "github-op-integrated": {
       "type": "stdio",
-      "command": "${workspaceFolder}/.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
+      "command": "./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh"
     }
   }
 }
 ```
 
-Cursor は `${workspaceFolder}` を project root に展開する。
+`.mcp.json` / `.codex/config.toml` と揃えて project root 基準の相対 `command` を使う。Cursor IDE は `${workspaceFolder}` 展開に対応するが、cursor-agent(CLI / Agent chat)はこの変数を展開せず、文字列のまま spawn して `ENOENT` になる。相対 path は IDE / agent の両方で project root を基準に解決されるため、こちらに統一する。wrapper 起動後は wrapper 自身の配置から project root を再解決するため、command の書き方には依存しない。経緯は `doc/design/decision-log/0053-cursor-mcp-config-path.md`。
 
 ## Claude Code — repo root の `.mcp.json`
 
