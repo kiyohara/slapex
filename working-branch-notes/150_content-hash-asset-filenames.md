@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: content-hash-asset-filenames
-- PR: (未採番)
+- PR: #150
 - 最終更新: 2026-07-08
 
 ## 目的
@@ -27,7 +27,7 @@ Issue #135。asset のローカルファイル名を、元 URL の hash ベー�
 
 ## 次にやること
 
-- PR 作成後、note を採番名へ rename する。
+- PR #150 のレビュー / merge 待ち(merge はユーザー)。
 
 ## 検証
 
