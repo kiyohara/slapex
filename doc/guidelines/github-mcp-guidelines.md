@@ -8,7 +8,7 @@
 
 このルールが対象とする GitHub 操作は次のとおり。
 
-- collaboration write 操作: PR の作成・編集、issue の作成・編集・コメント追加、レビューコメントへの返信。
+- collaboration write 操作: PR の作成・編集、issue の作成・編集・コメント追加、レビューコメントへの返信、PR レビューの作成(pending review へのコメント追加・レビュー本体の submit)。
 - read 操作全般: PR / issue / レビューコメントの取得、検索。
 
 このルールが対象としない GitHub 操作は次のとおり(対応する別ルールに従う)。
@@ -33,7 +33,7 @@
 MCP が使える環境かどうかが事前に判断できない場合は、まず MCP を試してよい。エラー時の fallback 手順は、read 系と write 系で扱いを分ける。
 
 - read 系 (`pull_request_read`、`list_*`、`search_*` など): 同じ操作を `gh` で再実行してよい。
-- write 系 (`create_pull_request`、`update_pull_request`、`issue_write`、`add_issue_comment`、`add_reply_to_pull_request_comment` など): MCP server 側で操作が成功した後に応答だけ失敗するケースがあり、素朴に `gh` で同じ create / update を再実行すると PR / issue / コメントが二重に作成される。fallback の前に read 系 tool で対象の現状を確認し、未反映であることが確認できた場合だけ `gh` で再実行する。
+- write 系 (`create_pull_request`、`update_pull_request`、`issue_write`、`add_issue_comment`、`add_reply_to_pull_request_comment`、`pull_request_review_write`、`add_comment_to_pending_review` など): MCP server 側で操作が成功した後に応答だけ失敗するケースがあり、素朴に `gh` で同じ create / update を再実行すると PR / issue / コメントが二重に作成される。fallback の前に read 系 tool で対象の現状を確認し、未反映であることが確認できた場合だけ `gh` で再実行する。
 
 ## 安全性の担保
 
