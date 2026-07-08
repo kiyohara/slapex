@@ -5,8 +5,10 @@
 // (internal/export), so the committed samples always match the current
 // renderer output. No real Slack workspace or network access is involved.
 //
-// Timestamps are derived from the current time, so regenerating updates the
-// dates in the samples. Run via:
+// Sample generation pins the fixture clock to a fixed instant (sampleBaseTime)
+// so regenerating is deterministic: the dates in doc/samples/ do not change just
+// because the current day changed, keeping the regeneration diff focused on real
+// renderer/content changes (Issue #135). Run via:
 //
 //	docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 //
@@ -77,9 +79,24 @@ func serveScenario(lang, addr string, assetDelay time.Duration) error {
 	return http.Serve(l, handler)
 }
 
+// sampleBaseTime pins the clock for committed-sample generation, both the
+// fixture clock (message dates are derived from it as day-2 / day-1) and the
+// export clock (the footer "Exported" line). Without a fixed value, every
+// regeneration on a different day would rewrite all dates in
+// doc/samples/**/index.html and bury the real diff — defeating the point of
+// stabilizing sample regeneration (Issue #135, decision log 0052). Only sample
+// generation is pinned; slapex --demo and -serve keep time.Now() so a user's
+// live demo still shows current dates. The instant is arbitrary (the workspace
+// is fictional); it is set to the exact instant the currently committed samples
+// were generated (2026-07-04 16:32:41 in Asia/Tokyo = 2026-07-04T07:32:41Z;
+// message days 07-02 / 07-03), so adopting a fixed clock reproduces them
+// byte-for-byte and introduces no date churn. It uses time.Local, matching the
+// message-time rendering, so the footer and message times share the timezone
+// sample generation runs in (Asia/Tokyo, set via -e TZ=Asia/Tokyo).
+var sampleBaseTime = time.Date(2026, 7, 4, 16, 32, 41, 0, time.Local)
+
 func run(out string) error {
-	now := time.Now()
-	for _, sc := range []*demo.Scenario{demo.ScenarioJA(now), demo.ScenarioEN(now)} {
+	for _, sc := range []*demo.Scenario{demo.ScenarioJA(sampleBaseTime), demo.ScenarioEN(sampleBaseTime)} {
 		if err := buildSample(sc, out); err != nil {
 			return fmt.Errorf("%s: %w", sc.Lang, err)
 		}
@@ -117,6 +134,7 @@ func buildSample(sc *demo.Scenario, out string) error {
 		Days:           30,
 		MaxAttachBytes: 10 << 20,
 		ToolVersion:    "dev",
+		Now:            sampleBaseTime,
 	}, printer)
 	if err != nil {
 		return err
