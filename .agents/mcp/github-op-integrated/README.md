@@ -99,3 +99,4 @@ remote 案を将来採らないとは決めていない。auth / capability の�
 - **tool 一覧が空 / tool 名が違う**: 起動中の image の tool 名が `GITHUB_TOOLS` とずれている。最新 image を pull し、[GitHub MCP Server README](https://github.com/github/github-mcp-server) と比較したうえで `.config/github-op-integrated.conf` / `.config/github-op-integrated.conf.example` を更新する。
 - **呼び出しのたびに 1Password 承認ダイアログが出る**: 通常は `op run` の session が再利用されるため、session ごと 1 回で済むはず。毎回出る場合は session が短時間で expire している可能性が高い。`op signin` や biometric unlock の設定を確認する。
 - **MCP host から起動直後にクラッシュと言われる**: wrapper を手動実行(`.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh </dev/null`)してエラーを直接確認する。
+- **cursor-agent で `spawn ${workspaceFolder}/... ENOENT` になる**: cursor-agent(CLI / Agent chat)は `${workspaceFolder}` を展開しないため、この変数を含む `command` を文字列のまま spawn して失敗する。`.cursor/mcp.json` の `command` を project root 基準の相対 path(`./.agents/mcp/github-op-integrated/mcp-github-op-integrated.sh`)にする。経緯は `doc/design/decision-log/0053-cursor-mcp-config-path.md`。
