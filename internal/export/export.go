@@ -54,8 +54,9 @@ type Options struct {
 	ToolVersion    string
 	// Now overrides the export clock used for the footer "Exported" line, the
 	// --days oldest boundary and the default output-root name. Zero means
-	// time.Now(). gensample pins it so regenerated samples are deterministic
-	// (Issue #135); normal runs and slapex --demo leave it zero.
+	// time.Now(). gensample sets it from its -time flag when a sample
+	// regeneration is pinned for reproducibility; normal runs and slapex --demo
+	// leave it zero.
 	Now time.Time
 }
 

@@ -5,10 +5,14 @@
 // (internal/export), so the committed samples always match the current
 // renderer output. No real Slack workspace or network access is involved.
 //
-// Sample generation pins the fixture clock to a fixed instant (sampleBaseTime)
-// so regenerating is deterministic: the dates in doc/samples/ do not change just
-// because the current day changed, keeping the regeneration diff focused on real
-// renderer/content changes (Issue #135). Run via:
+// Sample generation derives the fixture message dates and the footer "Exported"
+// timestamp from the current time, so regenerating refreshes the sample dates to
+// the day it is run — the intended behaviour when the committed samples are
+// refreshed at release time (Issue #137). Pass -time <RFC3339> to pin the clock
+// instead, which makes a regeneration reproducible; that is used to keep the diff
+// down to the real change when only the renderer or asset layout moved and the
+// dates should stay put (e.g. the content-hash asset rename in Issue #135). Run
+// via:
 //
 //	docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 //
@@ -42,6 +46,7 @@ func main() {
 	lang := flag.String("lang", "ja", "scenario to serve with -serve (ja or en)")
 	listen := flag.String("listen", "127.0.0.1:8765", "listen address for -serve")
 	assetDelay := flag.Duration("asset-delay", 0, "artificial delay per asset download in -serve mode (e.g. 350ms)")
+	timeArg := flag.String("time", "", "pin the sample clock (message dates and footer timestamp) to this RFC3339 instant instead of the current time, e.g. 2026-07-04T16:32:41+09:00; use it to reproduce a regeneration without churning dates")
 	flag.Parse()
 	if *serve {
 		if err := serveScenario(*lang, *listen, *assetDelay); err != nil {
@@ -50,10 +55,30 @@ func main() {
 		}
 		return
 	}
-	if err := run(*out); err != nil {
+	now, err := sampleClock(*timeArg)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "gensample:", err)
 		os.Exit(1)
 	}
+	if err := run(*out, now); err != nil {
+		fmt.Fprintln(os.Stderr, "gensample:", err)
+		os.Exit(1)
+	}
+}
+
+// sampleClock resolves the base instant sample generation runs against. An empty
+// arg means the current time (the default: regenerating refreshes sample dates
+// to today). A non-empty arg is an RFC3339 timestamp that pins message dates and
+// the footer timestamp so a regeneration is reproducible.
+func sampleClock(arg string) (time.Time, error) {
+	if arg == "" {
+		return time.Now(), nil
+	}
+	t, err := time.Parse(time.RFC3339, arg)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid -time %q (want RFC3339 like 2026-07-04T16:32:41+09:00): %w", arg, err)
+	}
+	return t, nil
 }
 
 // serveScenario serves the lang scenario's fake Slack API on addr until the
@@ -79,25 +104,11 @@ func serveScenario(lang, addr string, assetDelay time.Duration) error {
 	return http.Serve(l, handler)
 }
 
-// sampleBaseTime pins the clock for committed-sample generation, both the
-// fixture clock (message dates are derived from it as day-2 / day-1) and the
-// export clock (the footer "Exported" line). Without a fixed value, every
-// regeneration on a different day would rewrite all dates in
-// doc/samples/**/index.html and bury the real diff — defeating the point of
-// stabilizing sample regeneration (Issue #135, decision log 0052). Only sample
-// generation is pinned; slapex --demo and -serve keep time.Now() so a user's
-// live demo still shows current dates. The instant is arbitrary (the workspace
-// is fictional); it is set to the exact instant the currently committed samples
-// were generated (2026-07-04 16:32:41 in Asia/Tokyo = 2026-07-04T07:32:41Z;
-// message days 07-02 / 07-03), so adopting a fixed clock reproduces them
-// byte-for-byte and introduces no date churn. It uses time.Local, matching the
-// message-time rendering, so the footer and message times share the timezone
-// sample generation runs in (Asia/Tokyo, set via -e TZ=Asia/Tokyo).
-var sampleBaseTime = time.Date(2026, 7, 4, 16, 32, 41, 0, time.Local)
-
-func run(out string) error {
-	for _, sc := range []*demo.Scenario{demo.ScenarioJA(sampleBaseTime), demo.ScenarioEN(sampleBaseTime)} {
-		if err := buildSample(sc, out); err != nil {
+// run regenerates every language sample against the base instant now (the fixture
+// message dates and the footer timestamp derive from it).
+func run(out string, now time.Time) error {
+	for _, sc := range []*demo.Scenario{demo.ScenarioJA(now), demo.ScenarioEN(now)} {
+		if err := buildSample(sc, now, out); err != nil {
 			return fmt.Errorf("%s: %w", sc.Lang, err)
 		}
 	}
@@ -119,8 +130,9 @@ func scenario(lang string) (*demo.Scenario, error) {
 // buildSample runs the shared demo export driver against sc and replaces
 // out/<lang>/ with the generated index.html + style.css + assets/. It goes
 // through demo.Export so sample generation and `slapex --demo` share the exact
-// same fixture-serving wiring.
-func buildSample(sc *demo.Scenario, out string) error {
+// same fixture-serving wiring. now is the export clock (footer timestamp), kept
+// equal to the fixture clock so the footer and message dates agree.
+func buildSample(sc *demo.Scenario, now time.Time, out string) error {
 	tmp, err := os.MkdirTemp("", "gensample-")
 	if err != nil {
 		return err
@@ -134,7 +146,7 @@ func buildSample(sc *demo.Scenario, out string) error {
 		Days:           30,
 		MaxAttachBytes: 10 << 20,
 		ToolVersion:    "dev",
-		Now:            sampleBaseTime,
+		Now:            now,
 	}, printer)
 	if err != nil {
 		return err

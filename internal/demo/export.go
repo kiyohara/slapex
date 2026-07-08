@@ -22,8 +22,9 @@ type Options struct {
 	ReuseCache     string
 	ToolVersion    string
 	// Now overrides the export clock (footer timestamp, fetch window). Zero means
-	// time.Now(). gensample pins it for deterministic sample regeneration (Issue
-	// #135); slapex --demo leaves it zero so a user's demo shows current dates.
+	// time.Now(). gensample sets it (from its -time flag) when a sample
+	// regeneration is pinned for reproducibility; slapex --demo leaves it zero so
+	// a user's demo shows current dates.
 	Now time.Time
 }
 
