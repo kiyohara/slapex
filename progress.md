@@ -36,7 +36,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 | sample-03 | #137 | todo | #135 後 | 同梱サンプル export 更新 skill と利用ルールを整備する | - |
 | sample-04 | #138 | todo | #136 / #137 後 | README 出力プレビュー画像更新 skill と利用ルールを整備する | - |
 | sample-05 | #139 | todo | #137 後 | README ターミナルデモ GIF 更新 skill と利用ルールを整備する | - |
-| sample-06 | #140 | done | - | quickstart の全体フローを利用者向け SVG に置き換える | - |
+| sample-06 | #140 | done | - | quickstart の全体フローを利用者向け SVG に置き換え。PR レビュー / merge 待ち | #157 |
 
 ## リリース履歴
 
