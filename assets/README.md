@@ -9,6 +9,12 @@
 
 どちらも SVG のまま保持する。PNG などの raster 画像は、必要な利用先が出た時点で生成する。
 
+## Help 用の説明図
+
+`help/` には利用者向け help で使う説明図を置く。
+
+- `help/quickstart-flow.svg`: `doc/help/quickstart.md` 冒頭で、インストールからローカル閲覧までの流れを示す図。SVG を正本として直接編集する。
+
 ## スクリーンショット
 
 `screenshots/` には README で使う出力プレビュー画像(`sample-*.png`)を置く。`doc/samples/` のサンプル export を撮影したもので、日本語版(`-ja`)と英語ページ準備用の英語版(`-en`)がある。再生成手順は `doc/samples/README.md` を参照。
