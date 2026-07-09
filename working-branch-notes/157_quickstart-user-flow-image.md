@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `quickstart-user-flow-image`
-- PR: 未作成
+- PR: #157
 - 最終更新: 2026-07-10
 
 ## 目的
@@ -10,7 +10,7 @@ Issue #140 に従い、quickstart 冒頭の Mermaid 構造図を、初回利用�
 
 ## 現在の状況
 
-SVG、quickstart の画像参照、assets README、`progress.md` を更新し、指定された表示・文書検証を完了した。PR 作成前の最終差分確認中。
+SVG、quickstart の画像参照、assets README、`progress.md` を更新し、指定された表示・文書検証を完了した。PR #157 を作成し、working branch note の採番処理中。
 
 ## 決定事項
 
@@ -20,8 +20,8 @@ SVG、quickstart の画像参照、assets README、`progress.md` を更新し、
 
 ## 次にやること
 
-- 変更を commit / push して PR を作成する。
-- PR 採番後に working branch note と `progress.md` の PR 参照を更新する。
+- working branch note の採番変更を commit / push する。
+- `progress.md` の PR 参照を #157 に更新し、GitHub 上の Markdown preview を最終確認する。
 
 ## 検証
 
@@ -41,3 +41,4 @@ SVG、quickstart の画像参照、assets README、`progress.md` を更新し、
 
 - 2026-07-10: Issue #140 と正本ガイドラインを確認し、作業を開始した。
 - 2026-07-10: 縦型 5 ステップの SVG を追加し、標準幅と 360 px 幅で表示確認した。
+- 2026-07-10: PR #157 を作成し、working branch note を採番した。
