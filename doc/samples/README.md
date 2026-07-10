@@ -23,6 +23,8 @@
 docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 ```
 
+AI agent が sample export を再生成する場合は `update-sample-exports` skill を使う。
+
 日時は実行時刻から相対で決まるため、再生成すると本文中の日付・Export information の内容が更新される。
 
 ## README 用スクリーンショット

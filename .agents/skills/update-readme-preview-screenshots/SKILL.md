@@ -1,6 +1,6 @@
 ---
 name: update-readme-preview-screenshots
-description: slapex の README 出力プレビューに映る HTML / CSS / assets、sample fixture、README の画像参照や caption、または `tools/genscreenshot` の生成処理を変更したときに、committed sample export から ja / en の preview screenshot 4 枚を Docker Compose で再生成し、crop・枠線・edge artifact・README 表示を検証する。CLI テキスト出力、install script、開発者向け document だけの変更では使わない。
+description: slapex の README 出力プレビューに映る HTML / CSS / assets、sample fixture、README の画像参照や caption、`tools/genscreenshot`、または `compose.yaml` の `screenshot` service を変更したときに使う。出力の見た目を変えた場合は先に `update-sample-exports` を実行し、その後に committed sample export から ja / en の preview screenshot 4 枚を Docker Compose で再生成・検証する。CLI テキスト出力、install script、開発者向け document、test、CI 設定だけの変更では使わない。
 ---
 
 # update-readme-preview-screenshots

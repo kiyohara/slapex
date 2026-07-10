@@ -16,6 +16,7 @@ Issue #138 に従い、README 出力プレビュー画像を更新する skill �
 - `update-readme-preview-screenshots` skill、Claude Code 用 symlink、既存 guideline / sample README からの導線を追加した。
 - screenshot 4 枚の再生成と目視確認まで完了し、生成差分がないことを確認した。
 - 実装 commit を push し、PR #159 を作成した。
+- review 指摘に対応し、frontmatter description の実行順序・compose trigger・除外条件と、sample export skill への導線を補強した。
 
 ## 決定事項
 
@@ -44,6 +45,9 @@ Issue #138 に従い、README 出力プレビュー画像を更新する skill �
 - GitHub main の README「出力プレビュー」を実表示で確認: ja の 2 画像は読み込み完了、自然寸法は 1600x1775 / 1600x1593、caption 2 件と `<kbd>` の 1px 枠線が表示され、broken image はなかった。今回 README markup と PNG に差分はないため、作業ブランチでも同じ表示となる。
 - 新規 / 更新 guideline と既存 `update-sample-exports` skill から `update-readme-preview-screenshots` の利用条件・実行順序を辿れることを `rg` で確認した。
 - `git diff --check`: 成功。
+- review 対応後の frontmatter description は 579 文字で、実行順序、`compose.yaml` trigger、test / CI の除外条件を含むことを確認した。
+- `doc/samples/README.md` の sample export / screenshot 両節から対応する skill へ辿れることを確認した。
+- review 対応は skill metadata と開発者向け document のみのため、screenshot 再生成と package test は再実行していない。
 
 ## リスク・ブロッカー
 
@@ -54,3 +58,4 @@ Issue #138 に従い、README 出力プレビュー画像を更新する skill �
 - 2026-07-10: Issue / guideline / 依存実装を確認し、作業を開始した。
 - 2026-07-10: skill と利用ルールを実装し、screenshot 4 枚を再生成・目視確認した。
 - 2026-07-10: PR #159 を作成し、working branch note を採番した。
+- 2026-07-10: review の改善提案を確認し、skill discovery metadata と sample README の導線を更新した。
