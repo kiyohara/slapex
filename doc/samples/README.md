@@ -33,6 +33,8 @@ docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 docker compose run --rm screenshot
 ```
 
+AI agent が再生成する場合は `update-readme-preview-screenshots` skill を使う。screenshot は committed sample export から生成するため、出力 HTML / CSS / assets の見た目、DOM 構造、asset path、fixture の表示内容を変えた場合は、先に `update-sample-exports` skill で sample export を更新する。
+
 撮影・検証の要点(詳細は `tools/genscreenshot/main.go` を正とする):
 
 - viewport 幅 1100px・device scale 2x・scrollbar 非表示(`--hide-scrollbars`)で撮影し、幅 1600px へ縮小する。
@@ -42,7 +44,7 @@ docker compose run --rm screenshot
 
 repo root `README.md` の「出力プレビュー」で見える preview 画像の枠線は、PNG ではなく README 側の HTML(`<kbd>` で画像を囲む)で付ける。GitHub README の sanitizer は `style` 属性や `img` の `border` 属性を除去するため、通過実績のある HTML 要素で枠線を表現する。
 
-サンプル export と README 用 screenshot は別の生成手順で管理する。出力の見栄え、DOM 構造、fixture の表示内容を変えた場合は、サンプル export の更新後に screenshot も更新する必要があるか確認する。フォントはコンテナ内の Noto フォントで決まるため、host 環境の違いで見た目が変わることはない。
+サンプル export と README 用 screenshot は別の skill / 生成手順で管理する。フォントはコンテナ内の Noto フォントで決まるため、host 環境の違いで見た目が変わることはない。
 
 ## README 用デモ GIF
 

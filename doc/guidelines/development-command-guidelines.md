@@ -75,6 +75,14 @@ docker compose run --rm --no-deps dev <command>
 
 再生成と検証の詳細は `.agents/skills/update-sample-exports/SKILL.md` を正本とする。README 用 screenshot / GIF は別の生成手順・skill の責務であり、サンプル export の更新に含めない。ただし、出力の見栄えや fixture の表示内容を変えた場合は、後続の screenshot / GIF 更新が必要か確認する。
 
+## README 出力プレビュー画像の更新
+
+README の「出力プレビュー」に映る見た目や掲載内容を変える変更では、`update-readme-preview-screenshots` skill を使って ja / en の timeline / thread screenshot 4 枚を再生成・検証する。
+
+主な対象は `internal/render/**`、`internal/render/templates/**`、`internal/export/**`、`internal/output/**`、`internal/demo/**`、`doc/samples/**` のうち screenshot に映る変更、repo root `README.md` の画像参照 / caption / 画像を囲む HTML、`tools/genscreenshot/**`、`compose.yaml` の `screenshot` service である。CLI のテキスト出力、install script、開発者向け document、test、CI 設定だけの変更では実行しない。
+
+screenshot は committed sample export から生成する。出力の見た目、DOM 構造、asset path、fixture の表示内容を変えた場合は、先に `update-sample-exports` skill で `doc/samples/` を更新し、その後に screenshot を更新する。再生成と検証の詳細は `.agents/skills/update-readme-preview-screenshots/SKILL.md` を正本とする。
+
 ## 例外
 
 次のようなコマンドは host OS 側で実行してよい。
