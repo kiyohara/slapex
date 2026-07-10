@@ -8,7 +8,7 @@
 
 全体の流れ:
 
-![slapex をインストールし、Slack App と token を用意して実行すると、index.html と assets が生成され、ブラウザでローカル閲覧できるまでの 5 ステップ](../../assets/help/quickstart-flow.svg)
+![slapex をインストールし、Slack App と token を用意して実行すると、index.html と assets が生成され、ブラウザでローカル閲覧できるまでの 4 ステップ](../../assets/help/quickstart-flow.svg)
 
 ## 前提(1 分)
 
