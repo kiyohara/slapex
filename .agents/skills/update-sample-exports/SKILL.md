@@ -1,6 +1,6 @@
 ---
 name: update-sample-exports
-description: slapex の出力 HTML / CSS / assets の見栄え、DOM 構造、asset 保存 path、または demo fixture の表示内容を変更したときに、架空データだけを使って `doc/samples/ja/` と `doc/samples/en/` の同梱サンプル export を再生成・検証する。README 文言、開発者向け doc、test、CI 設定だけの変更では使わない。
+description: slapex の出力 HTML / CSS / assets の見栄え、DOM 構造、asset 保存 path、demo fixture の表示内容、または `tools/gensample` の生成処理を変更したときに、架空データだけを使って `doc/samples/ja/` と `doc/samples/en/` の同梱サンプル export を再生成・検証する。README 文言、開発者向け doc、test、CI 設定だけの変更では使わない。
 ---
 
 # update-sample-exports
@@ -15,8 +15,9 @@ slapex に同梱する生成済みサンプル export を、現行の export pip
 - `internal/export/**` の表示変換。
 - `internal/output/**` の asset path や保存仕様。
 - `internal/demo/**` の fixture のうち、export に表示される内容や asset。
+- `tools/gensample/**` の生成対象、出力先、`demo.Export` の呼び出し方。
 
-README の文言、開発者向け document、test、CI 設定だけの変更では使わない。変更がサンプル出力へ影響するか判断できない場合は、対象コードから `demo.Export` までの経路を確認してから決める。
+README の文言、開発者向け document、test、CI 設定だけの変更では使わない。変更がサンプル出力へ影響するか判断できない場合は、対象コードから generator / `demo.Export` までの経路を確認してから決める。
 
 ## 事前確認
 
@@ -46,8 +47,19 @@ docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 
 ## 生成後の確認
 
-1. `git diff -- doc/samples` を読み、変更が対象実装と fixture から説明できることを確認する。日時は実行時刻から相対で生成されるため、日時だけの差分も確認対象とする。
-2. `doc/samples/ja/index.html` と `doc/samples/en/index.html` が参照する `assets/` path を列挙し、参照先が各 sample directory 内に存在することを確認する。
+1. `git diff -- doc/samples` を読み、変更が対象実装、fixture、generator から説明できることを確認する。実質差分だけを残し、相対日時 / Export information だけの差分は commit しない。実質差分か判断できない場合はユーザーに確認する。
+2. `doc/samples/ja/index.html` と `doc/samples/en/index.html` が参照する `assets/` path を列挙し、参照先が各 sample directory 内に存在することを確認する。例えば次の command は欠落した path だけを出力する。
+
+   ```sh
+   for lang in ja en; do
+     rg -o 'assets/[^" ]+' "doc/samples/$lang/index.html" |
+       sort -u |
+       while IFS= read -r asset_path; do
+         test -f "doc/samples/$lang/$asset_path" || printf 'missing: %s/%s\n' "$lang" "$asset_path"
+       done
+   done
+   ```
+
 3. 変更した package に必要な test を Docker Compose 経由で実行する。対象が複数 package にまたがる場合は `internal/render`、`internal/export`、`internal/output`、`internal/demo` の関連 test を含める。
 4. `git diff --check` を実行する。
 5. 実行コマンドと結果、生成差分の要点、未確認事項を PR description または working branch note に記録する。

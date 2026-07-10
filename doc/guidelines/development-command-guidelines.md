@@ -71,7 +71,7 @@ docker compose run --rm --no-deps dev <command>
 
 出力 HTML / CSS / assets の見栄え、DOM 構造、asset 保存 path、または fixture の表示内容に影響する変更では、`update-sample-exports` skill を使って `doc/samples/ja/` と `doc/samples/en/` を更新する。
 
-主な対象は `internal/render/**`、`internal/render/templates/**`、`internal/export/**` の表示変換、`internal/output/**` の asset path / 保存仕様、`internal/demo/**` の fixture 表示内容である。README 文言、開発者向け document、test、CI 設定だけの変更では実行しない。
+主な対象は `internal/render/**`、`internal/render/templates/**`、`internal/export/**` の表示変換、`internal/output/**` の asset path / 保存仕様、`internal/demo/**` の fixture 表示内容、`tools/gensample/**` の生成処理である。README 文言、開発者向け document、test、CI 設定だけの変更では実行しない。
 
 再生成と検証の詳細は `.agents/skills/update-sample-exports/SKILL.md` を正本とする。README 用 screenshot / GIF は別の生成手順・skill の責務であり、サンプル export の更新に含めない。ただし、出力の見栄えや fixture の表示内容を変えた場合は、後続の screenshot / GIF 更新が必要か確認する。
 
