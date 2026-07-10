@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `add-update-readme-preview-skill`
-- PR: 未作成
+- PR: #159
 - 最終更新: 2026-07-10
 
 ## 目的
@@ -15,6 +15,7 @@ Issue #138 に従い、README 出力プレビュー画像を更新する skill �
 - #137 で追加された `update-sample-exports` skill と `development-command-guidelines.md` の責務分担を確認した。
 - `update-readme-preview-screenshots` skill、Claude Code 用 symlink、既存 guideline / sample README からの導線を追加した。
 - screenshot 4 枚の再生成と目視確認まで完了し、生成差分がないことを確認した。
+- 実装 commit を push し、PR #159 を作成した。
 
 ## 決定事項
 
@@ -24,9 +25,7 @@ Issue #138 に従い、README 出力プレビュー画像を更新する skill �
 
 ## 次にやること
 
-- 最終差分と静的チェックを確認する。
-- commit / push 後に PR を作成する。
-- PR 採番後に note と `progress.md` の PR 参照を更新する。
+- PR #159 の review / merge はユーザーが行う。
 
 ## 検証
 
@@ -54,3 +53,4 @@ Issue #138 に従い、README 出力プレビュー画像を更新する skill �
 
 - 2026-07-10: Issue / guideline / 依存実装を確認し、作業を開始した。
 - 2026-07-10: skill と利用ルールを実装し、screenshot 4 枚を再生成・目視確認した。
+- 2026-07-10: PR #159 を作成し、working branch note を採番した。
