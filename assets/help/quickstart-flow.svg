@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 800" role="img" aria-labelledby="title desc">
+  <title id="title">slapex で Slack の投稿をローカル保存するまでの流れ</title>
+  <desc id="desc">slapex をインストールし、Slack App と token を用意し、slapex を実行すると、index.html と assets が生成され、ブラウザでローカル閲覧できる 4 ステップの図。</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8FBFF"/>
+      <stop offset="1" stop-color="#E5F1FB"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5866EF"/>
+      <stop offset="1" stop-color="#858BEE"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#314191" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#858BEE"/>
+    </marker>
+    <style>
+      text { font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif; }
+      .step-title { fill: #242038; font-size: 25px; font-weight: 700; }
+      .step-detail { fill: #5d5872; font-size: 18px; }
+      .step-number { fill: #ffffff; font-size: 22px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+      .icon { fill: none; stroke: #5866EF; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="720" height="800" rx="32" fill="url(#background)"/>
+  <text x="360" y="58" fill="#242038" font-size="30" font-weight="800" text-anchor="middle">Slack の投稿を手元に保存するまで</text>
+  <text x="360" y="91" fill="#68627c" font-size="18" text-anchor="middle">準備から閲覧まで、上から順に進めます</text>
+
+  <path d="M360 242 V268" stroke="#858BEE" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <path d="M360 406 V432" stroke="#858BEE" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <path d="M360 570 V596" stroke="#858BEE" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+  <g transform="translate(52 120)" filter="url(#shadow)">
+    <rect width="616" height="122" rx="22" fill="#ffffff"/>
+    <circle cx="42" cy="61" r="22" fill="url(#accent)"/>
+    <text class="step-number" x="42" y="61">1</text>
+    <g class="icon" transform="translate(91 38)">
+      <path d="M0 24 H46"/><path d="M23 0 V24"/><path d="M13 14 L23 24 L33 14"/><rect x="5" y="31" width="36" height="14" rx="4"/>
+    </g>
+    <text class="step-title" x="162" y="52">slapex をインストール</text>
+    <text class="step-detail" x="162" y="84">Homebrew または install script を使います</text>
+  </g>
+
+  <g transform="translate(52 284)" filter="url(#shadow)">
+    <rect width="616" height="122" rx="22" fill="#ffffff"/>
+    <circle cx="42" cy="61" r="22" fill="url(#accent)"/>
+    <text class="step-number" x="42" y="61">2</text>
+    <g class="icon" transform="translate(91 38)">
+      <rect x="0" y="10" width="48" height="34" rx="9"/><circle cx="17" cy="27" r="5"/><path d="M22 27 H39 M34 27 V34"/><path d="M12 10 V3 H36 V10"/>
+    </g>
+    <text class="step-title" x="162" y="52">Slack App と token を用意</text>
+    <text class="step-detail" x="162" y="84">案内に沿って App を workspace に追加します</text>
+  </g>
+
+  <g transform="translate(52 448)" filter="url(#shadow)">
+    <rect width="616" height="122" rx="22" fill="#ffffff"/>
+    <circle cx="42" cy="61" r="22" fill="url(#accent)"/>
+    <text class="step-number" x="42" y="61">3</text>
+    <g class="icon" transform="translate(91 40)">
+      <rect x="0" y="0" width="50" height="42" rx="7"/><path d="M9 13 L17 21 L9 29 M24 29 H40"/>
+    </g>
+    <text class="step-title" x="162" y="52">slapex を実行して保存</text>
+    <text class="step-detail" x="162" y="84">index.html と assets が生成されます</text>
+  </g>
+
+  <g transform="translate(52 612)" filter="url(#shadow)">
+    <rect width="616" height="122" rx="22" fill="#ffffff"/>
+    <circle cx="42" cy="61" r="22" fill="url(#accent)"/>
+    <text class="step-number" x="42" y="61">4</text>
+    <g class="icon" transform="translate(91 35)">
+      <rect x="0" y="0" width="52" height="43" rx="7"/><path d="M0 12 H52"/><circle cx="8" cy="6" r="1.5" fill="#5866EF" stroke="none"/><circle cx="14" cy="6" r="1.5" fill="#5866EF" stroke="none"/><path d="M17 52 H35 M26 43 V52"/>
+    </g>
+    <text class="step-title" x="162" y="52">ブラウザでローカル閲覧</text>
+    <text class="step-detail" x="162" y="84">index.html を開けば、手元だけで読めます</text>
+  </g>
+
+  <text x="360" y="770" fill="#5866EF" font-size="18" font-weight="700" text-anchor="middle">外部 URL に依存せず、保存後もいつでも閲覧できます</text>
+</svg>

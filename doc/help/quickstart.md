@@ -8,12 +8,7 @@
 
 全体の流れ:
 
-```mermaid
-flowchart LR
-    slack["Slack workspace"] -- "Slack API<br>(read 系 scope)" --> cli["slapex CLI"]
-    cli -- "export" --> html["静的 HTML + assets<br>(index.html)"]
-    html -- "ブラウザで開く" --> view["ローカルで閲覧<br>(外部 URL 非依存)"]
-```
+![slapex をインストールし、Slack App と token を用意して実行すると、index.html と assets が生成され、ブラウザでローカル閲覧できるまでの 4 ステップ](../../assets/help/quickstart-flow.svg)
 
 ## 前提(1 分)
 
