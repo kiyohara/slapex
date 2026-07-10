@@ -83,6 +83,14 @@ README の「出力プレビュー」に映る見た目や掲載内容を変え�
 
 screenshot は committed sample export から生成する。出力の見た目、DOM 構造、asset path、fixture の表示内容を変えた場合は、先に `update-sample-exports` skill で `doc/samples/` を更新し、その後に screenshot を更新する。再生成と検証の詳細は `.agents/skills/update-readme-preview-screenshots/SKILL.md` を正本とする。
 
+## README ターミナルデモ GIF の更新
+
+README の「ターミナルでの実行例」に映る CLI の操作フローや表示内容を変える変更では、`update-readme-demo-gif` skill を使って `assets/demo/slapex-demo-ja.gif` を再録画・検証する。
+
+主な対象は `cmd/slapex/**` の CLI 出力・prompt・option・demo mode・終了表示、`internal/ui/**` の進捗・色・plain / interactive 表示、`internal/export/**` の phase 名・summary・完了・警告表示、`tools/demo/**`、録画 fixture や fake server に関わる `tools/gensample/**` / `internal/demo/**`、repo root `README.md` の GIF 参照・caption・掲載意図、`compose.yaml` の `vhs` service である。出力 HTML / CSS、install script、help 文書、unit test、CI 設定だけの変更では実行しない。
+
+録画は架空 fixture と local fake Slack API server だけを使い、実 token、実 workspace、外部 Slack への通信を使わない。再録画と検証の詳細は `.agents/skills/update-readme-demo-gif/SKILL.md` を正本とする。
+
 ## 例外
 
 次のようなコマンドは host OS 側で実行してよい。
