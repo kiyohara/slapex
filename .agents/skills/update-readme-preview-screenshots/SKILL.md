@@ -68,7 +68,7 @@ host のブラウザや画像編集 tool で代替生成しない。
 
 - `update-sample-exports` は `doc/samples/ja/` と `doc/samples/en/` を実 export pipeline の出力へ揃える。
 - この skill は確定した sample export から README preview screenshot 4 枚を生成・検証する。
-- README ターミナルデモ GIF の再録画は別 skill / 手順の責務とする。
+- README ターミナルデモ GIF の再録画は `update-readme-demo-gif` skill の責務とする。
 
 ## やらないこと
 

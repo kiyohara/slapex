@@ -70,7 +70,7 @@ docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample
 
 README 用 screenshot とターミナルデモ GIF の生成は、この skill の責務に含めない。
 
-出力の見栄え、DOM 構造、fixture の表示内容を変えた場合は、サンプル export の更新後に `update-readme-preview-screenshots` skill を使う。CLI 操作や fixture シナリオの見え方を変えた場合は、デモ GIF の更新が必要になり得る。必要性を確認し、対応する別 skill / 手順を後続で使う。
+出力の見栄え、DOM 構造、fixture の表示内容を変えた場合は、サンプル export の更新後に `update-readme-preview-screenshots` skill を使う。CLI 操作や fixture シナリオの見え方を変えた場合は、`update-readme-demo-gif` skill を使う。
 
 ## やらないこと
 

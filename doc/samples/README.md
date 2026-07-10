@@ -58,4 +58,6 @@ repo root `README.md` の「出力プレビュー」で見える preview 画像�
 bash tools/demo/record.sh
 ```
 
+AI agent が再録画する場合は `update-readme-demo-gif` skill を使う。
+
 dev container で linux 向けの `slapex` / `gensample` バイナリをビルドし、compose service `vhs`(`ghcr.io/charmbracelet/vhs` + CJK フォント。`tools/demo/Dockerfile`)で `tools/demo/demo-ja.tape` を再生して GIF を生成する。録画のシナリオ・待ち時間・画面サイズは tape 側で調整する。fixture の日時は実行時刻起点のため、再録画すると画面上の日付も更新される。
