@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `add-update-samples-skill`
-- PR: 未作成
+- PR: #158
 - 最終更新: 2026-07-10
 
 ## 目的
@@ -23,7 +23,7 @@ Issue #137 に従い、同梱サンプル export を安全に更新する `updat
 
 ## 次にやること
 
-- commit / push 後に PR を作成し、note を PR 番号へ採番する。
+- note 採番の commit を作成して push し、PR #158 への反映を確認する。
 
 ## 検証
 
