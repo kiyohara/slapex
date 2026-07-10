@@ -42,7 +42,7 @@ docker compose run --rm screenshot
 
 repo root `README.md` の「出力プレビュー」で見える preview 画像の枠線は、PNG ではなく README 側の HTML(`<kbd>` で画像を囲む)で付ける。GitHub README の sanitizer は `style` 属性や `img` の `border` 属性を除去するため、通過実績のある HTML 要素で枠線を表現する。
 
-サンプルを再生成した場合はスクリーンショットも再生成する。フォントはコンテナ内の Noto フォントで決まるため、host 環境の違いで見た目が変わることはない。
+サンプル export と README 用 screenshot は別の生成手順で管理する。出力の見栄え、DOM 構造、fixture の表示内容を変えた場合は、サンプル export の更新後に screenshot も更新する必要があるか確認する。フォントはコンテナ内の Noto フォントで決まるため、host 環境の違いで見た目が変わることはない。
 
 ## README 用デモ GIF
 
