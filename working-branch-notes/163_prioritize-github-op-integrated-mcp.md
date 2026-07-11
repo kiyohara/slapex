@@ -15,6 +15,7 @@ Issue #161 に従い、GitHub 操作で `github-op-integrated` MCP を優先す�
 - Cursor の追加調査では、Issue の A〜D で必要範囲を満たせることを確認した。
 - 正本へ切断時手順、競合時ルール、操作別 tool 対応表を追加し、静的検証を完了した。
 - PR #163 の review 指摘を検証し、再接続入口の surface 別整理と PR review 作成行の追加を反映した。
+- Cursor CLI の現行公式文書を再確認し、interactive command と CLI subcommand の区別を修正した。
 
 ## 決定事項
 
@@ -24,7 +25,7 @@ Issue #161 に従い、GitHub 操作で `github-op-integrated` MCP を優先す�
 
 ## 次にやること
 
-- review 対応を commit / push し、GitHub 上へ結果を返信する。
+- Cursor CLI の追加修正を commit / push し、PR への反映を確認する。
 
 ## 検証
 
@@ -45,3 +46,4 @@ Issue #161 に従い、GitHub 操作で `github-op-integrated` MCP を優先す�
 - 2026-07-11: Issue #161 を開始。GitHub 上の現況と依存を確認し、作業ブランチを作成した。
 - 2026-07-11: 正本を更新し、tool mapping、参照整合性、文体、working branch note の情報統制を検証した。
 - 2026-07-11: PR #163 の review 指摘 3 件を確認し、2 件の guideline 改善と note 採番を反映した。
+- 2026-07-11: 別経路の指摘を検証し、Cursor CLI の `/mcp list` と `agent mcp enable` / `agent mcp disable` の役割を現行公式文書に合わせた。

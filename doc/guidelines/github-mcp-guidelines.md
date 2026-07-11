@@ -67,7 +67,7 @@ MCP tool 自体が allowlist に無い場合と、tool は利用できるが res
 3. Docker と他の MCP 接続が正常なら、Docker 全体の障害ではなく当該 session の stdio 接続だけが切れている可能性を区別する。
 4. agent 自身で再接続できない場合は、切断した事実と診断結果をユーザーへ明示し、MCP host の管理 UI または interactive CLI での再接続を依頼する。入口は surface と version に応じて次を候補とする。再接続後も既存 session の tool snapshot が更新されない場合は、新しい session が必要なことも伝える。
    - Claude Code: `/mcp` で状態を確認し、手動 retry する。
-   - Cursor IDE: Customize の MCP 設定で対象 server を切り替える。Cursor CLI: `agent mcp list` で状態を確認し、interactive mode の `/mcp enable` / `/mcp disable` で切り替える。
+   - Cursor IDE: Customize の MCP 設定で対象 server を切り替える。Cursor CLI: `agent mcp list` または interactive mode の `/mcp list` で状態を確認し、`agent mcp enable <identifier>` / `agent mcp disable <identifier>` で切り替える。
    - Codex desktop app: Settings の MCP servers で設定を保存して Restart し、composer の `/mcp` で接続状態を確認する。Codex CLI / TUI: `codex mcp list` または `/mcp` で状態を確認し、設定変更後に client を restart する。
 5. 再接続できない場合、操作が少数かつ緊急の場合、または対象操作が MCP allowlist 外の場合だけ `gh` へ fallback する。複数回の GitHub 操作が見込まれる場合は、細切れの `gh` 続行より MCP の再接続を優先する。
 
