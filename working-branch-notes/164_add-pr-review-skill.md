@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: add-pr-review-skill
-- PR: 未作成
+- PR: #164
 - 最終更新: 2026-07-11
 
 ## 目的
@@ -26,7 +26,7 @@ Issue #162 に従い、slapex 専用の PR review / review comment 対応 skill 
 
 ## 次にやること
 
-- PR 作成と note の採番 rename。
+- PR #164 のレビュー対応と merge 待ち(merge はユーザー)。
 
 ## 検証
 
@@ -54,3 +54,4 @@ Issue #162 記載の検証項目の実施結果(2026-07-11)。
 ## セッションログ
 
 - 2026-07-11: 依存 #161(PR #163)の merge を確認し、ブランチ作成。skill 実装を開始。
+- 2026-07-11: skill 実装と検証を完了し、PR #164 を作成。note を採番 rename。
