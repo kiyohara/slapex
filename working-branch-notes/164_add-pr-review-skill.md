@@ -20,6 +20,7 @@ Issue #162 に従い、slapex 専用の PR review / review comment 対応 skill 
 - SKILL.md には共通 workflow(対象 PR の特定、Agent 識別と canonical metadata、capability 再利用条件、tool routing、event / resolve 制約、write failure 手順、反復上限)とモード選択を置き、モード固有手順は `references/review.md` / `references/address-comments.md` / `references/verify-comments.md` に分割する(Issue の指示)。
 - 可視 metadata の canonical フォーマットは `Agent` / `Review cycle` / `Reviewed head` / `Mode` の 4 キー・この順序・`: ` 区切り・1 行 1 キーで SKILL.md に確定する。
 - review cycle ID の時刻部は秒まで(`YYYYMMDDHHMMSS`、UTC)とする。分単位では同一 Agent・同一 head の再試行で ID が衝突し得るという Codex review の指摘(PR #164)を採用した。
+- canonical metadata に `Model` キーを追加し 5 キーとする(ユーザー要望)。利用 model の記録が目的の参考情報であり、cycle 突合や担当一致判定には使わない。`Agent` 値へ埋め込まず独立キーにしたのは、同一 Agent 種別でも session により model が変わり得て、`Agent` の等値比較を壊さないため。確認できない場合は `unknown` とし推測しない。
 - `address-comments` / `verify-comments` の返信では、元 review の review cycle ID をそのまま使い、新しい ID を作らない(cycle 突合のため)。
 - review 完了コメント・再確認結果は `add_issue_comment`(PR conversation comment)へ一本化する。
 - AGENTS.md への skill 名追記は行わない(自動 discover のため必須でないと Issue に明記)。
@@ -57,3 +58,4 @@ Issue #162 記載の検証項目の実施結果(2026-07-11)。
 - 2026-07-11: 依存 #161(PR #163)の merge を確認し、ブランチ作成。skill 実装を開始。
 - 2026-07-11: skill 実装と検証を完了し、PR #164 を作成。note を採番 rename。
 - 2026-07-11: Codex review の指摘(review cycle ID の分単位衝突)を採用し、時刻部を `YYYYMMDDHHMMSS` へ変更。Cursor review は指摘なし。
+- 2026-07-12: ユーザー要望により canonical metadata へ `Model` キーを追加(記録目的、突合には不使用)。

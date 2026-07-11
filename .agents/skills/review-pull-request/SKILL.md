@@ -65,14 +65,16 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 
 ```text
 Agent: <Agent 種別>
+Model: <model 識別子>
 Review cycle: <agent-slug>-<short-head>-<YYYYMMDDHHMMSS>
 Reviewed head: <head SHA>
 Mode: <review | address-comments | verify-comments>
 ```
 
-- キーは `Agent`、`Review cycle`、`Reviewed head`、`Mode` の 4 つとし、この順序で必須とする。1 行 1 キーとする。
+- キーは `Agent`、`Model`、`Review cycle`、`Reviewed head`、`Mode` の 5 つとし、この順序で必須とする。1 行 1 キーとする。
 - 区切りは半角コロン + 半角スペース(`: `)とする。
 - `Agent` は処理した Agent 種別の表示名とする(例: `Codex`、`Claude Code`、`Cursor`)。
+- `Model` は、その処理で利用した model の識別子とする。実行環境から確認できる値を使い(例: `claude-fable-5`)、確認できない場合は `unknown` とし、推測しない。`Model` は記録目的の参考情報であり、review cycle の突合や `verify-comments` の担当一致判定には使わない。同一 Agent 種別でも session により model が変わり得るためである。
 - `Review cycle` の値は `<agent-slug>-<short-head>-<YYYYMMDDHHMMSS>` とする。`<agent-slug>` は Review 担当 Agent 種別の小文字 kebab-case(例: `codex`、`claude-code`、`cursor`)、`<short-head>` は review 開始時点の head SHA 先頭 7 文字、`<YYYYMMDDHHMMSS>` は review 開始時刻(UTC、秒まで)とする(例: `codex-1a2b3c4-20260711103045`)。同一 Agent・同一 head の再レビューや再試行で cycle ID が衝突しないよう、秒までを含める。
 - `Reviewed head` は、そのコメントの投稿時点で当該 Agent が確認した full head SHA とする。
 - `Mode` は投稿を行ったモード名とする。
