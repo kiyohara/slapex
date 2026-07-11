@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `update-mcp-guidelines-resolve-row`
-- PR: 未作成
+- PR: #166
 - 最終更新: 2026-07-12
 
 ## 目的
@@ -13,7 +13,7 @@ Issue #165 に従い、GitHub MCP ガイドラインの Review thread 解決行�
 - 依存する Issue #162 / PR #164 の merge を GitHub MCP で確認済み。
 - `doc/guidelines/github-mcp-guidelines.md` の操作表を更新した。
 - Issue 指定の静的検証を完了した。
-- commit / push と PR 作成を進める。
+- PR #166 を作成し、working branch note を採番した。
 
 ## 決定事項
 
@@ -24,8 +24,8 @@ Issue #165 に従い、GitHub MCP ガイドラインの Review thread 解決行�
 
 ## 次にやること
 
-- 変更を commit / push して PR を作成する。
-- PR 採番後に本 note を rename する。
+- 採番後の note 更新を commit / push する。
+- PR #166 のレビューと merge を待つ。
 
 ## 検証
 
@@ -43,3 +43,4 @@ Issue #165 に従い、GitHub MCP ガイドラインの Review thread 解決行�
 
 - 2026-07-12: PR #164 の merge を確認し、ブランチを作成。ガイドラインの操作表を手動 resolve 運用へ更新した。
 - 2026-07-12: Issue 指定の静的検証を完了した。
+- 2026-07-12: PR #166 を作成し、working branch note を採番した。
