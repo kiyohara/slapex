@@ -118,7 +118,6 @@ Mode: <review | address-comments | verify-comments>
 | Check runs の確認 | `pull_request_read(get_check_runs)` |
 
 - 上記 tool はすべて現行 `.config/github-op-integrated.conf.example` の allowlist に含まれる。本 skill のための tool allowlist 追加は不要である。
-- `doc/guidelines/github-mcp-guidelines.md` の操作表は「Review thread の解決」に `pull_request_review_write(resolve_thread)` を挙げるが、本 skill では resolve を自動実行の対象外とする(理由は「Review event と resolve の制約」)。
 
 ## Review event と resolve の制約
 

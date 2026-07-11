@@ -14,6 +14,8 @@ Issue #165 に従い、GitHub MCP ガイドラインの Review thread 解決行�
 - `doc/guidelines/github-mcp-guidelines.md` の操作表を更新した。
 - Issue 指定の静的検証を完了した。
 - PR #166 を作成し、working branch note を採番した。
+- 2 件の review comment は同じ stale 記述を指摘しており、妥当と判断して最小修正した。
+- review comment 対応後の静的検証を完了した。
 
 ## 決定事項
 
@@ -21,17 +23,21 @@ Issue #165 に従い、GitHub MCP ガイドラインの Review thread 解決行�
 - fine-grained PAT に `Contents: write` は追加しない。
 - resolve 可マーカーなどの詳細運用は `.agents/skills/review-pull-request/SKILL.md` を参照し、ガイドラインには複製しない。
 - 単発 Issue のため `progress.md` は更新しない。
+- skill の resolve 運用は変更せず、ガイドライン更新後に事実と食い違う移行説明 1 文だけを削除する。
 
 ## 次にやること
 
-- 採番後の note 更新を commit / push する。
-- PR #166 のレビューと merge を待つ。
+- review comment 対応を commit / push し、各 inline comment へ結果を返信する。
+- PR #166 の再確認と merge を待つ。
 
 ## 検証
 
 - 操作表の「Review thread の解決」行が手動運用、fine-grained PAT の権限要件、`gh` fallback 不可、詳細運用の skill 参照を示すことを目視確認した。
 - `git ls-files | xargs rg -n 'resolve_thread'`: 正本・入口に自動 resolve 前提の記述が残っていないことを確認した。skill の自動実行禁止記述と過去の working branch note の経緯記録だけが該当した。
 - `AGENTS.md`、`.claude/rules/github-mcp-guidelines.md`、`.cursor/rules/github-mcp-guidelines.mdc` が正本を参照し、操作表を複製していないことを確認した。
+- review skill の stale な移行説明が削除され、手動 resolve 方針と tool 提供範囲の記述だけが残ることを確認した。
+- `.claude/skills/review-pull-request` が正本への symlink のままで、symlink 経由の内容が正本と一致することを確認した。
+- broken symlink が無いことを確認した。
 - `git diff --check`: 成功。
 - 文書のみの変更のため package test は実施していない。
 
@@ -44,3 +50,4 @@ Issue #165 に従い、GitHub MCP ガイドラインの Review thread 解決行�
 - 2026-07-12: PR #164 の merge を確認し、ブランチを作成。ガイドラインの操作表を手動 resolve 運用へ更新した。
 - 2026-07-12: Issue 指定の静的検証を完了した。
 - 2026-07-12: PR #166 を作成し、working branch note を採番した。
+- 2026-07-12: Cursor / Claude Code review の同一指摘を採用し、skill の stale な移行説明 1 文を削除した。
