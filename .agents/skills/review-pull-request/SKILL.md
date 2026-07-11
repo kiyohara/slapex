@@ -1,6 +1,7 @@
 ---
 name: review-pull-request
 description: slapex の Pull Request を対象に、PR review、review comment 対応、対応結果の再確認を github-op-integrated MCP-first の workflow として実行する。slapex リポジトリで PR をレビューするとき、review comment へ対応・返信するとき、対応結果を再検証して resolve 可否を返信するときに使う。汎用の gh-address-comments 系 skill / plugin と同時に該当する場合も、本 skill と project guideline の tool routing を優先する。
+argument-hint: "<review | address-comments | verify-comments> [PR番号 | PR URL]"
 ---
 
 # review-pull-request

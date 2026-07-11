@@ -25,6 +25,7 @@ Issue #162 に従い、slapex 専用の PR review / review comment 対応 skill 
 - review 完了コメント・再確認結果は `add_issue_comment`(PR conversation comment)へ一本化する。
 - inline thread の resolve は skill から自動実行せず、人間が GitHub UI で行う(ユーザー決定)。理由: resolve の実体である GraphQL mutation `resolveReviewThread` は REST に対応 endpoint が無く、fine-grained PAT では Pull requests に加えて `Contents: Read and Write` を要求する(公式 doc に記載なし、community Discussion #44650 で確認)。本プロジェクトは Contents: write を付与せず、`gh` も fine-grained PAT を使うため fallback も不可。
 - `verify-comments` の確認済み返信は先頭行 `**修正確認済み(resolve 可)**` を canonical な resolve 可マーカーとし、再確認結果コメントに resolve 可 thread の URL 一覧を含める。人間はこれを起点に手動 resolve する。
+- frontmatter に `argument-hint` を追加し、slash command 入力時の autocomplete に 3 モードの選択肢と対象 PR を表示する(ユーザー要望)。Claude Code 拡張のヒント表示であり、選択式 picker の機能は存在しない。他 tool(Cursor / Codex)は未知の frontmatter キーとして無視する想定。
 - AGENTS.md への skill 名追記は行わない(自動 discover のため必須でないと Issue に明記)。
 - `progress.md` の索引に #162 の行は無いため、更新しない(単発 Issue は無理に登録しない)。
 
@@ -64,3 +65,5 @@ Issue #162 記載の検証項目の実施結果(2026-07-11)。
 - 2026-07-12: ユーザー要望により canonical metadata へ `Model` キーを追加(記録目的、突合には不使用)。
 - 2026-07-12: Codex verify-comments の指摘(`Model` 追加時の「次の 4 行」導入文と本 note 旧決定事項の 5 キー不整合)を採用し修正。同一 cycle の address-comments 2 周目(上限)。
 - 2026-07-12: 別 Agent の verify-comments で thread resolve が fine-grained PAT の権限エラーとなった。調査の結果、`resolveReviewThread` は fine-grained PAT で `Contents: Read and Write` を要求すると判明(公式 doc 記載なし、community Discussion #44650)。`gh` も fine-grained PAT のため fallback 不可。resolve を人間の手動操作へ変更し、resolve 可マーカーを canonical 化した。
+- 2026-07-12: guideline 操作表の resolve 行更新を Issue #165 として起票(PR #164 merge 後に着手)。
+- 2026-07-12: frontmatter に `argument-hint` を追加し、モード選択肢の入力補完ヒントを表示するようにした(ユーザー要望)。
