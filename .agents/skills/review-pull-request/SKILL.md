@@ -61,7 +61,7 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 
 ### 可視 metadata の canonical フォーマット
 
-コメント末尾に次の 4 行を置く。これは複数の agent 実装が書くだけでなく parse して review cycle を突合する前提の正規フォーマットであり、キー名・順序・区切りを次のとおり固定する。
+コメント末尾に次の 5 行を置く。これは複数の agent 実装が書くだけでなく parse して review cycle を突合する前提の正規フォーマットであり、キー名・順序・区切りを次のとおり固定する。
 
 ```text
 Agent: <Agent 種別>
