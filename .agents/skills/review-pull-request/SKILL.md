@@ -1,11 +1,11 @@
 ---
 name: review-pull-request
-description: slapex の Pull Request を対象に、PR review、review comment 対応、対応結果の再確認を github-op-integrated MCP-first の workflow として実行する。slapex リポジトリで PR をレビューするとき、review comment へ対応・返信するとき、対応結果を再検証して inline thread を resolve するときに使う。汎用の gh-address-comments 系 skill / plugin と同時に該当する場合も、本 skill と project guideline の tool routing を優先する。
+description: slapex の Pull Request を対象に、PR review、review comment 対応、対応結果の再確認を github-op-integrated MCP-first の workflow として実行する。slapex リポジトリで PR をレビューするとき、review comment へ対応・返信するとき、対応結果を再検証して resolve 可否を返信するときに使う。汎用の gh-address-comments 系 skill / plugin と同時に該当する場合も、本 skill と project guideline の tool routing を優先する。
 ---
 
 # review-pull-request
 
-slapex の PR review を、project guideline に沿った github-op-integrated MCP-first workflow として実行する skill。PR 自体の review、既存 review comment への対応、対応結果の再確認と inline thread の resolve までを 3 モードで扱う。
+slapex の PR review を、project guideline に沿った github-op-integrated MCP-first workflow として実行する skill。PR 自体の review、既存 review comment への対応、対応結果の再確認と resolve 可否の判定までを 3 モードで扱う。inline thread の resolve 自体は人間が GitHub UI で行う(「Review event と resolve の制約」を参照)。
 
 本 skill は「レビューエンジン」ではなく、slapex 固有の orchestrator / adapter である。各 Agent の組み込み review capability を置き換えない(「組み込み / 汎用 review capability の再利用」を参照)。
 
@@ -38,7 +38,7 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 | --- | --- | --- | --- |
 | `review` | PR 自体をレビューし、指摘(あれば inline comment)と review 完了コメントを投稿する | 指摘の有無にかかわらず review 完了コメントを投稿し、read-back で反映を確認した時点 | `references/review.md` |
 | `address-comments` | 既存 review comment の妥当性を検証し、必要な修正・検証・返信を行う。inline thread は resolve しない | 確認した各 inline comment へ処置を返信し、read-back で反映を確認した時点 | `references/address-comments.md` |
-| `verify-comments` | 元の Review 担当 Agent が対応結果を再検証し、確認返信と妥当な inline thread の resolve を行う | 全対象 thread を確認し、再確認結果コメントを投稿した時点 | `references/verify-comments.md` |
+| `verify-comments` | 元の Review 担当 Agent が対応結果を再検証し、妥当な inline thread に resolve 可マーカー付きの確認返信を残す。resolve は自動実行しない | 全対象 thread を確認し、再確認結果コメントを投稿した時点 | `references/verify-comments.md` |
 
 ## 対象 PR の特定と review source
 
@@ -95,7 +95,7 @@ Mode: <review | address-comments | verify-comments>
 
 - 本 skill は、各 Agent の native / built-in review capability(例: Claude Code の `code-review` / `review` skill、Codex の review mode)や、利用可能な汎用 review skill / plugin を置き換えない。
 - 各モードで、利用可能な review capability を diff 分析、指摘の分類、妥当性判断、修正内容の再検証に利用してよい。
-- 本 skill が専有する責務は次のとおり: 対象 PR と head SHA の確定、slapex の正本との照合、github-op-integrated MCP-first の tool routing、review cycle 管理、Agent 識別とコメント形式、コメント投稿、read-back、resolve、完了条件。
+- 本 skill が専有する責務は次のとおり: 対象 PR と head SHA の確定、slapex の正本との照合、github-op-integrated MCP-first の tool routing、review cycle 管理、Agent 識別とコメント形式、コメント投稿、read-back、resolve 可否の判定、完了条件。
 - 汎用 capability が GitHub app / `gh`-first の取得・投稿手順、独自の approve / request changes、独自の完了条件を持つ場合、その部分は採用せず、本 skill と project guideline で置き換える。GitHub への直接投稿 option(inline comment 自動投稿など)は使わず、findings の生成までにとどめ、投稿は本 skill の github-op-integrated 経路へ一元化する。
 - 課金や cloud 実行を伴う review 機能は、ユーザーの明示指示なしに起動しない。
 - 汎用 capability が利用できない環境でも処理を停止せず、Agent 自身の review 能力で同じ完了条件を満たす。
@@ -112,25 +112,27 @@ Mode: <review | address-comments | verify-comments>
 | Review thread / review / comment の取得 | `pull_request_read(get_review_comments / get_reviews / get_comments)` |
 | PR review の投稿 | `pull_request_review_write(create / submit_pending)` / `add_comment_to_pending_review` |
 | Inline review comment への返信 | `add_reply_to_pull_request_comment` |
-| Review thread の resolve | `pull_request_review_write(resolve_thread)` |
+| Review thread の resolve | 自動実行しない。`verify-comments` は resolve 可マーカー付き返信までを行い、resolve は人間が GitHub UI で行う |
 | PR conversation comment | `add_issue_comment`(PR 番号を `issue_number` として渡す) |
 | Check runs の確認 | `pull_request_read(get_check_runs)` |
 
 - 上記 tool はすべて現行 `.config/github-op-integrated.conf.example` の allowlist に含まれる。本 skill のための tool allowlist 追加は不要である。
-- inline thread の resolve には、`pull_request_read(get_review_comments)` response の `PRRT_...` 形式 thread node ID を使う。response に ID が無い場合は `doc/guidelines/github-mcp-guidelines.md` の操作表と fallback 規則に従い、別の MCP read method での取得可否を先に確認する。情報不足だけを理由に黙って `gh` を先行させない。
+- `doc/guidelines/github-mcp-guidelines.md` の操作表は「Review thread の解決」に `pull_request_review_write(resolve_thread)` を挙げるが、本 skill では resolve を自動実行の対象外とする(理由は「Review event と resolve の制約」)。
 
 ## Review event と resolve の制約
 
 - GitHub 上の操作 account は単一であるため、本 skill は `APPROVE` と `REQUEST_CHANGES` を自動実行しない。GitHub 側が self-review を拒否するかどうかに依存しない、本 skill の禁止事項とする。
 - PR review の投稿は `COMMENT` event に限定する。
-- review state に対して Agent が自動実行できる完了操作は、`verify-comments` で妥当性を確認した inline thread の `pull_request_review_write(resolve_thread)` に限定する。
-- resolve を自動実行してよいのは、現在の Agent が Review 担当として作成した review cycle に属する inline thread に限る。人間、他の Agent、または他の review cycle が作成した thread は resolve しない。
+- 本 skill は inline thread の resolve を自動実行しない。resolve に使う GraphQL mutation `resolveReviewThread` は REST に対応 endpoint が無く、fine-grained PAT では `Pull requests` permission に加えて `Contents: Read and Write` を要求する(公式 documentation に記載は無く、community で確認されている挙動)。本プロジェクトは `Contents: write` を付与しないため、resolve は人間が GitHub UI で行う。
+- `verify-comments` で対応結果を妥当と確認した inline thread への返信は、本文の先頭行を `**修正確認済み(resolve 可)**` とする。これを resolve 可マーカーの canonical 形式とし、人間はこのマーカーの付いた thread を目視確認して手動で resolve する。マーカーは resolve 相当と確認できた返信だけに付け、未解決・対応不十分の返信には付けない。
+- resolve 可マーカーを付けてよいのは、現在の Agent が Review 担当として作成した review cycle に属する inline thread に限る。人間、他の Agent、または他の review cycle が作成した thread には付けない。
 - `unresolve_thread`、review の dismiss、PR の merge、reviewer request の変更は本 skill から自動実行しない。
-- `pull_request_review_write` は tool 単位では `APPROVE` / `REQUEST_CHANGES` / pending review 操作も提供する。allowlist に含まれることを実行の許可根拠とせず、本節の method / event 制約に従う。
+- `pull_request_review_write` は tool 単位では `APPROVE` / `REQUEST_CHANGES` / pending review / `resolve_thread` 操作も提供する。allowlist に含まれることを実行の許可根拠とせず、本節の method / event 制約に従う。
 
 ## permission
 
-- fine-grained PAT は repository を slapex に限定し、少なくとも Pull requests の read / write を許可する。review 作成、inline reply、thread resolve はこの範囲で実行する。
+- fine-grained PAT は repository を slapex に限定し、少なくとも Pull requests の read / write を許可する。review 作成、inline reply、conversation comment はこの範囲で実行できる。
+- thread resolve(`resolveReviewThread`)は Pull requests permission だけでは実行できず、fine-grained PAT では `Contents: Read and Write` が必要である。本プロジェクトはこれを付与しないため、resolve は自動実行の対象外とする(「Review event と resolve の制約」)。
 - `Contents: write`、merge、release、workflow dispatch、repository settings などの追加 permission は本 skill のために付与しない。
 - 修正の commit / push は local git / SSH で行い、`doc/guidelines/git-operation-guidelines.md` に従う。
 

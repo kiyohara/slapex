@@ -23,6 +23,8 @@ Issue #162 に従い、slapex 専用の PR review / review comment 対応 skill 
 - canonical metadata に `Model` キーを追加し 5 キーとする(ユーザー要望)。利用 model の記録が目的の参考情報であり、cycle 突合や担当一致判定には使わない。`Agent` 値へ埋め込まず独立キーにしたのは、同一 Agent 種別でも session により model が変わり得て、`Agent` の等値比較を壊さないため。確認できない場合は `unknown` とし推測しない。
 - `address-comments` / `verify-comments` の返信では、元 review の review cycle ID をそのまま使い、新しい ID を作らない(cycle 突合のため)。
 - review 完了コメント・再確認結果は `add_issue_comment`(PR conversation comment)へ一本化する。
+- inline thread の resolve は skill から自動実行せず、人間が GitHub UI で行う(ユーザー決定)。理由: resolve の実体である GraphQL mutation `resolveReviewThread` は REST に対応 endpoint が無く、fine-grained PAT では Pull requests に加えて `Contents: Read and Write` を要求する(公式 doc に記載なし、community Discussion #44650 で確認)。本プロジェクトは Contents: write を付与せず、`gh` も fine-grained PAT を使うため fallback も不可。
+- `verify-comments` の確認済み返信は先頭行 `**修正確認済み(resolve 可)**` を canonical な resolve 可マーカーとし、再確認結果コメントに resolve 可 thread の URL 一覧を含める。人間はこれを起点に手動 resolve する。
 - AGENTS.md への skill 名追記は行わない(自動 discover のため必須でないと Issue に明記)。
 - `progress.md` の索引に #162 の行は無いため、更新しない(単発 Issue は無理に登録しない)。
 
@@ -50,8 +52,9 @@ Issue #162 記載の検証項目の実施結果(2026-07-11)。
 
 ## リスク・ブロッカー
 
-- 実 PR での review / reply / resolve の write 動作は、本 PR では read 検証のみ(無関係な既存 PR へ test comment を投稿しない)。write 経路の実地確認は今後の実運用で行う。
-- 現行 GitHub MCP Server の `pull_request_read(get_review_comments)` response に thread node ID(`PRRT_...`)が含まれないため、`resolve_thread` 実行時は skill 記載のとおり別の MCP read method の確認 → guideline の fallback 規則の順で扱う必要がある。MCP server の version 更新で response に node ID が含まれるようになる可能性がある。
+- review 投稿・inline 返信・conversation comment の write 経路は、本 PR 自体のレビュー運用で実地確認済み。thread resolve は fine-grained PAT の権限不足で不可と判明し、人間の手動操作へ変更した(決定事項参照)。
+- 将来、自動 resolve を再導入する場合は、`resolveReviewThread` が fine-grained PAT で `Contents: Read and Write` を要求する点と、`pull_request_read(get_review_comments)` response に thread node ID(`PRRT_...`)が含まれない点の両方を再確認する必要がある。
+- `doc/guidelines/github-mcp-guidelines.md` の操作表は「Review thread の解決 = `pull_request_review_write(resolve_thread)`」のままであり、本 skill の手動 resolve 方針との差分がある。guideline 側の更新は本 Issue のスコープ外のため、別タスクとして扱う。
 
 ## セッションログ
 
@@ -60,3 +63,4 @@ Issue #162 記載の検証項目の実施結果(2026-07-11)。
 - 2026-07-11: Codex review の指摘(review cycle ID の分単位衝突)を採用し、時刻部を `YYYYMMDDHHMMSS` へ変更。Cursor review は指摘なし。
 - 2026-07-12: ユーザー要望により canonical metadata へ `Model` キーを追加(記録目的、突合には不使用)。
 - 2026-07-12: Codex verify-comments の指摘(`Model` 追加時の「次の 4 行」導入文と本 note 旧決定事項の 5 キー不整合)を採用し修正。同一 cycle の address-comments 2 周目(上限)。
+- 2026-07-12: 別 Agent の verify-comments で thread resolve が fine-grained PAT の権限エラーとなった。調査の結果、`resolveReviewThread` は fine-grained PAT で `Contents: Read and Write` を要求すると判明(公式 doc 記載なし、community Discussion #44650)。`gh` も fine-grained PAT のため fallback 不可。resolve を人間の手動操作へ変更し、resolve 可マーカーを canonical 化した。
