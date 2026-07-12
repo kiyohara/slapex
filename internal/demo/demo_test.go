@@ -54,32 +54,58 @@ func TestScenariosRenderEndToEnd(t *testing.T) {
 	}
 }
 
-// TestFilterSince guards that the fake conversations.history honours the
-// "oldest" bound the export pipeline sends for --days, so demo mode respects
-// the fetch window like a real run (regression for the --days demo gap).
-func TestFilterSince(t *testing.T) {
+func TestExportDateRangeEndToEnd(t *testing.T) {
+	now := time.Date(2026, 7, 3, 16, 0, 0, 0, time.Local)
+	sc := ScenarioJA(now)
+	targetDate := now.AddDate(0, 0, -1).Format("2006-01-02")
+	dir, err := Export(context.Background(), sc, Options{
+		OutputDir:      t.TempDir(),
+		MaxPosts:       1000,
+		Date:           targetDate,
+		MaxAttachBytes: 10 << 20,
+		ToolVersion:    "test",
+		Now:            now,
+	}, ui.NewPrinter(io.Discard, false))
+	if err != nil {
+		t.Fatalf("demo.Export(--date): %v", err)
+	}
+	html, err := os.ReadFile(filepath.Join(dir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(html, []byte("イベントサイト、staging")) {
+		t.Fatal("date export is missing a target-day message")
+	}
+	if bytes.Contains(html, []byte("開催決定です")) {
+		t.Fatal("date export contains a previous-day timeline message")
+	}
+}
+
+// TestFilterRange guards that the fake conversations.history honours both
+// boundaries and uses the same half-open interval as a real run.
+func TestFilterRange(t *testing.T) {
 	msgs := []slack.Message{
 		{TS: "100.000000", Text: "old"},
 		{TS: "200.000000", Text: "mid"},
 		{TS: "300.000000", Text: "new"},
 	}
 
-	// oldest at 200 drops the older message and keeps 200 (inclusive) and 300.
-	got := filterSince(msgs, "200.000000")
+	// The start is included and the end is excluded.
+	got := filterRange(msgs, "200.000000", "300.000000")
 	gotTexts := make([]string, len(got))
 	for i, m := range got {
 		gotTexts[i] = m.Text
 	}
-	if strings.Join(gotTexts, ",") != "mid,new" {
-		t.Fatalf("filterSince(oldest=200) kept %v, want [mid new]", gotTexts)
+	if strings.Join(gotTexts, ",") != "mid" {
+		t.Fatalf("filterRange([200,300)) kept %v, want [mid]", gotTexts)
 	}
 
-	// An empty or unparseable oldest keeps every message.
-	if n := len(filterSince(msgs, "")); n != len(msgs) {
-		t.Fatalf("filterSince(oldest=\"\") kept %d, want %d", n, len(msgs))
+	// Empty or unparseable boundaries do not filter that side.
+	if n := len(filterRange(msgs, "", "")); n != len(msgs) {
+		t.Fatalf("filterRange(empty) kept %d, want %d", n, len(msgs))
 	}
-	if n := len(filterSince(msgs, "not-a-ts")); n != len(msgs) {
-		t.Fatalf("filterSince(oldest=\"not-a-ts\") kept %d, want %d", n, len(msgs))
+	if n := len(filterRange(msgs, "not-a-ts", "not-a-ts")); n != len(msgs) {
+		t.Fatalf("filterRange(invalid) kept %d, want %d", n, len(msgs))
 	}
 }
 

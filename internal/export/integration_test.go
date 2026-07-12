@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/kiyohara/slapex/internal/slack"
 )
@@ -44,6 +45,73 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 		"/api/users.info":            2,
 		"/api/emoji.list":            1,
 	})
+}
+
+func TestRunIntegrationDateRange(t *testing.T) {
+	t.Parallel()
+
+	start := time.Date(2026, 7, 3, 0, 0, 0, 0, time.Local)
+	sc := happyPathScenario()
+	sc.Messages[0].TS = slack.FormatTS(start.AddDate(0, 0, 1).Unix())
+	sc.Messages[1].TS = slack.FormatTS(start.Add(2 * time.Second).Unix())
+	sc.Messages[1].ThreadTS = sc.Messages[1].TS
+	sc.Messages[2].TS = slack.FormatTS(start.Unix())
+	oldReplies := sc.Replies["1700000002.000000"]
+	delete(sc.Replies, "1700000002.000000")
+	for i := range oldReplies {
+		oldReplies[i].ThreadTS = sc.Messages[1].TS
+	}
+	oldReplies[0].TS = sc.Messages[1].TS
+	sc.Replies[sc.Messages[1].TS] = oldReplies
+
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword: "project-alpha",
+		OutputDir:      t.TempDir(),
+		MaxPosts:       2,
+		Date:           "2026-07-03",
+		MaxAttachBytes: 1 << 20,
+		KeepCache:      true,
+		ToolVersion:    "test",
+	})
+
+	htmlBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(htmlBytes)
+	for _, want := range []string{"First timeline note", "Starting the launch thread", "2026-07-03 (local date, --date 2026-07-03"} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("HTML missing %q", want)
+		}
+	}
+	if strings.Contains(html, "Final timeline update") {
+		t.Fatal("HTML contains message at the exclusive end boundary")
+	}
+
+	var metadata struct {
+		Fetch struct {
+			RangeMode string `json:"range_mode"`
+			Date      string `json:"date"`
+			Days      int    `json:"days"`
+			MaxPosts  int    `json:"max_posts"`
+			OldestTS  string `json:"oldest_ts"`
+			LatestTS  string `json:"latest_ts"`
+		} `json:"fetch"`
+		Counts struct {
+			TimelineMessages int `json:"timeline_messages"`
+			Replies          int `json:"replies"`
+		} `json:"counts"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/metadata.json"), &metadata)
+	if metadata.Fetch.RangeMode != "date" || metadata.Fetch.Date != "2026-07-03" || metadata.Fetch.Days != 0 || metadata.Fetch.MaxPosts != 2 {
+		t.Fatalf("metadata fetch = %+v", metadata.Fetch)
+	}
+	if metadata.Fetch.OldestTS != slack.FormatTS(start.Unix()) || metadata.Fetch.LatestTS != slack.FormatTS(start.AddDate(0, 0, 1).Unix()) {
+		t.Fatalf("metadata bounds = %q/%q", metadata.Fetch.OldestTS, metadata.Fetch.LatestTS)
+	}
+	if metadata.Counts.TimelineMessages != 2 || metadata.Counts.Replies != 2 {
+		t.Fatalf("metadata counts = %+v, want 2 timeline / 2 replies", metadata.Counts)
+	}
 }
 
 // runExportScenario is the integration-test entry point for happy-path

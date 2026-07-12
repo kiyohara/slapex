@@ -6,10 +6,23 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kiyohara/slapex/internal/render"
 	"github.com/kiyohara/slapex/internal/slack"
 )
+
+func TestResolveFetchRangeDateUsesLocalCalendarDay(t *testing.T) {
+	r, err := resolveFetchRange(Options{Date: "2026-07-03"}, time.Time{})
+	if err != nil {
+		t.Fatalf("resolveFetchRange: %v", err)
+	}
+	wantStart := time.Date(2026, 7, 3, 0, 0, 0, 0, time.Local)
+	wantEnd := wantStart.AddDate(0, 0, 1)
+	if r.mode != "date" || !r.start.Equal(wantStart) || !r.end.Equal(wantEnd) {
+		t.Fatalf("range = %+v, want date [%s, %s)", r, wantStart, wantEnd)
+	}
+}
 
 func TestChooseChannel(t *testing.T) {
 	channels := testChannels(

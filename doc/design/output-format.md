@@ -12,7 +12,7 @@
 
 初期出力は channel 単位の `index.html` とする。日付単位や thread 単位の HTML 分割は初期対象外とする。
 
-歴史の長い channel を指定した場合に無制限取得にならないよう、取得範囲は post 件数と日付で制限する。2 つの制限は AND で結合し、両方を満たす投稿だけを取得対象にする。
+歴史の長い channel を指定した場合に無制限取得にならないよう、取得範囲は post 件数と時間範囲で制限する。2 つの制限は AND で結合し、両方を満たす投稿だけを取得対象にする。
 
 option:
 
@@ -20,8 +20,11 @@ option:
 |---|---:|---:|---|
 | `--max-posts <count>` | `1000` | `10000` | channel timeline 上の親投稿の最大取得件数 |
 | `--days <days>` | `30` | `90` | 現在時刻から何日前までの投稿を取得するか |
+| `--date <date>` | なし | - | local timezone の特定日(`YYYY-MM-DD`)だけを取得する |
 
-`--max-posts` は親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
+`--date 2026-07-03` は local timezone の半開区間 `[2026-07-03 00:00:00, 2026-07-04 00:00:00)` を表す。開始時刻ちょうどの timeline 投稿は含み、終了時刻ちょうどの投稿は含まない。`--date` と明示した `--days` は排他とする。
+
+`--max-posts` は時間範囲内に残る親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は投稿時刻で切り詰めず一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
 
 ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
 

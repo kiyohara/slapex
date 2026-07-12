@@ -39,7 +39,7 @@
 | `tool_version` | slapex の version |
 | `workspace` | `team_id`、workspace 名、domain、URL |
 | `channel` | channel ID、channel 名、public/private、archived 状態、bot membership |
-| `fetch` | `--days` / `--max-posts` / `--max-attachment-size` の実効値、`oldest` 境界、実行時刻 |
+| `fetch` | range mode、`--days` / `--date` / `--max-posts` / `--max-attachment-size` の実効値、`oldest_ts` / `latest_ts` 境界、実行時刻 |
 | `labels` | 実際に使った `<workspace-label>` / `<channel-label>` と元の表示名 |
 | `counts` | timeline メッセージ数、thread 数、replies 数、assets の保存・上限超過・失敗件数 |
 
@@ -90,7 +90,7 @@
 
 いずれかが不一致、または検証不能(ファイル欠落、parse 不能)な場合は、その cache を使わず、警告を表示して通常の取得にフォールバックする(エラー終了にはしない)。
 
-取得条件(`--days` / `--max-posts`)の差異は再利用可否の判定に使わない。cache の主な再利用対象は assets manifest と user / emoji の解決結果であり、メッセージ本文は毎回取得し直すためである。token の scope 差異も事前検証しない。scope 不足による個別 asset の取得失敗は通常の失敗として manifest に記録され、HTML 上では置換表示になる。
+取得条件(`--days` / `--date` / `--max-posts`)の差異は再利用可否の判定に使わない。cache の主な再利用対象は assets manifest と user / emoji の解決結果であり、メッセージ本文は毎回取得し直すためである。token の scope 差異も事前検証しない。scope 不足による個別 asset の取得失敗は通常の失敗として manifest に記録され、HTML 上では置換表示になる。
 
 ## 未決事項
 

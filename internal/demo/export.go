@@ -17,6 +17,7 @@ type Options struct {
 	OutputDir      string
 	MaxPosts       int
 	Days           int
+	Date           string
 	MaxAttachBytes int64
 	KeepCache      bool
 	ReuseCache     string
@@ -51,6 +52,7 @@ func Export(ctx context.Context, sc *Scenario, o Options, printer *ui.Printer) (
 		OutputDir:      o.OutputDir,
 		MaxPosts:       o.MaxPosts,
 		Days:           o.Days,
+		Date:           o.Date,
 		MaxAttachBytes: o.MaxAttachBytes,
 		KeepCache:      o.KeepCache,
 		ReuseCache:     o.ReuseCache,

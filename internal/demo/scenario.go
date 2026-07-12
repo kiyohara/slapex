@@ -88,21 +88,17 @@ func replaceMessageBaseURL(m *slack.Message, repl func(string) string) {
 	}
 }
 
-// filterSince returns the messages whose ts is at or after oldest, mirroring
-// the Slack conversations.history "oldest" bound the export pipeline sends for
-// --days. This keeps demo mode honouring the fetch window like a real run
-// (doc/design/cli-interface.md「demo モード」). An empty or unparseable oldest,
-// or a message with an unparseable ts, is treated permissively (kept).
-func filterSince(messages []slack.Message, oldest string) []slack.Message {
-	lo, err := strconv.ParseFloat(strings.TrimSpace(oldest), 64)
-	if err != nil {
-		return messages
-	}
+// filterRange mirrors conversations.history bounds for demo mode.
+func filterRange(messages []slack.Message, oldest, latest string) []slack.Message {
+	lo, loErr := strconv.ParseFloat(strings.TrimSpace(oldest), 64)
+	hi, hiErr := strconv.ParseFloat(strings.TrimSpace(latest), 64)
 	filtered := make([]slack.Message, 0, len(messages))
 	for _, m := range messages {
-		if ts, err := strconv.ParseFloat(m.TS, 64); err != nil || ts >= lo {
-			filtered = append(filtered, m)
+		ts, err := strconv.ParseFloat(m.TS, 64)
+		if err != nil || (loErr == nil && ts < lo) || (hiErr == nil && ts >= hi) {
+			continue
 		}
+		filtered = append(filtered, m)
 	}
 	return filtered
 }

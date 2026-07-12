@@ -50,6 +50,7 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--output <path>` | 実行時刻から生成 | 出力 root を指定する |
 | `--max-posts <count>` | `1000` | timeline 上の親投稿の最大取得件数(1〜10000) |
 | `--days <days>` | `30` | 現在時刻から何日前までを取得するか(1〜90) |
+| `--date <date>` | なし | local timezone の特定日(`YYYY-MM-DD`)だけを取得する |
 | `--max-attachment-size <size>` | `10MB` | 添付ファイル / original 画像 1 件あたりの保存上限 |
 | `--keep-cache` | off | 中間ファイル `.cache/` を成否に関係なく残す。`--reuse-cache` で再利用する cache を作るときに使う |
 | `--reuse-cache <path>` | なし | 以前の出力ディレクトリまたは `.cache/` を再利用する |
@@ -58,6 +59,8 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--demo` | off | token なしで同梱の架空サンプルを export する(実 Slack に接続しない) |
 | `--version` | | version を表示して終了する |
 | `--help` | | usage を表示して終了する |
+
+`--date 2026-07-03` のように指定すると、実行環境の local timezone で 2026-07-03 00:00 以上、翌日 00:00 未満の timeline 投稿を取得します。`--date` と `--days` は同時に指定できません。`--date` と `--max-posts` は併用でき、対象日の timeline 投稿だけを件数上限に数えます。対象になった親投稿の thread replies は、reply 自体の日付にかかわらず取得します。
 
 ## cache の再利用
 

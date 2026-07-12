@@ -264,8 +264,8 @@ func TestHistoryPagination(t *testing.T) {
 	defer srv.Close()
 
 	c, _ := newTestClient(srv)
-	const oldest = "1700000000.000000"
-	messages, truncated, err := c.History(context.Background(), "C123", oldest, 100, nil)
+	const oldest = "1.000000"
+	messages, truncated, err := c.History(context.Background(), "C123", oldest, "", 100, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -289,9 +289,49 @@ func TestHistoryPagination(t *testing.T) {
 		if got := form.Get("oldest"); got != oldest {
 			t.Errorf("request %d oldest = %q, want %q", i, got, oldest)
 		}
+		if got := form.Get("inclusive"); got != "true" {
+			t.Errorf("request %d inclusive = %q, want true", i, got)
+		}
 		if got := form.Get("limit"); got != "200" {
 			t.Errorf("request %d limit = %q, want 200", i, got)
 		}
+	}
+}
+
+func TestHistoryRangeBoundariesAndMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	h := &pagedHandler{
+		t:    t,
+		path: "/api/conversations.history",
+		pages: map[string]string{
+			"": `{"ok":true,"messages":[{"ts":"400.000000","text":"at end"},{"ts":"350.000000","text":"inside 2"},{"ts":"300.000000","text":"inside 1"},{"ts":"200.000000","text":"at start"},{"ts":"199.999999","text":"before"}],"response_metadata":{"next_cursor":""}}`,
+		},
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	c, _ := newTestClient(srv)
+	messages, truncated, err := c.History(context.Background(), "C123", "200.000000", "400.000000", 2, nil)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if !truncated {
+		t.Fatal("truncated = false, want true")
+	}
+	var texts []string
+	for _, m := range messages {
+		texts = append(texts, m.Text)
+	}
+	if got, want := strings.Join(texts, ","), "inside 2,inside 1"; got != want {
+		t.Fatalf("messages = %q, want %q", got, want)
+	}
+	form := h.gotForms()[0]
+	if got := form.Get("oldest"); got != "200.000000" {
+		t.Fatalf("oldest = %q, want 200.000000", got)
+	}
+	if got := form.Get("latest"); got != "400.000000" {
+		t.Fatalf("latest = %q, want 400.000000", got)
 	}
 }
 

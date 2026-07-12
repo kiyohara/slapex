@@ -68,6 +68,7 @@ type cliOptions struct {
 	outputDir      string
 	maxPosts       int
 	days           int
+	date           string
 	maxAttachBytes int64
 	keepCache      bool
 	reuseCache     string
@@ -124,6 +125,7 @@ func run() int {
 		OutputDir:      opts.outputDir,
 		MaxPosts:       opts.maxPosts,
 		Days:           opts.days,
+		Date:           opts.date,
 		MaxAttachBytes: opts.maxAttachBytes,
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
@@ -158,6 +160,7 @@ func runDemo(opts *cliOptions, printer *ui.Printer, getenv func(string) string) 
 		OutputDir:      opts.outputDir,
 		MaxPosts:       opts.maxPosts,
 		Days:           opts.days,
+		Date:           opts.date,
 		MaxAttachBytes: opts.maxAttachBytes,
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
@@ -322,6 +325,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		outputDir     = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
 		maxPosts      = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
 		days          = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
+		date          = fs.String("date", "", "fetch timeline messages on this local date (YYYY-MM-DD)")
 		maxAttach     = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
 		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
 		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept cache (path to output directory or .cache/)")
@@ -369,7 +373,25 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		fmt.Fprintln(diagnostics, "slapex: --max-posts must be between 1 and 10000")
 		return nil, errUsage
 	}
-	if *days < 1 || *days > 90 {
+	daysExplicit := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "days" {
+			daysExplicit = true
+		}
+	})
+	if *date != "" {
+		parsed, err := time.ParseInLocation("2006-01-02", *date, time.Local)
+		if err != nil || parsed.Format("2006-01-02") != *date {
+			fmt.Fprintf(diagnostics, "slapex: invalid --date %q (expected YYYY-MM-DD)\n", *date)
+			return nil, errUsage
+		}
+		if daysExplicit {
+			fmt.Fprintln(diagnostics, "slapex: --date and --days cannot be used together")
+			return nil, errUsage
+		}
+		*days = 0
+	}
+	if *date == "" && (*days < 1 || *days > 90) {
 		fmt.Fprintln(diagnostics, "slapex: --days must be between 1 and 90")
 		return nil, errUsage
 	}
@@ -383,6 +405,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		outputDir:      *outputDir,
 		maxPosts:       *maxPosts,
 		days:           *days,
+		date:           *date,
 		maxAttachBytes: maxAttachBytes,
 		keepCache:      *keepCache,
 		reuseCache:     *reuseCache,
