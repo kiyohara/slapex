@@ -18,25 +18,21 @@
 
 v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-現在は worktree / project MCP 整備と、利用者向け help / サンプル更新運用を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
+現在は取得範囲指定(`--date` / `--from` `--to`)と、emoji 除外(privacy signal)を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
 
-## Agent / 開発環境整備
-
-| ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
-|---|---|---|---|---|---|
-| agent-env-01 | #8 | done | - | `.worktreeinclude` + `worktree-setup.sh` + docs を整備。PR レビュー / merge 待ち | #149 |
-
-## 利用者向け help / サンプル整備
+## 取得範囲指定
 
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
-| help-01 | #126 | done | #125 done | 既存の利用者向け文書の文体を一括修正する | #143 |
-| sample-01 | #135 | done | - | asset ファイル名を内容 hash(sha256)ベースにし、サンプル再生成 diff を安定化。PR レビュー / merge 待ち | #150 |
-| sample-02 | #136 | done | - | README 出力プレビューから table 枠線を外し、HTML/CSS で画像枠線を付ける | #142 |
-| sample-03 | #137 | done | #135 後 | 同梱サンプル export 更新 skill と利用ルールを整備済み | #158 |
-| sample-04 | #138 | done | #136 / #137 後 | README 出力プレビュー画像更新 skill と利用ルールを整備済み | #159 |
-| sample-05 | #139 | done | #137 後 | README ターミナルデモ GIF 更新 skill と利用ルールを整備。PR レビュー / merge 待ち | #160 |
-| sample-06 | #140 | done | - | quickstart の全体フローを利用者向け SVG に置き換え。PR レビュー / merge 待ち | #157 |
+| range-01 | #153 | todo | - | `--date YYYY-MM-DD` で特定日の timeline 取得範囲を指定できるようにする | - |
+| range-02 | #154 | todo | #153 | `--from` / `--to` で任意期間の timeline 取得範囲を指定できるようにする | - |
+
+## emoji 除外(privacy signal)
+
+| ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
+|---|---|---|---|---|---|
+| exclude-01 | #155 | todo | - | `--exclude-body-emoji` で本文 shortcode 一致投稿を export から除外する | - |
+| exclude-02 | #156 | todo | #155 | `--exclude-reaction-emoji` で指定 reaction 付き投稿を export から除外する | - |
 
 ## リリース履歴
 
@@ -59,3 +55,5 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 - 1Password integration 整備 — token 注入 help と `op run` 経由の interactive selection を整備済み(Issue #53〜#54 / PR #96・#98)。
 - 開発ループ整備 — 既存 Issue 登録 skill、Issue 駆動タスク実行 skill、開発ループ入口ドキュメントを追加済み(Issue #88〜#90 / PR #92〜#94)。
 - CLI 出力 UX / 利用者向け help 基盤 / サンプル表示の初期整備 — styled/plain 出力(#100 / PR #102)、README 出力プレビューと同梱サンプル(#51 / PR #114)、Slack App セットアップ画像 help(#48 / PR #119)、FAQ(#52 / PR #128)、quickstart(#49 / PR #124)、README 再構成(#123 / PR #131)、文体・リンク方針(#125 / PR #127、#129 / PR #130)を整備済み。方針は decision log 0045 / 0048 / 0049。
+- Agent / 開発環境整備 — worktree の project MCP local config セットアップ(#8 / PR #149、decision log 0051)。関連 follow-up として Cursor MCP command の相対 path 化(#151 / PR #152、decision log 0053)、GitHub MCP 優先規則・PR review skill・手動 resolve 運用(#161 / #162 / #165、PR #163 / #164 / #166)も完了。
+- 利用者向け help / サンプル更新運用 — 文体一括修正(#126 / PR #143)、asset 内容 hash(#135 / PR #150、decision log 0052)、preview 枠線(#136 / PR #142)、sample / preview / demo 更新 skill(#137〜#139 / PR #158〜#160)、quickstart 全体フロー SVG(#140 / PR #157)を整備済み。
