@@ -53,6 +53,12 @@ func TestResolveDateTimeFetchRangePreservesAbsoluteInstants(t *testing.T) {
 	if got, want := r.end.UTC().Format(time.RFC3339), "2026-07-03T03:00:00Z"; got != want {
 		t.Fatalf("end = %s, want %s", got, want)
 	}
+	if got, want := r.progressLabel(), "from 2026-07-03T00:30:00Z (included) to 2026-07-03T03:00:00Z (not included)"; got != want {
+		t.Fatalf("progress label = %q, want %q", got, want)
+	}
+	if got, want := r.footerRangeLabel(), "From 2026-07-03T00:30:00Z (included); to 2026-07-03T03:00:00Z (not included)"; got != want {
+		t.Fatalf("footer range = %q, want %q", got, want)
+	}
 }
 
 func TestResolveDateTimeFetchRangeRejectsEmptyOrReversedRange(t *testing.T) {

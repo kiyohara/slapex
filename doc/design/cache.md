@@ -45,7 +45,7 @@
 
 `fetch.target_range` は option の表現から独立した取得対象そのものを記録する。`start` / `end` は ISO 8601 UTC、`start_slack_ts` / `end_slack_ts` は Slack API 境界値とする。`--date`、`--from` / `--to`、`--days` はいずれも開始・終了を持つ半開区間として記録する。将来 open-ended range を導入する場合は、上限が無い側を `null` とする。
 
-`fetch.options` は export 実行時に指定・適用された option を記録する。`range_mode` は `date` / `datetime-range` / `days` とし、range option の raw input である `date`、`from` / `to`、`days` のうち有効なものだけを入れる。`max_posts` と `max_attachment_size_bytes` もここへ置く。schema version 1 の既存 reader との互換性のため、従来の flat な `days` / `max_posts` / `max_attachment_size_bytes` / `oldest_ts` / `latest_ts` / `executed_at` も当面は残す。新しい reader は `target_range` と `options` を優先する。
+`fetch.options` は export 実行時に指定・適用された option を記録する。`range_mode` は `date` / `datetime-range` / `days` とし、range option の raw input である `date`、`from` / `to`、`days` のうち有効なものだけを入れる。`max_posts` と `max_attachment_size_bytes` もここへ置く。schema version 1 の既存 reader との互換性のため、従来からある flat な `days` / `max_posts` / `max_attachment_size_bytes` / `oldest_ts` / `executed_at` は当面残す。`latest_ts` は Issue #154 で `oldest_ts` と対になる終了境界として flat 欄にも追加する。新しい reader は `target_range` と `options` を優先する。
 
 ### `assets_manifest.json`
 

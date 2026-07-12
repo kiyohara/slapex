@@ -378,7 +378,7 @@ func (r messageFetchRange) progressLabel() string {
 	case "date":
 		return "on " + r.start.Format("2006-01-02") + " (local time)"
 	case "datetime-range":
-		return "from " + r.start.Format(time.RFC3339) + " to " + r.end.Format(time.RFC3339)
+		return "from " + r.start.UTC().Format(time.RFC3339) + " (included) to " + r.end.UTC().Format(time.RFC3339) + " (not included)"
 	}
 	return "since " + r.start.Format("2006-01-02")
 }
@@ -386,9 +386,9 @@ func (r messageFetchRange) progressLabel() string {
 func (r messageFetchRange) footerRangeLabel() string {
 	start := r.start.UTC().Format(time.RFC3339)
 	if r.end.IsZero() {
-		return fmt.Sprintf("[%s, unbounded)", start)
+		return fmt.Sprintf("From %s (included); no end boundary", start)
 	}
-	return fmt.Sprintf("[%s, %s)", start, r.end.UTC().Format(time.RFC3339))
+	return fmt.Sprintf("From %s (included); to %s (not included)", start, r.end.UTC().Format(time.RFC3339))
 }
 
 func (r messageFetchRange) footerOptionsLabel(opts Options) string {

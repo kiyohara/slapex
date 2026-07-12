@@ -106,7 +106,7 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 	for _, want := range []string{
 		"First timeline note",
 		"Starting the launch thread",
-		fmt.Sprintf("[%s, %s)", start.UTC().Format(time.RFC3339), start.AddDate(0, 0, 1).UTC().Format(time.RFC3339)),
+		fmt.Sprintf("From %s (included); to %s (not included)", start.UTC().Format(time.RFC3339), start.AddDate(0, 0, 1).UTC().Format(time.RFC3339)),
 		"<dt>Options</dt><dd>--date &#34;" + input + "&#34;",
 	} {
 		if !strings.Contains(html, want) {
@@ -189,7 +189,7 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 	for _, want := range []string{
 		"First timeline note",
 		"Starting the launch thread",
-		fmt.Sprintf("[%s, %s)", start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339)),
+		fmt.Sprintf("From %s (included); to %s (not included)", start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339)),
 		"<dt>Options</dt><dd>--from &#34;" + fromInput + "&#34;, --to &#34;" + toInput + "&#34;",
 	} {
 		if !strings.Contains(html, want) {

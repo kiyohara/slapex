@@ -33,7 +33,7 @@ option:
 
 `--max-posts` は時間範囲内に残る親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は投稿時刻で切り詰めず一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
 
-HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻による半開区間として表示する。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限は、意味の異なる情報として `Options` 行へ分けて表示する。
+HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻で表示し、開始を含むことを `included`、終了を含まないことを `not included` と平易に明記する。利用者向け表示では `[start, end)` の記号や `inclusive` / `exclusive` の用語だけに依存しない。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限は、意味の異なる情報として `Options` 行へ分けて表示する。
 
 ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
 
