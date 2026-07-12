@@ -39,9 +39,13 @@
 | `tool_version` | slapex の version |
 | `workspace` | `team_id`、workspace 名、domain、URL |
 | `channel` | channel ID、channel 名、public/private、archived 状態、bot membership |
-| `fetch` | `--days` / `--max-posts` / `--max-attachment-size` の実効値、`oldest` 境界、実行時刻 |
+| `fetch` | 取得対象の絶対時刻境界、実行時 option、実行時刻。下記の object に分けて記録する |
 | `labels` | 実際に使った `<workspace-label>` / `<channel-label>` と元の表示名 |
 | `counts` | timeline メッセージ数、thread 数、replies 数、assets の保存・上限超過・失敗件数 |
+
+`fetch.target_range` は option の表現から独立した取得対象そのものを記録する。`start` / `end` は ISO 8601 UTC、`start_slack_ts` / `end_slack_ts` は Slack API 境界値とする。`--date` と `--days` はどちらも開始・終了を持つ半開区間として記録する。将来 open-ended range を導入する場合は、上限が無い側を `null` とする。
+
+`fetch.options` は export 実行時に指定・適用された option を記録する。`range_mode` と、range option の `date`、将来の `from` / `to`、`days` のうち有効なものだけを入れ、`max_posts` と `max_attachment_size_bytes` もここへ置く。schema version 1 の既存 reader との互換性のため、従来の flat な `days` / `max_posts` / `max_attachment_size_bytes` / `oldest_ts` / `executed_at` も当面は残す。新しい reader は `target_range` と `options` を優先する。
 
 ### `assets_manifest.json`
 
@@ -90,7 +94,7 @@
 
 いずれかが不一致、または検証不能(ファイル欠落、parse 不能)な場合は、その cache を使わず、警告を表示して通常の取得にフォールバックする(エラー終了にはしない)。
 
-取得条件(`--days` / `--max-posts`)の差異は再利用可否の判定に使わない。cache の主な再利用対象は assets manifest と user / emoji の解決結果であり、メッセージ本文は毎回取得し直すためである。token の scope 差異も事前検証しない。scope 不足による個別 asset の取得失敗は通常の失敗として manifest に記録され、HTML 上では置換表示になる。
+取得条件(`--date` / 将来の `--from`・`--to` / `--days` / `--max-posts`)の差異は再利用可否の判定に使わない。cache の主な再利用対象は assets manifest と user / emoji の解決結果であり、メッセージ本文は毎回取得し直すためである。token の scope 差異も事前検証しない。scope 不足による個別 asset の取得失敗は通常の失敗として manifest に記録され、HTML 上では置換表示になる。
 
 ## 未決事項
 

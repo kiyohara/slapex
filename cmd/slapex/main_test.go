@@ -72,6 +72,18 @@ func TestParseArgsValidation(t *testing.T) {
 		{name: "days upper bound", args: []string{"--days", "90"}},
 		{name: "days below range", args: []string{"--days", "0"}, wantErr: true},
 		{name: "days above range", args: []string{"--days", "91"}, wantErr: true},
+		{name: "date", args: []string{"--date", "2026-07-03"}},
+		{name: "slash date", args: []string{"--date", "2026/07/03"}},
+		{name: "date with hour", args: []string{"--date", "2026-07-03T09"}},
+		{name: "date with minute", args: []string{"--date", "2026-07-03T09:30"}},
+		{name: "date with offset", args: []string{"--date", "2026-07-03T09:30:15+09:00"}},
+		{name: "invalid calendar date", args: []string{"--date", "2026-02-30"}, wantErr: true},
+		{name: "invalid hour", args: []string{"--date", "2026-07-03T25:00:00"}, wantErr: true},
+		{name: "timezone abbreviation", args: []string{"--date", "2026-07-03T09:00:00JST"}, wantErr: true},
+		{name: "natural language", args: []string{"--date", "yesterday"}, wantErr: true},
+		{name: "japanese date", args: []string{"--date", "2026年07月03日"}, wantErr: true},
+		{name: "date with explicit days", args: []string{"--date", "2026-07-03", "--days", "7"}, wantErr: true},
+		{name: "date with max posts", args: []string{"--date", "2026-07-03", "--max-posts", "10"}},
 		{name: "max attachment lower bound unit", args: []string{"--max-attachment-size", "1KB"}},
 		{name: "max attachment lower bound bytes", args: []string{"--max-attachment-size", "1024"}},
 		{name: "max attachment below range", args: []string{"--max-attachment-size", "1023"}, wantErr: true},
@@ -88,6 +100,16 @@ func TestParseArgsValidation(t *testing.T) {
 				t.Fatalf("parseCLIArgs(%v) returned error: %v", tt.args, err)
 			}
 		})
+	}
+}
+
+func TestParseArgsDateDisablesDefaultDays(t *testing.T) {
+	got, err := parseCLIArgs([]string{"--date", "2026-07-03"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parseCLIArgs(--date) returned error: %v", err)
+	}
+	if got.date != "2026-07-03" || got.days != 0 {
+		t.Fatalf("date/days = %q/%d, want 2026-07-03/0", got.date, got.days)
 	}
 }
 
@@ -238,6 +260,29 @@ func TestRunStdoutCarriesOnlyTheResult(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "--days must be between") {
 		t.Fatalf("stderr = %q, missing usage diagnostics", stderr)
+	}
+}
+
+func TestRunDateUsageErrors(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	for _, args := range [][]string{
+		{"slapex", "--date", "2026-02-30"},
+		{"slapex", "--date", "2026-07-03T25:00:00"},
+		{"slapex", "--date", "2026-07-03T09:00:00JST"},
+		{"slapex", "--date", "yesterday"},
+		{"slapex", "--date", "2026-07-03", "--days", "7"},
+	} {
+		os.Args = args
+		var code int
+		stdout, _ := captureStdio(t, func() { code = run() })
+		if code != exitUsage {
+			t.Fatalf("run(%v) = %d, want %d", args[1:], code, exitUsage)
+		}
+		if stdout != "" {
+			t.Fatalf("run(%v) stdout = %q, want empty", args[1:], stdout)
+		}
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/kiyohara/slapex/internal/slack"
 )
@@ -44,6 +45,109 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 		"/api/users.info":            2,
 		"/api/emoji.list":            1,
 	})
+}
+
+func TestRunIntegrationDateRange(t *testing.T) {
+	t.Parallel()
+
+	offsetInput := "2026-07-03T23:30:15-07:00"
+	offsetInstant, err := time.Parse(time.RFC3339, offsetInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offsetLocal := offsetInstant.In(time.Local)
+	offsetStart := time.Date(offsetLocal.Year(), offsetLocal.Month(), offsetLocal.Day(), 0, 0, 0, 0, time.Local)
+
+	for _, tt := range []struct {
+		name  string
+		input string
+		start time.Time
+	}{
+		{name: "loose local input", input: "2026/07/03 09:30", start: time.Date(2026, 7, 3, 0, 0, 0, 0, time.Local)},
+		{name: "offset input", input: offsetInput, start: offsetStart},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assertDateRangeExport(t, tt.input, tt.start)
+		})
+	}
+}
+
+func assertDateRangeExport(t *testing.T, input string, start time.Time) {
+	t.Helper()
+
+	sc := happyPathScenario()
+	sc.Messages[0].TS = slack.FormatTS(start.AddDate(0, 0, 1).Unix())
+	sc.Messages[1].TS = slack.FormatTS(start.Add(2 * time.Second).Unix())
+	sc.Messages[1].ThreadTS = sc.Messages[1].TS
+	sc.Messages[2].TS = slack.FormatTS(start.Unix())
+	oldReplies := sc.Replies["1700000002.000000"]
+	delete(sc.Replies, "1700000002.000000")
+	for i := range oldReplies {
+		oldReplies[i].ThreadTS = sc.Messages[1].TS
+	}
+	oldReplies[0].TS = sc.Messages[1].TS
+	sc.Replies[sc.Messages[1].TS] = oldReplies
+
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword: "project-alpha",
+		OutputDir:      t.TempDir(),
+		MaxPosts:       2,
+		Date:           input,
+		MaxAttachBytes: 1 << 20,
+		KeepCache:      true,
+		ToolVersion:    "test",
+	})
+
+	htmlBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(htmlBytes)
+	for _, want := range []string{
+		"First timeline note",
+		"Starting the launch thread",
+		fmt.Sprintf("[%s, %s)", start.UTC().Format(time.RFC3339), start.AddDate(0, 0, 1).UTC().Format(time.RFC3339)),
+		"<dt>Options</dt><dd>--date &#34;" + input + "&#34;",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("HTML missing %q", want)
+		}
+	}
+	if strings.Contains(html, "Final timeline update") {
+		t.Fatal("HTML contains message at the exclusive end boundary")
+	}
+
+	var metadata struct {
+		Fetch struct {
+			TargetRange struct {
+				Start        string `json:"start"`
+				End          string `json:"end"`
+				StartSlackTS string `json:"start_slack_ts"`
+				EndSlackTS   string `json:"end_slack_ts"`
+			} `json:"target_range"`
+			Options struct {
+				RangeMode string `json:"range_mode"`
+				Date      string `json:"date"`
+				MaxPosts  int    `json:"max_posts"`
+			} `json:"options"`
+		} `json:"fetch"`
+		Counts struct {
+			TimelineMessages int `json:"timeline_messages"`
+			Replies          int `json:"replies"`
+		} `json:"counts"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/metadata.json"), &metadata)
+	if metadata.Fetch.Options.RangeMode != "date" || metadata.Fetch.Options.Date != input || metadata.Fetch.Options.MaxPosts != 2 {
+		t.Fatalf("metadata fetch = %+v", metadata.Fetch)
+	}
+	wantEnd := start.AddDate(0, 0, 1)
+	if metadata.Fetch.TargetRange.Start != start.UTC().Format(time.RFC3339) || metadata.Fetch.TargetRange.End != wantEnd.UTC().Format(time.RFC3339) ||
+		metadata.Fetch.TargetRange.StartSlackTS != slack.FormatTS(start.Unix()) || metadata.Fetch.TargetRange.EndSlackTS != slack.FormatTS(wantEnd.Unix()) {
+		t.Fatalf("metadata target range = %+v", metadata.Fetch.TargetRange)
+	}
+	if metadata.Counts.TimelineMessages != 2 || metadata.Counts.Replies != 2 {
+		t.Fatalf("metadata counts = %+v, want 2 timeline / 2 replies", metadata.Counts)
+	}
 }
 
 // runExportScenario is the integration-test entry point for happy-path
@@ -577,6 +681,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		`assets/attachments/`,
 		"runbook.pdf",
 		"Launch checklist",
+		`<dt>Options</dt>`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("index.html missing marker %q", marker)
@@ -629,6 +734,16 @@ func assertCacheFiles(t *testing.T, dir string) {
 			Replies          int `json:"replies"`
 			AssetsSaved      int `json:"assets_saved"`
 		} `json:"counts"`
+		Fetch struct {
+			TargetRange struct {
+				Start string  `json:"start"`
+				End   *string `json:"end"`
+			} `json:"target_range"`
+			Options struct {
+				RangeMode string `json:"range_mode"`
+				Days      int    `json:"days"`
+			} `json:"options"`
+		} `json:"fetch"`
 	}
 	readJSON(t, filepath.Join(dir, ".cache/metadata.json"), &metadata)
 	if metadata.Workspace.TeamID != "TACME123" || metadata.Workspace.Name != "Acme Workspace" {
@@ -642,6 +757,9 @@ func assertCacheFiles(t *testing.T, dir string) {
 	}
 	if metadata.Counts.AssetsSaved < 8 {
 		t.Fatalf("metadata assets_saved = %d, want at least 8", metadata.Counts.AssetsSaved)
+	}
+	if metadata.Fetch.TargetRange.Start == "" || metadata.Fetch.TargetRange.End == nil || *metadata.Fetch.TargetRange.End == "" || metadata.Fetch.Options.RangeMode != "days" || metadata.Fetch.Options.Days != 90 {
+		t.Fatalf("metadata fetch = %+v, want absolute start/end and --days 90", metadata.Fetch)
 	}
 
 	var manifest struct {

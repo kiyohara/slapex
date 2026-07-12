@@ -6,10 +6,63 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kiyohara/slapex/internal/render"
 	"github.com/kiyohara/slapex/internal/slack"
 )
+
+func TestResolveFetchRangeDateUsesLocalCalendarDay(t *testing.T) {
+	r, err := resolveFetchRange(Options{Date: "2026-07-03"}, time.Time{})
+	if err != nil {
+		t.Fatalf("resolveFetchRange: %v", err)
+	}
+	wantStart := time.Date(2026, 7, 3, 0, 0, 0, 0, time.Local)
+	wantEnd := wantStart.AddDate(0, 0, 1)
+	if r.mode != "date" || !r.start.Equal(wantStart) || !r.end.Equal(wantEnd) {
+		t.Fatalf("range = %+v, want date [%s, %s)", r, wantStart, wantEnd)
+	}
+}
+
+func TestResolveFetchRangeDaysUsesAbsoluteStartAndEnd(t *testing.T) {
+	now := time.Date(2026, 7, 12, 13, 0, 0, 0, time.FixedZone("JST", 9*60*60))
+	r, err := resolveFetchRange(Options{Days: 30}, now)
+	if err != nil {
+		t.Fatalf("resolveFetchRange: %v", err)
+	}
+	if want := now.Add(-30 * 24 * time.Hour); !r.start.Equal(want) {
+		t.Fatalf("start = %s, want %s", r.start, want)
+	}
+	if !r.end.Equal(now) {
+		t.Fatalf("end = %s, want %s", r.end, now)
+	}
+}
+
+func TestResolveDateFetchRangeNormalizesParsedInstantToLocalDay(t *testing.T) {
+	local := time.FixedZone("JST", 9*60*60)
+	tests := []struct {
+		name      string
+		input     string
+		wantStart string
+	}{
+		{name: "loose local input", input: "2026/07/03 09:30", wantStart: "2026-07-03T00:00:00+09:00"},
+		{name: "offset input crossing local midnight", input: "2026-07-03T16:30:15-07:00", wantStart: "2026-07-04T00:00:00+09:00"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := resolveDateFetchRange(tt.input, local)
+			if err != nil {
+				t.Fatalf("resolveDateFetchRange: %v", err)
+			}
+			if got := r.start.Format(time.RFC3339); got != tt.wantStart {
+				t.Fatalf("start = %s, want %s", got, tt.wantStart)
+			}
+			if !r.end.Equal(r.start.AddDate(0, 0, 1)) {
+				t.Fatalf("end = %s, want next local day", r.end)
+			}
+		})
+	}
+}
 
 func TestChooseChannel(t *testing.T) {
 	channels := testChannels(

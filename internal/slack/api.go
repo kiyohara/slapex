@@ -178,16 +178,20 @@ type Reaction struct {
 	Count int    `json:"count"`
 }
 
-// History fetches timeline messages newer than oldest, up to maxMessages.
+// History fetches timeline messages in [oldest, latest), up to maxMessages.
 // It reports whether the fetch stopped because maxMessages was reached.
-func (c *Client) History(ctx context.Context, channelID string, oldest string, maxMessages int, progress func(fetched int)) ([]Message, bool, error) {
+func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, progress func(fetched int)) ([]Message, bool, error) {
 	var messages []Message
 	cursor := ""
 	for {
 		params := url.Values{
-			"channel": {channelID},
-			"oldest":  {oldest},
-			"limit":   {strconv.Itoa(pageLimit)},
+			"channel":   {channelID},
+			"oldest":    {oldest},
+			"inclusive": {"true"},
+			"limit":     {strconv.Itoa(pageLimit)},
+		}
+		if latest != "" {
+			params.Set("latest", latest)
 		}
 		if cursor != "" {
 			params.Set("cursor", cursor)
@@ -200,6 +204,9 @@ func (c *Client) History(ctx context.Context, channelID string, oldest string, m
 			return nil, false, err
 		}
 		for _, m := range page.Messages {
+			if !timestampInRange(m.TS, oldest, latest) {
+				continue
+			}
 			if len(messages) >= maxMessages {
 				return messages, true, nil
 			}
@@ -213,6 +220,32 @@ func (c *Client) History(ctx context.Context, channelID string, oldest string, m
 		}
 		cursor = next
 	}
+}
+
+func timestampInRange(ts, oldest, latest string) bool {
+	// An unbounded caller continues to rely on conversations.history for the
+	// lower-bound filtering. A bounded range is checked again locally so an
+	// inclusive API response cannot leak its exact end boundary into the export.
+	if latest == "" {
+		return true
+	}
+	value, err := strconv.ParseFloat(ts, 64)
+	if err != nil {
+		return false
+	}
+	if oldest != "" {
+		start, err := strconv.ParseFloat(oldest, 64)
+		if err == nil && value < start {
+			return false
+		}
+	}
+	if latest != "" {
+		end, err := strconv.ParseFloat(latest, 64)
+		if err == nil && value >= end {
+			return false
+		}
+	}
+	return true
 }
 
 // Replies fetches thread replies (excluding the parent message itself), up to

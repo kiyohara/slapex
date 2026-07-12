@@ -40,6 +40,15 @@ import (
 // injected Retry-After / backoff durations.
 func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (exportRunResult, []time.Duration, error) {
 	t.Helper()
+	if opts.Now.IsZero() && len(sc.Messages) > 0 {
+		latest := tsTime(sc.Messages[0].TS)
+		for i := 1; i < len(sc.Messages); i++ {
+			if candidate := tsTime(sc.Messages[i].TS); candidate.After(latest) {
+				latest = candidate
+			}
+		}
+		opts.Now = latest.Add(time.Hour)
+	}
 
 	fake := newFakeSlackServer(t, &sc)
 	t.Cleanup(fake.Close)
