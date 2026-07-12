@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `codex/date-fetch-option`
-- PR: 未作成
+- PR: #168
 - 最終更新: 2026-07-12
 
 ## 目的
@@ -21,7 +21,7 @@ Issue #153 に従い、local timezone の特定日を channel timeline の半開
 
 ## 次にやること
 
-- commit、push、PR 作成、note の PR 番号への rename を行う。
+- PR #168 のレビューと merge を待つ。
 
 ## 検証
 
