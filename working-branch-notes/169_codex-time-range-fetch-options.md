@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `codex/time-range-fetch-options`
-- PR: 未作成
+- PR: #169
 - 最終更新: 2026-07-13
 
 ## 目的
