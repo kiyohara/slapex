@@ -84,6 +84,17 @@ func TestParseArgsValidation(t *testing.T) {
 		{name: "japanese date", args: []string{"--date", "2026年07月03日"}, wantErr: true},
 		{name: "date with explicit days", args: []string{"--date", "2026-07-03", "--days", "7"}, wantErr: true},
 		{name: "date with max posts", args: []string{"--date", "2026-07-03", "--max-posts", "10"}},
+		{name: "datetime range slash dates", args: []string{"--from", "2026/07/03", "--to", "2026/07/04"}},
+		{name: "datetime range hours", args: []string{"--from", "2026-07-03T09", "--to", "2026-07-03T10"}},
+		{name: "datetime range minutes", args: []string{"--from", "2026-07-03T09:30", "--to", "2026-07-03T10:45"}},
+		{name: "datetime range offsets", args: []string{"--from", "2026-07-03T09:30:15+09:00", "--to", "2026-07-03T10:00:00+09:00"}},
+		{name: "from only", args: []string{"--from", "2026-07-03"}, wantErr: true},
+		{name: "to only", args: []string{"--to", "2026-07-04"}, wantErr: true},
+		{name: "range with explicit days", args: []string{"--from", "2026-07-03", "--to", "2026-07-04", "--days", "7"}, wantErr: true},
+		{name: "range with date", args: []string{"--from", "2026-07-03", "--to", "2026-07-04", "--date", "2026-07-03"}, wantErr: true},
+		{name: "empty range", args: []string{"--from", "2026-07-03", "--to", "2026-07-03"}, wantErr: true},
+		{name: "reversed range", args: []string{"--from", "2026-07-04", "--to", "2026-07-03"}, wantErr: true},
+		{name: "invalid range date", args: []string{"--from", "2026-02-30", "--to", "2026-03-01"}, wantErr: true},
 		{name: "max attachment lower bound unit", args: []string{"--max-attachment-size", "1KB"}},
 		{name: "max attachment lower bound bytes", args: []string{"--max-attachment-size", "1024"}},
 		{name: "max attachment below range", args: []string{"--max-attachment-size", "1023"}, wantErr: true},
@@ -110,6 +121,16 @@ func TestParseArgsDateDisablesDefaultDays(t *testing.T) {
 	}
 	if got.date != "2026-07-03" || got.days != 0 {
 		t.Fatalf("date/days = %q/%d, want 2026-07-03/0", got.date, got.days)
+	}
+}
+
+func TestParseArgsDateTimeRangeDisablesDefaultDays(t *testing.T) {
+	got, err := parseCLIArgs([]string{"--from", "2026-07-03T09", "--to", "2026-07-03T10:45"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parseCLIArgs(--from/--to) returned error: %v", err)
+	}
+	if got.from != "2026-07-03T09" || got.to != "2026-07-03T10:45" || got.days != 0 {
+		t.Fatalf("from/to/days = %q/%q/%d", got.from, got.to, got.days)
 	}
 }
 
@@ -193,6 +214,20 @@ func TestParseArgsHelpMentionsNoColor(t *testing.T) {
 	}
 }
 
+func TestParseArgsHelpMentionsDateTimeRange(t *testing.T) {
+	var buf bytes.Buffer
+	_, err := parseCLIArgs([]string{"--help"}, &buf)
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("parseCLIArgs(--help) error = %v, want %v", err, flag.ErrHelp)
+	}
+	out := buf.String()
+	for _, option := range []string{"-from", "-to"} {
+		if !strings.Contains(out, option) {
+			t.Fatalf("usage %q missing %s option", out, option)
+		}
+	}
+}
+
 func TestParseArgsHelpMentionsSlackToken(t *testing.T) {
 	var buf bytes.Buffer
 	_, err := parseCLIArgs([]string{"--help"}, &buf)
@@ -273,6 +308,11 @@ func TestRunDateUsageErrors(t *testing.T) {
 		{"slapex", "--date", "2026-07-03T09:00:00JST"},
 		{"slapex", "--date", "yesterday"},
 		{"slapex", "--date", "2026-07-03", "--days", "7"},
+		{"slapex", "--from", "2026-07-03"},
+		{"slapex", "--to", "2026-07-04"},
+		{"slapex", "--from", "2026-07-03", "--to", "2026-07-03"},
+		{"slapex", "--from", "2026-07-03", "--to", "2026-07-04", "--days", "7"},
+		{"slapex", "--from", "2026-07-03", "--to", "2026-07-04", "--date", "2026-07-03"},
 	} {
 		os.Args = args
 		var code int

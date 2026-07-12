@@ -70,6 +70,8 @@ type cliOptions struct {
 	maxPosts       int
 	days           int
 	date           string
+	from           string
+	to             string
 	maxAttachBytes int64
 	keepCache      bool
 	reuseCache     string
@@ -127,6 +129,8 @@ func run() int {
 		MaxPosts:       opts.maxPosts,
 		Days:           opts.days,
 		Date:           opts.date,
+		From:           opts.from,
+		To:             opts.to,
 		MaxAttachBytes: opts.maxAttachBytes,
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
@@ -162,6 +166,8 @@ func runDemo(opts *cliOptions, printer *ui.Printer, getenv func(string) string) 
 		MaxPosts:       opts.maxPosts,
 		Days:           opts.days,
 		Date:           opts.date,
+		From:           opts.from,
+		To:             opts.to,
 		MaxAttachBytes: opts.maxAttachBytes,
 		KeepCache:      opts.keepCache,
 		ReuseCache:     opts.reuseCache,
@@ -327,6 +333,8 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		maxPosts      = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
 		days          = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
 		date          = fs.String("date", "", "fetch timeline messages on the local date containing this date/time")
+		from          = fs.String("from", "", "fetch timeline messages at or after this date/time (requires --to)")
+		to            = fs.String("to", "", "fetch timeline messages before this date/time (requires --from)")
 		maxAttach     = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
 		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
 		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept cache (path to output directory or .cache/)")
@@ -375,12 +383,50 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		return nil, errUsage
 	}
 	daysExplicit := false
+	dateExplicit := false
+	fromExplicit := false
+	toExplicit := false
 	fs.Visit(func(f *flag.Flag) {
-		if f.Name == "days" {
+		switch f.Name {
+		case "days":
 			daysExplicit = true
+		case "date":
+			dateExplicit = true
+		case "from":
+			fromExplicit = true
+		case "to":
+			toExplicit = true
 		}
 	})
-	if *date != "" {
+	if fromExplicit || toExplicit {
+		if !fromExplicit || !toExplicit {
+			fmt.Fprintln(diagnostics, "slapex: --from and --to must be used together")
+			return nil, errUsage
+		}
+		if dateExplicit {
+			fmt.Fprintln(diagnostics, "slapex: --from/--to and --date cannot be used together")
+			return nil, errUsage
+		}
+		if daysExplicit {
+			fmt.Fprintln(diagnostics, "slapex: --from/--to and --days cannot be used together")
+			return nil, errUsage
+		}
+		fromTime, err := datetime.Parse(*from, time.Local)
+		if err != nil {
+			fmt.Fprintf(diagnostics, "slapex: invalid --from %q (unsupported date/time format)\n", *from)
+			return nil, errUsage
+		}
+		toTime, err := datetime.Parse(*to, time.Local)
+		if err != nil {
+			fmt.Fprintf(diagnostics, "slapex: invalid --to %q (unsupported date/time format)\n", *to)
+			return nil, errUsage
+		}
+		if !fromTime.Before(toTime) {
+			fmt.Fprintln(diagnostics, "slapex: --from must be before --to")
+			return nil, errUsage
+		}
+		*days = 0
+	} else if dateExplicit {
 		if _, err := datetime.Parse(*date, time.Local); err != nil {
 			fmt.Fprintf(diagnostics, "slapex: invalid --date %q (unsupported date/time format)\n", *date)
 			return nil, errUsage
@@ -391,7 +437,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		}
 		*days = 0
 	}
-	if *date == "" && (*days < 1 || *days > 90) {
+	if !dateExplicit && !fromExplicit && !toExplicit && (*days < 1 || *days > 90) {
 		fmt.Fprintln(diagnostics, "slapex: --days must be between 1 and 90")
 		return nil, errUsage
 	}
@@ -406,6 +452,8 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		maxPosts:       *maxPosts,
 		days:           *days,
 		date:           *date,
+		from:           *from,
+		to:             *to,
 		maxAttachBytes: maxAttachBytes,
 		keepCache:      *keepCache,
 		reuseCache:     *reuseCache,

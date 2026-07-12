@@ -50,6 +50,7 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--output <path>` | 実行時刻から生成 | 出力 root を指定する |
 | `--max-posts <count>` | `1000` | timeline 上の親投稿の最大取得件数(1〜10000) |
 | `--date <date-time>` | なし | 入力が属する local timezone の 1 日だけを取得する |
+| `--from <date-time>` / `--to <date-time>` | なし | 開始を含み終了を含まない任意期間を取得する |
 | `--days <days>` | `30` | 現在時刻から何日前までを取得するか(1〜90) |
 | `--max-attachment-size <size>` | `10MB` | 添付ファイル / original 画像 1 件あたりの保存上限 |
 | `--keep-cache` | off | 中間ファイル `.cache/` を成否に関係なく残す。`--reuse-cache` で再利用する cache を作るときに使う |
@@ -60,11 +61,13 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--version` | | version を表示して終了する |
 | `--help` | | usage を表示して終了する |
 
-取得範囲は、特定日の `--date`、任意期間の `--from` / `--to`、相対範囲の `--days` の順で選びます。`--from` / `--to` は今後追加予定で、現時点では使用できません。現在、再現可能な特定日を取得する場合は `--date` を第一選択とし、実行時刻からの相対日数が必要な場合にだけ `--days` を使います。
+取得範囲は、特定日の `--date`、任意期間の `--from` / `--to`、相対範囲の `--days` の順で選びます。再現可能な特定日を取得する場合は `--date`、開始・終了を指定する場合は `--from` / `--to`、実行時刻からの相対日数が必要な場合は `--days` を使います。
 
 `--date 2026-07-03` や `--date "2026/07/03 09:30"` のように指定すると、入力が属する実行環境の local calendar date について、00:00 以上、翌日 00:00 未満の timeline 投稿を取得します。RFC3339 / RFC3339Nano も指定でき、offset 付き入力は絶対時刻から local timezone の対象日を決めます。入力に時刻があっても、取得範囲はその日の全体です。
 
-local datetime は日付区切りに `-` / `/`、日時区切りに `T` / 半角スペースを使え、時刻は `HH` / `HH:MM` / `HH:MM:SS` を指定できます。timezone abbreviation、自然言語、日本語日付は指定できません。`--date` と `--days` は同時に指定できません。`--date` と `--max-posts` は併用でき、対象日の timeline 投稿だけを件数上限に数えます。対象になった親投稿の thread replies は、reply 自体の日付にかかわらず取得します。
+`--from` と `--to` は必ずペアで指定します。たとえば `--from 2026/07/03 --to 2026/07/04` は、local timezone の 2026-07-03 00:00 以上、2026-07-04 00:00 未満を取得します。開始は終了より前にする必要があります。
+
+local datetime は日付区切りに `-` / `/`、日時区切りに `T` / 半角スペースを使え、時刻は `HH` / `HH:MM` / `HH:MM:SS` を指定できます。timezone abbreviation、自然言語、日本語日付は指定できません。`--date`、`--from` / `--to`、`--days` は互いに併用できません。`--max-posts` は併用でき、対象範囲内の timeline 投稿だけを件数上限に数えます。対象になった親投稿の thread replies は、reply 自体の日時にかかわらず取得します。
 
 ## cache の再利用
 
