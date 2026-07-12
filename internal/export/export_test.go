@@ -24,6 +24,32 @@ func TestResolveFetchRangeDateUsesLocalCalendarDay(t *testing.T) {
 	}
 }
 
+func TestResolveDateFetchRangeNormalizesParsedInstantToLocalDay(t *testing.T) {
+	local := time.FixedZone("JST", 9*60*60)
+	tests := []struct {
+		name      string
+		input     string
+		wantStart string
+	}{
+		{name: "loose local input", input: "2026/07/03 09:30", wantStart: "2026-07-03T00:00:00+09:00"},
+		{name: "offset input crossing local midnight", input: "2026-07-03T16:30:15-07:00", wantStart: "2026-07-04T00:00:00+09:00"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := resolveDateFetchRange(tt.input, local)
+			if err != nil {
+				t.Fatalf("resolveDateFetchRange: %v", err)
+			}
+			if got := r.start.Format(time.RFC3339); got != tt.wantStart {
+				t.Fatalf("start = %s, want %s", got, tt.wantStart)
+			}
+			if !r.end.Equal(r.start.AddDate(0, 0, 1)) {
+				t.Fatalf("end = %s, want next local day", r.end)
+			}
+		})
+	}
+}
+
 func TestChooseChannel(t *testing.T) {
 	channels := testChannels(
 		"C001", "general",

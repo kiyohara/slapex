@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/kiyohara/slapex/internal/datetime"
 	"github.com/kiyohara/slapex/internal/demo"
 	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
@@ -325,7 +326,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		outputDir     = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
 		maxPosts      = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
 		days          = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
-		date          = fs.String("date", "", "fetch timeline messages on this local date (YYYY-MM-DD)")
+		date          = fs.String("date", "", "fetch timeline messages on the local date containing this date/time")
 		maxAttach     = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
 		keepCache     = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
 		reuseCache    = fs.String("reuse-cache", "", "reuse a previously kept cache (path to output directory or .cache/)")
@@ -380,9 +381,8 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		}
 	})
 	if *date != "" {
-		parsed, err := time.ParseInLocation("2006-01-02", *date, time.Local)
-		if err != nil || parsed.Format("2006-01-02") != *date {
-			fmt.Fprintf(diagnostics, "slapex: invalid --date %q (expected YYYY-MM-DD)\n", *date)
+		if _, err := datetime.Parse(*date, time.Local); err != nil {
+			fmt.Fprintf(diagnostics, "slapex: invalid --date %q (unsupported date/time format)\n", *date)
 			return nil, errUsage
 		}
 		if daysExplicit {

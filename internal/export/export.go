@@ -18,6 +18,7 @@ import (
 
 	"charm.land/huh/v2"
 
+	"github.com/kiyohara/slapex/internal/datetime"
 	"github.com/kiyohara/slapex/internal/emoji"
 	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/render"
@@ -325,10 +326,16 @@ func resolveFetchRange(opts Options, now time.Time) (messageFetchRange, error) {
 	if opts.Date == "" {
 		return messageFetchRange{mode: "days", start: now.Add(-time.Duration(opts.Days) * 24 * time.Hour)}, nil
 	}
-	start, err := time.ParseInLocation("2006-01-02", opts.Date, time.Local)
-	if err != nil || start.Format("2006-01-02") != opts.Date {
-		return messageFetchRange{}, usagef("invalid date %q", opts.Date)
+	return resolveDateFetchRange(opts.Date, time.Local)
+}
+
+func resolveDateFetchRange(input string, loc *time.Location) (messageFetchRange, error) {
+	parsed, err := datetime.Parse(input, loc)
+	if err != nil {
+		return messageFetchRange{}, usagef("invalid date %q", input)
 	}
+	localDate := parsed.In(loc)
+	start := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), 0, 0, 0, 0, loc)
 	return messageFetchRange{mode: "date", start: start, end: start.AddDate(0, 0, 1)}, nil
 }
 

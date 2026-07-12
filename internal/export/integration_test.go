@@ -50,7 +50,31 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 func TestRunIntegrationDateRange(t *testing.T) {
 	t.Parallel()
 
-	start := time.Date(2026, 7, 3, 0, 0, 0, 0, time.Local)
+	offsetInput := "2026-07-03T23:30:15-07:00"
+	offsetInstant, err := time.Parse(time.RFC3339, offsetInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offsetLocal := offsetInstant.In(time.Local)
+	offsetStart := time.Date(offsetLocal.Year(), offsetLocal.Month(), offsetLocal.Day(), 0, 0, 0, 0, time.Local)
+
+	for _, tt := range []struct {
+		name  string
+		input string
+		start time.Time
+	}{
+		{name: "loose local input", input: "2026/07/03 09:30", start: time.Date(2026, 7, 3, 0, 0, 0, 0, time.Local)},
+		{name: "offset input", input: offsetInput, start: offsetStart},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assertDateRangeExport(t, tt.input, tt.start)
+		})
+	}
+}
+
+func assertDateRangeExport(t *testing.T, input string, start time.Time) {
+	t.Helper()
+
 	sc := happyPathScenario()
 	sc.Messages[0].TS = slack.FormatTS(start.AddDate(0, 0, 1).Unix())
 	sc.Messages[1].TS = slack.FormatTS(start.Add(2 * time.Second).Unix())
@@ -68,7 +92,7 @@ func TestRunIntegrationDateRange(t *testing.T) {
 		ChannelKeyword: "project-alpha",
 		OutputDir:      t.TempDir(),
 		MaxPosts:       2,
-		Date:           "2026-07-03",
+		Date:           input,
 		MaxAttachBytes: 1 << 20,
 		KeepCache:      true,
 		ToolVersion:    "test",
@@ -79,7 +103,7 @@ func TestRunIntegrationDateRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := string(htmlBytes)
-	for _, want := range []string{"First timeline note", "Starting the launch thread", "2026-07-03 (local date, --date 2026-07-03"} {
+	for _, want := range []string{"First timeline note", "Starting the launch thread", start.Format("2006-01-02") + " (local date, --date " + input} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)
 		}
@@ -103,7 +127,7 @@ func TestRunIntegrationDateRange(t *testing.T) {
 		} `json:"counts"`
 	}
 	readJSON(t, filepath.Join(got.OutputDir, ".cache/metadata.json"), &metadata)
-	if metadata.Fetch.RangeMode != "date" || metadata.Fetch.Date != "2026-07-03" || metadata.Fetch.Days != 0 || metadata.Fetch.MaxPosts != 2 {
+	if metadata.Fetch.RangeMode != "date" || metadata.Fetch.Date != input || metadata.Fetch.Days != 0 || metadata.Fetch.MaxPosts != 2 {
 		t.Fatalf("metadata fetch = %+v", metadata.Fetch)
 	}
 	if metadata.Fetch.OldestTS != slack.FormatTS(start.Unix()) || metadata.Fetch.LatestTS != slack.FormatTS(start.AddDate(0, 0, 1).Unix()) {

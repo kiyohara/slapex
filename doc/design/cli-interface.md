@@ -36,7 +36,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `--output <path>` | path | 実行時刻から生成 | | 出力 root を指定する(省略時の動作は `output-format.md`) |
 | `--max-posts <count>` | 整数 | `1000` | `1`〜`10000` | timeline 上の親投稿の最大取得件数(`output-format.md`) |
 | `--days <days>` | 整数 | `30` | `1`〜`90` | 現在時刻から何日前までの投稿を取得するか(`output-format.md`) |
-| `--date <date>` | `YYYY-MM-DD` | なし | local timezone 上の実在する日付 | 特定日の timeline 投稿だけを取得する(`output-format.md`) |
+| `--date <date-time>` | 日付または日時 | なし | 下記の明示形式 | 入力が属する local calendar date の timeline 投稿だけを取得する(`output-format.md`) |
 | `--max-attachment-size <size>` | サイズ | `10MB` | `1KB` 以上 | 添付ファイル / original 画像 1 件あたりの保存上限(`output-format.md`) |
 | `--keep-cache` | flag | off | | `.cache/` を成否に関係なく残す(`cache.md`) |
 | `--reuse-cache <path>` | path | なし | | 以前の出力ディレクトリまたは `.cache/` を再利用する(`cache.md`) |
@@ -50,7 +50,11 @@ token を CLI option や引数として受け取る経路は提供しない。�
 
 制約を外れた値、未知の option、不正な書式は usage を表示して exit code `2` で終了する。
 
-`--date` と利用者が明示した `--days` は併用できない。`--date` だけを指定した場合、既定値 `--days 30` は適用しない。`--date` は実行環境の local timezone における 1 日として解釈する。
+`--date` と利用者が明示した `--days` は併用できない。`--date` だけを指定した場合、既定値 `--days 30` は適用しない。
+
+`--date` は RFC3339 / RFC3339Nano、または local timezone として解釈する次の形式を受け入れる。日付区切りは `-` / `/`、日付と時刻の区切りは `T` / 半角スペースを許可し、時刻は `HH` / `HH:MM` / `HH:MM:SS` の不足部分を `0` で補う。日付だけの場合も時刻を `00:00:00` とする。許可 layout は実装で明示的に列挙し、timezone abbreviation、自然言語、日本語日付、年を省略した形式は受け入れない。
+
+offset なしの入力は local timezone として parse する。offset 付き入力は絶対時刻として parse してから local timezone へ変換する。いずれも、その瞬間が属する local calendar date の 00:00 以上、翌日 00:00 未満を取得範囲とする。入力に時刻があっても、時刻部分は対象日の決定にだけ使う。
 
 ### 将来検討とする option
 

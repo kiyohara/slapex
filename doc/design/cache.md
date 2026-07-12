@@ -39,7 +39,7 @@
 | `tool_version` | slapex の version |
 | `workspace` | `team_id`、workspace 名、domain、URL |
 | `channel` | channel ID、channel 名、public/private、archived 状態、bot membership |
-| `fetch` | range mode、`--days` / `--date` / `--max-posts` / `--max-attachment-size` の実効値、`oldest_ts` / `latest_ts` 境界、実行時刻 |
+| `fetch` | range mode、raw の `--date`、`--days` / `--max-posts` / `--max-attachment-size` の実効値、`oldest_ts` / `latest_ts` 境界、実行時刻 |
 | `labels` | 実際に使った `<workspace-label>` / `<channel-label>` と元の表示名 |
 | `counts` | timeline メッセージ数、thread 数、replies 数、assets の保存・上限超過・失敗件数 |
 

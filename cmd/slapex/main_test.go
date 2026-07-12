@@ -73,8 +73,15 @@ func TestParseArgsValidation(t *testing.T) {
 		{name: "days below range", args: []string{"--days", "0"}, wantErr: true},
 		{name: "days above range", args: []string{"--days", "91"}, wantErr: true},
 		{name: "date", args: []string{"--date", "2026-07-03"}},
+		{name: "slash date", args: []string{"--date", "2026/07/03"}},
+		{name: "date with hour", args: []string{"--date", "2026-07-03T09"}},
+		{name: "date with minute", args: []string{"--date", "2026-07-03T09:30"}},
+		{name: "date with offset", args: []string{"--date", "2026-07-03T09:30:15+09:00"}},
 		{name: "invalid calendar date", args: []string{"--date", "2026-02-30"}, wantErr: true},
-		{name: "invalid date format", args: []string{"--date", "2026/07/03"}, wantErr: true},
+		{name: "invalid hour", args: []string{"--date", "2026-07-03T25:00:00"}, wantErr: true},
+		{name: "timezone abbreviation", args: []string{"--date", "2026-07-03T09:00:00JST"}, wantErr: true},
+		{name: "natural language", args: []string{"--date", "yesterday"}, wantErr: true},
+		{name: "japanese date", args: []string{"--date", "2026年07月03日"}, wantErr: true},
 		{name: "date with explicit days", args: []string{"--date", "2026-07-03", "--days", "7"}, wantErr: true},
 		{name: "date with max posts", args: []string{"--date", "2026-07-03", "--max-posts", "10"}},
 		{name: "max attachment lower bound unit", args: []string{"--max-attachment-size", "1KB"}},
@@ -262,7 +269,9 @@ func TestRunDateUsageErrors(t *testing.T) {
 
 	for _, args := range [][]string{
 		{"slapex", "--date", "2026-02-30"},
-		{"slapex", "--date", "2026/07/03"},
+		{"slapex", "--date", "2026-07-03T25:00:00"},
+		{"slapex", "--date", "2026-07-03T09:00:00JST"},
+		{"slapex", "--date", "yesterday"},
 		{"slapex", "--date", "2026-07-03", "--days", "7"},
 	} {
 		os.Args = args
