@@ -49,7 +49,7 @@
 | Review thread / review / comment の取得 | `pull_request_read(get_review_comments / get_reviews / get_comments)` | thread node ID など、後続操作に必要な情報が response に含まれるかも確認する。 |
 | PR review の作成 | `pull_request_review_write(create / submit_pending)` / `add_comment_to_pending_review` | pending review の作成、inline comment の追加、submit の順に使う。submit failure 後は `pull_request_read(get_reviews)` で read-back する。 |
 | Inline review comment への返信 | `add_reply_to_pull_request_comment` | write 後に thread を再取得して反映を確認する。 |
-| Review thread の解決 | `pull_request_review_write(resolve_thread)` | response から thread node ID を取得できる場合に使う。 |
+| Review thread の解決 | 自動実行しない(人間が GitHub UI で行う) | MCP tool の `resolve_thread` と `gh api graphql` は機能上利用できる。手動運用の理由は、本プロジェクトで採用する fine-grained PAT に `resolveReviewThread` が要求する `Contents: Read and Write` を付与しないためである(この権限要件は公式 documentation に記載は無く、[community で確認されている挙動](https://github.com/orgs/community/discussions/44650))。resolve 可マーカーなどの運用は `.agents/skills/review-pull-request/SKILL.md` に従う。 |
 | PR conversation comment | `add_issue_comment` | PR 番号を `issue_number` として渡す。 |
 | PR の作成・更新 | `create_pull_request` / `update_pull_request` | failure 後は read-back し、create / update の二重実行を防ぐ。 |
 | Check runs の確認 | `pull_request_read(get_check_runs)` | allowlist されている現行環境では MCP を先に使う。 |
