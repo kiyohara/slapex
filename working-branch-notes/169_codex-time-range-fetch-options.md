@@ -20,7 +20,7 @@ Issue #154 に従い、`--from` / `--to` で channel timeline の任意期間を
 
 ## 次にやること
 
-- 最終差分を確認し、commit / push / PR 作成を行う。
+- PR #169 の review と merge を待つ。merge はユーザーが行う。
 
 ## 検証
 
@@ -39,3 +39,4 @@ Issue #154 に従い、`--from` / `--to` で channel timeline の任意期間を
 
 - 2026-07-13: Issue #154、Issue #153、PR #168 の本文・差分・レビュー結果を確認して作業を開始した。
 - 2026-07-13: CLI、datetime range、footer / metadata、demo、test、設計文書、help を更新し、全 test と README media の再生成・目視確認を完了した。
+- 2026-07-13: PR #169 を作成し、working branch note を採番した。
