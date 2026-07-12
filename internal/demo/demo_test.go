@@ -81,6 +81,36 @@ func TestExportDateRangeEndToEnd(t *testing.T) {
 	}
 }
 
+func TestExportDateTimeRangeEndToEnd(t *testing.T) {
+	now := time.Date(2026, 7, 3, 16, 0, 0, 0, time.Local)
+	sc := ScenarioJA(now)
+	day := now.AddDate(0, 0, -1)
+	start := time.Date(day.Year(), day.Month(), day.Day(), 11, 30, 0, 0, time.Local)
+	end := time.Date(day.Year(), day.Month(), day.Day(), 11, 31, 0, 0, time.Local)
+	dir, err := Export(context.Background(), sc, Options{
+		OutputDir:      t.TempDir(),
+		MaxPosts:       1000,
+		From:           start.Format(time.RFC3339),
+		To:             end.Format(time.RFC3339),
+		MaxAttachBytes: 10 << 20,
+		ToolVersion:    "test",
+		Now:            now,
+	}, ui.NewPrinter(io.Discard, false))
+	if err != nil {
+		t.Fatalf("demo.Export(--from/--to): %v", err)
+	}
+	html, err := os.ReadFile(filepath.Join(dir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(html, []byte("イベントサイト、staging")) {
+		t.Fatal("datetime range export is missing the message at the start boundary")
+	}
+	if bytes.Contains(html, []byte("v1.4.0 を staging")) {
+		t.Fatal("datetime range export contains the message at the end boundary")
+	}
+}
+
 // TestFilterRange guards that the fake conversations.history honours both
 // boundaries and uses the same half-open interval as a real run.
 func TestFilterRange(t *testing.T) {

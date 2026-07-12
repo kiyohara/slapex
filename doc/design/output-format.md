@@ -20,17 +20,20 @@ option:
 |---|---:|---:|---|
 | `--max-posts <count>` | `1000` | `10000` | channel timeline 上の親投稿の最大取得件数 |
 | `--date <date-time>` | なし | - | 入力が属する local timezone の 1 日だけを取得する |
+| `--from <date-time>` / `--to <date-time>` | なし | - | 開始を含み終了を含まない任意期間を取得する |
 | `--days <days>` | `30` | `90` | 現在時刻から何日前までの投稿を取得するか |
 
-取得範囲の指定は `--date`、Issue #154 で追加する `--from` / `--to`、`--days` の順に優先して案内する。特定日を再現可能に指定できる `--date` を第一選択とし、`--days` は実行時刻基準の相対範囲が必要な場合に使う。
+取得範囲の指定は `--date`、`--from` / `--to`、`--days` の順に優先して案内する。特定日を再現可能に指定する場合は `--date`、任意期間は `--from` / `--to`、実行時刻基準の相対範囲は `--days` を使う。
 
 `--date` は `2026-07-03` / `2026/07/03`、時刻の一部を含む local datetime、RFC3339 / RFC3339Nano を受け入れる。offset 付き入力は絶対時刻として parse して local timezone へ変換し、offset なし入力は local timezone として parse する。入力が属する local calendar date を対象とし、時刻部分は対象日の決定にだけ使う。
 
 たとえば `--date 2026-07-03T09:30` は local timezone の半開区間 `[2026-07-03 00:00:00, 2026-07-04 00:00:00)` を表す。開始時刻ちょうどの timeline 投稿は含み、終了時刻ちょうどの投稿は含まない。`--date` と明示した `--days` は排他とする。日時入力の全形式と受け入れない形式は `cli-interface.md` を正本とする。
 
+`--from` / `--to` は必ずペアで指定し、開始が終了より前の半開区間 `[from, to)` とする。日付だけの場合は local timezone の 00:00 として解釈するため、`--from 2026/07/03 --to 2026/07/04` で local timezone の 2026-07-03 全体を取得できる。offset 付き入力は絶対時刻として扱う。`--date` および明示した `--days` とは排他にする。
+
 `--max-posts` は時間範囲内に残る親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は投稿時刻で切り詰めず一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
 
-HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻による半開区間として表示する。実行時に指定した `--date`、将来の `--from` / `--to`、`--days` と件数・asset 上限は、意味の異なる情報として `Options` 行へ分けて表示する。
+HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻による半開区間として表示する。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限は、意味の異なる情報として `Options` 行へ分けて表示する。
 
 ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
 

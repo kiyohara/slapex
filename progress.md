@@ -25,7 +25,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
 | range-01 | #153 | done | - | `--date <date-time>` で特定日の timeline 取得範囲を指定できるようにする | #168 |
-| range-02 | #154 | todo | #153 | `--from` / `--to` で任意期間の timeline 取得範囲を指定できるようにする | - |
+| range-02 | #154 | done | #153 | `--from` / `--to` で任意期間の timeline 取得範囲を指定できるようにする | - |
 
 ## emoji 除外(privacy signal)
 

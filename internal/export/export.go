@@ -48,6 +48,8 @@ type Options struct {
 	MaxPosts       int
 	Days           int
 	Date           string
+	From           string
+	To             string
 	MaxAttachBytes int64
 	KeepCache      bool
 	ReuseCache     string
@@ -324,6 +326,9 @@ type messageFetchRange struct {
 }
 
 func resolveFetchRange(opts Options, now time.Time) (messageFetchRange, error) {
+	if opts.From != "" || opts.To != "" {
+		return resolveDateTimeFetchRange(opts.From, opts.To, time.Local)
+	}
 	if opts.Date == "" {
 		return messageFetchRange{
 			mode:  "days",
@@ -332,6 +337,21 @@ func resolveFetchRange(opts Options, now time.Time) (messageFetchRange, error) {
 		}, nil
 	}
 	return resolveDateFetchRange(opts.Date, time.Local)
+}
+
+func resolveDateTimeFetchRange(fromInput, toInput string, loc *time.Location) (messageFetchRange, error) {
+	start, err := datetime.Parse(fromInput, loc)
+	if err != nil {
+		return messageFetchRange{}, usagef("invalid from date/time %q", fromInput)
+	}
+	end, err := datetime.Parse(toInput, loc)
+	if err != nil {
+		return messageFetchRange{}, usagef("invalid to date/time %q", toInput)
+	}
+	if !start.Before(end) {
+		return messageFetchRange{}, usagef("from date/time must be before to date/time")
+	}
+	return messageFetchRange{mode: "datetime-range", start: start, end: end}, nil
 }
 
 func resolveDateFetchRange(input string, loc *time.Location) (messageFetchRange, error) {
@@ -354,8 +374,11 @@ func (r messageFetchRange) latestTS() string {
 }
 
 func (r messageFetchRange) progressLabel() string {
-	if r.mode == "date" {
+	switch r.mode {
+	case "date":
 		return "on " + r.start.Format("2006-01-02") + " (local time)"
+	case "datetime-range":
+		return "from " + r.start.Format(time.RFC3339) + " to " + r.end.Format(time.RFC3339)
 	}
 	return "since " + r.start.Format("2006-01-02")
 }
@@ -372,6 +395,9 @@ func (r messageFetchRange) footerOptionsLabel(opts Options) string {
 	limit := fmt.Sprintf("--max-posts %d, --max-attachment-size %s", opts.MaxPosts, humanBytes(opts.MaxAttachBytes))
 	if r.mode == "date" {
 		return fmt.Sprintf("--date %q, %s", opts.Date, limit)
+	}
+	if r.mode == "datetime-range" {
+		return fmt.Sprintf("--from %q, --to %q, %s", opts.From, opts.To, limit)
 	}
 	return fmt.Sprintf("--days %d, %s", opts.Days, limit)
 }
@@ -813,6 +839,7 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 			"days": opts.Days, "max_posts": opts.MaxPosts,
 			"max_attachment_size_bytes": opts.MaxAttachBytes,
 			"oldest_ts":                 fetchRange.oldestTS(),
+			"latest_ts":                 fetchRange.latestTS(),
 			"executed_at":               now.UTC().Format(time.RFC3339),
 			"target_range":              fetchRange.metadataTargetRange(),
 			"options":                   fetchRange.metadataOptions(opts),
@@ -877,6 +904,9 @@ func (r messageFetchRange) metadataOptions(opts Options) map[string]any {
 	}
 	if r.mode == "date" {
 		values["date"] = opts.Date
+	} else if r.mode == "datetime-range" {
+		values["from"] = opts.From
+		values["to"] = opts.To
 	} else {
 		values["days"] = opts.Days
 	}

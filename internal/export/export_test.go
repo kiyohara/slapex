@@ -38,6 +38,31 @@ func TestResolveFetchRangeDaysUsesAbsoluteStartAndEnd(t *testing.T) {
 	}
 }
 
+func TestResolveDateTimeFetchRangePreservesAbsoluteInstants(t *testing.T) {
+	local := time.FixedZone("JST", 9*60*60)
+	r, err := resolveDateTimeFetchRange("2026/07/03 09:30", "2026-07-03T03:00:00Z", local)
+	if err != nil {
+		t.Fatalf("resolveDateTimeFetchRange: %v", err)
+	}
+	if r.mode != "datetime-range" {
+		t.Fatalf("mode = %q, want datetime-range", r.mode)
+	}
+	if got, want := r.start.Format(time.RFC3339), "2026-07-03T09:30:00+09:00"; got != want {
+		t.Fatalf("start = %s, want %s", got, want)
+	}
+	if got, want := r.end.UTC().Format(time.RFC3339), "2026-07-03T03:00:00Z"; got != want {
+		t.Fatalf("end = %s, want %s", got, want)
+	}
+}
+
+func TestResolveDateTimeFetchRangeRejectsEmptyOrReversedRange(t *testing.T) {
+	for _, to := range []string{"2026-07-03T09:30", "2026-07-03T09:00"} {
+		if _, err := resolveDateTimeFetchRange("2026-07-03T09:30", to, time.Local); err == nil {
+			t.Fatalf("resolveDateTimeFetchRange with to=%q succeeded, want error", to)
+		}
+	}
+}
+
 func TestResolveDateFetchRangeNormalizesParsedInstantToLocalDay(t *testing.T) {
 	local := time.FixedZone("JST", 9*60*60)
 	tests := []struct {

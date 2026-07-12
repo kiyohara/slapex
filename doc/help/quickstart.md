@@ -110,7 +110,7 @@ Linux ではファイルマネージャから開くか、`xdg-open "<output-path
 
 ## 次のステップ
 
-- 取得日(`--date`)、今後追加予定の任意期間(`--from` / `--to`)、相対期間(`--days`)、取得件数(`--max-posts`)、出力先(`--output`)などの調整: [使い方](usage.md#主要な-option) の option 一覧。
+- 取得日(`--date`)、任意期間(`--from` / `--to`)、相対期間(`--days`)、取得件数(`--max-posts`)、出力先(`--output`)などの調整: [使い方](usage.md#主要な-option) の option 一覧。
 - 継続利用に向けて、token を毎回手入力せず secret manager(1Password CLI など)や CI secrets から注入する方法: [Token の渡し方](token-injection.md)。
 - CI・定期実行・チーム共通 automation での利用: [bot token の手順](slack-app-setup.md#bot-token-を使う場合)。
 
