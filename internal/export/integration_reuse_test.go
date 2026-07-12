@@ -357,6 +357,7 @@ func reuseOptions(t *testing.T, keepCache bool) Options {
 		MaxAttachBytes: 1 << 20,
 		KeepCache:      keepCache,
 		ToolVersion:    "test",
+		Now:            time.Unix(1700000003, 0).Add(time.Hour),
 	}
 }
 

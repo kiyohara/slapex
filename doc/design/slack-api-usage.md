@@ -49,8 +49,10 @@ token type による主な違い:
 ## pagination
 
 - cursor ベースの pagination を使い、`response_metadata.next_cursor` が空になるまで辿る。
-- `--days` では `conversations.history` の `oldest` に「実行開始時刻 − `--days` × 24 時間」を指定する。`--date` では local timezone の対象日 00:00 を `oldest`、翌日 00:00 を `latest` に指定する。開始境界を含めるため `inclusive=true` も指定する。
+- `--date` では local timezone の対象日 00:00 を `conversations.history` の `oldest`、翌日 00:00 を `latest` に指定する。開始境界を含めるため `inclusive=true` も指定する。
 - `--date` の応答は client 側でも `[oldest, latest)` に絞り込み、Slack API の境界挙動だけに依存しない。開始境界ちょうどは含め、終了境界ちょうどは除外する。
+- Issue #154 で追加する `--from` / `--to` も、`--date` と同じ bounded range の API 境界と client 側判定を使う。
+- `--days` では `oldest` に「実行基準時刻 − `--days` × 24 時間」、`latest` に実行基準時刻を指定し、`--date` と同様に client 側でも半開区間を守る。
 - 1 ページの要求件数は 200 件を上限とする。サーバー側がより小さいページ(例: 15 件)しか返さなくても、cursor 継続により動作が変わらない設計とする。
 - timeline 上で取得範囲に残った親投稿件数が `--max-posts` に達した時点で打ち切る。`conversations.replies` だけに現れる thread replies は数えない(thread_broadcast は timeline に現れるため数える)。
 - `conversations.replies` も同様に pagination し、1 thread あたり合計 1000 件で打ち切る(`output-format.md`)。

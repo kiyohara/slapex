@@ -223,10 +223,9 @@ func (c *Client) History(ctx context.Context, channelID, oldest, latest string, 
 }
 
 func timestampInRange(ts, oldest, latest string) bool {
-	// Existing --days runs have no latest boundary and continue to rely on
-	// conversations.history for the lower-bound filtering. A bounded range is
-	// checked again locally so an inclusive API response cannot leak its exact
-	// end boundary into the export.
+	// An unbounded caller continues to rely on conversations.history for the
+	// lower-bound filtering. A bounded range is checked again locally so an
+	// inclusive API response cannot leak its exact end boundary into the export.
 	if latest == "" {
 		return true
 	}

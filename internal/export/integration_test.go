@@ -103,7 +103,12 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 		t.Fatal(err)
 	}
 	html := string(htmlBytes)
-	for _, want := range []string{"First timeline note", "Starting the launch thread", start.Format("2006-01-02") + " (local date, --date " + input} {
+	for _, want := range []string{
+		"First timeline note",
+		"Starting the launch thread",
+		fmt.Sprintf("[%s, %s)", start.UTC().Format(time.RFC3339), start.AddDate(0, 0, 1).UTC().Format(time.RFC3339)),
+		"<dt>Options</dt><dd>--date &#34;" + input + "&#34;",
+	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)
 		}
@@ -114,12 +119,17 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 
 	var metadata struct {
 		Fetch struct {
-			RangeMode string `json:"range_mode"`
-			Date      string `json:"date"`
-			Days      int    `json:"days"`
-			MaxPosts  int    `json:"max_posts"`
-			OldestTS  string `json:"oldest_ts"`
-			LatestTS  string `json:"latest_ts"`
+			TargetRange struct {
+				Start        string `json:"start"`
+				End          string `json:"end"`
+				StartSlackTS string `json:"start_slack_ts"`
+				EndSlackTS   string `json:"end_slack_ts"`
+			} `json:"target_range"`
+			Options struct {
+				RangeMode string `json:"range_mode"`
+				Date      string `json:"date"`
+				MaxPosts  int    `json:"max_posts"`
+			} `json:"options"`
 		} `json:"fetch"`
 		Counts struct {
 			TimelineMessages int `json:"timeline_messages"`
@@ -127,11 +137,13 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 		} `json:"counts"`
 	}
 	readJSON(t, filepath.Join(got.OutputDir, ".cache/metadata.json"), &metadata)
-	if metadata.Fetch.RangeMode != "date" || metadata.Fetch.Date != input || metadata.Fetch.Days != 0 || metadata.Fetch.MaxPosts != 2 {
+	if metadata.Fetch.Options.RangeMode != "date" || metadata.Fetch.Options.Date != input || metadata.Fetch.Options.MaxPosts != 2 {
 		t.Fatalf("metadata fetch = %+v", metadata.Fetch)
 	}
-	if metadata.Fetch.OldestTS != slack.FormatTS(start.Unix()) || metadata.Fetch.LatestTS != slack.FormatTS(start.AddDate(0, 0, 1).Unix()) {
-		t.Fatalf("metadata bounds = %q/%q", metadata.Fetch.OldestTS, metadata.Fetch.LatestTS)
+	wantEnd := start.AddDate(0, 0, 1)
+	if metadata.Fetch.TargetRange.Start != start.UTC().Format(time.RFC3339) || metadata.Fetch.TargetRange.End != wantEnd.UTC().Format(time.RFC3339) ||
+		metadata.Fetch.TargetRange.StartSlackTS != slack.FormatTS(start.Unix()) || metadata.Fetch.TargetRange.EndSlackTS != slack.FormatTS(wantEnd.Unix()) {
+		t.Fatalf("metadata target range = %+v", metadata.Fetch.TargetRange)
 	}
 	if metadata.Counts.TimelineMessages != 2 || metadata.Counts.Replies != 2 {
 		t.Fatalf("metadata counts = %+v, want 2 timeline / 2 replies", metadata.Counts)
@@ -669,6 +681,7 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 		`assets/attachments/`,
 		"runbook.pdf",
 		"Launch checklist",
+		`<dt>Options</dt>`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("index.html missing marker %q", marker)
@@ -721,6 +734,16 @@ func assertCacheFiles(t *testing.T, dir string) {
 			Replies          int `json:"replies"`
 			AssetsSaved      int `json:"assets_saved"`
 		} `json:"counts"`
+		Fetch struct {
+			TargetRange struct {
+				Start string  `json:"start"`
+				End   *string `json:"end"`
+			} `json:"target_range"`
+			Options struct {
+				RangeMode string `json:"range_mode"`
+				Days      int    `json:"days"`
+			} `json:"options"`
+		} `json:"fetch"`
 	}
 	readJSON(t, filepath.Join(dir, ".cache/metadata.json"), &metadata)
 	if metadata.Workspace.TeamID != "TACME123" || metadata.Workspace.Name != "Acme Workspace" {
@@ -734,6 +757,9 @@ func assertCacheFiles(t *testing.T, dir string) {
 	}
 	if metadata.Counts.AssetsSaved < 8 {
 		t.Fatalf("metadata assets_saved = %d, want at least 8", metadata.Counts.AssetsSaved)
+	}
+	if metadata.Fetch.TargetRange.Start == "" || metadata.Fetch.TargetRange.End == nil || *metadata.Fetch.TargetRange.End == "" || metadata.Fetch.Options.RangeMode != "days" || metadata.Fetch.Options.Days != 90 {
+		t.Fatalf("metadata fetch = %+v, want absolute start/end and --days 90", metadata.Fetch)
 	}
 
 	var manifest struct {

@@ -55,7 +55,7 @@ type Options struct {
 	PromptTTY      *os.File // controlling terminal for interactive prompts; nil when unavailable
 	ToolVersion    string
 	// Now overrides the export clock used for the footer "Exported" line, the
-	// --days oldest boundary and the default output-root name. Zero means
+	// --days range boundaries and the default output-root name. Zero means
 	// time.Now(). gensample sets it from its -time flag when a sample
 	// regeneration is pinned for reproducibility; normal runs and slapex --demo
 	// leave it zero.
@@ -255,10 +255,11 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		ChannelLine:       chLine,
 		ExportedLine: fmt.Sprintf("%s (UTC%s) / %s",
 			now.Format("2006-01-02 15:04"), offsetString(tzOffset), now.UTC().Format(time.RFC3339)),
-		RangeLine: fetchRange.footerLabel(opts),
-		ToolLine:  fmt.Sprintf("slapex %s", opts.ToolVersion),
-		Items:     items,
-		Truncated: truncated,
+		RangeLine:   fetchRange.footerRangeLabel(),
+		OptionsLine: fetchRange.footerOptionsLabel(opts),
+		ToolLine:    fmt.Sprintf("slapex %s", opts.ToolVersion),
+		Items:       items,
+		Truncated:   truncated,
 	}
 
 	htmlFile, err := os.Create(filepath.Join(dir, "index.html"))
@@ -324,7 +325,11 @@ type messageFetchRange struct {
 
 func resolveFetchRange(opts Options, now time.Time) (messageFetchRange, error) {
 	if opts.Date == "" {
-		return messageFetchRange{mode: "days", start: now.Add(-time.Duration(opts.Days) * 24 * time.Hour)}, nil
+		return messageFetchRange{
+			mode:  "days",
+			start: now.Add(-time.Duration(opts.Days) * 24 * time.Hour),
+			end:   now,
+		}, nil
 	}
 	return resolveDateFetchRange(opts.Date, time.Local)
 }
@@ -355,12 +360,20 @@ func (r messageFetchRange) progressLabel() string {
 	return "since " + r.start.Format("2006-01-02")
 }
 
-func (r messageFetchRange) footerLabel(opts Options) string {
+func (r messageFetchRange) footerRangeLabel() string {
+	start := r.start.UTC().Format(time.RFC3339)
+	if r.end.IsZero() {
+		return fmt.Sprintf("[%s, unbounded)", start)
+	}
+	return fmt.Sprintf("[%s, %s)", start, r.end.UTC().Format(time.RFC3339))
+}
+
+func (r messageFetchRange) footerOptionsLabel(opts Options) string {
 	limit := fmt.Sprintf("--max-posts %d, --max-attachment-size %s", opts.MaxPosts, humanBytes(opts.MaxAttachBytes))
 	if r.mode == "date" {
-		return fmt.Sprintf("%s (local date, --date %s, %s)", r.start.Format("2006-01-02"), opts.Date, limit)
+		return fmt.Sprintf("--date %q, %s", opts.Date, limit)
 	}
-	return fmt.Sprintf("since %s (--days %d, %s)", r.start.Format("2006-01-02"), opts.Days, limit)
+	return fmt.Sprintf("--days %d, %s", opts.Days, limit)
 }
 
 func threadParticipants(replies []*render.MessageView) ([]render.ThreadParticipantView, int) {
@@ -794,11 +807,15 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 			"is_private": ch.IsPrivate, "is_archived": ch.IsArchived, "is_member": ch.IsMember,
 		},
 		"fetch": map[string]any{
-			"range_mode": fetchRange.mode, "days": opts.Days, "date": opts.Date, "max_posts": opts.MaxPosts,
+			// Keep the original v1 flat fields for cache compatibility. New
+			// consumers should prefer target_range and options, which separate
+			// the absolute fetch boundary from the CLI input that produced it.
+			"days": opts.Days, "max_posts": opts.MaxPosts,
 			"max_attachment_size_bytes": opts.MaxAttachBytes,
 			"oldest_ts":                 fetchRange.oldestTS(),
-			"latest_ts":                 fetchRange.latestTS(),
 			"executed_at":               now.UTC().Format(time.RFC3339),
+			"target_range":              fetchRange.metadataTargetRange(),
+			"options":                   fetchRange.metadataOptions(opts),
 		},
 		"labels": map[string]string{
 			"workspace_label": wsLabel, "channel_label": chLabel,
@@ -835,6 +852,35 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 		"channel":        ch,
 	}
 	return output.WriteCacheFile(dir, "slack_api_cache.json", apiCache)
+}
+
+func (r messageFetchRange) metadataTargetRange() map[string]any {
+	end := any(nil)
+	endSlackTS := any(nil)
+	if !r.end.IsZero() {
+		end = r.end.UTC().Format(time.RFC3339)
+		endSlackTS = r.latestTS()
+	}
+	return map[string]any{
+		"start":          r.start.UTC().Format(time.RFC3339),
+		"end":            end,
+		"start_slack_ts": r.oldestTS(),
+		"end_slack_ts":   endSlackTS,
+	}
+}
+
+func (r messageFetchRange) metadataOptions(opts Options) map[string]any {
+	values := map[string]any{
+		"range_mode":                r.mode,
+		"max_posts":                 opts.MaxPosts,
+		"max_attachment_size_bytes": opts.MaxAttachBytes,
+	}
+	if r.mode == "date" {
+		values["date"] = opts.Date
+	} else {
+		values["days"] = opts.Days
+	}
+	return values
 }
 
 // --- small helpers -----------------------------------------------------------

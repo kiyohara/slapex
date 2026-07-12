@@ -24,6 +24,20 @@ func TestResolveFetchRangeDateUsesLocalCalendarDay(t *testing.T) {
 	}
 }
 
+func TestResolveFetchRangeDaysUsesAbsoluteStartAndEnd(t *testing.T) {
+	now := time.Date(2026, 7, 12, 13, 0, 0, 0, time.FixedZone("JST", 9*60*60))
+	r, err := resolveFetchRange(Options{Days: 30}, now)
+	if err != nil {
+		t.Fatalf("resolveFetchRange: %v", err)
+	}
+	if want := now.Add(-30 * 24 * time.Hour); !r.start.Equal(want) {
+		t.Fatalf("start = %s, want %s", r.start, want)
+	}
+	if !r.end.Equal(now) {
+		t.Fatalf("end = %s, want %s", r.end, now)
+	}
+}
+
 func TestResolveDateFetchRangeNormalizesParsedInstantToLocalDay(t *testing.T) {
 	local := time.FixedZone("JST", 9*60*60)
 	tests := []struct {

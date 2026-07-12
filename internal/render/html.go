@@ -31,6 +31,7 @@ type PageData struct {
 	ChannelLine       string
 	ExportedLine      string
 	RangeLine         string
+	OptionsLine       string
 	ToolLine          string
 	Items             []TimelineItem
 	Truncated         bool // --max-posts reached
