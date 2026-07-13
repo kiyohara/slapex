@@ -81,6 +81,83 @@ func TestRunIntegrationExcludeBodyEmojiParentAndThread(t *testing.T) {
 	assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
 }
 
+func TestRunIntegrationExcludeBodyEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000003.000000"
+	parent := slack.Message{
+		Type:       "message",
+		TS:         parentTS,
+		ThreadTS:   parentTS,
+		User:       "U01",
+		Text:       "private parent :shushing_face:",
+		ReplyCount: 1,
+	}
+	broadcast := slack.Message{
+		Type:     "message",
+		Subtype:  "thread_broadcast",
+		TS:       "1700000004.000000",
+		ThreadTS: parentTS,
+		User:     "U02",
+		Text:     "private broadcast",
+	}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		broadcast,
+		parent,
+		{Type: "message", TS: "1700000002.000000", User: "U01", Text: "retained newer"},
+		{Type: "message", TS: "1700000001.000000", User: "U02", Text: "retained older"},
+	}
+	sc.Replies[parentTS] = []slack.Message{parent, broadcast}
+	opts := renderingOptions(t)
+	opts.MaxPosts = 2
+	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
+	for _, excluded := range []string{"private parent", "private broadcast"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"retained newer", "retained older"} {
+		mustContain(t, body, retained)
+	}
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 2,
+		"/api/conversations.replies": 1,
+	})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, []string{"shushing_face"})
+	assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
+}
+
+func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
+	t.Parallel()
+
+	const (
+		firstTS  = "1700000002.000000"
+		secondTS = "1700000001.000000"
+	)
+	first := slack.Message{Type: "message", TS: firstTS, ThreadTS: firstTS, User: "U01", Text: "first parent", ReplyCount: 1}
+	second := slack.Message{Type: "message", TS: secondTS, ThreadTS: secondTS, User: "U02", Text: "second parent", ReplyCount: 1}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{first, second}
+	sc.Replies[firstTS] = []slack.Message{
+		first,
+		{Type: "message", TS: "1700000002.100000", ThreadTS: firstTS, User: "U02", Text: "excluded :shushing_face:"},
+	}
+	sc.Replies[secondTS] = []slack.Message{
+		second,
+		{Type: "message", TS: "1700000001.100000", ThreadTS: secondTS, User: "U01", Text: "retained reply"},
+	}
+	opts := renderingOptions(t)
+	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+
+	got := runExportScenario(t, sc, opts)
+	if !logsContain(got.Logs, "fetching thread replies ... 1/2") || !logsContain(got.Logs, "fetching thread replies ... 2/2") {
+		t.Fatalf("thread progress did not advance monotonically: %v", got.Logs)
+	}
+}
+
 func TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts(t *testing.T) {
 	t.Parallel()
 
