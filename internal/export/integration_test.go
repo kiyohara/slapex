@@ -252,6 +252,9 @@ func TestRunIntegrationExcludeReactionEmojiParentAndThread(t *testing.T) {
 	if !logsContain(got.Logs, "excluded by reaction emoji: 1") {
 		t.Fatalf("summary missing reaction exclusion count: %v", got.Logs)
 	}
+	if logsContain(got.Logs, "excluded by body emoji") {
+		t.Fatalf("reaction-only logs contain the body-filter label: %v", got.Logs)
+	}
 }
 
 func TestRunIntegrationExcludeReactionEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
@@ -335,6 +338,11 @@ func TestRunIntegrationEmojiFiltersORReplyCustomAndMaxPosts(t *testing.T) {
 	assertCacheOmits(t, got.OutputDir, "screenshot-original.png", "screenshot-thumb.png")
 	if !logsContain(got.Logs, "excluded by emoji filters: 2") {
 		t.Fatalf("summary missing combined exclusion count: %v", got.Logs)
+	}
+	for _, wrong := range []string{"excluded by body emoji", "excluded by reaction emoji"} {
+		if logsContain(got.Logs, wrong) {
+			t.Fatalf("combined-filter logs contain the single-filter label %q: %v", wrong, got.Logs)
+		}
 	}
 }
 

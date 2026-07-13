@@ -207,8 +207,8 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	excludedTotal := filter.ExcludedCount()
 	messagesStatus := ui.StatusSuccess
 	messagesMeta := fmt.Sprintf("threads %d, replies %d", len(replies), replyTotal)
-	if excludedTotal > 0 {
-		messagesMeta += fmt.Sprintf(", excluded by body emoji: %d", excludedTotal)
+	if label := excludedMessagesLabel(opts); excludedTotal > 0 && label != "" {
+		messagesMeta += fmt.Sprintf(", %s: %d", label, excludedTotal)
 	}
 	if truncated {
 		messagesStatus = ui.StatusWarn
@@ -371,13 +371,8 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	p.EndPhase(ui.StatusSuccess, "Done", fmt.Sprintf("%s / %s", wsLine, chLine),
 		fmt.Sprintf("in %s", time.Since(now).Round(time.Second)))
 	p.Plainf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
-	switch {
-	case len(opts.ExcludeBodyEmoji) > 0 && len(opts.ExcludeReactionEmoji) > 0:
-		p.Plainf("    excluded by emoji filters: %d", excludedTotal)
-	case len(opts.ExcludeBodyEmoji) > 0:
-		p.Plainf("    excluded by body emoji: %d", excludedTotal)
-	case len(opts.ExcludeReactionEmoji) > 0:
-		p.Plainf("    excluded by reaction emoji: %d", excludedTotal)
+	if label := excludedMessagesLabel(opts); label != "" {
+		p.Plainf("    %s: %d", label, excludedTotal)
 	}
 	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
 	if n := assets.Reused(); n > 0 {
@@ -385,6 +380,19 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	}
 	p.Plainf("  output: %s", abs)
 	return abs, nil
+}
+
+func excludedMessagesLabel(opts Options) string {
+	switch {
+	case len(opts.ExcludeBodyEmoji) > 0 && len(opts.ExcludeReactionEmoji) > 0:
+		return "excluded by emoji filters"
+	case len(opts.ExcludeBodyEmoji) > 0:
+		return "excluded by body emoji"
+	case len(opts.ExcludeReactionEmoji) > 0:
+		return "excluded by reaction emoji"
+	default:
+		return ""
+	}
 }
 
 type messageFetchRange struct {

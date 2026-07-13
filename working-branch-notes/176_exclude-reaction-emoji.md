@@ -15,17 +15,19 @@ Issue #156 の `--exclude-reaction-emoji` を実装し、reaction で示され�
 - 最新 `main` から作業ブランチを作成済み。
 - `--exclude-reaction-emoji` の CLI parse、export pipeline、demo、HTML / cache metadata / summary、docs、test を実装済み。
 - Issue 指定の検証と README demo GIF の再録画・目視確認を完了済み。
+- PR #176 の Claude Code / Cursor からの重複した指摘に対応し、Messages phase の除外理由表示を有効な filter と一致させた。
 
 ## 決定事項
 
 - PR #175 で導入した parser / matcher / message predicate / timestamp 単位の除外件数管理を拡張する。
 - 本文条件と reaction 条件は同じ message predicate 内で OR 合成する。
 - 両 filter が有効な場合の完了 summary は原因別 count を重複計上せず、一意な total を `excluded by emoji filters` として表示する。
+- Messages phase と完了 summary の除外理由 label は同じ helper で決定し、body のみ・reaction のみ・併用で表示がずれないようにする。
 - filter 未指定時の sample export の HTML / DOM / fixture は変わらないため、sample export と preview screenshot は再生成しない。
 
 ## 次にやること
 
-- PR を作成し、review と merge を待つ。
+- review comment への対応結果を返信し、reviewer の再確認と merge を待つ。
 
 ## 検証
 
@@ -37,6 +39,8 @@ Issue #156 の `--exclude-reaction-emoji` を実装し、reaction で示され�
 - `bash tools/demo/record.sh`: 成功。架空 fixture / fake token / local fake Slack API のみを使用し、`assets/demo/slapex-demo-ja.gif` を更新。
 - GIF の先頭・token prompt・channel 選択・進捗・最終 frame を確認し、準備 command と token 入力値が映らず、最終完了行まで収録されていることを確認。
 - README の GIF 参照、caption、指定幅を確認し、変更不要と判断。
+- review comment 対応後に `docker compose run --rm --no-deps dev go test ./internal/export`、`docker compose run --rm --no-deps dev go test ./...`、`docker compose run --rm --no-deps dev gofmt -l .`、`docker compose run --rm --no-deps dev go vet ./...` を再実行し、すべて成功した。
+- review comment 対応後に README demo GIF を再録画し、更新後の代表 frame の表示を確認した。
 
 ## リスク・ブロッカー
 
@@ -48,3 +52,4 @@ Issue #156 の `--exclude-reaction-emoji` を実装し、reaction で示され�
 - 2026-07-13: reaction filter の実装、docs、unit / integration test、全体検証を完了した。
 - 2026-07-13: README demo GIF の再録画と目視確認を完了した。
 - 2026-07-13: PR #176 を作成し、note 採番と `progress.md` の PR 参照更新を完了した。
+- 2026-07-13: Claude Code / Cursor の重複した review comment を採用し、Messages phase と完了 summary の除外理由 label を共通化して再検証した。
