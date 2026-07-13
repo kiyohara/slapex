@@ -47,3 +47,4 @@ Issue #156 の `--exclude-reaction-emoji` を実装し、reaction で示され�
 - 2026-07-13: Issue #156、先行 PR #175、progress.md、関連 guideline を確認し、ブランチを作成した。
 - 2026-07-13: reaction filter の実装、docs、unit / integration test、全体検証を完了した。
 - 2026-07-13: README demo GIF の再録画と目視確認を完了した。
+- 2026-07-13: PR #176 を作成し、note 採番と `progress.md` の PR 参照更新を完了した。
