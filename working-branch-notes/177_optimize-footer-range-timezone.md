@@ -23,7 +23,7 @@ Issue #170 に基づき、HTML footer の取得期間を利用者の日時指定
 
 ## 次にやること
 
-- PR を作成し、note を PR 番号付きへ rename する。
+- PR #177 の review / merge 待ち。merge はユーザーが行う。
 
 ## 検証
 
