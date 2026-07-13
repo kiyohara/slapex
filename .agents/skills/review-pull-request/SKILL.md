@@ -37,7 +37,7 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 
 | モード | 責務 | 完了条件 | 手順 |
 | --- | --- | --- | --- |
-| `review` | PR 自体をレビューし、指摘(あれば inline comment)と review 完了コメントを投稿する | 指摘の有無にかかわらず review 完了コメントを投稿し、read-back で反映を確認した時点 | `references/review.md` |
+| `review` | PR 自体をレビューし、指摘があれば inline comment と review body、無ければ PR conversation comment で完了を可視化する | 完了要約 1 本と、指摘がある場合は inline comment を投稿し、read-back で反映を確認した時点 | `references/review.md` |
 | `address-comments` | 既存 review comment の妥当性を検証し、必要な修正・検証・返信を行う。inline thread は resolve しない | 確認した各 inline comment へ処置を返信し、read-back で反映を確認した時点 | `references/address-comments.md` |
 | `verify-comments` | 元の Review 担当 Agent が対応結果を再検証し、妥当な inline thread に resolve 可マーカー付きの確認返信を残す。resolve は自動実行しない | 全対象 thread を確認し、再確認結果コメントを投稿した時点 | `references/verify-comments.md` |
 
@@ -49,20 +49,20 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
   - 対応する open PR が無い。
   - 複数候補があり一意に決まらない。
   - local branch と PR head branch の対応を確認できない。
-- PR 番号 / URL を明示指定された場合も `pull_request_read(get)` で state を確認し、closed または merged の場合は処理を停止してユーザーへ報告する。draft PR は review 対象としてよいが、draft であることを review 完了コメントへ記録する。
+- PR 番号 / URL を明示指定された場合も `pull_request_read(get)` で state を確認し、closed または merged の場合は処理を停止してユーザーへ報告する。draft PR は review 対象としてよいが、draft であることを完了要約へ記録する。
 - review 対象の正本は GitHub 上の PR head SHA と PR diff とする。未 push commit、staged change、working tree change を review 対象へ混ぜない。
 - local checkout は実装確認や test に利用してよいが、GitHub 上の head SHA との対応を確認する。
 - review または再確認の途中で PR head SHA が変わった場合は、古い diff を前提に投稿せず、必要な context と検証を取り直す。
 
 ## Agent 識別と review cycle
 
-- 本 skill が投稿するすべての GitHub コメント(review、inline comment、返信、完了コメント)に、処理した Agent 自身を識別できる表示と review cycle の可視 metadata を含める。GitHub 上の操作 account は単一であり、username では処理主体を区別できないためである。
+- `review` モードでは review cycle の完了要約を載せる 1 本に、処理した Agent 自身を識別できる表示と review cycle の可視 metadata を含める。`address-comments` / `verify-comments` では投稿する各返信・コメントに同じ metadata を含める。GitHub 上の操作 account は単一であり、username では処理主体を区別できないためである。
 - Agent 種別は実行環境(system prompt、実行 harness の情報)から確認する。判定できない場合は推測せず、ユーザーに確認する。
 - `review` モードの開始時に review cycle ID を作る。session ID、token、local path などの内部情報を review cycle ID や metadata に含めない。
 
 ### 可視 metadata の canonical フォーマット
 
-コメント末尾に次の 5 行を置く。これは複数の agent 実装が書くだけでなく parse して review cycle を突合する前提の正規フォーマットであり、キー名・順序・区切りを次のとおり固定する。
+可視 metadata を含める投稿の末尾に次の 5 行を置く。これは複数の agent 実装が書くだけでなく parse して review cycle を突合する前提の正規フォーマットであり、キー名・順序・区切りを次のとおり固定する。
 
 ```text
 Agent: <Agent 種別>
@@ -89,7 +89,7 @@ Mode: <review | address-comments | verify-comments>
 
 ## コメント言語と文体
 
-- 本 skill が投稿するすべての GitHub コメント(review、inline comment、返信、完了コメント)は日本語で書く。
+- 本 skill が投稿するすべての GitHub コメント(review body、inline comment、返信、PR conversation comment)は日本語で書く。
 - 文体は `doc/guidelines/document-style-guidelines.md` の開発者向け文体(常体)に合わせる。
 
 ## 組み込み / 汎用 review capability の再利用
