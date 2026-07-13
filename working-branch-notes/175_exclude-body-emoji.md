@@ -25,7 +25,6 @@ Issue #155 の `--exclude-body-emoji` を実装し、本文 shortcode で示さ�
 ## 次にやること
 
 - PR #175 の review と merge を待つ。
-- `progress.md` の PR 参照を #175 に更新する。
 
 ## 検証
 
@@ -46,3 +45,4 @@ Issue #155 の `--exclude-body-emoji` を実装し、本文 shortcode で示さ�
 
 - 2026-07-13: Issue #155 / #156、progress.md、関連 guideline を確認し、ブランチを作成した。
 - 2026-07-13: 実装、docs、integration test、全体検証、README demo GIF の再録画・目視確認を完了した。
+- 2026-07-13: PR #175 を作成し、note 採番と `progress.md` の PR 参照更新を完了した。
