@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `number-working-branch-note-remove-user-gates`
-- PR:
+- PR: #172
 - 最終更新: 2026-07-13
 
 ## 目的
@@ -13,6 +13,7 @@ Issue #171 に従い、`number-working-branch-note` の定型フローから pus
 - Issue の依存、関連 PR、コメント、sub-issue が無いことを確認済み。
 - `main` を `origin/main` と同期し、作業ブランチを作成済み。
 - skill 本文の定型承認ゲートを削除し、安全停止条件を維持した。
+- PR #172 を作成し、working branch note を採番した。
 
 ## 決定事項
 
@@ -22,8 +23,7 @@ Issue #171 に従い、`number-working-branch-note` の定型フローから pus
 
 ## 次にやること
 
-- 変更を commit / push する。
-- PR を作成し、この note を採番する。
+- PR #172 の review / merge を待つ。
 
 ## 検証
 
@@ -43,3 +43,4 @@ Issue #171 に従い、`number-working-branch-note` の定型フローから pus
 
 - 2026-07-13: Issue #171 の依存確認と作業ブランチ作成を完了した。
 - 2026-07-13: skill 更新と Issue 指定の検証を完了した。
+- 2026-07-13: PR #172 を作成し、working branch note を採番した。
