@@ -104,6 +104,12 @@ func TestParseArgsValidation(t *testing.T) {
 		{name: "exclude body emoji empty", args: []string{"--exclude-body-emoji", ""}, wantErr: true},
 		{name: "exclude body emoji empty item", args: []string{"--exclude-body-emoji", "shushing_face,,speak_no_evil"}, wantErr: true},
 		{name: "exclude body emoji trailing comma", args: []string{"--exclude-body-emoji", "shushing_face,"}, wantErr: true},
+		{name: "exclude reaction emoji", args: []string{"--exclude-reaction-emoji", "shushing_face,:SPEAK_NO_EVIL:"}},
+		{name: "exclude reaction emoji skin tone", args: []string{"--exclude-reaction-emoji", ":+1::skin-tone-3:"}},
+		{name: "exclude reaction emoji empty", args: []string{"--exclude-reaction-emoji", ""}, wantErr: true},
+		{name: "exclude reaction emoji empty item", args: []string{"--exclude-reaction-emoji", "shushing_face,,speak_no_evil"}, wantErr: true},
+		{name: "exclude reaction emoji trailing comma", args: []string{"--exclude-reaction-emoji", "shushing_face,"}, wantErr: true},
+		{name: "both emoji filters", args: []string{"--exclude-body-emoji", "shushing_face", "--exclude-reaction-emoji", "speak_no_evil"}},
 	}
 
 	for _, tt := range tests {
@@ -116,6 +122,16 @@ func TestParseArgsValidation(t *testing.T) {
 				t.Fatalf("parseCLIArgs(%v) returned error: %v", tt.args, err)
 			}
 		})
+	}
+}
+
+func TestParseArgsNormalizesReactionEmoji(t *testing.T) {
+	got, err := parseCLIArgs([]string{"--exclude-reaction-emoji", " shushing_face, :SPEAK_NO_EVIL:, :+1::skin-tone-3: "}, io.Discard)
+	if err != nil {
+		t.Fatalf("parseCLIArgs returned error: %v", err)
+	}
+	if want := "shushing_face,speak_no_evil,+1"; strings.Join(got.excludeReactionEmoji, ",") != want {
+		t.Fatalf("excludeReactionEmoji = %v, want %s", got.excludeReactionEmoji, want)
 	}
 }
 
@@ -216,6 +232,17 @@ func TestParseArgsHelpMentionsNoColor(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "no-color") {
 		t.Fatalf("usage %q missing no-color option", buf.String())
+	}
+}
+
+func TestParseArgsHelpMentionsExcludeReactionEmoji(t *testing.T) {
+	var buf bytes.Buffer
+	_, err := parseCLIArgs([]string{"--help"}, &buf)
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("parseCLIArgs(--help) error = %v, want %v", err, flag.ErrHelp)
+	}
+	if !strings.Contains(buf.String(), "exclude-reaction-emoji") {
+		t.Fatalf("usage %q missing exclude-reaction-emoji option", buf.String())
 	}
 }
 

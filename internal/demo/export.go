@@ -14,17 +14,18 @@ import (
 // non-interactive resolution, skipped API pacing) are fixed by Export itself,
 // so callers only supply the output location and fetch window.
 type Options struct {
-	OutputDir        string
-	MaxPosts         int
-	Days             int
-	Date             string
-	From             string
-	To               string
-	ExcludeBodyEmoji []string
-	MaxAttachBytes   int64
-	KeepCache        bool
-	ReuseCache       string
-	ToolVersion      string
+	OutputDir            string
+	MaxPosts             int
+	Days                 int
+	Date                 string
+	From                 string
+	To                   string
+	ExcludeBodyEmoji     []string
+	ExcludeReactionEmoji []string
+	MaxAttachBytes       int64
+	KeepCache            bool
+	ReuseCache           string
+	ToolVersion          string
 	// Now overrides the export clock (footer timestamp, fetch window). Zero means
 	// time.Now(). gensample sets it (from its -time flag) when a sample
 	// regeneration is pinned for reproducibility; slapex --demo leaves it zero so
@@ -51,19 +52,20 @@ func Export(ctx context.Context, sc *Scenario, o Options, printer *ui.Printer) (
 	client.Logf = printer.Noticef
 
 	return export.Run(ctx, client, export.Options{
-		ChannelKeyword:   sc.ChannelName,
-		OutputDir:        o.OutputDir,
-		MaxPosts:         o.MaxPosts,
-		Days:             o.Days,
-		Date:             o.Date,
-		From:             o.From,
-		To:               o.To,
-		ExcludeBodyEmoji: o.ExcludeBodyEmoji,
-		MaxAttachBytes:   o.MaxAttachBytes,
-		KeepCache:        o.KeepCache,
-		ReuseCache:       o.ReuseCache,
-		NoInteractive:    true,
-		ToolVersion:      o.ToolVersion,
-		Now:              o.Now,
+		ChannelKeyword:       sc.ChannelName,
+		OutputDir:            o.OutputDir,
+		MaxPosts:             o.MaxPosts,
+		Days:                 o.Days,
+		Date:                 o.Date,
+		From:                 o.From,
+		To:                   o.To,
+		ExcludeBodyEmoji:     o.ExcludeBodyEmoji,
+		ExcludeReactionEmoji: o.ExcludeReactionEmoji,
+		MaxAttachBytes:       o.MaxAttachBytes,
+		KeepCache:            o.KeepCache,
+		ReuseCache:           o.ReuseCache,
+		NoInteractive:        true,
+		ToolVersion:          o.ToolVersion,
+		Now:                  o.Now,
 	}, printer)
 }

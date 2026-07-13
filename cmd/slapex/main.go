@@ -66,21 +66,22 @@ func main() {
 }
 
 type cliOptions struct {
-	channel          string
-	outputDir        string
-	maxPosts         int
-	days             int
-	date             string
-	from             string
-	to               string
-	excludeBodyEmoji []string
-	maxAttachBytes   int64
-	keepCache        bool
-	reuseCache       string
-	noInteractive    bool
-	noColor          bool
-	demo             bool
-	showVersion      bool
+	channel              string
+	outputDir            string
+	maxPosts             int
+	days                 int
+	date                 string
+	from                 string
+	to                   string
+	excludeBodyEmoji     []string
+	excludeReactionEmoji []string
+	maxAttachBytes       int64
+	keepCache            bool
+	reuseCache           string
+	noInteractive        bool
+	noColor              bool
+	demo                 bool
+	showVersion          bool
 }
 
 func run() int {
@@ -126,20 +127,21 @@ func run() int {
 	client.Logf = printer.Noticef
 
 	exportOpts := export.Options{
-		ChannelKeyword:   opts.channel,
-		OutputDir:        opts.outputDir,
-		MaxPosts:         opts.maxPosts,
-		Days:             opts.days,
-		Date:             opts.date,
-		From:             opts.from,
-		To:               opts.to,
-		ExcludeBodyEmoji: opts.excludeBodyEmoji,
-		MaxAttachBytes:   opts.maxAttachBytes,
-		KeepCache:        opts.keepCache,
-		ReuseCache:       opts.reuseCache,
-		NoInteractive:    opts.noInteractive,
-		PromptTTY:        promptTTY,
-		ToolVersion:      version,
+		ChannelKeyword:       opts.channel,
+		OutputDir:            opts.outputDir,
+		MaxPosts:             opts.maxPosts,
+		Days:                 opts.days,
+		Date:                 opts.date,
+		From:                 opts.from,
+		To:                   opts.to,
+		ExcludeBodyEmoji:     opts.excludeBodyEmoji,
+		ExcludeReactionEmoji: opts.excludeReactionEmoji,
+		MaxAttachBytes:       opts.maxAttachBytes,
+		KeepCache:            opts.keepCache,
+		ReuseCache:           opts.reuseCache,
+		NoInteractive:        opts.noInteractive,
+		PromptTTY:            promptTTY,
+		ToolVersion:          version,
 	}
 
 	dir, err := export.Run(context.Background(), client, exportOpts, printer)
@@ -165,17 +167,18 @@ func runDemo(opts *cliOptions, printer *ui.Printer, getenv func(string) string) 
 	printer.Noticef("Running the bundled demo fixture (#%s, fictional data, no Slack token used).", sc.ChannelName)
 
 	dir, err := demo.Export(context.Background(), sc, demo.Options{
-		OutputDir:        opts.outputDir,
-		MaxPosts:         opts.maxPosts,
-		Days:             opts.days,
-		Date:             opts.date,
-		From:             opts.from,
-		To:               opts.to,
-		ExcludeBodyEmoji: opts.excludeBodyEmoji,
-		MaxAttachBytes:   opts.maxAttachBytes,
-		KeepCache:        opts.keepCache,
-		ReuseCache:       opts.reuseCache,
-		ToolVersion:      version,
+		OutputDir:            opts.outputDir,
+		MaxPosts:             opts.maxPosts,
+		Days:                 opts.days,
+		Date:                 opts.date,
+		From:                 opts.from,
+		To:                   opts.to,
+		ExcludeBodyEmoji:     opts.excludeBodyEmoji,
+		ExcludeReactionEmoji: opts.excludeReactionEmoji,
+		MaxAttachBytes:       opts.maxAttachBytes,
+		KeepCache:            opts.keepCache,
+		ReuseCache:           opts.reuseCache,
+		ToolVersion:          version,
 	}, printer)
 	if err != nil {
 		printer.StopPhase()
@@ -333,20 +336,21 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 	fs := flag.NewFlagSet("slapex", flag.ContinueOnError)
 	fs.SetOutput(diagnostics)
 	var (
-		outputDir        = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
-		maxPosts         = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
-		days             = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
-		date             = fs.String("date", "", "fetch timeline messages on the local date containing this date/time")
-		from             = fs.String("from", "", "fetch timeline messages at or after this date/time (requires --to)")
-		to               = fs.String("to", "", "fetch timeline messages before this date/time (requires --from)")
-		excludeBodyEmoji = fs.String("exclude-body-emoji", "", "exclude messages containing any comma-separated emoji shortcode")
-		maxAttach        = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
-		keepCache        = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
-		reuseCache       = fs.String("reuse-cache", "", "reuse a previously kept cache (path to output directory or .cache/)")
-		noInteractive    = fs.Bool("no-interactive", false, "never prompt interactively (channel selection or SLACK_TOKEN entry)")
-		noColor          = fs.Bool("no-color", false, "plain progress output: no colors, icons or animations (also via NO_COLOR, CI, TERM=dumb)")
-		demoMode         = fs.Bool("demo", false, "export a bundled fictional sample without a Slack token or Slack App")
-		showVersion      = fs.Bool("version", false, "print version and exit")
+		outputDir            = fs.String("output", "", "output root directory (default: ./slapex-<yyyymmdd>-<hhmm>)")
+		maxPosts             = fs.Int("max-posts", 1000, "maximum number of timeline parent messages (1-10000)")
+		days                 = fs.Int("days", 30, "fetch messages newer than this many days (1-90)")
+		date                 = fs.String("date", "", "fetch timeline messages on the local date containing this date/time")
+		from                 = fs.String("from", "", "fetch timeline messages at or after this date/time (requires --to)")
+		to                   = fs.String("to", "", "fetch timeline messages before this date/time (requires --from)")
+		excludeBodyEmoji     = fs.String("exclude-body-emoji", "", "exclude messages containing any comma-separated emoji shortcode")
+		excludeReactionEmoji = fs.String("exclude-reaction-emoji", "", "exclude messages with any comma-separated emoji reaction")
+		maxAttach            = fs.String("max-attachment-size", "10MB", "per-file save limit for attachments and original images (e.g. 10MB, 512KB, 10485760)")
+		keepCache            = fs.Bool("keep-cache", false, "keep the .cache/ directory regardless of the result")
+		reuseCache           = fs.String("reuse-cache", "", "reuse a previously kept cache (path to output directory or .cache/)")
+		noInteractive        = fs.Bool("no-interactive", false, "never prompt interactively (channel selection or SLACK_TOKEN entry)")
+		noColor              = fs.Bool("no-color", false, "plain progress output: no colors, icons or animations (also via NO_COLOR, CI, TERM=dumb)")
+		demoMode             = fs.Bool("demo", false, "export a bundled fictional sample without a Slack token or Slack App")
+		showVersion          = fs.Bool("version", false, "print version and exit")
 	)
 	fs.Usage = func() {
 		fmt.Fprintf(diagnostics, "Usage: slapex [channel] [options]\n\n")
@@ -392,6 +396,7 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 	fromExplicit := false
 	toExplicit := false
 	excludeBodyEmojiExplicit := false
+	excludeReactionEmojiExplicit := false
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "days":
@@ -404,6 +409,8 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 			toExplicit = true
 		case "exclude-body-emoji":
 			excludeBodyEmojiExplicit = true
+		case "exclude-reaction-emoji":
+			excludeReactionEmojiExplicit = true
 		}
 	})
 	if fromExplicit || toExplicit {
@@ -454,30 +461,39 @@ func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {
 		fmt.Fprintf(diagnostics, "slapex: invalid --max-attachment-size %q (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n", *maxAttach)
 		return nil, errUsage
 	}
-	var excludedEmoji []string
+	var excludedBodyEmoji []string
 	if excludeBodyEmojiExplicit {
-		excludedEmoji, err = emoji.ParseList(*excludeBodyEmoji)
+		excludedBodyEmoji, err = emoji.ParseList(*excludeBodyEmoji)
 		if err != nil {
 			fmt.Fprintf(diagnostics, "slapex: invalid --exclude-body-emoji %q: %v\n", *excludeBodyEmoji, err)
 			return nil, errUsage
 		}
 	}
+	var excludedReactionEmoji []string
+	if excludeReactionEmojiExplicit {
+		excludedReactionEmoji, err = emoji.ParseList(*excludeReactionEmoji)
+		if err != nil {
+			fmt.Fprintf(diagnostics, "slapex: invalid --exclude-reaction-emoji %q: %v\n", *excludeReactionEmoji, err)
+			return nil, errUsage
+		}
+	}
 	return &cliOptions{
-		channel:          channel,
-		outputDir:        *outputDir,
-		maxPosts:         *maxPosts,
-		days:             *days,
-		date:             *date,
-		from:             *from,
-		to:               *to,
-		excludeBodyEmoji: excludedEmoji,
-		maxAttachBytes:   maxAttachBytes,
-		keepCache:        *keepCache,
-		reuseCache:       *reuseCache,
-		noInteractive:    *noInteractive,
-		noColor:          *noColor,
-		demo:             *demoMode,
-		showVersion:      *showVersion,
+		channel:              channel,
+		outputDir:            *outputDir,
+		maxPosts:             *maxPosts,
+		days:                 *days,
+		date:                 *date,
+		from:                 *from,
+		to:                   *to,
+		excludeBodyEmoji:     excludedBodyEmoji,
+		excludeReactionEmoji: excludedReactionEmoji,
+		maxAttachBytes:       maxAttachBytes,
+		keepCache:            *keepCache,
+		reuseCache:           *reuseCache,
+		noInteractive:        *noInteractive,
+		noColor:              *noColor,
+		demo:                 *demoMode,
+		showVersion:          *showVersion,
 	}, nil
 }
 

@@ -111,6 +111,36 @@ func TestExportDateTimeRangeEndToEnd(t *testing.T) {
 	}
 }
 
+func TestExportReactionEmojiFilterEndToEnd(t *testing.T) {
+	now := time.Date(2026, 7, 3, 16, 0, 0, 0, time.Local)
+	sc := ScenarioEN(now)
+	const excludedText = "reaction filter demo marker"
+	sc.Messages[0].Text = excludedText
+	sc.Messages[0].Reactions = []slack.Reaction{{Name: "do_not_archive", Count: 1}}
+	dir, err := Export(context.Background(), sc, Options{
+		OutputDir:            t.TempDir(),
+		MaxPosts:             1000,
+		Days:                 30,
+		ExcludeReactionEmoji: []string{"do_not_archive"},
+		MaxAttachBytes:       10 << 20,
+		ToolVersion:          "test",
+		Now:                  now,
+	}, ui.NewPrinter(io.Discard, false))
+	if err != nil {
+		t.Fatalf("demo.Export(--exclude-reaction-emoji): %v", err)
+	}
+	html, err := os.ReadFile(filepath.Join(dir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(html, []byte(excludedText)) {
+		t.Fatal("reaction-filtered demo message remains in index.html")
+	}
+	if !bytes.Contains(html, []byte("--exclude-reaction-emoji do_not_archive")) {
+		t.Fatal("demo HTML does not show the active reaction filter")
+	}
+}
+
 // TestFilterRange guards that the fake conversations.history honours both
 // boundaries and uses the same half-open interval as a real run.
 func TestFilterRange(t *testing.T) {
