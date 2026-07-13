@@ -69,6 +69,8 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 
 `--from` と `--to` は必ずペアで指定します。たとえば `--from 2026/07/03 --to 2026/07/04` は、local timezone の 2026-07-03 00:00 以上、2026-07-04 00:00 未満を取得します。開始は終了より前にする必要があります。
 
+出力 HTML の footer では、取得範囲を開始を含み終了を含まない絶対時刻として表示します。`--date` と `--days` では実行環境の local timezone を使います。`--from` / `--to` の片方または両方に同じ UTC offset を明示した場合はその offset を優先し、両端で offset が異なる場合は local timezone を使います。表示には `UTC+09:00` のような固定 offset または named timezone が含まれます。
+
 投稿者が emoji で「archive されたくない」と示せる運用では、本文 shortcode を見る `--exclude-body-emoji`、reaction 名を見る `--exclude-reaction-emoji` を privacy signal として使えます。複数指定は comma で区切ります。標準 emoji と custom emoji のどちらも名前で判定します。
 
 ```sh

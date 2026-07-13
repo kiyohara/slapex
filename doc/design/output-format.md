@@ -35,7 +35,7 @@ option:
 
 `--exclude-body-emoji <emoji-list>` は本文 shortcode、`--exclude-reaction-emoji <emoji-list>` は `reactions[].name` を判定する。両 option は併用でき、いずれかの条件に一致すれば除外する。timeline 親投稿が一致した場合は親投稿と thread 全体を除外し、可能な場合はその thread の replies を取得しない。thread reply だけが一致した場合はその reply だけを除外する。除外後に reply が 0 件なら thread UI を表示しない。除外された message の本文、投稿者、file / asset URL は HTML、cache、進捗・エラー出力へ残さず、除外後の message だけから user、emoji、asset を解決する。
 
-HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻で表示し、開始を含むことを `included`、終了を含まないことを `not included` と平易に明記する。利用者向け表示では `[start, end)` の記号や `inclusive` / `exclusive` の用語だけに依存しない。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限、正規化済みの `--exclude-body-emoji` / `--exclude-reaction-emoji` は、意味の異なる情報として `Options` 行へ分けて表示する。
+HTML footer の `Range` は、取得対象の境界を RFC3339 絶対時刻で表示し、開始を含むことを `included`、終了を含まないことを `not included` と平易に明記する。利用者向け表示では `[start, end)` の記号や `inclusive` / `exclusive` の用語だけに依存しない。`date` mode と `days` mode は実行環境の local timezone、`datetime-range` mode は両端で一貫する明示 offset または片側だけの明示 offset を優先して使う。両端の明示 offset が異なる場合と、両端とも offset を持たない場合は実行環境の local timezone、local timezone を利用できない場合は UTC へ fallback する。固定 offset は地域名へ推測せず `UTC±HH:MM`、named timezone は名前を表示し、各境界の RFC3339 offset へ DST を反映する。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限、正規化済みの `--exclude-body-emoji` / `--exclude-reaction-emoji` は、意味の異なる情報として `Options` 行へ分けて表示する。
 
 ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
 
