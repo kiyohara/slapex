@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `exclude-body-emoji`
-- PR: 未作成
+- PR: #175
 - 最終更新: 2026-07-13
 
 ## 目的
@@ -24,8 +24,8 @@ Issue #155 の `--exclude-body-emoji` を実装し、本文 shortcode で示さ�
 
 ## 次にやること
 
-- commit / push して PR を作成する。
-- PR 採番後に note と `progress.md` の PR 参照を更新する。
+- PR #175 の review と merge を待つ。
+- `progress.md` の PR 参照を #175 に更新する。
 
 ## 検証
 
