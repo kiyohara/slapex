@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: release/v1.2.0
-- PR: (採番前)
+- PR: #179
 - 最終更新: 2026-07-13
 
 ## 目的
@@ -14,7 +14,7 @@ v1.2.0 release 前の doc bump を 1 PR にまとめる。install 例の version
 - 直前 tag: `v1.1.2`
 - 対象 version: `v1.2.0`(ユーザー指定)
 - 最新 main CI: run `29236845492` / success / headSha `e35b71f696f2e1d0e4d44da0b8808fe0c5c824aa`
-- release 準備 PR: 未作成
+- release 準備 PR: #179
 
 ## 決定事項
 
@@ -25,9 +25,7 @@ v1.2.0 release 前の doc bump を 1 PR にまとめる。install 例の version
 
 ## 次にやること
 
-- release 準備 PR を作成する。
-- PR 採番後に working branch note を番号付きへ rename する。
-- ユーザーが PR を merge する。
+- ユーザーが PR #179 を merge する。
 - merge 後に main HEAD を確認し、署名付き `v1.2.0` tag の作成と tag push へ進む。
 
 ## 検証
