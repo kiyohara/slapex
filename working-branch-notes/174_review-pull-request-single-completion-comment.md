@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `review-pull-request-single-completion-comment`
-- PR: 未作成
+- PR: #174
 - 最終更新: 2026-07-13
 
 ## 目的
