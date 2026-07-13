@@ -16,7 +16,7 @@
 
 ## 現況
 
-v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み。v1.2.0 は release 準備中。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
+v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
 GitHub 上の open Issue を確認した範囲では、現在追跡中の横断タスクはない。新しい横断タスクが始まったら、状態・依存・Issue / PR 参照だけを示す索引表を追加する。
 
@@ -29,7 +29,7 @@ GitHub 上の open Issue を確認した範囲では、現在追跡中の横断�
 | v1.1.0 | released | token prompt / interactive selection / CLI output UX / 開発ループ整備を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.1.1 | released | `--reuse-cache` の出力ディレクトリ検出改善、exported HTML header / footer 調整、logo asset 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.1.2 | released | 出力プレビュー・匿名化サンプル、token 不要 `--demo`、Slack App セットアップ help スクリーンショット、export footer への tool version 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
-| v1.2.0 | preparing | 取得範囲指定(`--date` / `--from` / `--to`)、emoji 除外(`--exclude-body-emoji` / `--exclude-reaction-emoji`)、footer timezone 改善、README / help 再構成を含む minor release 準備中 |
+| v1.2.0 | released | 取得範囲指定(`--date` / `--from` / `--to`)、emoji 除外(`--exclude-body-emoji` / `--exclude-reaction-emoji`)、footer timezone 改善、README / help 再構成を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新を確認済み |
 
 ## 完了済みフェーズ(参考)
 
