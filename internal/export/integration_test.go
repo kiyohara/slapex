@@ -450,13 +450,13 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 	for _, want := range []string{
 		"First timeline note",
 		"Starting the launch thread",
-		fmt.Sprintf(
+		escapePlusForHTMLAssertion(fmt.Sprintf(
 			"From %s (included); to %s (not included); timezone: %s",
 			start.In(displayTimezone.location).Format(time.RFC3339),
 			start.AddDate(0, 0, 1).In(displayTimezone.location).Format(time.RFC3339),
 			displayTimezone.label,
-		),
-		"<dt>Options</dt><dd>--date &#34;" + input + "&#34;",
+		)),
+		escapePlusForHTMLAssertion("<dt>Options</dt><dd>--date &#34;" + input + "&#34;"),
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)
@@ -539,13 +539,13 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 	for _, want := range []string{
 		"First timeline note",
 		"Starting the launch thread",
-		fmt.Sprintf(
+		escapePlusForHTMLAssertion(fmt.Sprintf(
 			"From %s (included); to %s (not included); timezone: %s",
 			start.In(displayTimezone.location).Format(time.RFC3339),
 			end.In(displayTimezone.location).Format(time.RFC3339),
 			displayTimezone.label,
-		),
-		"<dt>Options</dt><dd>--from &#34;" + fromInput + "&#34;, --to &#34;" + toInput + "&#34;",
+		)),
+		escapePlusForHTMLAssertion("<dt>Options</dt><dd>--from &#34;" + fromInput + "&#34;, --to &#34;" + toInput + "&#34;"),
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("HTML missing %q", want)
@@ -591,6 +591,10 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 	if metadata.Counts.TimelineMessages != 2 || metadata.Counts.Replies != 2 {
 		t.Fatalf("metadata counts = %+v, want 2 timeline / 2 replies", metadata.Counts)
 	}
+}
+
+func escapePlusForHTMLAssertion(value string) string {
+	return strings.ReplaceAll(value, "+", "&#43;")
 }
 
 // runExportScenario is the integration-test entry point for happy-path
