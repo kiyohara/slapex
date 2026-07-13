@@ -10,7 +10,7 @@ Issue #173 に従い、`review-pull-request` の `review` モードで完了要�
 
 ## 現在の状況
 
-正本 skill の `SKILL.md` と `references/review.md` を単一チャネル方針へ更新し、指定検証を完了した。PR 作成を進める。
+正本 skill の `SKILL.md` と `references/review.md` を単一チャネル方針へ更新し、指定検証を完了した。draft PR #174 を作成し、note の採番と PR description の参照更新まで完了した。
 
 ## 決定事項
 
@@ -20,7 +20,7 @@ Issue #173 に従い、`review-pull-request` の `review` モードで完了要�
 
 ## 次にやること
 
-- commit、push、PR 作成後に note を採番する。
+- PR #174 をレビューし、問題がなければ merge する。merge はユーザーが行う。
 
 ## 検証
 
@@ -38,3 +38,4 @@ Issue #173 に従い、`review-pull-request` の `review` モードで完了要�
 
 - 2026-07-13: Issue #173 の state、依存、コメント、sub-issue、関連 PR を確認。依存なし、関連 PR なし。
 - 2026-07-13: review 完了要約を指摘ありでは review body、指摘なしでは PR conversation comment の 1 本に揃え、指定検証を完了。
+- 2026-07-13: draft PR #174 を作成し、working branch note を採番。PR description の note 参照を更新した。
