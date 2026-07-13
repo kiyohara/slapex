@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `optimize-footer-range-timezone`
-- PR: 未作成
+- PR: #177
 - 最終更新: 2026-07-13
 
 ## 目的
