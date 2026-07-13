@@ -18,21 +18,7 @@
 
 v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-現在は取得範囲指定(`--date` / `--from` `--to`)と、emoji 除外(privacy signal)を横断タスクとして追跡中。状態・依存・Issue / PR 参照だけを下の索引表で管理する。
-
-## 取得範囲指定
-
-| ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
-|---|---|---|---|---|---|
-| range-01 | #153 | done | - | `--date <date-time>` で特定日の timeline 取得範囲を指定できるようにする | #168 |
-| range-02 | #154 | done | #153 | `--from` / `--to` で任意期間の timeline 取得範囲を指定できるようにする | #169 |
-
-## emoji 除外(privacy signal)
-
-| ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
-|---|---|---|---|---|---|
-| exclude-01 | #155 | done | - | `--exclude-body-emoji` で本文 shortcode 一致投稿を export から除外する | #175 |
-| exclude-02 | #156 | done | #155 | `--exclude-reaction-emoji` で指定 reaction 付き投稿を export から除外する | #176 |
+GitHub 上の open Issue を確認した範囲では、現在追跡中の横断タスクはない。新しい横断タスクが始まったら、状態・依存・Issue / PR 参照だけを示す索引表を追加する。
 
 ## リリース履歴
 
@@ -57,3 +43,5 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 - CLI 出力 UX / 利用者向け help 基盤 / サンプル表示の初期整備 — styled/plain 出力(#100 / PR #102)、README 出力プレビューと同梱サンプル(#51 / PR #114)、Slack App セットアップ画像 help(#48 / PR #119)、FAQ(#52 / PR #128)、quickstart(#49 / PR #124)、README 再構成(#123 / PR #131)、文体・リンク方針(#125 / PR #127、#129 / PR #130)を整備済み。方針は decision log 0045 / 0048 / 0049。
 - Agent / 開発環境整備 — worktree の project MCP local config セットアップ(#8 / PR #149、decision log 0051)。関連 follow-up として Cursor MCP command の相対 path 化(#151 / PR #152、decision log 0053)、GitHub MCP 優先規則・PR review skill・手動 resolve 運用(#161 / #162 / #165、PR #163 / #164 / #166)も完了。
 - 利用者向け help / サンプル更新運用 — 文体一括修正(#126 / PR #143)、asset 内容 hash(#135 / PR #150、decision log 0052)、preview 枠線(#136 / PR #142)、sample / preview / demo 更新 skill(#137〜#139 / PR #158〜#160)、quickstart 全体フロー SVG(#140 / PR #157)を整備済み。
+- 取得範囲指定 — 特定日の `--date`(#153 / PR #168)、任意期間の `--from` / `--to`(#154 / PR #169)、footer の timezone 表示改善(#170 / PR #177)を実装済み。
+- emoji 除外(privacy signal) — 本文 shortcode の `--exclude-body-emoji`(#155 / PR #175)と、reaction の `--exclude-reaction-emoji`(#156 / PR #176)を実装済み。
