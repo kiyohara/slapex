@@ -446,10 +446,16 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 		t.Fatal(err)
 	}
 	html := string(htmlBytes)
+	displayTimezone := environmentRangeDisplayTimezone(time.Local)
 	for _, want := range []string{
 		"First timeline note",
 		"Starting the launch thread",
-		fmt.Sprintf("From %s (included); to %s (not included)", start.UTC().Format(time.RFC3339), start.AddDate(0, 0, 1).UTC().Format(time.RFC3339)),
+		fmt.Sprintf(
+			"From %s (included); to %s (not included); timezone: %s",
+			start.In(displayTimezone.location).Format(time.RFC3339),
+			start.AddDate(0, 0, 1).In(displayTimezone.location).Format(time.RFC3339),
+			displayTimezone.label,
+		),
 		"<dt>Options</dt><dd>--date &#34;" + input + "&#34;",
 	} {
 		if !strings.Contains(html, want) {
@@ -529,10 +535,16 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := string(htmlBytes)
+	displayTimezone := chooseDateTimeRangeDisplayTimezone(fromInput, toInput, time.Local)
 	for _, want := range []string{
 		"First timeline note",
 		"Starting the launch thread",
-		fmt.Sprintf("From %s (included); to %s (not included)", start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339)),
+		fmt.Sprintf(
+			"From %s (included); to %s (not included); timezone: %s",
+			start.In(displayTimezone.location).Format(time.RFC3339),
+			end.In(displayTimezone.location).Format(time.RFC3339),
+			displayTimezone.label,
+		),
 		"<dt>Options</dt><dd>--from &#34;" + fromInput + "&#34;, --to &#34;" + toInput + "&#34;",
 	} {
 		if !strings.Contains(html, want) {
