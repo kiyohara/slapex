@@ -265,7 +265,7 @@ func TestHistoryPagination(t *testing.T) {
 
 	c, _ := newTestClient(srv)
 	const oldest = "1.000000"
-	messages, truncated, err := c.History(context.Background(), "C123", oldest, "", 100, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", oldest, "", 100, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -312,7 +312,7 @@ func TestHistoryRangeBoundariesAndMaxPosts(t *testing.T) {
 	defer srv.Close()
 
 	c, _ := newTestClient(srv)
-	messages, truncated, err := c.History(context.Background(), "C123", "200.000000", "400.000000", 2, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", "200.000000", "400.000000", 2, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -332,6 +332,47 @@ func TestHistoryRangeBoundariesAndMaxPosts(t *testing.T) {
 	}
 	if got := form.Get("latest"); got != "400.000000" {
 		t.Fatalf("latest = %q, want 400.000000", got)
+	}
+}
+
+func TestHistoryAppliesPredicateBeforeMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	h := &pagedHandler{
+		t:    t,
+		path: "/api/conversations.history",
+		pages: map[string]string{
+			"":     `{"ok":true,"messages":[{"ts":"5.0","text":"exclude"},{"ts":"4.0","text":"keep 1"}],"response_metadata":{"next_cursor":"cur1"}}`,
+			"cur1": `{"ok":true,"messages":[{"ts":"3.0","text":"keep 2"},{"ts":"2.0","text":"keep 3"}],"response_metadata":{"next_cursor":""}}`,
+		},
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	c, _ := newTestClient(srv)
+	excluded := 0
+	include := func(m *Message) bool {
+		if m.Text == "exclude" {
+			excluded++
+			return false
+		}
+		return true
+	}
+	messages, truncated, err := c.History(context.Background(), "C123", "1.0", "", 2, include, nil)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if !truncated {
+		t.Fatal("truncated = false, want true")
+	}
+	if excluded != 1 {
+		t.Fatalf("excluded = %d, want 1", excluded)
+	}
+	if got := messages[0].Text + "," + messages[1].Text; got != "keep 1,keep 2" {
+		t.Fatalf("messages = %q, want keep 1,keep 2", got)
+	}
+	if got := strings.Join(h.gotCursors(), "|"); got != "|cur1" {
+		t.Fatalf("cursors = %q, want |cur1", got)
 	}
 }
 

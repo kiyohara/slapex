@@ -43,19 +43,20 @@ func usagef(format string, args ...any) *UsageError {
 
 // Options are the validated CLI inputs (doc/design/cli-interface.md).
 type Options struct {
-	ChannelKeyword string
-	OutputDir      string
-	MaxPosts       int
-	Days           int
-	Date           string
-	From           string
-	To             string
-	MaxAttachBytes int64
-	KeepCache      bool
-	ReuseCache     string
-	NoInteractive  bool
-	PromptTTY      *os.File // controlling terminal for interactive prompts; nil when unavailable
-	ToolVersion    string
+	ChannelKeyword   string
+	OutputDir        string
+	MaxPosts         int
+	Days             int
+	Date             string
+	From             string
+	To               string
+	ExcludeBodyEmoji []string
+	MaxAttachBytes   int64
+	KeepCache        bool
+	ReuseCache       string
+	NoInteractive    bool
+	PromptTTY        *os.File // controlling terminal for interactive prompts; nil when unavailable
+	ToolVersion      string
 	// Now overrides the export clock used for the footer "Exported" line, the
 	// --days range boundaries and the default output-root name. Zero means
 	// time.Now(). gensample sets it from its -time flag when a sample
@@ -117,8 +118,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	if err != nil {
 		return "", err
 	}
+	filter := newMessageFilter(opts.ExcludeBodyEmoji)
 	p.StartPhase("Messages", fmt.Sprintf("fetching %s (--max-posts %d) ...", fetchRange.progressLabel(), opts.MaxPosts))
-	messages, truncated, err := client.History(ctx, ch.ID, fetchRange.oldestTS(), fetchRange.latestTS(), opts.MaxPosts,
+	messages, truncated, err := client.History(ctx, ch.ID, fetchRange.oldestTS(), fetchRange.latestTS(), opts.MaxPosts, filter.Include,
 		func(n int) { p.UpdatePhase(fmt.Sprintf("fetching %s ... %d fetched", fetchRange.progressLabel(), n)) })
 	if err != nil {
 		return "", err
@@ -143,13 +145,26 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		if err != nil {
 			return "", err
 		}
+		var kept []slack.Message
+		for i := range r {
+			if filter.Include(&r[i]) {
+				kept = append(kept, r[i])
+			}
+		}
+		r = kept
 		sort.Slice(r, func(i, j int) bool { return tsLess(r[i].TS, r[j].TS) })
-		replies[m.TS] = r
-		repliesTruncated[m.TS] = trunc
+		if len(r) > 0 {
+			replies[m.TS] = r
+			repliesTruncated[m.TS] = trunc
+		}
 		replyTotal += len(r)
 	}
+	excludedTotal := filter.ExcludedCount()
 	messagesStatus := ui.StatusSuccess
-	messagesMeta := fmt.Sprintf("threads %d, replies %d", threadTotal, replyTotal)
+	messagesMeta := fmt.Sprintf("threads %d, replies %d", len(replies), replyTotal)
+	if excludedTotal > 0 {
+		messagesMeta += fmt.Sprintf(", excluded by body emoji: %d", excludedTotal)
+	}
 	if truncated {
 		messagesStatus = ui.StatusWarn
 		messagesMeta += fmt.Sprintf(", truncated by --max-posts %d", opts.MaxPosts)
@@ -295,7 +310,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", saved, skipped, failed), assetsMeta)
 
 	if err := writeCaches(dir, now, auth, ch, opts, fetchRange, wsLabel, chLabel,
-		len(messages), threadCount, replyCount, saved, skipped, failed, users, customEmoji, assets); err != nil {
+		len(messages), threadCount, replyCount, excludedTotal, saved, skipped, failed, users, customEmoji, assets); err != nil {
 		return "", err
 	}
 	if !opts.KeepCache {
@@ -311,6 +326,9 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	p.EndPhase(ui.StatusSuccess, "Done", fmt.Sprintf("%s / %s", wsLine, chLine),
 		fmt.Sprintf("in %s", time.Since(now).Round(time.Second)))
 	p.Plainf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
+	if len(opts.ExcludeBodyEmoji) > 0 {
+		p.Plainf("    excluded by body emoji: %d", excludedTotal)
+	}
 	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
 	if n := assets.Reused(); n > 0 {
 		p.Plainf("    (of which %d copied from reused cache, no download)", n)
@@ -393,6 +411,9 @@ func (r messageFetchRange) footerRangeLabel() string {
 
 func (r messageFetchRange) footerOptionsLabel(opts Options) string {
 	limit := fmt.Sprintf("--max-posts %d, --max-attachment-size %s", opts.MaxPosts, humanBytes(opts.MaxAttachBytes))
+	if len(opts.ExcludeBodyEmoji) > 0 {
+		limit += ", --exclude-body-emoji " + strings.Join(opts.ExcludeBodyEmoji, ",")
+	}
 	if r.mode == "date" {
 		return fmt.Sprintf("--date %q, %s", opts.Date, limit)
 	}
@@ -816,7 +837,7 @@ type cachedUser struct {
 }
 
 func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Channel, opts Options,
-	fetchRange messageFetchRange, wsLabel, chLabel string, timeline, threads, replyTotal, saved, skipped, failed int,
+	fetchRange messageFetchRange, wsLabel, chLabel string, timeline, threads, replyTotal, excludedTotal, saved, skipped, failed int,
 	users map[string]*slack.User, customEmoji map[string]string, assets *output.Assets) error {
 
 	common := output.CacheCommon{SchemaVersion: output.SchemaVersion, GeneratedAt: now.UTC().Format(time.RFC3339)}
@@ -850,7 +871,8 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 		},
 		"counts": map[string]int{
 			"timeline_messages": timeline, "threads": threads, "replies": replyTotal,
-			"assets_saved": saved, "assets_skipped": skipped, "assets_failed": failed,
+			"excluded_messages": excludedTotal,
+			"assets_saved":      saved, "assets_skipped": skipped, "assets_failed": failed,
 		},
 	}
 	if err := output.WriteCacheFile(dir, "metadata.json", metadata); err != nil {
@@ -902,6 +924,9 @@ func (r messageFetchRange) metadataOptions(opts Options) map[string]any {
 		"max_posts":                 opts.MaxPosts,
 		"max_attachment_size_bytes": opts.MaxAttachBytes,
 	}
+	if len(opts.ExcludeBodyEmoji) > 0 {
+		values["exclude_body_emoji"] = opts.ExcludeBodyEmoji
+	}
 	if r.mode == "date" {
 		values["date"] = opts.Date
 	} else if r.mode == "datetime-range" {
@@ -911,6 +936,33 @@ func (r messageFetchRange) metadataOptions(opts Options) map[string]any {
 		values["days"] = opts.Days
 	}
 	return values
+}
+
+type messageFilter struct {
+	bodyEmoji emoji.NameSet
+	excluded  map[string]struct{}
+}
+
+func newMessageFilter(bodyEmoji []string) *messageFilter {
+	return &messageFilter{
+		bodyEmoji: emoji.NewNameSet(bodyEmoji),
+		excluded:  map[string]struct{}{},
+	}
+}
+
+func (f *messageFilter) Include(message *slack.Message) bool {
+	if message == nil {
+		return false
+	}
+	if !f.bodyEmoji.MatchesText(message.Text) {
+		return true
+	}
+	f.excluded[message.TS] = struct{}{}
+	return false
+}
+
+func (f *messageFilter) ExcludedCount() int {
+	return len(f.excluded)
 }
 
 // --- small helpers -----------------------------------------------------------

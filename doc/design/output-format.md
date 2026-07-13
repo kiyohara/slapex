@@ -31,9 +31,11 @@ option:
 
 `--from` / `--to` は必ずペアで指定し、開始が終了より前の半開区間 `[from, to)` とする。日付だけの場合は local timezone の 00:00 として解釈するため、`--from 2026/07/03 --to 2026/07/04` で local timezone の 2026-07-03 全体を取得できる。offset 付き入力は絶対時刻として扱う。`--date` および明示した `--days` とは排他にする。
 
-`--max-posts` は時間範囲内に残る親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は投稿時刻で切り詰めず一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
+`--max-posts` は時間範囲と `--exclude-body-emoji` の除外条件を適用した後に残る親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は投稿時刻で切り詰めず一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
 
-HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻で表示し、開始を含むことを `included`、終了を含まないことを `not included` と平易に明記する。利用者向け表示では `[start, end)` の記号や `inclusive` / `exclusive` の用語だけに依存しない。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限は、意味の異なる情報として `Options` 行へ分けて表示する。
+`--exclude-body-emoji <emoji-list>` を指定した場合、timeline 親投稿の本文に一致する shortcode があれば親投稿と thread 全体を除外し、その thread の replies は取得しない。thread reply の本文だけが一致する場合は、その reply だけを除外する。除外後に reply が 0 件なら thread UI を表示しない。除外された message の本文、投稿者、file / asset URL は HTML、cache、進捗・エラー出力へ残さず、除外後の message だけから user、emoji、asset を解決する。
+
+HTML footer の `Range` は、取得対象の境界を UTC の RFC3339 絶対時刻で表示し、開始を含むことを `included`、終了を含まないことを `not included` と平易に明記する。利用者向け表示では `[start, end)` の記号や `inclusive` / `exclusive` の用語だけに依存しない。実行時に指定した `--date`、`--from` / `--to`、`--days` と件数・asset 上限、正規化済みの `--exclude-body-emoji` は、意味の異なる情報として `Options` 行へ分けて表示する。
 
 ただし、1 thread の replies が `1000` 件を超える場合は、それ以上の取得を取りやめ、HTML 上では残りの replies を次のようなメッセージに置き換える。
 

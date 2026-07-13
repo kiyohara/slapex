@@ -24,6 +24,17 @@ func TestResolveFetchRangeDateUsesLocalCalendarDay(t *testing.T) {
 	}
 }
 
+func TestMessageFilterCountsExcludedMessageOnce(t *testing.T) {
+	filter := newMessageFilter([]string{"shushing_face"})
+	message := slack.Message{TS: "1700000001.000000", Text: "private :shushing_face:"}
+	if filter.Include(&message) || filter.Include(&message) {
+		t.Fatal("Include returned true for excluded message")
+	}
+	if got := filter.ExcludedCount(); got != 1 {
+		t.Fatalf("ExcludedCount = %d, want 1", got)
+	}
+}
+
 func TestResolveFetchRangeDaysUsesAbsoluteStartAndEnd(t *testing.T) {
 	now := time.Date(2026, 7, 12, 13, 0, 0, 0, time.FixedZone("JST", 9*60*60))
 	r, err := resolveFetchRange(Options{Days: 30}, now)

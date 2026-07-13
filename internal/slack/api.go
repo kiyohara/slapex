@@ -178,9 +178,13 @@ type Reaction struct {
 	Count int    `json:"count"`
 }
 
-// History fetches timeline messages in [oldest, latest), up to maxMessages.
-// It reports whether the fetch stopped because maxMessages was reached.
-func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, progress func(fetched int)) ([]Message, bool, error) {
+// MessagePredicate reports whether a fetched message should be retained.
+type MessagePredicate func(*Message) bool
+
+// History fetches timeline messages in [oldest, latest), up to maxMessages
+// retained messages. It reports whether the fetch stopped because maxMessages
+// was reached.
+func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, include MessagePredicate, progress func(fetched int)) ([]Message, bool, error) {
 	var messages []Message
 	cursor := ""
 	for {
@@ -205,6 +209,9 @@ func (c *Client) History(ctx context.Context, channelID, oldest, latest string, 
 		}
 		for _, m := range page.Messages {
 			if !timestampInRange(m.TS, oldest, latest) {
+				continue
+			}
+			if include != nil && !include(&m) {
 				continue
 			}
 			if len(messages) >= maxMessages {
