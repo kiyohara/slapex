@@ -39,7 +39,7 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 | --- | --- | --- | --- |
 | `review` | PR 自体をレビューし、指摘があれば inline comment と review body、無ければ PR conversation comment で完了を可視化する | 完了要約 1 本と、指摘がある場合は inline comment を投稿し、read-back で反映を確認した時点 | `references/review.md` |
 | `address-comments` | 既存 review comment の妥当性を検証し、必要な修正・検証・返信を行う。inline thread は resolve しない | 確認した各 inline comment へ処置を返信し、read-back で反映を確認した時点 | `references/address-comments.md` |
-| `verify-comments` | 元の Review 担当 Agent が対応結果を再検証し、妥当な inline thread に resolve 可マーカー付きの確認返信を残す。resolve は自動実行しない | 全対象 thread を確認し、再確認結果コメントを投稿した時点 | `references/verify-comments.md` |
+| `verify-comments` | 元の Review 担当 Agent が対応結果を再検証し、妥当な inline thread に簡潔な resolve 可マーカー付き返信を残す。共通の検証結果は完了要約 1 本へ集約し、resolve は自動実行しない | 全対象 thread への返信と完了要約 1 本を投稿し、read-back で反映を確認した時点 | `references/verify-comments.md` |
 
 ## 対象 PR の特定と review source
 
@@ -56,7 +56,7 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 
 ## Agent 識別と review cycle
 
-- `review` モードでは review cycle の完了要約を載せる 1 本に、処理した Agent 自身を識別できる表示と review cycle の可視 metadata を含める。`address-comments` / `verify-comments` では投稿する各返信・コメントに同じ metadata を含める。GitHub 上の操作 account は単一であり、username では処理主体を区別できないためである。
+- `review` / `verify-comments` モードでは review cycle の完了要約を載せる 1 本に、処理した Agent 自身を識別できる表示と review cycle の可視 metadata を含める。`address-comments` では投稿する各返信・コメントに同じ metadata を含める。GitHub 上の操作 account は単一であり、username では処理主体を区別できないためである。
 - Agent 種別は実行環境(system prompt、実行 harness の情報)から確認する。判定できない場合は推測せず、ユーザーに確認する。
 - `review` モードの開始時に review cycle ID を作る。session ID、token、local path などの内部情報を review cycle ID や metadata に含めない。
 
@@ -79,7 +79,7 @@ Mode: <review | address-comments | verify-comments>
 - `Review cycle` の値は `<agent-slug>-<short-head>-<YYYYMMDDHHMMSS>` とする。`<agent-slug>` は Review 担当 Agent 種別の小文字 kebab-case(例: `codex`、`claude-code`、`cursor`)、`<short-head>` は review 開始時点の head SHA 先頭 7 文字、`<YYYYMMDDHHMMSS>` は review 開始時刻(UTC、秒まで)とする(例: `codex-1a2b3c4-20260711103045`)。同一 Agent・同一 head の再レビューや再試行で cycle ID が衝突しないよう、秒までを含める。
 - `Reviewed head` は、そのコメントの投稿時点で当該 Agent が確認した full head SHA とする。
 - `Mode` は投稿を行ったモード名とする。
-- `address-comments` / `verify-comments` の返信・コメントでは、`Review cycle` に対象 review cycle の ID(元 review の値)をそのまま使い、新しい ID を作らない。同じ cycle を追跡可能に保つためである。
+- `address-comments` の返信・コメントと `verify-comments` の完了要約では、`Review cycle` に対象 review cycle の ID(元 review の値)をそのまま使い、新しい ID を作らない。同じ cycle を追跡可能に保つためである。
 - HTML comment などの非表示 marker は取得経路によって欠落し得るため、併用してよいが、非表示 marker だけに依存しない。
 
 ### verify-comments の担当一致
