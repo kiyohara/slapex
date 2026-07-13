@@ -19,11 +19,12 @@ Issue #171 に従い、`number-working-branch-note` の定型フローから pus
 
 - 変更対象は `.agents/skills/number-working-branch-note/SKILL.md` のみに限定する。
 - 既知 stale 表現は機械的に置換し、曖昧な表現や title は触らず終了報告に残す。
+- 列挙済み stale 表現の置換先を定型化し、note の採番を確定と表現しない。
 - 例外時の安全停止条件と情報統制、commit 対象限定は維持する。
 
 ## 次にやること
 
-- PR #172 の review / merge を待つ。
+- inline thread へ対応結果を返信し、元の Review 担当 Agent による `verify-comments` を待つ。
 
 ## 検証
 
@@ -33,6 +34,7 @@ Issue #171 に従い、`number-working-branch-note` の定型フローから pus
 - `ls -la .claude/skills/number-working-branch-note`: 正本を指す symlink を確認済み。
 - `test -f .claude/skills/number-working-branch-note/SKILL.md`: 成功。
 - `git diff --check`: 成功。
+- stale 表現の定型置換表と、確定を含意する置換の禁止を確認済み。
 - package test: 文書 / skill のみの変更のため未実施。
 
 ## リスク・ブロッカー
@@ -44,3 +46,4 @@ Issue #171 に従い、`number-working-branch-note` の定型フローから pus
 - 2026-07-13: Issue #171 の依存確認と作業ブランチ作成を完了した。
 - 2026-07-13: skill 更新と Issue 指定の検証を完了した。
 - 2026-07-13: PR #172 を作成し、working branch note を採番した。
+- 2026-07-13: review comment を採用し、stale 表現の置換先と制約を明文化した。
