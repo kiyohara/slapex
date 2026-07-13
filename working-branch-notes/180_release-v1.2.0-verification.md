@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: release-v1.2.0-verification
-- PR: (採番前)
+- PR: #180
 - 最終更新: 2026-07-13
 
 ## 目的
@@ -15,7 +15,7 @@ v1.2.0 公開後の release 検証結果を `progress.md` と decision log 0041 
 - release workflow: run `29243080813` / success
 - GitHub Release: published
 - assets: darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt`
-- 検証結果記録 PR: 未作成
+- 検証結果記録 PR: #180
 
 ## 決定事項
 
@@ -24,9 +24,8 @@ v1.2.0 公開後の release 検証結果を `progress.md` と decision log 0041 
 
 ## 次にやること
 
-- 検証結果記録 PR を作成する。
 - ユーザー手元の macOS binary / Homebrew upgrade 確認を依頼する。
-- ユーザーが検証結果記録 PR を merge する。
+- ユーザーが PR #180 を merge する。
 
 ## 検証
 
