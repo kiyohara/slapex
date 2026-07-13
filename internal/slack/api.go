@@ -178,9 +178,13 @@ type Reaction struct {
 	Count int    `json:"count"`
 }
 
-// History fetches timeline messages in [oldest, latest), up to maxMessages.
-// It reports whether the fetch stopped because maxMessages was reached.
-func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, progress func(fetched int)) ([]Message, bool, error) {
+// MessagePredicate reports whether a fetched message should be retained.
+type MessagePredicate func(*Message) bool
+
+// History fetches timeline messages in [oldest, latest), up to maxMessages
+// retained messages. It reports whether the fetch stopped because maxMessages
+// was reached.
+func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, include MessagePredicate, progress func(fetched int)) ([]Message, bool, error) {
 	var messages []Message
 	cursor := ""
 	for {
@@ -205,6 +209,12 @@ func (c *Client) History(ctx context.Context, channelID, oldest, latest string, 
 		}
 		for _, m := range page.Messages {
 			if !timestampInRange(m.TS, oldest, latest) {
+				continue
+			}
+			// Apply the predicate before the limit guard. This keeps truncated
+			// false when every message beyond the retained limit is excluded,
+			// while allowing callers to count examined exclusions explicitly.
+			if include != nil && !include(&m) {
 				continue
 			}
 			if len(messages) >= maxMessages {
@@ -248,9 +258,10 @@ func timestampInRange(ts, oldest, latest string) bool {
 	return true
 }
 
-// Replies fetches thread replies (excluding the parent message itself), up to
-// maxReplies. It reports whether the thread was truncated at the limit.
-func (c *Client) Replies(ctx context.Context, channelID, threadTS string, maxReplies int) ([]Message, bool, error) {
+// Thread fetches a thread parent and its replies, up to maxReplies replies.
+// It reports whether the replies were truncated at the limit.
+func (c *Client) Thread(ctx context.Context, channelID, threadTS string, maxReplies int) (*Message, []Message, bool, error) {
+	var parent *Message
 	var replies []Message
 	cursor := ""
 	for {
@@ -267,22 +278,30 @@ func (c *Client) Replies(ctx context.Context, channelID, threadTS string, maxRep
 		}
 		next, err := c.call(ctx, "conversations.replies", params, &page)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		for _, m := range page.Messages {
 			if m.TS == threadTS {
-				continue // the parent appears in the replies response
+				copy := m
+				parent = &copy
+				continue
 			}
 			if len(replies) >= maxReplies {
-				return replies, true, nil
+				return parent, replies, true, nil
 			}
 			replies = append(replies, m)
 		}
 		if next == "" {
-			return replies, false, nil
+			return parent, replies, false, nil
 		}
 		cursor = next
 	}
+}
+
+// Replies fetches thread replies without returning the parent message.
+func (c *Client) Replies(ctx context.Context, channelID, threadTS string, maxReplies int) ([]Message, bool, error) {
+	_, replies, truncated, err := c.Thread(ctx, channelID, threadTS, maxReplies)
+	return replies, truncated, err
 }
 
 // User is the subset of users.info slapex uses for display names and avatars.

@@ -54,7 +54,8 @@ token type による主な違い:
 - `--from` / `--to` では、parse 後の開始を `oldest`、終了を `latest` に指定し、`--date` と同じ bounded range の API 境界と client 側判定を使う。
 - `--days` では `oldest` に「実行基準時刻 − `--days` × 24 時間」、`latest` に実行基準時刻を指定し、`--date` と同様に client 側でも半開区間を守る。
 - 1 ページの要求件数は 200 件を上限とする。サーバー側がより小さいページ(例: 15 件)しか返さなくても、cursor 継続により動作が変わらない設計とする。
-- timeline 上で取得範囲に残った親投稿件数が `--max-posts` に達した時点で打ち切る。`conversations.replies` だけに現れる thread replies は数えない(thread_broadcast は timeline に現れるため数える)。
+- timeline 上で取得範囲と `--exclude-body-emoji` の条件を適用した後に残る親投稿件数が `--max-posts` に達するまで cursor を継続する。本文 emoji で除外した投稿は数えない。`conversations.replies` だけに現れる thread replies は数えない(thread_broadcast は timeline に現れるため数える)。
+- timeline 親投稿を本文 emoji で除外した場合、その親投稿の `conversations.replies` は呼ばない。残した親投稿の replies は取得後すぐ同じ本文 predicate で絞り、その後の user / emoji / asset 解決には残った message だけを渡す。
 - `conversations.replies` も同様に pagination し、1 thread あたり合計 1000 件で打ち切る(`output-format.md`)。
 
 ## rate limit とリトライ

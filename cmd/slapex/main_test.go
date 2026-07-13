@@ -99,6 +99,11 @@ func TestParseArgsValidation(t *testing.T) {
 		{name: "max attachment lower bound bytes", args: []string{"--max-attachment-size", "1024"}},
 		{name: "max attachment below range", args: []string{"--max-attachment-size", "1023"}, wantErr: true},
 		{name: "max attachment invalid format", args: []string{"--max-attachment-size", "large"}, wantErr: true},
+		{name: "exclude body emoji", args: []string{"--exclude-body-emoji", "shushing_face,:SPEAK_NO_EVIL:"}},
+		{name: "exclude body emoji skin tone", args: []string{"--exclude-body-emoji", ":+1::skin-tone-3:"}},
+		{name: "exclude body emoji empty", args: []string{"--exclude-body-emoji", ""}, wantErr: true},
+		{name: "exclude body emoji empty item", args: []string{"--exclude-body-emoji", "shushing_face,,speak_no_evil"}, wantErr: true},
+		{name: "exclude body emoji trailing comma", args: []string{"--exclude-body-emoji", "shushing_face,"}, wantErr: true},
 	}
 
 	for _, tt := range tests {

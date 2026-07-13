@@ -39,6 +39,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 | `--from <date-time>` | 日付または日時 | なし | `--to` とペア、下記の明示形式 | 任意期間の開始境界を指定する(境界を含む) |
 | `--to <date-time>` | 日付または日時 | なし | `--from` とペア、下記の明示形式 | 任意期間の終了境界を指定する(境界を含まない) |
 | `--days <days>` | 整数 | `30` | `1`〜`90` | 現在時刻から何日前までの投稿を取得するか(`output-format.md`) |
+| `--exclude-body-emoji <emoji-list>` | comma-separated list | なし | Slack emoji 名。空要素不可 | 本文に指定 shortcode を含む投稿を export 対象から除外する |
 | `--max-attachment-size <size>` | サイズ | `10MB` | `1KB` 以上 | 添付ファイル / original 画像 1 件あたりの保存上限(`output-format.md`) |
 | `--keep-cache` | flag | off | | `.cache/` を成否に関係なく残す(`cache.md`) |
 | `--reuse-cache <path>` | path | なし | | 以前の出力ディレクトリまたは `.cache/` を再利用する(`cache.md`) |
@@ -53,6 +54,8 @@ token を CLI option や引数として受け取る経路は提供しない。�
 取得範囲 option は、利用者への案内と文書内の記載順を `--date`、`--from` / `--to`、`--days` の優先順とする。特定日には `--date`、任意期間には `--from` / `--to`、実行時刻基準の相対範囲にだけ `--days` を使う。
 
 制約を外れた値、未知の option、不正な書式は usage を表示して exit code `2` で終了する。
+
+`--exclude-body-emoji` は `shushing_face,speak_no_evil` のような comma-separated list を受け付ける。各要素の前後空白と外側の colon を除き、大文字小文字を lowercase に正規化する。空要素、trailing comma、正規化後に空になる要素は不正とする。skin tone suffix は base emoji 名へ寄せ、本文中の標準・custom・未知の `:shortcode:` と名前を完全一致で比較する。Unicode literal emoji、attachment、unfurl、file 名、reaction は判定しない。
 
 `--from` と `--to` は必ずペアで指定し、開始は終了より前にする。範囲は開始を含み終了を含まない半開区間 `[from, to)` とする。`--from` / `--to` は `--date` および利用者が明示した `--days` と併用できない。`--date` または `--from` / `--to` だけを指定した場合、既定値 `--days 30` は適用しない。
 
@@ -77,7 +80,7 @@ offset なしの入力は local timezone として parse する。offset 付き�
 - 実行時に in-process の fake Slack API server を起動し、内部専用の fake token でその server にだけ接続する。実 Slack host への通信や実 token の送信は行わない(`doc/guidelines/credential-scope-guidelines.md`)。接続先の指定は CLI 内部で直接行い、公開環境変数を経由しない。
 - サンプルデータは架空の workspace / channel / user / asset で構成し、実 workspace 名・個人名・実 token を含めない(#51 と同じ匿名化方針)。ja / en の 2 シナリオを同梱し、locale(`LC_ALL` → `LC_MESSAGES` → `LANG` の順に最初の非空値)が `ja` で始まる場合は日本語シナリオ、それ以外は英語シナリオを使う。
 - 対象 channel は 1 つに固定されるため channel selection は行わない(non-interactive で自動解決)。positional な `[channel]` 引数を渡しても demo では無視する。
-- 出力先(`--output`)、`--no-color`、取得範囲 option(`--max-posts` / `--date` / `--from` / `--to` / `--days` / `--max-attachment-size` など)は通常実行と同じく尊重する。stdout の契約(成功時に出力ディレクトリ path を 1 行)も通常実行と同じで、token 不要の案内は stderr に出す。
+- 出力先(`--output`)、`--no-color`、取得範囲 option(`--max-posts` / `--date` / `--from` / `--to` / `--days` / `--max-attachment-size` など)、除外 option(`--exclude-body-emoji`)は通常実行と同じく尊重する。stdout の契約(成功時に出力ディレクトリ path を 1 行)も通常実行と同じで、token 不要の案内は stderr に出す。
 - fixture は in-process 配信で実際の rate limit が無いため、通常実行が行う Slack API pacing は demo では省略し、待ち時間を入れない。
 - デモ録画(`tools/demo/`)が使う内部環境変数 `SLAPEX_API_BASE_URL`(`decision-log/0046-api-base-url-override.md`)とは別経路である。録画は token 入力プロンプトを見せる目的でその機構を引き続き使い、demo モードは利用者向けの token 不要経路として別に提供する。
 

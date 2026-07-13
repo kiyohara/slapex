@@ -47,6 +47,224 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 	})
 }
 
+func TestRunIntegrationExcludeBodyEmojiParentAndThread(t *testing.T) {
+	t.Parallel()
+
+	sc := happyPathScenario()
+	sc.Messages[1].Text += " :shushing_face:"
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword:   "project-alpha",
+		OutputDir:        t.TempDir(),
+		MaxPosts:         10,
+		Days:             90,
+		ExcludeBodyEmoji: []string{"shushing_face"},
+		MaxAttachBytes:   1 << 20,
+		KeepCache:        true,
+		ToolVersion:      "test",
+	})
+
+	bodyBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(bodyBytes)
+	for _, excluded := range []string{"Starting the launch thread", "Reply with screenshot", "Thread is wrapped up"} {
+		if strings.Contains(body, excluded) {
+			t.Fatalf("index.html contains excluded content %q", excluded)
+		}
+	}
+	if !strings.Contains(body, "--exclude-body-emoji shushing_face") {
+		t.Fatal("index.html does not show the active normalized filter")
+	}
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/conversations.replies": 0})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, []string{"shushing_face"})
+	assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
+}
+
+func TestRunIntegrationExcludeBodyEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000003.000000"
+	parent := slack.Message{
+		Type:       "message",
+		TS:         parentTS,
+		ThreadTS:   parentTS,
+		User:       "U01",
+		Text:       "private parent :shushing_face:",
+		ReplyCount: 1,
+	}
+	broadcast := slack.Message{
+		Type:     "message",
+		Subtype:  "thread_broadcast",
+		TS:       "1700000004.000000",
+		ThreadTS: parentTS,
+		User:     "U02",
+		Text:     "private broadcast",
+	}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		broadcast,
+		parent,
+		{Type: "message", TS: "1700000002.000000", User: "U01", Text: "retained newer"},
+		{Type: "message", TS: "1700000001.000000", User: "U02", Text: "retained older"},
+	}
+	sc.Replies[parentTS] = []slack.Message{parent, broadcast}
+	opts := renderingOptions(t)
+	opts.MaxPosts = 2
+	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
+	for _, excluded := range []string{"private parent", "private broadcast"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"retained newer", "retained older"} {
+		mustContain(t, body, retained)
+	}
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 2,
+		"/api/conversations.replies": 1,
+	})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, []string{"shushing_face"})
+	assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
+}
+
+func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
+	t.Parallel()
+
+	const (
+		firstTS  = "1700000002.000000"
+		secondTS = "1700000001.000000"
+	)
+	first := slack.Message{Type: "message", TS: firstTS, ThreadTS: firstTS, User: "U01", Text: "first parent", ReplyCount: 1}
+	second := slack.Message{Type: "message", TS: secondTS, ThreadTS: secondTS, User: "U02", Text: "second parent", ReplyCount: 1}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{first, second}
+	sc.Replies[firstTS] = []slack.Message{
+		first,
+		{Type: "message", TS: "1700000002.100000", ThreadTS: firstTS, User: "U02", Text: "excluded :shushing_face:"},
+	}
+	sc.Replies[secondTS] = []slack.Message{
+		second,
+		{Type: "message", TS: "1700000001.100000", ThreadTS: secondTS, User: "U01", Text: "retained reply"},
+	}
+	opts := renderingOptions(t)
+	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+
+	got := runExportScenario(t, sc, opts)
+	if !logsContain(got.Logs, "fetching thread replies ... 1/2") || !logsContain(got.Logs, "fetching thread replies ... 2/2") {
+		t.Fatalf("thread progress did not advance monotonically: %v", got.Logs)
+	}
+}
+
+func TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	sc := happyPathScenario()
+	sc.Messages[0].Text = "private newest :do_not_archive:"
+	sc.Replies["1700000002.000000"][2].Text = "private reply :speak_no_evil:"
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword:   "project-alpha",
+		OutputDir:        t.TempDir(),
+		MaxPosts:         2,
+		Days:             90,
+		ExcludeBodyEmoji: []string{"do_not_archive", "speak_no_evil"},
+		MaxAttachBytes:   1 << 20,
+		KeepCache:        true,
+		ToolVersion:      "test",
+	})
+
+	bodyBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(bodyBytes)
+	for _, excluded := range []string{"private newest", "private reply", "screenshot.png"} {
+		if strings.Contains(body, excluded) {
+			t.Fatalf("index.html contains excluded content %q", excluded)
+		}
+	}
+	for _, included := range []string{"Starting the launch thread", "First timeline note", "Thread is wrapped up"} {
+		if !strings.Contains(body, included) {
+			t.Fatalf("index.html is missing retained content %q", included)
+		}
+	}
+	assertExcludedMetadata(t, got.OutputDir, 2, 1, 1, 2, []string{"do_not_archive", "speak_no_evil"})
+	assertCacheOmits(t, got.OutputDir, "screenshot-original.png", "screenshot-thumb.png")
+}
+
+func TestRunIntegrationExcludeBodyEmojiHidesEmptyThread(t *testing.T) {
+	t.Parallel()
+
+	sc := happyPathScenario()
+	sc.Replies["1700000002.000000"][1].Text += " :speak_no_evil:"
+	sc.Replies["1700000002.000000"][2].Text += " :speak_no_evil:"
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword:   "project-alpha",
+		OutputDir:        t.TempDir(),
+		MaxPosts:         10,
+		Days:             90,
+		ExcludeBodyEmoji: []string{"speak_no_evil"},
+		MaxAttachBytes:   1 << 20,
+		KeepCache:        true,
+		ToolVersion:      "test",
+	})
+
+	bodyBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(bodyBytes)
+	if !strings.Contains(body, "Starting the launch thread") {
+		t.Fatal("index.html is missing the retained parent message")
+	}
+	if strings.Contains(body, `summary class="thread-label"`) {
+		t.Fatal("index.html shows thread UI after every reply was excluded")
+	}
+	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 2, []string{"speak_no_evil"})
+}
+
+func assertCacheOmits(t *testing.T, dir string, values ...string) {
+	t.Helper()
+	for _, name := range []string{"metadata.json", "assets_manifest.json", "slack_api_cache.json"} {
+		body, err := os.ReadFile(filepath.Join(dir, ".cache", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, value := range values {
+			if strings.Contains(string(body), value) {
+				t.Fatalf("%s contains excluded-only value %q", name, value)
+			}
+		}
+	}
+}
+
+func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies, excluded int, names []string) {
+	t.Helper()
+	var metadata struct {
+		Counts struct {
+			Timeline int `json:"timeline_messages"`
+			Threads  int `json:"threads"`
+			Replies  int `json:"replies"`
+			Excluded int `json:"excluded_messages"`
+		} `json:"counts"`
+		Fetch struct {
+			Options struct {
+				ExcludeBodyEmoji []string `json:"exclude_body_emoji"`
+			} `json:"options"`
+		} `json:"fetch"`
+		Users map[string]any `json:"users"`
+	}
+	readJSON(t, filepath.Join(dir, ".cache/metadata.json"), &metadata)
+	if metadata.Counts.Timeline != timeline || metadata.Counts.Threads != threads || metadata.Counts.Replies != replies || metadata.Counts.Excluded != excluded {
+		t.Fatalf("metadata counts = %+v, want timeline=%d threads=%d replies=%d excluded=%d", metadata.Counts, timeline, threads, replies, excluded)
+	}
+	if !slices.Equal(metadata.Fetch.Options.ExcludeBodyEmoji, names) {
+		t.Fatalf("exclude_body_emoji = %v, want %v", metadata.Fetch.Options.ExcludeBodyEmoji, names)
+	}
+}
+
 func TestRunIntegrationDateRange(t *testing.T) {
 	t.Parallel()
 
