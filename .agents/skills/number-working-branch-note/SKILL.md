@@ -1,6 +1,6 @@
 ---
 name: number-working-branch-note
-description: PR 採番直後に working branch note のファイル名へ PR 番号を割り当てる。`working-branch-notes/draft_<branch>*.md` が存在し、対応する PR が OPEN な場合に、note のリネーム・関連参照(note 本文・PR description)の置換・commit・push 確認までを一連の手順で安全に実施する。note の "確定" を意味するものではなく、採番後も note は通常通り更新される前提。
+description: PR 採番直後に working branch note のファイル名へ PR 番号を割り当てる。`working-branch-notes/draft_<branch>*.md` が存在し、対応する PR が OPEN な場合に、note のリネーム・関連参照(note 本文・PR description)の置換・commit・push までを一連の手順で安全に実施する。note の "確定" を意味するものではなく、採番後も note は通常通り更新される前提。
 ---
 
 # number-working-branch-note
@@ -44,6 +44,18 @@ PR を作成した直後に `working-branch-notes/` 配下の `draft_...md` を 
 
 以下の順で実行する。各ステップで失敗・矛盾を検出したら停止し、ユーザーに報告する。安全側に倒し、判断に迷うときは進めずに確認する。
 
+### stale 表現の定型置換
+
+Step 5 と Step 10 で列挙済みの stale 表現は、次の定型で置換する。
+
+| 置換前 | 置換後 |
+| --- | --- |
+| `PR 未作成` | `PR #<PR-number> 作成済み` |
+| `PR 作成後に更新` | `PR #<PR-number> に更新済み` |
+| `working branch note が未確定` | `working branch note を採番済み` |
+
+採番は note の確定を意味しないため、`working branch note が確定済み` など、確定を含意する表現へ置換してはならない。定型置換後に文法や文脈が不自然になる場合は曖昧な表現として触らず、終了時に報告する。
+
 ### 1. 前提チェック
 
 ```sh
@@ -86,7 +98,7 @@ git mv working-branch-notes/draft_<escaped-branch>__<suffix>.md \
 
 - 先頭メタ行の `- PR:` 欄が空、または `#` 番号や URL が無い場合に、`#<PR-number>`(または PR URL)を入れる。既に正しい値があれば変更しない。
 - 本文中の `draft_<escaped-branch>` 表記(自ファイル名含む参照)を `<PR-number>_<escaped-branch>` に置換する。`__suffix` 付きも同様に置換する。置換対象は **具体的な escape branch 名を含む参照** に限る。`draft_...md` / `<PR-number>_...md` のような汎用 placeholder(skill 仕様や handling.md からの引用・例示)は対象外。判別が難しい場合はユーザーに確認する。
-- 「PR 未作成」「PR 作成後に更新」「working branch note が未確定」など、PR 採番前提の stale 表現があれば置換候補を提示し、ユーザー合意を得てから書き換える(機械的に書き換えない)。
+- 「stale 表現の定型置換」に列挙した PR 採番前提の表現を、同節の置換先へ機械的に書き換える。列挙パターンに明確に当てはまらない曖昧な表現は触らず、終了時に報告する。
 
 編集が終わったら、対象 note を `git add <path>` で再 stage する。Step 4 の `git mv` は rename 時点の内容しか index に載せないため、本文編集分を改めて stage しないと Step 8 の commit に含まれない。
 
@@ -124,9 +136,9 @@ git commit -m "Number working branch note for PR #<number>"
 
 `git commit` は commit signing を伴うため、署名失敗・1Password 承認プロンプト不達などが起きた場合は `git-operation-guidelines.md` に従い、制約のない実行環境で同じコマンドを再実行する。
 
-### 9. push(ユーザー確認後)
+### 9. push
 
-push は SSH remote 経由で 1Password SSH agent を使うため、必ずユーザー確認を取ってから実行する。確認のために、これから走らせる正確なコマンドをユーザーに提示する。
+commit 成功後、`doc/guidelines/git-operation-guidelines.md` に従って push を実行する。
 
 ```sh
 git push
@@ -139,11 +151,11 @@ SSH 認証失敗・socket 通信エラーなどが出た場合は `git-operation
 前提チェックで取得した PR title / description に対して次を行う。PR title / description を再取得する必要がある場合も、最初に `github-op-integrated` MCP tool を使う。
 
 - description 内の `draft_<escaped-branch>` 表記(`__suffix` 付き含む)を `<PR-number>_<escaped-branch>` に置換する。これは機械的に置換してよい。Step 5 と同じく、**具体的な escape branch 名を含む参照のみ** を機械的置換の対象とする。汎用 placeholder は触らない。
-- 「PR 未作成」「PR 作成後に更新」「working branch note が未確定」などの stale 表現を検出し、置換候補をユーザーに提示する。ユーザー合意後に書き換える。
-- title は通常触らない。明確に stale な記述が含まれる場合のみ、置換候補を提示してユーザー合意後に書き換える。
+- 「stale 表現の定型置換」に列挙した表現を、同節の置換先へ機械的に書き換える。列挙パターンに明確に当てはまらない曖昧な表現は触らず、終了時に報告する。
+- title は通常触らない。列挙済みのパターンに明確に当てはまる stale な記述だけを機械的に書き換え、曖昧な場合は触らず終了時に報告する。
 - `doc/guidelines/pull-request-guidelines.md` に従い、日本語維持・tool 名なし・既存表現の置換に留める(新規セクションの追加はしない)。
 
-合意が取れたら、`github-op-integrated` MCP tool の `update_pull_request` で反映する。MCP tool が利用できず `gh` に fallback する場合だけ、`op plugin run -- gh pr edit <number> --body-file <tmp>` などを使う。body は必ずファイル経由で渡し、shell エスケープの取りこぼしを避ける。
+定型置換が終わったら、`github-op-integrated` MCP tool の `update_pull_request` で反映する。MCP tool が利用できず `gh` に fallback する場合だけ、`op plugin run -- gh pr edit <number> --body-file <tmp>` などを使う。body は必ずファイル経由で渡し、shell エスケープの取りこぼしを避ける。
 
 ## 終了時の報告
 
@@ -152,7 +164,7 @@ SSH 認証失敗・socket 通信エラーなどが出た場合は `git-operation
 - rename した note ファイルの一覧(旧名 → 新名)。
 - 情報統制チェックで除外・修正した箇所があればその概要。
 - 作成した commit のメッセージと SHA(分かれば)。
-- push の有無(ユーザー承認の結果)。
+- push の成否。
 - PR description / title への変更点(置換した stale 表現があれば箇条書きで)。
 
 ## やらないこと
@@ -162,6 +174,6 @@ SSH 認証失敗・socket 通信エラーなどが出た場合は `git-operation
 - note の `最終更新:` 欄の自動更新。
 - `<PR-number>_...md` が既に存在するときの自動上書き・自動削除。
 - 関連しない作業ツリー変更の commit への巻き込み。
-- 機械的な stale 表現の自動書き換え(必ずユーザー合意を取る)。
+- 列挙パターンに明確に当てはまらない stale 表現や title の推測による書き換え(触らず終了時に報告する)。
 - PR description への新規セクション追加(既存表現の置換のみ)。
 - title の積極的な書き換え。
