@@ -13,6 +13,7 @@
 - 取得範囲指定と emoji 除外の全項目が完了したため、2 つの索引表を完了済みフェーズの要約へ圧縮済み。
 - GitHub 上の open Issue / open PR がないことを確認し、現況を更新済み。
 - 最新の GitHub Release が v1.1.2 であり、リリース履歴と一致することを確認済み。
+- Draft PR #178 を作成し、branch note を採番済み。
 
 ## 決定事項
 
@@ -22,7 +23,7 @@
 
 ## 次にやること
 
-- Draft PR を作成し、review / merge を待つ。
+- PR #178 の review / merge を待つ。
 
 ## 検証
 
@@ -38,3 +39,4 @@
 ## セッションログ
 
 - 2026-07-13: `maintain-progress` で完了表を圧縮し、現況を更新。
+- 2026-07-13: Draft PR #178 を作成し、branch note を採番。
