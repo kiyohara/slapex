@@ -32,7 +32,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 を GitHub Releases で公開済み�
 | ID | Issue | 状態 | 依存 / 順序 | 次にやること | PR |
 |---|---|---|---|---|---|
 | exclude-01 | #155 | done | - | `--exclude-body-emoji` で本文 shortcode 一致投稿を export から除外する | #175 |
-| exclude-02 | #156 | todo | #155 | `--exclude-reaction-emoji` で指定 reaction 付き投稿を export から除外する | - |
+| exclude-02 | #156 | done | #155 | `--exclude-reaction-emoji` で指定 reaction 付き投稿を export から除外する | #176 |
 
 ## リリース履歴
 

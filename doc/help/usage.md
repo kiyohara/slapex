@@ -53,6 +53,7 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 | `--from <date-time>` / `--to <date-time>` | なし | 開始を含み終了を含まない任意期間を取得する |
 | `--days <days>` | `30` | 現在時刻から何日前までを取得するか(1〜90) |
 | `--exclude-body-emoji <emoji-list>` | なし | 本文に指定 emoji shortcode を含む投稿を除外する |
+| `--exclude-reaction-emoji <emoji-list>` | なし | 指定 emoji reaction が付いた投稿を除外する |
 | `--max-attachment-size <size>` | `10MB` | 添付ファイル / original 画像 1 件あたりの保存上限 |
 | `--keep-cache` | off | 中間ファイル `.cache/` を成否に関係なく残す。`--reuse-cache` で再利用する cache を作るときに使う |
 | `--reuse-cache <path>` | なし | 以前の出力ディレクトリまたは `.cache/` を再利用する |
@@ -68,13 +69,14 @@ channel を指定せずに実行した場合、操作可能な terminal があ�
 
 `--from` と `--to` は必ずペアで指定します。たとえば `--from 2026/07/03 --to 2026/07/04` は、local timezone の 2026-07-03 00:00 以上、2026-07-04 00:00 未満を取得します。開始は終了より前にする必要があります。
 
-投稿者が本文中の emoji で「archive されたくない」と示せる運用では、`--exclude-body-emoji` を privacy signal として使えます。複数指定は comma で区切ります。標準 emoji と custom emoji のどちらも shortcode 名で判定します。
+投稿者が emoji で「archive されたくない」と示せる運用では、本文 shortcode を見る `--exclude-body-emoji`、reaction 名を見る `--exclude-reaction-emoji` を privacy signal として使えます。複数指定は comma で区切ります。標準 emoji と custom emoji のどちらも名前で判定します。
 
 ```sh
 slapex engineering --exclude-body-emoji shushing_face,speak_no_evil
+slapex engineering --exclude-reaction-emoji shushing_face,speak_no_evil
 ```
 
-一致した timeline 親投稿は thread 全体を export せず、thread reply だけが一致した場合はその reply だけを除外します。除外された本文・投稿者・assets は HTML や cache に残りません。Unicode emoji、attachment、reaction はこの option の判定対象外です。
+両 option は同時に指定でき、本文または reaction のどちらかに一致した message を除外します。一致した timeline 親投稿は thread 全体を export せず、thread reply だけが一致した場合はその reply だけを除外します。除外された本文・投稿者・assets は HTML や cache に残りません。Unicode emoji、attachment、unfurl、file 名は判定対象外です。
 
 local datetime は日付区切りに `-` / `/`、日時区切りに `T` / 半角スペースを使え、時刻は `HH` / `HH:MM` / `HH:MM:SS` を指定できます。timezone abbreviation、自然言語、日本語日付は指定できません。`--date`、`--from` / `--to`、`--days` は互いに併用できません。`--max-posts` は併用でき、対象範囲内の timeline 投稿だけを件数上限に数えます。対象になった親投稿の thread replies は、reply 自体の日時にかかわらず取得します。
 

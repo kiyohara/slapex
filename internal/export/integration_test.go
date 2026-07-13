@@ -77,7 +77,7 @@ func TestRunIntegrationExcludeBodyEmojiParentAndThread(t *testing.T) {
 		t.Fatal("index.html does not show the active normalized filter")
 	}
 	assertEndpointCounts(t, got.Server, map[string]int{"/api/conversations.replies": 0})
-	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, []string{"shushing_face"})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, []string{"shushing_face"}, nil)
 	assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
 }
 
@@ -126,7 +126,7 @@ func TestRunIntegrationExcludeBodyEmojiParentDropsBroadcastAndRefillsMaxPosts(t 
 		"/api/conversations.history": 2,
 		"/api/conversations.replies": 1,
 	})
-	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, []string{"shushing_face"})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, []string{"shushing_face"}, nil)
 	assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
 }
 
@@ -190,7 +190,7 @@ func TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts(t *testing.T) {
 			t.Fatalf("index.html is missing retained content %q", included)
 		}
 	}
-	assertExcludedMetadata(t, got.OutputDir, 2, 1, 1, 2, []string{"do_not_archive", "speak_no_evil"})
+	assertExcludedMetadata(t, got.OutputDir, 2, 1, 1, 2, []string{"do_not_archive", "speak_no_evil"}, nil)
 	assertCacheOmits(t, got.OutputDir, "screenshot-original.png", "screenshot-thumb.png")
 }
 
@@ -222,7 +222,128 @@ func TestRunIntegrationExcludeBodyEmojiHidesEmptyThread(t *testing.T) {
 	if strings.Contains(body, `summary class="thread-label"`) {
 		t.Fatal("index.html shows thread UI after every reply was excluded")
 	}
-	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 2, []string{"speak_no_evil"})
+	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 2, []string{"speak_no_evil"}, nil)
+}
+
+func TestRunIntegrationExcludeReactionEmojiParentAndThread(t *testing.T) {
+	t.Parallel()
+
+	sc := happyPathScenario()
+	sc.Messages[1].Reactions = append(sc.Messages[1].Reactions, slack.Reaction{Name: "speak_no_evil", Count: 1})
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword:       "project-alpha",
+		OutputDir:            t.TempDir(),
+		MaxPosts:             10,
+		Days:                 90,
+		ExcludeReactionEmoji: []string{"speak_no_evil"},
+		MaxAttachBytes:       1 << 20,
+		KeepCache:            true,
+		ToolVersion:          "test",
+	})
+
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"Starting the launch thread", "Reply with screenshot", "Thread is wrapped up"} {
+		mustNotContain(t, body, excluded)
+	}
+	mustContain(t, body, "--exclude-reaction-emoji speak_no_evil")
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/conversations.replies": 0})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, nil, []string{"speak_no_evil"})
+	assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
+	if !logsContain(got.Logs, "excluded by reaction emoji: 1") {
+		t.Fatalf("summary missing reaction exclusion count: %v", got.Logs)
+	}
+	if logsContain(got.Logs, "excluded by body emoji") {
+		t.Fatalf("reaction-only logs contain the body-filter label: %v", got.Logs)
+	}
+}
+
+func TestRunIntegrationExcludeReactionEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000003.000000"
+	parent := slack.Message{
+		Type:       "message",
+		TS:         parentTS,
+		ThreadTS:   parentTS,
+		User:       "U01",
+		Text:       "private parent",
+		ReplyCount: 1,
+		Reactions:  []slack.Reaction{{Name: "speak_no_evil", Count: 1}},
+	}
+	broadcast := slack.Message{
+		Type:     "message",
+		Subtype:  "thread_broadcast",
+		TS:       "1700000004.000000",
+		ThreadTS: parentTS,
+		User:     "U02",
+		Text:     "private broadcast",
+	}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		broadcast,
+		parent,
+		{Type: "message", TS: "1700000002.000000", User: "U01", Text: "retained newer"},
+		{Type: "message", TS: "1700000001.000000", User: "U02", Text: "retained older"},
+	}
+	sc.Replies[parentTS] = []slack.Message{parent, broadcast}
+	opts := renderingOptions(t)
+	opts.MaxPosts = 2
+	opts.ExcludeReactionEmoji = []string{"speak_no_evil"}
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"private parent", "private broadcast"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"retained newer", "retained older"} {
+		mustContain(t, body, retained)
+	}
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 2,
+		"/api/conversations.replies": 1,
+	})
+	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, nil, []string{"speak_no_evil"})
+	assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
+}
+
+func TestRunIntegrationEmojiFiltersORReplyCustomAndMaxPosts(t *testing.T) {
+	t.Parallel()
+
+	sc := happyPathScenario()
+	sc.Messages[0].Text += " :speak_no_evil:"
+	sc.Messages[0].Reactions = []slack.Reaction{{Name: "do_not_archive", Count: 1}}
+	sc.Replies["1700000002.000000"][2].Reactions = []slack.Reaction{{Name: "shushing_face", Count: 1}}
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword:       "project-alpha",
+		OutputDir:            t.TempDir(),
+		MaxPosts:             2,
+		Days:                 90,
+		ExcludeBodyEmoji:     []string{"speak_no_evil"},
+		ExcludeReactionEmoji: []string{"do_not_archive", "shushing_face"},
+		MaxAttachBytes:       1 << 20,
+		KeepCache:            true,
+		ToolVersion:          "test",
+	})
+
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"Final timeline update", "Reply with screenshot", "screenshot.png"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"Starting the launch thread", "First timeline note", "Thread is wrapped up"} {
+		mustContain(t, body, retained)
+	}
+	mustContain(t, body, "--exclude-body-emoji speak_no_evil")
+	mustContain(t, body, "--exclude-reaction-emoji do_not_archive,shushing_face")
+	assertExcludedMetadata(t, got.OutputDir, 2, 1, 1, 2, []string{"speak_no_evil"}, []string{"do_not_archive", "shushing_face"})
+	assertCacheOmits(t, got.OutputDir, "screenshot-original.png", "screenshot-thumb.png")
+	if !logsContain(got.Logs, "excluded by emoji filters: 2") {
+		t.Fatalf("summary missing combined exclusion count: %v", got.Logs)
+	}
+	for _, wrong := range []string{"excluded by body emoji", "excluded by reaction emoji"} {
+		if logsContain(got.Logs, wrong) {
+			t.Fatalf("combined-filter logs contain the single-filter label %q: %v", wrong, got.Logs)
+		}
+	}
 }
 
 func assertCacheOmits(t *testing.T, dir string, values ...string) {
@@ -240,7 +361,7 @@ func assertCacheOmits(t *testing.T, dir string, values ...string) {
 	}
 }
 
-func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies, excluded int, names []string) {
+func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies, excluded int, bodyNames, reactionNames []string) {
 	t.Helper()
 	var metadata struct {
 		Counts struct {
@@ -251,7 +372,8 @@ func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies
 		} `json:"counts"`
 		Fetch struct {
 			Options struct {
-				ExcludeBodyEmoji []string `json:"exclude_body_emoji"`
+				ExcludeBodyEmoji     []string `json:"exclude_body_emoji"`
+				ExcludeReactionEmoji []string `json:"exclude_reaction_emoji"`
 			} `json:"options"`
 		} `json:"fetch"`
 		Users map[string]any `json:"users"`
@@ -260,8 +382,11 @@ func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies
 	if metadata.Counts.Timeline != timeline || metadata.Counts.Threads != threads || metadata.Counts.Replies != replies || metadata.Counts.Excluded != excluded {
 		t.Fatalf("metadata counts = %+v, want timeline=%d threads=%d replies=%d excluded=%d", metadata.Counts, timeline, threads, replies, excluded)
 	}
-	if !slices.Equal(metadata.Fetch.Options.ExcludeBodyEmoji, names) {
-		t.Fatalf("exclude_body_emoji = %v, want %v", metadata.Fetch.Options.ExcludeBodyEmoji, names)
+	if !slices.Equal(metadata.Fetch.Options.ExcludeBodyEmoji, bodyNames) {
+		t.Fatalf("exclude_body_emoji = %v, want %v", metadata.Fetch.Options.ExcludeBodyEmoji, bodyNames)
+	}
+	if !slices.Equal(metadata.Fetch.Options.ExcludeReactionEmoji, reactionNames) {
+		t.Fatalf("exclude_reaction_emoji = %v, want %v", metadata.Fetch.Options.ExcludeReactionEmoji, reactionNames)
 	}
 }
 
