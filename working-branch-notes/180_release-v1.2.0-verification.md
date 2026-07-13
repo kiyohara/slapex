@@ -24,7 +24,6 @@ v1.2.0 公開後の release 検証結果を `progress.md` と decision log 0041 
 
 ## 次にやること
 
-- ユーザー手元の macOS binary / Homebrew upgrade 確認を依頼する。
 - ユーザーが PR #180 を merge する。
 
 ## 検証
@@ -35,12 +34,13 @@ v1.2.0 公開後の release 検証結果を `progress.md` と decision log 0041 
 - Linux asset checksum: `slapex_linux_amd64: OK`。
 - Linux `--version`: `slapex 1.2.0`。
 - Homebrew tap: `Casks/slapex.rb` が `version "1.2.0"`。
-- ユーザー手元の macOS / Homebrew: 未確認。
+- ユーザー手元の macOS / Homebrew: upgrade 前 `slapex 1.1.2`、upgrade 後 `slapex 1.2.0`。
 
 ## リスク・ブロッカー
 
-- macOS binary の `--version` と Homebrew upgrade 後の `slapex --version` はユーザー手元確認が必要。
+- なし。
 
 ## セッションログ
 
 - 2026-07-13: v1.2.0 tag push 後の release workflow / assets / checksum / Linux version / Homebrew cask を確認。
+- 2026-07-13: ユーザー手元の macOS / Homebrew upgrade を確認。

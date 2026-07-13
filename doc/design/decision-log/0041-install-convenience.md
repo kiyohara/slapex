@@ -38,7 +38,7 @@
 
 2026-07-04 に v1.1.2 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.1.2"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.1.2` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `slapex --version` が upgrade 前に `slapex 1.1.1`、`brew update && brew upgrade --cask slapex && slapex --version` 後に `slapex 1.1.2` を返すことを確認した。
 
-2026-07-13 に v1.2.0 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.2.0"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.2.0` を返すことを確認した。
+2026-07-13 に v1.2.0 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.2.0"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.2.0` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `slapex --version` が upgrade 前に `slapex 1.1.2`、`brew update && brew upgrade --cask slapex && slapex --version` 後に `slapex 1.2.0` を返すことを確認した。
 
 ## 理由
 
@@ -52,7 +52,7 @@
 
 - 実装: `scripts/install.sh`（POSIX sh、OS / arch 判定・checksum 検証・install 先指定・`--version` / `--bin-dir` / `--dry-run` / `--help`）と `scripts/install_test.sh`（検出マッピングのテスト）を追加（案B）。
 - ドキュメント: `README.md` のインストール節にクイックインストール（案B）を追加し、手動手順を詳細版として残す。`doc/design/architecture.md` の配布方式に install script を追記。
-- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 release で release workflow から tap repo への cask 自動更新を確認済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 では Homebrew 経由の upgrade も確認済み。
+- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
 - decision log: `index.md` の未決事項から「Homebrew tap」を移し、本ログを現在有効な主要方針に追加。0034 に関連を追記。
 
 ## 後から見直す条件
