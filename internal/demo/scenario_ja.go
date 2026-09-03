@@ -29,6 +29,7 @@ func ScenarioJA(now time.Time) *Scenario {
 		"/files/avatar-ren.svg":     avatarSVG("レ", "#1971c2"),
 		"/files/avatar-sakura.svg":  avatarSVG("さ", "#0ca678"),
 		"/files/avatar-daichi.svg":  avatarSVG("だ", "#7048e8"),
+		"/files/bot-deploy.svg":     botIconSVG("#1098ad"),
 		"/files/emoji-yatta.svg":    badgeEmojiSVG([]string{"やった"}, "#f08c00", 19),
 		"/files/emoji-kansha.svg":   badgeEmojiSVG([]string{"感謝"}, "#e03131", 26),
 		"/files/banner-art.svg":     packageArtSVG("エージェントナイト", "vol.3 / エージェントラボ"),
@@ -83,6 +84,9 @@ func ScenarioJA(now time.Time) *Scenario {
 			"U02REN":    sampleUser("U02REN", "ren", "若葉 蓮", "若葉レン", "{{base}}/files/avatar-ren.svg"),
 			"U03SAKURA": sampleUser("U03SAKURA", "sakura", "三日月 さくら", "三日月さくら", "{{base}}/files/avatar-sakura.svg"),
 			"U04DAICHI": sampleUser("U04DAICHI", "daichi", "天野 大地", "天野だいち", "{{base}}/files/avatar-daichi.svg"),
+		},
+		Bots: map[string]slack.Bot{
+			"B01DEPLOY": sampleBot("B01DEPLOY", "デプロイくん", "A01DEPLOY", "{{base}}/files/bot-deploy.svg"),
 		},
 		Emoji: map[string]string{
 			"yatta":  "{{base}}/files/emoji-yatta.svg",

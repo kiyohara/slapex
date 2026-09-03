@@ -8,6 +8,7 @@ package export
 // (subtypes, tombstone, size-limit replacement, 1000-reply cap, emoji).
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -110,14 +111,16 @@ func findManifest(entries []manifestEntryFull, match func(manifestEntryFull) boo
 	return manifestEntryFull{}, false
 }
 
-// botProfileName / editedAt build the inline anonymous-struct pointers used by
-// slack.Message for bot_profile and edited.
-func botProfileName(name string) *struct {
-	Name string `json:"name"`
-} {
-	return &struct {
-		Name string `json:"name"`
-	}{Name: name}
+// botProfileName / botProfileFull / editedAt build the bot_profile and edited
+// values used by slack.Message.
+func botProfileName(name string) *slack.BotProfile {
+	return &slack.BotProfile{Name: name}
+}
+
+// botProfileFull is a bot_profile carrying both the app name and its icons, the
+// case that needs no bots.info call at all (decision log 0054).
+func botProfileFull(name, iconURL string) *slack.BotProfile {
+	return &slack.BotProfile{Name: name, Icons: slack.BotIcons{Image48: iconURL, Image72: iconURL}}
 }
 
 func editedAt(ts string) *struct {
@@ -767,4 +770,186 @@ func TestRunIntegrationEmojiRendering(t *testing.T) {
 	mustNotContain(t, body, `<img class="emoji"`)
 	// Unknown shortcode (not standard, not custom) kept literally.
 	mustContain(t, body, ":definitely_not_a_real_emoji:")
+}
+
+// --- bot author resolution (Issue #182, decision log 0054) -------------------
+
+// savedAvatarPath is the assets/avatars/ path a PNG asset body is saved under.
+// Saved file names are content hashes (decision log 0016 / 0052), so the test
+// can derive the expected src without reading the manifest.
+func savedAvatarPath(body string) string {
+	return fmt.Sprintf("assets/avatars/%x.png", sha256.Sum256([]byte(body)))
+}
+
+func pngAsset(body string) fakeAsset {
+	return fakeAsset{ContentType: "image/png", Body: body}
+}
+
+// botIcons builds a bots.info / bot_profile icons block from one URL.
+func botIcons(url string) slack.BotIcons {
+	return slack.BotIcons{Image48: url, Image72: url}
+}
+
+// TestRunIntegrationBotAuthorResolution covers the name / avatar fallback chain
+// for bot messages: a bot_message carrying only bot_id resolves through
+// bots.info, an inline bot_profile with both name and icons needs no call at
+// all, and a partial bot_profile or a bare username still takes its icon from
+// bots.info. Repeated posts from the same app cost one call.
+func TestRunIntegrationBotAuthorResolution(t *testing.T) {
+	t.Parallel()
+
+	const (
+		idOnlyIcon   = "bots.info icon for the bot_id-only app"
+		inlineIcon   = "inline bot_profile icon"
+		namedBotIcon = "bots.info icon completing a partial bot_profile"
+		usernameIcon = "bots.info icon for a username-only post"
+	)
+
+	sc := baseScenario()
+	sc.Assets = map[string]fakeAsset{
+		"/files/bot-id-only.png":  pngAsset(idOnlyIcon),
+		"/files/bot-inline.png":   pngAsset(inlineIcon),
+		"/files/bot-named.png":    pngAsset(namedBotIcon),
+		"/files/bot-username.png": pngAsset(usernameIcon),
+	}
+	sc.Bots = map[string]slack.Bot{
+		"B001": {ID: "B001", Name: "Deploy Bot", AppID: "A001", Icons: botIcons("{{base}}/files/bot-id-only.png")},
+		"B003": {ID: "B003", Name: "bots.info name", AppID: "A003", Icons: botIcons("{{base}}/files/bot-named.png")},
+		"B004": {ID: "B004", Name: "bots.info name", AppID: "A004", Icons: botIcons("{{base}}/files/bot-username.png")},
+	}
+	sc.Messages = []slack.Message{
+		// 1. bot_id only: the exact shape of a slash command / webhook post.
+		{Type: "message", Subtype: "bot_message", TS: "1700000701.000000", BotID: "B001", Text: "Deployment finished"},
+		// 6. same bot_id again: still one bots.info call.
+		{Type: "message", Subtype: "bot_message", TS: "1700000702.000000", BotID: "B001", Text: "Deployment finished again"},
+		// 2. complete bot_profile: no bots.info call needed.
+		{
+			Type: "message", Subtype: "bot_message", TS: "1700000703.000000", BotID: "B002",
+			BotProfile: botProfileFull("Inline Bot", "{{base}}/files/bot-inline.png"),
+			Text:       "Inline profile post",
+		},
+		// 3. bot_profile.name without icons: name stays, icon comes from bots.info.
+		{
+			Type: "message", Subtype: "bot_message", TS: "1700000704.000000", BotID: "B003",
+			BotProfile: botProfileName("Named Bot"), Text: "Partial profile post",
+		},
+		// 4. username only: username stays, icon comes from bots.info.
+		{
+			Type: "message", Subtype: "bot_message", TS: "1700000705.000000", BotID: "B004",
+			Username: "Webhook", Text: "Webhook event received",
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<span class="author">Deploy Bot</span>`)
+	mustContain(t, body, `<img src="`+savedAvatarPath(idOnlyIcon)+`" alt="">`)
+	mustNotContain(t, body, `<span class="author">B001</span>`)
+
+	mustContain(t, body, `<span class="author">Inline Bot</span>`)
+	mustContain(t, body, `<img src="`+savedAvatarPath(inlineIcon)+`" alt="">`)
+
+	mustContain(t, body, `<span class="author">Named Bot</span>`)
+	mustContain(t, body, `<img src="`+savedAvatarPath(namedBotIcon)+`" alt="">`)
+
+	mustContain(t, body, `<span class="author">Webhook</span>`)
+	mustContain(t, body, `<img src="`+savedAvatarPath(usernameIcon)+`" alt="">`)
+
+	// bots.info name never overrides an inline override.
+	mustNotContain(t, body, `<span class="author">bots.info name</span>`)
+	// No bot fell back to the initial placeholder.
+	mustNotContain(t, body, `<span class="avatar-fallback">B</span>`)
+
+	// One call per unique bot ID that needed resolving; B002 needed none.
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/bots.info": 3})
+
+	var api struct {
+		Bots map[string]struct {
+			Name      string `json:"name"`
+			AvatarURL string `json:"avatar_url"`
+		} `json:"bots"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/slack_api_cache.json"), &api)
+	if len(api.Bots) != 3 {
+		t.Fatalf("cached bots = %d (%v), want 3", len(api.Bots), api.Bots)
+	}
+	if cached := api.Bots["B001"]; cached.Name != "Deploy Bot" || !strings.HasSuffix(cached.AvatarURL, "/files/bot-id-only.png") {
+		t.Fatalf("cached bot B001 = %+v, want the bots.info name and icon URL", cached)
+	}
+}
+
+// TestRunIntegrationBotInfoFailureFallsBack pins the failure path: an
+// unresolvable bot ID warns and keeps the previous bot_id / initial rendering,
+// and the export still succeeds (same treatment as a failed users.info).
+func TestRunIntegrationBotInfoFailureFallsBack(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{Type: "message", Subtype: "bot_message", TS: "1700000801.000000", BotID: "B404", Text: "Orphaned bot post"},
+	}
+
+	got, _, err := runExportScenarioRaw(t, sc, renderingOptions(t))
+	if err != nil {
+		t.Fatalf("Run() error = %v, want success despite the bots.info failure", err)
+	}
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<span class="author">B404</span>`)
+	mustContain(t, body, `<span class="avatar-fallback">B</span>`)
+
+	logs := strings.Join(got.Logs, "\n")
+	if !strings.Contains(logs, "could not resolve bot B404") || !strings.Contains(logs, "bot_not_found") {
+		t.Fatalf("logs missing the bots.info warning:\n%s", logs)
+	}
+}
+
+// TestRunIntegrationBotAppChip pins the APP chip: it marks every app post —
+// bot_id only, inline bot_profile, and a bot user posting through
+// chat.postMessage (users.info is_bot) — on the timeline and inside threads,
+// and never marks a person, a system row or a thread participant avatar.
+func TestRunIntegrationBotAppChip(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000901.000000"
+	sc := baseScenario()
+	botUser := testUser("U03", "buildbot", "Build Bot", "Build Bot", "")
+	botUser.IsBot = true
+	sc.Users["U03"] = botUser
+	sc.Bots = map[string]slack.Bot{
+		"B001": {ID: "B001", Name: "Deploy Bot", AppID: "A001"},
+	}
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: parentTS, ThreadTS: parentTS, User: "U01", Text: "Human parent", ReplyCount: 1},
+		{Type: "message", Subtype: "bot_message", TS: "1700000902.000000", BotID: "B001", Text: "bot_id only post"},
+		{
+			Type: "message", Subtype: "bot_message", TS: "1700000903.000000", BotID: "B002",
+			BotProfile: botProfileName("Inline Bot"), Text: "bot_profile post",
+		},
+		// A bot user posting through chat.postMessage: a plain user ID, only
+		// users.info is_bot marks it as an app.
+		{Type: "message", TS: "1700000904.000000", User: "U03", Text: "bot user post"},
+		{Type: "message", Subtype: "channel_join", TS: "1700000905.000000", User: "U02", Text: "<@U02> has joined the channel"},
+	}
+	sc.Replies = map[string][]slack.Message{
+		parentTS: {
+			{Type: "message", Subtype: "bot_message", TS: "1700000906.000000", ThreadTS: parentTS, BotID: "B001", Text: "bot reply"},
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	for _, author := range []string{"Deploy Bot", "Inline Bot", "Build Bot"} {
+		mustContain(t, body, `<span class="author">`+author+`</span><span class="badge-app">APP</span>`)
+	}
+	// Exactly the three timeline app posts and the one thread reply: the human
+	// post, the system row and the thread participant avatar are all excluded.
+	mustContain(t, body, `<span class="system-body">`)
+	mustContain(t, body, `<span class="thread-participant">`)
+	if got := strings.Count(body, `<span class="badge-app">APP</span>`); got != 4 {
+		t.Fatalf("badge-app count = %d, want 4 (3 timeline posts + 1 thread reply)", got)
+	}
+	mustNotContain(t, body, `<span class="author">Alice</span><span class="badge-app">`)
 }

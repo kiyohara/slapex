@@ -45,6 +45,10 @@
 - アーキテクチャ選定では、各言語の Slack SDK または素の HTTP client で本方針(cursor pagination、429 対応、Bearer 付き download)が素直に実装できるかを評価軸にする。
 - PoC では rate limit 待機表示と pagination の打ち切り条件を確認対象にする。
 
+## 追記(2026-09-03)
+
+「bot 投稿は `bot_profile` / `username` を優先」は、その両方が無い場合を未定義のままにしていた。`user` も `bot_profile` も `username` も持たない `bot_message`(slash command の `in_channel` 応答、incoming webhook、`response_url` 経由の投稿)については、使用 API に `bots.info` を追加し、`bot_id` から app 名と app icon を解決する方針を確定した(`0054-bot-author-resolution.md`)。必要 scope は既存の `users:read` のままである。
+
 ## 後から見直す条件
 
 - Slack が internal App にも rate limit 強化を適用する方針変更を行った場合(その場合は default 値の再検討も必要)。

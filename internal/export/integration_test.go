@@ -43,6 +43,7 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 		"/api/conversations.history": 1,
 		"/api/conversations.replies": 1,
 		"/api/users.info":            2,
+		"/api/bots.info":             0,
 		"/api/emoji.list":            1,
 	})
 }
@@ -625,6 +626,7 @@ type exportScenario struct {
 	Messages []slack.Message
 	Replies  map[string][]slack.Message
 	Users    map[string]slack.User
+	Bots     map[string]slack.Bot
 	Emoji    map[string]string
 	Assets   map[string]fakeAsset
 
@@ -835,6 +837,7 @@ func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
 		"/api/conversations.history",
 		"/api/conversations.replies",
 		"/api/users.info",
+		"/api/bots.info",
 		"/api/emoji.list",
 	} {
 		mux.HandleFunc(path, f.handleAPI)
@@ -910,6 +913,13 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeSlackOK(w, map[string]any{"user": user})
+	case "/api/bots.info":
+		bot, ok := f.sc.Bots[r.PostForm.Get("bot")]
+		if !ok {
+			writeSlackError(w, "bot_not_found")
+			return
+		}
+		writeSlackOK(w, map[string]any{"bot": bot})
 	case "/api/emoji.list":
 		writeSlackOK(w, map[string]any{"emoji": f.sc.Emoji})
 	default:
@@ -1040,6 +1050,12 @@ func (sc *exportScenario) replaceBaseURL(baseURL string) {
 		u.Profile.Image72 = repl(u.Profile.Image72)
 		sc.Users[id] = u
 	}
+	for id, b := range sc.Bots {
+		b.Icons.Image36 = repl(b.Icons.Image36)
+		b.Icons.Image48 = repl(b.Icons.Image48)
+		b.Icons.Image72 = repl(b.Icons.Image72)
+		sc.Bots[id] = b
+	}
 	if sc.TeamInfo != nil {
 		sc.TeamInfo.Icon.Image34 = repl(sc.TeamInfo.Icon.Image34)
 		sc.TeamInfo.Icon.Image44 = repl(sc.TeamInfo.Icon.Image44)
@@ -1055,6 +1071,11 @@ func (sc *exportScenario) replaceBaseURL(baseURL string) {
 }
 
 func replaceMessageBaseURL(m *slack.Message, repl func(string) string) {
+	if m.BotProfile != nil {
+		m.BotProfile.Icons.Image36 = repl(m.BotProfile.Icons.Image36)
+		m.BotProfile.Icons.Image48 = repl(m.BotProfile.Icons.Image48)
+		m.BotProfile.Icons.Image72 = repl(m.BotProfile.Icons.Image72)
+	}
 	for i := range m.Files {
 		m.Files[i].URLPrivate = repl(m.Files[i].URLPrivate)
 		m.Files[i].URLPrivateDownload = repl(m.Files[i].URLPrivateDownload)

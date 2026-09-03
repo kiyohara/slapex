@@ -38,6 +38,10 @@
 - `.cache/assets_manifest.json` の `kind` に `avatar` が増える(`cache.md` の schema は種別を列挙しているため、`cache.md` 側も本 PR で追従)。
 - PoC 実装は本決定を反映済み。
 
+## 追記(2026-09-03)
+
+「取得できない場合(bot 投稿で profile が無い場合を含む)はイニシャル fallback」は、bot 投稿については `bots.info` でも icon を取れない場合に限定される。`bot_profile` が無い bot 投稿は `bot_id` から `bots.info` で app icon を解決し、同じ `assets/avatars/` に保存する(`0054-bot-author-resolution.md`)。
+
 ## 後から見直す条件
 
 - avatar の取得が export 時間や失敗率の面で問題になった場合。

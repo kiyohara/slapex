@@ -37,6 +37,7 @@ type Scenario struct {
 	Messages []slack.Message
 	Replies  map[string][]slack.Message
 	Users    map[string]slack.User
+	Bots     map[string]slack.Bot
 	Emoji    map[string]string
 	Assets   map[string]Asset
 }
@@ -67,6 +68,12 @@ func (sc *Scenario) ReplaceBaseURL(baseURL string) {
 		u.Profile.Image48 = repl(u.Profile.Image48)
 		u.Profile.Image72 = repl(u.Profile.Image72)
 		sc.Users[id] = u
+	}
+	for id, b := range sc.Bots {
+		b.Icons.Image36 = repl(b.Icons.Image36)
+		b.Icons.Image48 = repl(b.Icons.Image48)
+		b.Icons.Image72 = repl(b.Icons.Image72)
+		sc.Bots[id] = b
 	}
 	if sc.TeamInfo != nil {
 		sc.TeamInfo.Icon.Image68 = repl(sc.TeamInfo.Icon.Image68)
@@ -121,12 +128,18 @@ func editedAt(t time.Time) *struct {
 	}{TS: ts(t)}
 }
 
-func botProfile(name string) *struct {
-	Name string `json:"name"`
-} {
-	return &struct {
-		Name string `json:"name"`
-	}{Name: name}
+func botProfile(name string) *slack.BotProfile {
+	return &slack.BotProfile{Name: name}
+}
+
+// sampleBot is one fictional app resolved through the fake bots.info endpoint.
+func sampleBot(id, name, appID, iconURL string) slack.Bot {
+	return slack.Bot{
+		ID:    id,
+		Name:  name,
+		AppID: appID,
+		Icons: slack.BotIcons{Image48: iconURL, Image72: iconURL},
+	}
 }
 
 func sampleUser(id, name, realName, displayName, imageURL string) slack.User {

@@ -319,7 +319,7 @@ func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, o
 	countPaths := append([]string{
 		"/api/auth.test", "/api/conversations.list",
 		"/api/conversations.history", "/api/conversations.replies",
-		"/api/users.info", "/api/emoji.list",
+		"/api/users.info", "/api/bots.info", "/api/emoji.list",
 	}, assets...)
 
 	opts1.KeepCache = true
@@ -468,4 +468,91 @@ func collectAssetFiles(t *testing.T, dir string) map[string][]byte {
 		t.Fatalf("walk assets in %s: %v", dir, err)
 	}
 	return out
+}
+
+// --- bot reuse (Issue #182, decision log 0054) -------------------------------
+
+// botReuseScenario has one bot_id-only post (resolved through bots.info) and one
+// bot user post (a plain user ID that only users.info is_bot marks as an app),
+// so both new cache fields — bots and users[].is_bot — are exercised.
+func botReuseScenario() exportScenario {
+	sc := baseScenario()
+	botUser := testUser("U03", "buildbot", "Build Bot", "Build Bot", "")
+	botUser.IsBot = true
+	sc.Users = map[string]slack.User{"U03": botUser}
+	sc.Bots = map[string]slack.Bot{
+		"B001": {
+			ID: "B001", Name: "Deploy Bot", AppID: "A001",
+			Icons: slack.BotIcons{Image48: "{{base}}/files/bot-icon.png", Image72: "{{base}}/files/bot-icon.png"},
+		},
+	}
+	sc.Assets = map[string]fakeAsset{
+		"/files/bot-icon.png": {ContentType: "image/png", Body: "deploy-bot-icon"},
+	}
+	sc.Messages = []slack.Message{
+		{Type: "message", Subtype: "bot_message", TS: "1700000001.000000", BotID: "B001", Text: "Deployment finished"},
+		{Type: "message", TS: "1700000002.000000", User: "U03", Text: "Build finished"},
+	}
+	return sc
+}
+
+// TestRunIntegrationReuseCacheSkipsBotsInfo pins that a cache carrying bots and
+// users[].is_bot reproduces run 1's bot rendering with no bots.info / users.info
+// call at all: the app name, the copied app icon and both APP chips survive.
+func TestRunIntegrationReuseCacheSkipsBotsInfo(t *testing.T) {
+	t.Parallel()
+
+	r := runReuseScenario(t, botReuseScenario(), nil)
+
+	if d := delta(r.before, r.after, "/api/bots.info"); d != 0 {
+		t.Fatalf("bots.info delta = %d, want 0 (resolved bots reused from cache)", d)
+	}
+	if d := delta(r.before, r.after, "/api/users.info"); d != 0 {
+		t.Fatalf("users.info delta = %d, want 0 (resolved users reused from cache)", d)
+	}
+
+	assertAssetsIdentical(t, r.dir1, r.dir2)
+	body := readIndexHTML(t, r.dir2)
+	mustContain(t, body, `<span class="author">Deploy Bot</span><span class="badge-app">APP</span>`)
+	mustContain(t, body, `<span class="author">Build Bot</span><span class="badge-app">APP</span>`)
+	mustContain(t, body, `assets/avatars/`)
+	mustNotContain(t, body, `<span class="author">B001</span>`)
+}
+
+// TestRunIntegrationReuseCacheWithoutBotsKey pins backward compatibility: a
+// cache written before the bots key existed (and without users[].is_bot) is
+// still reusable. bots.info simply runs again, so everything derived from the
+// message itself is unchanged. The one accepted degradation is the bot user's
+// APP chip: is_bot is only knowable from users.info, and the cached user is
+// reused rather than re-resolved, so a pre-0054 cache cannot report it.
+func TestRunIntegrationReuseCacheWithoutBotsKey(t *testing.T) {
+	t.Parallel()
+
+	r := runReuseScenario(t, botReuseScenario(), func(t *testing.T, cacheDir string) {
+		t.Helper()
+		rewriteJSON(t, filepath.Join(cacheDir, "slack_api_cache.json"), func(m map[string]any) {
+			delete(m, "bots")
+			users, ok := m["users"].(map[string]any)
+			if !ok {
+				t.Fatalf("users key = %T, want an object", m["users"])
+			}
+			for _, u := range users {
+				if fields, ok := u.(map[string]any); ok {
+					delete(fields, "is_bot")
+				}
+			}
+		})
+	})
+
+	if d := delta(r.before, r.after, "/api/bots.info"); d != 1 {
+		t.Fatalf("bots.info delta = %d, want 1 (old cache has no bots key)", d)
+	}
+	if !logsContain(r.logs2, "Reusing cache from") {
+		t.Fatalf("run 2 did not report cache reuse:\n%s", strings.Join(r.logs2, "\n"))
+	}
+
+	body := readIndexHTML(t, r.dir2)
+	mustContain(t, body, `<span class="author">Deploy Bot</span><span class="badge-app">APP</span>`)
+	mustNotContain(t, body, `<span class="author">Build Bot</span><span class="badge-app">APP</span>`)
+	mustContain(t, body, `<span class="author">Build Bot</span>`)
 }

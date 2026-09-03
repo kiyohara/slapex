@@ -100,6 +100,7 @@ func (f *fakeServer) mux() *http.ServeMux {
 		"/api/conversations.history",
 		"/api/conversations.replies",
 		"/api/users.info",
+		"/api/bots.info",
 		"/api/emoji.list",
 	} {
 		mux.HandleFunc(path, f.handleAPI)
@@ -144,6 +145,13 @@ func (f *fakeServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeSlackOK(w, map[string]any{"user": user})
+	case "/api/bots.info":
+		bot, ok := f.sc.Bots[r.PostForm.Get("bot")]
+		if !ok {
+			writeSlackError(w, "bot_not_found")
+			return
+		}
+		writeSlackOK(w, map[string]any{"bot": bot})
 	case "/api/emoji.list":
 		writeSlackOK(w, map[string]any{"emoji": f.sc.Emoji})
 	default:

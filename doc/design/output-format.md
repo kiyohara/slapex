@@ -58,7 +58,7 @@ HTML footer の `Range` は、取得対象の境界を RFC3339 絶対時刻で�
 | URL preview service icon | Slack message の unfurl / attachment 情報 | `service_icon` など Slack API が返す service icon 相当 URL がある場合だけ保存し、service 名の横に表示する。ツール自身による favicon / Open Graph fetch は行わない |
 | ユーザーがアップロードした画像 | Slack message の `files` 情報、`files.info`、画像 thumbnail / original URL | thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする |
 | 画像以外の添付ファイル | Slack message の `files` 情報、`files.info`、download URL | サイズ上限以下の添付ファイルを保存し、HTML から相対リンクで参照する |
-| 投稿者の avatar 画像 | Slack API `users.info` の profile image URL | Slack default 風表示(`html-rendering.md`)の avatar として、登場する投稿者ごとに 1 画像を保存する。取得できない場合はイニシャル表示に fallback する(`decision-log/0035-avatar-assets.md`) |
+| 投稿者の avatar 画像 | Slack API `users.info` の profile image URL。bot 投稿では message の `bot_profile.icons` または `bots.info` の `icons` | Slack default 風表示(`html-rendering.md`)の avatar として、登場する投稿者ごとに 1 画像を保存する。bot / app の icon も同じ `assets/avatars/` に保存する。取得できない場合はイニシャル表示に fallback する(`decision-log/0035-avatar-assets.md`、`decision-log/0054-bot-author-resolution.md`) |
 
 標準絵文字とカスタム絵文字については、関連評価実装である `slack_posts_dumper` に PoC 実装がある。PoC では `AssetManager` が `output/assets/<url-md5>.<ext>` のような URL hash ベースのファイル名を生成し、`output/assets_manifest.json` に元 URL、ローカルパス、metadata を記録する。`EmojiResolver` は `emoji.list` でカスタム絵文字を解決し、標準絵文字は Slack の標準絵文字 URL を組み立てている。
 

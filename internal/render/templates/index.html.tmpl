@@ -49,6 +49,7 @@
     <div class="message-main">
       <div class="message-head">
         <span class="author">{{.Author}}</span>
+        {{- if .IsBot}}<span class="badge-app">APP</span>{{end}}
         <span class="time" title="{{.TimeISO}}">{{.TimeLabel}}</span>
       </div>
       {{- if .Body}}

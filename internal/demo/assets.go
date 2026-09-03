@@ -26,6 +26,19 @@ func avatarSVG(initial, bg string) Asset {
 		`</svg>`, bg, svgFont, initial))
 }
 
+// botIconSVG is the app icon of a fictional bot: a rounded square with a
+// simple robot mark, so a bot post is visibly not one of the letter avatars.
+func botIconSVG(bg string) Asset {
+	return svgAsset(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">`+
+		`<rect width="96" height="96" rx="22" fill="%s"/>`+
+		`<rect x="46" y="18" width="4" height="10" fill="#ffffff"/><circle cx="48" cy="16" r="5" fill="#ffffff"/>`+
+		`<rect x="24" y="30" width="48" height="38" rx="10" fill="#ffffff"/>`+
+		`<circle cx="39" cy="46" r="6" fill="%s"/><circle cx="57" cy="46" r="6" fill="%s"/>`+
+		`<rect x="37" y="57" width="22" height="4" rx="2" fill="%s"/>`+
+		`<rect x="34" y="72" width="28" height="6" rx="3" fill="#ffffff"/>`+
+		`</svg>`, bg, bg, bg, bg))
+}
+
 // workspaceIconSVG is a rounded square with a white star on a two-stop
 // gradient.
 func workspaceIconSVG(from, to string) Asset {
