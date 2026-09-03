@@ -14,7 +14,7 @@ Issue #182 の対応。`bot_id` しか持たない `bot_message`(slash command �
 
 ## 決定事項
 
-Issue #182 の「採用方針」1〜9 をそのまま採用した。決定内容は decision log `doc/design/decision-log/0054-bot-author-resolution.md` を正本とする。実装中に判断した点は次のとおり。
+Issue #182 の「採用方針」1〜9 をそのまま採用した。決定経緯は decision log `doc/design/decision-log/0054-bot-author-resolution.md` に記録した。仕様の正本は `doc/design/slack-api-usage.md` / `html-rendering.md` / `output-format.md` / `cache.md` の各 spec 文書とする。実装中に判断した点は次のとおり。
 
 - `collectBotIDs` は「解決が必要な bot ID」だけを返す。`bot_profile` が名前と icon URL の両方を持つ message は `bots.info` を呼ばない。進捗表示の件数もこの定義に揃えた。
 - 進捗表示は bot が 0 件のときだけ従来の文言(`resolving N users ...` / `N resolved`)を保つ。bot がいる場合は `resolving N users, 1 bot ...` / `N users, 1 bot resolved`。既存 channel の表示を不必要に変えないため。
@@ -24,7 +24,6 @@ Issue #182 の「採用方針」1〜9 をそのまま採用した。決定内容
 
 ## 次にやること
 
-- PR 作成後、note を `<PR 番号>_resolve-bot-author-with-bots-info.md` へ rename する。
 - 実 token での E2E は任意(ユーザー協働)。実施する場合は実 workspace の bot 投稿を含む channel を `--keep-cache` で export し、投稿者名が app 名、avatar が app icon になること、`slack_api_cache.json` に `bots` が入ることを確認する。実 ID や token は Issue / PR / note に書かない。
 
 ## 検証
@@ -70,3 +69,5 @@ demo run:
 - 2026-09-03: 統合テスト(解決チェーン / 失敗 fallback / `APP` chip / reuse 2 種)と `bots.info` の client test を追加。
 - 2026-09-03: 設計文書 4 本、help 1 本、decision log 0054 新規 + 0025 / 0035 追記 + index を更新。
 - 2026-09-03: sample export、README screenshot、demo GIF を再生成し、検証コマンドをすべて実行。
+- 2026-09-03: PR #184 を作成し、note を `184_resolve-bot-author-with-bots-info.md` へ採番した。
+- 2026-09-03: PR #184 の review 指摘 2 件(decision log を正本と書いていた点、完了済み rename が「次にやること」に残っていた点)に対応した。
