@@ -30,7 +30,7 @@ GitHub 上の open Issue を確認した範囲では、現在追跡中の横断�
 | v1.1.1 | released | `--reuse-cache` の出力ディレクトリ検出改善、exported HTML header / footer 調整、logo asset 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.1.2 | released | 出力プレビュー・匿名化サンプル、token 不要 `--demo`、Slack App セットアップ help スクリーンショット、export footer への tool version 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.2.0 | released | 取得範囲指定(`--date` / `--from` / `--to`)、emoji 除外(`--exclude-body-emoji` / `--exclude-reaction-emoji`)、footer timezone 改善、README / help 再構成を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
-| v1.2.1 | released | bot 投稿の投稿者名 / avatar を `bots.info` で解決し `APP` 表示を追加、asset の保存拡張子を download 内容から決定、PNG logo asset 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新を確認済み |
+| v1.2.1 | released | bot 投稿の投稿者名 / avatar を `bots.info` で解決し `APP` 表示を追加、asset の保存拡張子を download 内容から決定、PNG logo asset 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 
 ## 完了済みフェーズ(参考)
 
