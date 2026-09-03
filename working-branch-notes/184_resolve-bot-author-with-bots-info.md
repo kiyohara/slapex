@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `resolve-bot-author-with-bots-info`
-- PR: (未採番)
+- PR: #184
 - 最終更新: 2026-09-03
 
 ## 目的
@@ -10,7 +10,7 @@ Issue #182 の対応。`bot_id` しか持たない `bot_message`(slash command �
 
 ## 現在の状況
 
-実装、テスト、ドキュメント、生成物(sample export / README screenshot / demo GIF)まで完了。検証コマンドはすべて pass。PR 未作成。
+実装、テスト、ドキュメント、生成物(sample export / README screenshot / demo GIF)まで完了。検証コマンドはすべて pass。PR #184 作成済み。
 
 ## 決定事項
 
