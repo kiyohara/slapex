@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: release/v1.2.1
-- PR:
+- PR: #186
 - 最終更新: 2026-09-03
 
 ## 目的
@@ -14,7 +14,7 @@ v1.2.1 release 前の doc bump を 1 PR にまとめる。install 例の version
 - 直前 tag: `v1.2.0`
 - 対象 version: `v1.2.1`(ユーザー指定)
 - 最新 main CI: run `33725085834` / success / PR #185 の merge commit
-- release 準備 PR: 未採番
+- release 準備 PR: #186
 
 ## 決定事項
 
