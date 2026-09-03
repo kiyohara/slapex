@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,14 +59,17 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 	outDir := t.TempDir()
 	dl := &fakeDownloader{
 		content: map[string]fakeDownload{
-			"https://example.com/avatar":          {body: "avatar", contentType: "image/jpeg"},
-			"https://example.com/emoji":           {body: "emoji", contentType: "image/gif"},
-			"https://example.com/og":              {body: "og", contentType: "image/png"},
-			"https://example.com/service-icon":    {body: "service-icon", contentType: "image/png"},
-			"https://example.com/workspace-icon":  {body: "workspace-icon", contentType: "image/png"},
-			"https://example.com/thumb":           {body: "thumb", contentType: "image/webp"},
-			"https://example.com/original":        {body: "original", contentType: "image/png"},
-			"https://example.com/attachment":      {body: "attachment", contentType: "application/octet-stream"},
+			"https://example.com/avatar":         {body: "avatar", contentType: "image/jpeg"},
+			"https://example.com/emoji":          {body: "emoji", contentType: "image/gif"},
+			"https://example.com/og":             {body: "og", contentType: "image/png"},
+			"https://example.com/service-icon":   {body: "service-icon", contentType: "image/png"},
+			"https://example.com/workspace-icon": {body: "workspace-icon", contentType: "image/png"},
+			"https://example.com/thumb":          {body: "thumb", contentType: "image/webp"},
+			"https://example.com/original":       {body: "original", contentType: "image/png"},
+			"https://example.com/attachment":     {body: "attachment", contentType: "application/octet-stream"},
+			// Gravatar shape: the URL path says .jpg but the bytes are a PNG,
+			// because gravatar redirects to the PNG default image (Issue #183).
+			gravatarAvatarURL:                     {body: pngBody, contentType: "image/png"},
 			"https://example.com/fail":            {err: errors.New("download failed")},
 			"https://example.com/too-large-error": {err: slack.ErrTooLarge},
 		},
@@ -87,6 +91,7 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 		{kind: KindUploadThumb, url: "https://example.com/thumb", dir: "assets/uploads/thumbs", ext: ".webp"},
 		{kind: KindUploadOriginal, url: "https://example.com/original", dir: "assets/uploads/originals", ext: ".png", meta: AssetMeta{FileID: "F001", OriginalName: "photo.png"}},
 		{kind: KindAttachment, url: "https://example.com/attachment", dir: "assets/attachments", ext: ".txt", meta: AssetMeta{FileID: "F002", OriginalName: "report.txt", Mimetype: "text/plain", SizeBytes: 42}},
+		{kind: KindAvatar, url: gravatarAvatarURL, dir: "assets/avatars", ext: ".png"},
 	}
 
 	for _, tc := range cases {
@@ -124,6 +129,16 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 	assertEntry(t, entries, "https://example.com/large", "skipped_size", "")
 	assertEntry(t, entries, "https://example.com/fail", "failed", "")
 	assertEntry(t, entries, "https://example.com/too-large-error", "skipped_size", "")
+
+	// The gravatar avatar is saved as .png (from the content, not the .jpg URL)
+	// and its manifest mimetype agrees with that extension.
+	gravatar := findEntry(t, entries, gravatarAvatarURL)
+	if want := ".png"; filepath.Ext(gravatar.LocalPath) != want {
+		t.Fatalf("gravatar avatar local_path = %q, want extension %q", gravatar.LocalPath, want)
+	}
+	if gravatar.Mimetype != "image/png" {
+		t.Fatalf("gravatar avatar mimetype = %q, want %q", gravatar.Mimetype, "image/png")
+	}
 }
 
 func TestAssetsSaveContentHashDeduplicatesByContent(t *testing.T) {
@@ -211,26 +226,68 @@ func TestExtensionFor(t *testing.T) {
 		meta        AssetMeta
 		srcURL      string
 		contentType string
+		sniffed     string
 		want        string
 	}{
 		{
-			name:        "uses original name first",
+			name:        "sniffed content wins over the url extension",
+			srcURL:      gravatarAvatarURL,
+			contentType: "image/png",
+			sniffed:     "image/png",
+			want:        ".png",
+		},
+		{
+			name:    "sniffed content wins over the original name",
+			meta:    AssetMeta{OriginalName: "Report.PDF"},
+			srcURL:  "https://example.com/download",
+			sniffed: "application/pdf",
+			want:    ".pdf",
+		},
+		{
+			name:    "sniffed icon",
+			srcURL:  "https://example.com/favicon",
+			sniffed: "image/x-icon",
+			want:    ".ico",
+		},
+		{
+			name:        "uses original name first when the sniff is inconclusive",
 			meta:        AssetMeta{OriginalName: "Report.PDF"},
 			srcURL:      "https://example.com/download",
 			contentType: "image/png",
+			sniffed:     "text/plain",
 			want:        ".pdf",
 		},
 		{
 			name:        "uses url extension before query",
 			srcURL:      "https://example.com/image.JPG?token=redacted",
 			contentType: "image/png",
+			sniffed:     "text/plain",
 			want:        ".jpg",
+		},
+		{
+			name:    "keeps the url extension for unsniffable svg",
+			srcURL:  "https://example.com/logo.svg",
+			sniffed: "text/xml",
+			want:    ".svg",
 		},
 		{
 			name:        "uses supported mimetype",
 			srcURL:      "https://example.com/image",
 			contentType: "image/webp; charset=binary",
 			want:        ".webp",
+		},
+		{
+			name:        "uses svg mimetype when the url has no extension",
+			srcURL:      "https://example.com/logo",
+			contentType: "image/svg+xml",
+			sniffed:     "text/xml",
+			want:        ".svg",
+		},
+		{
+			name:        "uses icon mimetype when the url has no extension",
+			srcURL:      "https://example.com/favicon",
+			contentType: "image/vnd.microsoft.icon",
+			want:        ".ico",
 		},
 		{
 			name:        "falls back to bin",
@@ -243,11 +300,79 @@ func TestExtensionFor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := extensionFor(tt.meta, tt.srcURL, tt.contentType); got != tt.want {
+			if got := extensionFor(tt.meta, tt.srcURL, tt.contentType, tt.sniffed); got != tt.want {
 				t.Fatalf("extensionFor() = %q, want %q", got, tt.want)
 			}
 		})
 	}
+}
+
+func TestMimetypeFor(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		contentType string
+		sniffed     string
+		want        string
+	}{
+		{
+			name:        "prefers the sniffed type",
+			contentType: "image/jpeg",
+			sniffed:     "image/png",
+			want:        "image/png",
+		},
+		{
+			name:        "falls back to the response content type",
+			contentType: "image/svg+xml",
+			sniffed:     "text/xml",
+			want:        "image/svg+xml",
+		},
+		{
+			name:        "falls back for an unsniffable empty body",
+			contentType: "application/octet-stream",
+			want:        "application/octet-stream",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := mimetypeFor(tt.contentType, tt.sniffed); got != tt.want {
+				t.Fatalf("mimetypeFor() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHeadBufferDetect(t *testing.T) {
+	t.Parallel()
+
+	t.Run("detects from the first bytes only", func(t *testing.T) {
+		t.Parallel()
+		var head headBuffer
+		// Written in several chunks, as the download's io.Copy does, and longer
+		// than the sniff window so the cap is exercised.
+		for _, chunk := range []string{pngBody[:4], pngBody[4:], strings.Repeat("x", 2*sniffLen)} {
+			if n, err := head.Write([]byte(chunk)); n != len(chunk) || err != nil {
+				t.Fatalf("Write(%d bytes) = %d, %v", len(chunk), n, err)
+			}
+		}
+		if len(head.buf) != sniffLen {
+			t.Fatalf("head buffer len = %d, want %d", len(head.buf), sniffLen)
+		}
+		if got := head.detect(); got != "image/png" {
+			t.Fatalf("detect() = %q, want %q", got, "image/png")
+		}
+	})
+
+	t.Run("empty download detects nothing", func(t *testing.T) {
+		t.Parallel()
+		var head headBuffer
+		if got := head.detect(); got != "" {
+			t.Fatalf("detect() = %q, want empty", got)
+		}
+	})
 }
 
 func TestWriteCacheFile(t *testing.T) {
@@ -329,6 +454,16 @@ func TestRemoveCache(t *testing.T) {
 	}
 }
 
+// gravatarAvatarURL has the shape Slack's users.info returns for a gravatar
+// user: a path ending in .jpg with the Slack default image as the d= fallback.
+// The hash is a placeholder. Gravatar redirects to that default image, so the
+// bytes that arrive are a PNG (Issue #183).
+const gravatarAvatarURL = "https://secure.gravatar.com/avatar/0123456789abcdef0123456789abcdef.jpg?s=72&d=https%3A%2F%2Fexample.com%2Fdefault-72.png"
+
+// pngBody is a fake download body that starts with the PNG magic bytes, so
+// http.DetectContentType reports image/png for it.
+const pngBody = "\x89PNG\r\n\x1a\n" + "fake png body"
+
 type fakeDownload struct {
 	body        string
 	contentType string
@@ -357,6 +492,17 @@ func (f *fakeDownloader) Download(_ context.Context, srcURL string, _ int64, w i
 func sha256Hex(s string) string {
 	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:])
+}
+
+func findEntry(t *testing.T, entries []ManifestEntry, srcURL string) ManifestEntry {
+	t.Helper()
+	for _, entry := range entries {
+		if entry.SourceURL == srcURL {
+			return entry
+		}
+	}
+	t.Fatalf("entry for %s not found", srcURL)
+	return ManifestEntry{}
 }
 
 func assertEntry(t *testing.T, entries []ManifestEntry, srcURL, status, localPath string) {

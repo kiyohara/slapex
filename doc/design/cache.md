@@ -59,7 +59,7 @@
 | `source_url` | 元 URL |
 | `local_path` | 出力ディレクトリからの相対 path(未保存なら `null`)。保存名は download 内容の sha256 hash + extension(`output-format.md`) |
 | `file_id` / `emoji_name` | Slack file ID または絵文字名(該当する場合のみ) |
-| `original_name` / `mimetype` / `size_bytes` | 元の表示ファイル名と metadata |
+| `original_name` / `mimetype` / `size_bytes` | 元の表示ファイル名と metadata。`mimetype` は Slack の file metadata があればそれを使い、無ければ `local_path` の extension と同じ判断(download 内容からの判別 → response の Content-Type)で決めるため、両者は食い違わない(`output-format.md`) |
 | `status` | `saved` / `skipped_size` / `failed` |
 | `error` | 失敗理由(失敗時のみ) |
 

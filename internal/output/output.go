@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -191,9 +192,12 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	// content hash: identical content resolves to the same name, and regenerating
 	// the samples does not churn file names just because a signed URL or the
 	// fixture's base URL changed (decision log 0016 / 0052). The hash is computed
-	// during the download via a MultiWriter, so the temp file is not re-read.
+	// during the download via a MultiWriter, so the temp file is not re-read. The
+	// same MultiWriter keeps the first bytes so the real format can be detected
+	// from the content (decision log 0052, Issue #183) without a second read.
 	h := sha256.New()
-	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h))
+	var head headBuffer
+	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h, &head))
 	tmp.Close()
 	if err != nil {
 		status := "failed"
@@ -205,8 +209,9 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 		return "", false
 	}
 
+	sniffed := head.detect()
 	base := hex.EncodeToString(h.Sum(nil))
-	rel := filepath.Join(kindDirs[kind], base+extensionFor(meta, srcURL, contentType))
+	rel := filepath.Join(kindDirs[kind], base+extensionFor(meta, srcURL, contentType, sniffed))
 	dst := filepath.Join(a.dir, rel)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		a.record(kind, srcURL, meta, "", "failed", err.Error())
@@ -220,7 +225,7 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 		meta.SizeBytes = size
 	}
 	if meta.Mimetype == "" {
-		meta.Mimetype = contentType
+		meta.Mimetype = mimetypeFor(contentType, sniffed)
 	}
 	a.record(kind, srcURL, meta, filepath.ToSlash(rel), "saved", "")
 	return filepath.ToSlash(rel), true
@@ -325,7 +330,74 @@ func (a *Assets) Counts() (saved, skipped, failed int) {
 	return
 }
 
-func extensionFor(meta AssetMeta, srcURL, contentType string) string {
+const sniffLen = 512 // http.DetectContentType looks at no more than this many bytes.
+
+// headBuffer keeps the first sniffLen bytes written through it so the download's
+// real format can be detected from the bytes themselves. It sits in Save's
+// MultiWriter next to the temp file and the hash, so nothing is downloaded or
+// read twice.
+type headBuffer struct{ buf []byte }
+
+func (b *headBuffer) Write(p []byte) (int, error) {
+	if room := sniffLen - len(b.buf); room > 0 {
+		b.buf = append(b.buf, p[:min(room, len(p))]...)
+	}
+	return len(p), nil
+}
+
+// detect returns the media type sniffed from the head of the download, without
+// parameters (e.g. "image/png"), or "" when nothing was downloaded.
+func (b *headBuffer) detect() string {
+	if len(b.buf) == 0 {
+		return ""
+	}
+	mt, _, err := mime.ParseMediaType(http.DetectContentType(b.buf))
+	if err != nil {
+		return ""
+	}
+	return mt
+}
+
+// sniffedExtensions lists the formats http.DetectContentType recognises by magic
+// bytes, and the extension each one is saved with. A sniff result outside this
+// table (text/plain, application/octet-stream, ...) means the bytes told us
+// nothing, so extensionFor falls back to the name- and URL-based order.
+var sniffedExtensions = map[string]string{
+	"image/png":                ".png",
+	"image/jpeg":               ".jpg",
+	"image/gif":                ".gif",
+	"image/webp":               ".webp",
+	"image/bmp":                ".bmp",
+	"image/x-icon":             ".ico",
+	"image/vnd.microsoft.icon": ".ico",
+	"application/pdf":          ".pdf",
+}
+
+// contentTypeExtensions maps a declared Content-Type to an extension. It is the
+// last step before .bin and covers formats the sniff cannot identify, such as
+// SVG, which is XML and has no magic bytes.
+var contentTypeExtensions = map[string]string{
+	"image/jpeg":               ".jpg",
+	"image/png":                ".png",
+	"image/gif":                ".gif",
+	"image/webp":               ".webp",
+	"image/bmp":                ".bmp",
+	"image/x-icon":             ".ico",
+	"image/vnd.microsoft.icon": ".ico",
+	"image/svg+xml":            ".svg",
+	"application/pdf":          ".pdf",
+}
+
+// extensionFor picks the extension of the saved asset file. The downloaded bytes
+// win over whatever the URL or the server claims: a gravatar avatar is served
+// from a path ending in .jpg but redirects to a PNG, which used to leave the file
+// name, the manifest mimetype and the file contents disagreeing (Issue #183).
+// When the sniff is inconclusive the original order applies: the display file
+// name Slack gave us, then the URL path, then the Content-Type.
+func extensionFor(meta AssetMeta, srcURL, contentType, sniffed string) string {
+	if ext, ok := sniffedExtensions[sniffed]; ok {
+		return ext
+	}
 	if meta.OriginalName != "" {
 		if ext := filepath.Ext(meta.OriginalName); ext != "" && len(ext) <= 8 {
 			return strings.ToLower(ext)
@@ -338,18 +410,22 @@ func extensionFor(meta AssetMeta, srcURL, contentType string) string {
 		return strings.ToLower(ext)
 	}
 	if mt, _, err := mime.ParseMediaType(contentType); err == nil {
-		switch mt {
-		case "image/jpeg":
-			return ".jpg"
-		case "image/png":
-			return ".png"
-		case "image/gif":
-			return ".gif"
-		case "image/webp":
-			return ".webp"
+		if ext, ok := contentTypeExtensions[mt]; ok {
+			return ext
 		}
 	}
 	return ".bin"
+}
+
+// mimetypeFor decides the manifest mimetype of an asset that carries no Slack
+// file metadata. It follows the same judgement as extensionFor — sniffed bytes
+// first, the response Content-Type otherwise — so the recorded mimetype and the
+// saved file's extension never contradict each other (Issue #183).
+func mimetypeFor(contentType, sniffed string) string {
+	if _, ok := sniffedExtensions[sniffed]; ok {
+		return sniffed
+	}
+	return contentType
 }
 
 // CacheCommon is the shared header of every .cache/ file.
