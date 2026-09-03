@@ -48,6 +48,73 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 	})
 }
 
+// TestRunIntegrationAssetExtensionFromContent covers the gravatar shape end to
+// end: an avatar URL whose path ends in .jpg but whose bytes are a PNG, because
+// gravatar redirects to the PNG default image. The saved file takes its
+// extension from the content, and the manifest mimetype agrees with it
+// (Issue #183). The fixture's other assets keep their extensions, since their
+// bodies are plain strings that cannot be sniffed.
+func TestRunIntegrationAssetExtensionFromContent(t *testing.T) {
+	t.Parallel()
+
+	const gravatarPath = "/files/avatar-gravatar.jpg"
+	// The shape Slack's users.info returns for a gravatar user: a .jpg path with
+	// the Slack default image as the d= fallback. The hash is a placeholder.
+	const gravatarQuery = "?s=72&d=https%3A%2F%2Fexample.com%2Fdefault-72.png"
+
+	sc := happyPathScenario()
+	sc.Users["U01"] = testUser("U01", "alice", "Alice Example", "Alice", "{{base}}"+gravatarPath+gravatarQuery)
+	sc.Assets[gravatarPath] = fakeAsset{ContentType: "image/png", Body: "\x89PNG\r\n\x1a\nfake png body"}
+
+	got := runExportScenario(t, sc, Options{
+		ChannelKeyword: "project-alpha",
+		OutputDir:      t.TempDir(),
+		MaxPosts:       10,
+		Days:           90,
+		MaxAttachBytes: 1 << 20,
+		KeepCache:      true,
+		ToolVersion:    "test",
+	})
+
+	var manifest struct {
+		Assets []struct {
+			Kind      string `json:"kind"`
+			SourceURL string `json:"source_url"`
+			LocalPath string `json:"local_path"`
+			Mimetype  string `json:"mimetype"`
+			Status    string `json:"status"`
+		} `json:"assets"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/assets_manifest.json"), &manifest)
+
+	var checked int
+	for _, asset := range manifest.Assets {
+		if asset.Status != "saved" {
+			continue
+		}
+		switch {
+		case strings.Contains(asset.SourceURL, gravatarPath):
+			if filepath.Ext(asset.LocalPath) != ".png" || asset.Mimetype != "image/png" {
+				t.Fatalf("gravatar avatar = local_path:%q mimetype:%q, want a .png path and image/png", asset.LocalPath, asset.Mimetype)
+			}
+			if _, err := os.Stat(filepath.Join(got.OutputDir, filepath.FromSlash(asset.LocalPath))); err != nil {
+				t.Fatalf("gravatar avatar %q missing: %v", asset.LocalPath, err)
+			}
+			checked++
+		case strings.Contains(asset.SourceURL, "/files/runbook.pdf"):
+			// Unchanged: the body is a plain string, so the sniff says nothing and
+			// the original display name still decides the extension.
+			if filepath.Ext(asset.LocalPath) != ".pdf" {
+				t.Fatalf("attachment local_path = %q, want a .pdf path", asset.LocalPath)
+			}
+			checked++
+		}
+	}
+	if checked != 2 {
+		t.Fatalf("checked %d manifest assets, want 2 (gravatar avatar and attachment)", checked)
+	}
+}
+
 func TestRunIntegrationExcludeBodyEmojiParentAndThread(t *testing.T) {
 	t.Parallel()
 

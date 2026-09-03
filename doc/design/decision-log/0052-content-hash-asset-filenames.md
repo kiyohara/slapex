@@ -1,9 +1,9 @@
 # 0052 asset ファイル名の内容 hash 化
 
-- 状態: decided
+- 状態: decided(extension の決め方は 0055 で download 内容からの判別優先へ変更)
 - 作成日: 2026-07-08
-- 最終更新日: 2026-07-08
-- 関連: `../output-format.md`, `../cache.md`, `0016-asset-filenames.md`, `0030-cache-schema-and-reuse-validation.md`
+- 最終更新日: 2026-09-03
+- 関連: `../output-format.md`, `../cache.md`, `0016-asset-filenames.md`, `0030-cache-schema-and-reuse-validation.md`, `0055-asset-extension-from-content.md`
 
 ## 背景
 
@@ -51,3 +51,9 @@ asset のローカルファイル名を、元 URL の hash ではなく download
 
 - 同一 kind ディレクトリ内で内容 hash が衝突する事態(現実的には sha256 でほぼ起きない)や、内容が同じでも別ファイルとして残したい要件が出た場合。
 - 人間可読なファイル名の価値が衝突リスクを上回る場合(0016 の見直し条件と同じ)。
+
+## 追記(2026-09-03)
+
+本ログの「決定」にある「extension は従来どおり `extensionFor`(元の表示ファイル名 → URL 拡張子 → content type)で決める」という部分は、[0055-asset-extension-from-content.md](0055-asset-extension-from-content.md) で **download した内容の判別を最優先**する方式へ変更した。gravatar 由来の avatar のように、URL の path が `.jpg` でも実体が PNG である asset で、extension と manifest の `mimetype` とファイルの実体が矛盾していたためである(Issue #183)。
+
+内容 hash 命名(sha256)、kind ディレクトリ構成、manifest を `source_url` 単位で記録すること、`--reuse-cache` の verbatim copy は本ログのまま維持する。判別も既存の `io.MultiWriter` に先頭 512 byte を保持する writer を足す形で行うため、本ログの「再 download / 再読込をしない」方針は保たれている。詳細は 0055 を参照する。

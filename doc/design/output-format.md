@@ -64,6 +64,8 @@ HTML footer の `Range` は、取得対象の境界を RFC3339 絶対時刻で�
 
 本リポジトリでは、asset ファイル名は download した内容の hash(sha256)ベースにする。内容が同じ asset は同じファイル名へ解決されるため重複保存を避けやすく、元 URL が実行ごとに変わっても(署名付き query や、同梱サンプル生成時に実行ごとに変わる base URL など)、内容が変わらない限りファイル名は変わらない。asset 種別、元 URL、Slack file ID、emoji 名、元の表示ファイル名、content type、取得成否などの人間が読むための情報は `.cache/assets_manifest.json` と HTML 側の表示に保持する。当初の URL hash 方針から内容 hash 方針へ変更した決定経緯は `decision-log/0016-asset-filenames.md` と `decision-log/0052-content-hash-asset-filenames.md` を参照する(開発者向け)。
 
+ファイル名の extension は、download した内容の先頭から判別した形式(PNG / JPEG / GIF / WebP / BMP / ICO / PDF)を最優先で使う。gravatar の avatar のように、URL の path が `.jpg` でも実体が PNG である asset があるため、URL や Content-Type の申告より実体を優先する。内容から判別できない形式(SVG など magic bytes を持たない形式)では、元の表示ファイル名 → URL の拡張子 → Content-Type → `.bin` の順で決める(`decision-log/0055-asset-extension-from-content.md`)。
+
 標準絵文字は原則として Unicode に戻して HTML に直接表示する。カスタム絵文字や Unicode fallback できない絵文字は画像 asset として保存するが、利用者にとって custom かどうかは重要な分類ではないため、保存先は `assets/emoji/` に集約する。
 
 利用者が出力内容を把握しやすいように、ファイル名は内容 hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。同一内容・同一 extension の asset は同一 kind ディレクトリ内で同じファイルへ集約され、複数の元 URL が同じローカル path を指すことがある(manifest は元 URL 単位で記録する)。
