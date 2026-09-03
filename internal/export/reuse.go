@@ -20,6 +20,7 @@ type reusableCache struct {
 	teamID      string
 	channelID   string
 	users       map[string]cachedUser
+	bots        map[string]cachedBot
 	emoji       map[string]string
 	savedAssets map[string]output.ManifestEntry // source_url -> saved entry
 	oldDir      string                          // previous run's channel directory
@@ -70,9 +71,13 @@ func loadReuseCache(path string) (*reusableCache, error) {
 		return nil, err
 	}
 
+	// bots is absent from caches written before decision log 0054; the zero map
+	// simply means every bot ID is resolved with bots.info this run, so an older
+	// cache stays reusable and schema_version is unchanged.
 	var api struct {
 		SchemaVersion int                   `json:"schema_version"`
 		Users         map[string]cachedUser `json:"users"`
+		Bots          map[string]cachedBot  `json:"bots"`
 		Emoji         map[string]string     `json:"emoji"`
 	}
 	if err := readCacheJSON(filepath.Join(clean, "slack_api_cache.json"), &api); err != nil {
@@ -104,6 +109,7 @@ func loadReuseCache(path string) (*reusableCache, error) {
 		teamID:      meta.Workspace.TeamID,
 		channelID:   meta.Channel.ID,
 		users:       api.Users,
+		bots:        api.Bots,
 		emoji:       api.Emoji,
 		savedAssets: saved,
 		oldDir:      filepath.Dir(clean),
@@ -174,9 +180,17 @@ func (rc *reusableCache) reuseSource() *output.ReuseSource {
 // name and avatar URL) from a cached entry, so a cached user needs no users.info
 // call this run.
 func (c cachedUser) toUser(id string) *slack.User {
-	u := &slack.User{ID: id, RealName: c.RealName}
+	u := &slack.User{ID: id, RealName: c.RealName, IsBot: c.IsBot}
 	u.Profile.DisplayName = c.DisplayName
 	u.Profile.RealName = c.RealName
 	u.Profile.Image72 = c.AvatarURL
 	return u
+}
+
+// toBot reconstructs the minimal slack.Bot the builder needs (app name and icon
+// URL) from a cached entry, so a cached bot needs no bots.info call this run.
+func (c cachedBot) toBot(id string) *slack.Bot {
+	b := &slack.Bot{ID: id, Name: c.Name}
+	b.Icons.Image72 = c.AvatarURL
+	return b
 }

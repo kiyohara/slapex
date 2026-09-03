@@ -22,6 +22,7 @@ func ScenarioEN(now time.Time) *Scenario {
 		"/files/avatar-ben.svg":     avatarSVG("B", "#1971c2"),
 		"/files/avatar-chika.svg":   avatarSVG("C", "#0ca678"),
 		"/files/avatar-dan.svg":     avatarSVG("D", "#7048e8"),
+		"/files/bot-deploy.svg":     botIconSVG("#1098ad"),
 		"/files/emoji-ship-it.svg":  badgeEmojiSVG([]string{"SHIP", "IT!"}, "#1971c2", 20),
 		"/files/emoji-comet.svg":    cometEmojiSVG(),
 		"/files/banner-art.svg":     packageArtSVG("AGENT NIGHT", "vol. 3 / Agent Lab"),
@@ -76,6 +77,9 @@ func ScenarioEN(now time.Time) *Scenario {
 			"U02BEN":   sampleUser("U02BEN", "ben", "Ben Carter", "Ben", "{{base}}/files/avatar-ben.svg"),
 			"U03CHIKA": sampleUser("U03CHIKA", "chika", "Chika Ito", "Chika", "{{base}}/files/avatar-chika.svg"),
 			"U04DAN":   sampleUser("U04DAN", "dan", "Dan Kim", "Dan", "{{base}}/files/avatar-dan.svg"),
+		},
+		Bots: map[string]slack.Bot{
+			"B01DEPLOY": sampleBot("B01DEPLOY", "DeployBot", "A01DEPLOY", "{{base}}/files/bot-deploy.svg"),
 		},
 		Emoji: map[string]string{
 			"ship_it": "{{base}}/files/emoji-ship-it.svg",

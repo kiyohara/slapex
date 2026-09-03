@@ -93,25 +93,52 @@ func (c *Client) ListChannels(ctx context.Context) ([]Channel, error) {
 
 // Message is the subset of a Slack message slapex renders.
 type Message struct {
-	Type       string `json:"type"`
-	Subtype    string `json:"subtype"`
-	TS         string `json:"ts"`
-	ThreadTS   string `json:"thread_ts"`
-	User       string `json:"user"`
-	Inviter    string `json:"inviter"`
-	BotID      string `json:"bot_id"`
-	Username   string `json:"username"`
-	BotProfile *struct {
-		Name string `json:"name"`
-	} `json:"bot_profile"`
-	Text       string `json:"text"`
-	ReplyCount int    `json:"reply_count"`
+	Type       string      `json:"type"`
+	Subtype    string      `json:"subtype"`
+	TS         string      `json:"ts"`
+	ThreadTS   string      `json:"thread_ts"`
+	User       string      `json:"user"`
+	Inviter    string      `json:"inviter"`
+	BotID      string      `json:"bot_id"`
+	AppID      string      `json:"app_id"`
+	Username   string      `json:"username"`
+	BotProfile *BotProfile `json:"bot_profile"`
+	Text       string      `json:"text"`
+	ReplyCount int         `json:"reply_count"`
 	Edited     *struct {
 		TS string `json:"ts"`
 	} `json:"edited"`
 	Files       []File       `json:"files"`
 	Attachments []Attachment `json:"attachments"`
 	Reactions   []Reaction   `json:"reactions"`
+}
+
+// BotProfile is the inline app profile Slack attaches to some bot messages.
+// It is absent on messages posted through a slash command response,
+// an incoming webhook or response_url, which carry only bot_id
+// (doc/design/slack-api-usage.md, decision log 0054).
+type BotProfile struct {
+	ID    string   `json:"id"`
+	AppID string   `json:"app_id"`
+	Name  string   `json:"name"`
+	Icons BotIcons `json:"icons"`
+}
+
+// BotIcons is the subset of app icon URLs slapex may render, shared by
+// bot_profile.icons and the bots.info bot object.
+type BotIcons struct {
+	Image36 string `json:"image_36"`
+	Image48 string `json:"image_48"`
+	Image72 string `json:"image_72"`
+}
+
+// URL returns the app icon slapex saves: the 72px image, falling back to the
+// 48px image (the 36px image is too small for the avatar slot).
+func (i BotIcons) URL() string {
+	if i.Image72 != "" {
+		return i.Image72
+	}
+	return i.Image48
 }
 
 // IsThreadParent reports whether the message starts a thread on the timeline.
@@ -337,6 +364,30 @@ func (c *Client) UserInfo(ctx context.Context, userID string) (*User, error) {
 		return nil, err
 	}
 	return &out.User, nil
+}
+
+// Bot is the subset of bots.info slapex uses to resolve the display name and
+// icon of a bot message that carries only bot_id (decision log 0054).
+type Bot struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	AppID   string   `json:"app_id"`
+	UserID  string   `json:"user_id"`
+	Deleted bool     `json:"deleted"`
+	Icons   BotIcons `json:"icons"`
+}
+
+// BotInfo resolves one bot ID (a "B..." ID from a bot_message) through
+// bots.info. The user token scope users:read already covers it, so no manifest
+// change is needed (doc/help/slack-app-setup.md).
+func (c *Client) BotInfo(ctx context.Context, botID string) (*Bot, error) {
+	var out struct {
+		Bot Bot `json:"bot"`
+	}
+	if _, err := c.call(ctx, "bots.info", url.Values{"bot": {botID}}, &out); err != nil {
+		return nil, err
+	}
+	return &out.Bot, nil
 }
 
 // EmojiList returns the workspace custom emoji map (name -> URL or alias:name).

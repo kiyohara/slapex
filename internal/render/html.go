@@ -47,6 +47,7 @@ type TimelineItem struct {
 // MessageView is one rendered message (timeline or thread reply).
 type MessageView struct {
 	IsSystem                bool
+	IsBot                   bool // app / bot post: renders the APP chip
 	Author                  string
 	AvatarPath              string
 	AvatarInitial           string

@@ -128,6 +128,78 @@ func TestCallSendsFormEncodedRequestWithAuth(t *testing.T) {
 	}
 }
 
+func TestBotInfoRequestAndDecode(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mu   sync.Mutex
+		path string
+		form url.Values
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read request body: %v", err)
+		}
+		parsed, err := url.ParseQuery(string(body))
+		if err != nil {
+			t.Errorf("parse request body: %v", err)
+		}
+		mu.Lock()
+		path, form = r.URL.Path, parsed
+		mu.Unlock()
+		fmt.Fprint(w, `{"ok":true,"bot":{"id":"B01EXAMPLE","deleted":false,"name":"ExampleApp",`+
+			`"app_id":"A01EXAMPLE","icons":{"image_36":"https://example.invalid/36.png",`+
+			`"image_48":"https://example.invalid/48.png","image_72":"https://example.invalid/72.png"}}}`)
+	}))
+	defer srv.Close()
+
+	c, _ := newTestClient(srv)
+	bot, err := c.BotInfo(context.Background(), "B01EXAMPLE")
+	if err != nil {
+		t.Fatalf("BotInfo: %v", err)
+	}
+	if bot.ID != "B01EXAMPLE" || bot.Name != "ExampleApp" || bot.AppID != "A01EXAMPLE" {
+		t.Errorf("bot = %+v, want ID B01EXAMPLE / Name ExampleApp / AppID A01EXAMPLE", bot)
+	}
+	if bot.Deleted {
+		t.Error("bot.Deleted = true, want false")
+	}
+	if want := "https://example.invalid/72.png"; bot.Icons.URL() != want {
+		t.Errorf("bot.Icons.URL() = %q, want %q (image_72 preferred)", bot.Icons.URL(), want)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if path != "/api/bots.info" {
+		t.Errorf("path = %q, want /api/bots.info", path)
+	}
+	if form.Get("bot") != "B01EXAMPLE" {
+		t.Errorf("form bot = %q, want B01EXAMPLE", form.Get("bot"))
+	}
+}
+
+// TestBotInfoNotFound pins the error classification the export relies on to warn
+// and continue instead of failing the run.
+func TestBotInfoNotFound(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"ok":false,"error":"bot_not_found"}`)
+	}))
+	defer srv.Close()
+
+	c, _ := newTestClient(srv)
+	_, err := c.BotInfo(context.Background(), "B404")
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("err = %v, want *APIError", err)
+	}
+	if apiErr.Method != "bots.info" || apiErr.Code != "bot_not_found" {
+		t.Errorf("err = %+v, want method bots.info / code bot_not_found", apiErr)
+	}
+}
+
 func TestCallAPIError(t *testing.T) {
 	t.Parallel()
 

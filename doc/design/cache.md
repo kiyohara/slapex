@@ -69,11 +69,14 @@
 
 | field | 内容 |
 |---|---|
-| `users` | user ID → 解決済み display name / real name / avatar URL |
+| `users` | user ID → 解決済み display name / real name / avatar URL / `is_bot` |
+| `bots` | bot ID → `bots.info` で解決した app 名と app icon URL(`slack-api-usage.md`) |
 | `emoji` | 絵文字名 → 画像 URL または alias 先の名前 |
 | `workspace` / `channel` | `auth.test` と channel 解決の結果 |
 
 メッセージ本文の raw API response は保持しない。サイズが大きく、stale data になるリスクが高いためである(再検討の条件は決定経緯ログを参照)。
+
+`bots` と `users` の `is_bot` は既存 key への追加であり、`schema_version` は据え置く。これらを持たない旧 cache も `--reuse-cache` の対象として読める。その場合 `bots.info` を通常どおり呼び直すため表示は変わらない。ただし `is_bot` は `users.info` からしか分からず、cache 済み user は再解決しないため、bot user が投稿した message の `APP` 表示だけは旧 cache では復元されない(`decision-log/0054-bot-author-resolution.md`)。
 
 ## option
 

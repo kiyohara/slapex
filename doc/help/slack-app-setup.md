@@ -211,7 +211,7 @@ public channel と private channel の両方を扱えるように、user token /
 | 画像・添付ファイルの情報取得と download | `files:read` |
 | カスタム絵文字の一覧取得 | `emoji:read` |
 | workspace icon の取得(任意。無い場合は icon なしで出力) | `team:read` |
-| 投稿者名や表示名の解決 | `users:read` |
+| 投稿者名や表示名の解決、bot / app の名前と icon の解決 | `users:read` |
 
 ### scope 変更後の再 install
 

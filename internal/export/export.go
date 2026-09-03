@@ -217,7 +217,8 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	p.EndPhase(messagesStatus, "Messages", fmt.Sprintf("%d fetched %s", len(messages), fetchRange.progressLabel()), messagesMeta)
 
 	userIDs := collectUserIDs(messages, replies)
-	p.StartPhase("Users", fmt.Sprintf("resolving %d users ...", len(userIDs)))
+	botIDs := collectBotIDs(messages, replies)
+	p.StartPhase("Users", fmt.Sprintf("resolving %s ...", resolveTargetsLabel(len(userIDs), len(botIDs))))
 	users := map[string]*slack.User{}
 	reusedUsers := 0
 	for _, id := range userIDs {
@@ -235,11 +236,29 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		}
 		users[id] = u
 	}
-	usersMeta := ""
-	if reusedUsers > 0 {
-		usersMeta = fmt.Sprintf("%d from cache, users.info skipped", reusedUsers)
+	// A bot message that carries only bot_id has no user to resolve; bots.info
+	// supplies the app name and icon instead (decision log 0054). A failure is
+	// warned about and skipped, like an unresolvable user, so the export still
+	// completes with the bot_id and the initial fallback.
+	bots := map[string]*slack.Bot{}
+	reusedBots := 0
+	for _, id := range botIDs {
+		if reuse != nil {
+			if cb, ok := reuse.bots[id]; ok {
+				bots[id] = cb.toBot(id)
+				reusedBots++
+				continue
+			}
+		}
+		bot, err := client.BotInfo(ctx, id)
+		if err != nil {
+			p.Warnf("could not resolve bot %s: %s", id, err)
+			continue
+		}
+		bots[id] = bot
 	}
-	p.EndPhase(ui.StatusSuccess, "Users", fmt.Sprintf("%d resolved", len(users)), usersMeta)
+	p.EndPhase(ui.StatusSuccess, "Users", resolvedTargetsLabel(len(users), len(bots)),
+		reusedTargetsMeta(reusedUsers, reusedBots))
 
 	var customEmoji map[string]string
 	if reuse != nil {
@@ -275,13 +294,28 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			avatars[id] = rel
 		}
 	}
+	// App icons are saved as ordinary avatars (output.KindAvatar), so they land
+	// in assets/avatars/ next to the human ones and stay public downloads with
+	// no Authorization header (doc/guidelines/credential-scope-guidelines.md).
+	botAvatars := map[string]string{}
+	for _, id := range botIDs {
+		bot, ok := bots[id]
+		if !ok {
+			continue
+		}
+		if rel, ok := assets.Save(output.KindAvatar, bot.Icons.URL(), output.AssetMeta{}); ok {
+			botAvatars[id] = rel
+		}
+	}
 
 	b := &builder{
-		users:   users,
-		avatars: avatars,
-		emoji:   emojiResolver,
-		assets:  assets,
-		limit:   opts.MaxAttachBytes,
+		users:      users,
+		avatars:    avatars,
+		bots:       bots,
+		botAvatars: botAvatars,
+		emoji:      emojiResolver,
+		assets:     assets,
+		limit:      opts.MaxAttachBytes,
 	}
 	var items []render.TimelineItem
 	lastDate := ""
@@ -355,7 +389,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", saved, skipped, failed), assetsMeta)
 
 	if err := writeCaches(dir, now, auth, ch, opts, fetchRange, wsLabel, chLabel,
-		len(messages), threadCount, replyCount, excludedTotal, saved, skipped, failed, users, customEmoji, assets); err != nil {
+		len(messages), threadCount, replyCount, excludedTotal, saved, skipped, failed, users, bots, customEmoji, assets); err != nil {
 		return "", err
 	}
 	if !opts.KeepCache {
@@ -754,11 +788,13 @@ var normalSubtypes = map[string]bool{
 }
 
 type builder struct {
-	users   map[string]*slack.User
-	avatars map[string]string
-	emoji   *emoji.Resolver
-	assets  *output.Assets
-	limit   int64
+	users      map[string]*slack.User
+	avatars    map[string]string
+	bots       map[string]*slack.Bot
+	botAvatars map[string]string
+	emoji      *emoji.Resolver
+	assets     *output.Assets
+	limit      int64
 }
 
 // UserName implements render.TextResolver.
@@ -811,8 +847,9 @@ func (b *builder) messageView(m *slack.Message) *render.MessageView {
 	}
 
 	v.Author = b.authorName(m)
-	v.AvatarPath = b.avatars[m.User]
+	v.AvatarPath = b.authorAvatar(m)
 	v.AvatarInitial = initialOf(v.Author)
+	v.IsBot = isBotMessage(m, b.users[m.User])
 	v.Italic = m.Subtype == "me_message"
 	if m.Text != "" {
 		v.Body = render.Mrkdwn(m.Text, b)
@@ -853,6 +890,9 @@ func (b *builder) channelJoinInviterSuffix(m *slack.Message) (template.HTML, boo
 	return render.Safe(suffix), true
 }
 
+// authorName resolves the displayed poster name. For a bot message the inline
+// bot_profile / username overrides come first, then the bots.info name, and only
+// then the raw bot_id (decision log 0054).
 func (b *builder) authorName(m *slack.Message) string {
 	if m.User != "" {
 		return b.UserName(m.User)
@@ -863,10 +903,42 @@ func (b *builder) authorName(m *slack.Message) string {
 	if m.Username != "" {
 		return m.Username
 	}
+	if bot, ok := b.bots[m.BotID]; ok && bot.Name != "" {
+		return bot.Name
+	}
 	if m.BotID != "" {
 		return m.BotID
 	}
 	return "(unknown)"
+}
+
+// authorAvatar resolves the saved avatar for a message: the poster's users.info
+// image, else the inline bot_profile app icon, else the bots.info app icon. An
+// empty result leaves the initial fallback in place (decision log 0035 / 0054).
+// Both bot icons are saved on demand; output.Assets deduplicates by source URL,
+// so repeated posts from the same app download once.
+func (b *builder) authorAvatar(m *slack.Message) string {
+	if m.User != "" {
+		return b.avatars[m.User]
+	}
+	if m.BotProfile != nil {
+		if rel, ok := b.assets.Save(output.KindAvatar, m.BotProfile.Icons.URL(), output.AssetMeta{}); ok {
+			return rel
+		}
+	}
+	return b.botAvatars[m.BotID]
+}
+
+// isBotMessage reports whether a message was posted by an app rather than a
+// person, so the renderer can show the APP chip (decision log 0054). u is the
+// resolved poster, if any: a bot user posting through chat.postMessage carries a
+// normal user ID and is only recognizable by users.info is_bot. Slackbot is not
+// an app and reports is_bot false, so it is correctly left out.
+func isBotMessage(m *slack.Message, u *slack.User) bool {
+	if m.BotID != "" || m.BotProfile != nil {
+		return true
+	}
+	return u != nil && u.IsBot
 }
 
 func (b *builder) userDisplayName(id string) (string, bool) {
@@ -1004,11 +1076,21 @@ type cachedUser struct {
 	DisplayName string `json:"display_name"`
 	RealName    string `json:"real_name,omitempty"`
 	AvatarURL   string `json:"avatar_url,omitempty"`
+	// IsBot preserves users.info is_bot so --reuse-cache can still tell a bot
+	// user's post from a person's and render the APP chip (decision log 0054).
+	IsBot bool `json:"is_bot,omitempty"`
+}
+
+// cachedBot is one bots.info result: the app name and the icon URL slapex saved,
+// so --reuse-cache can skip the call (doc/design/cache.md).
+type cachedBot struct {
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
 func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Channel, opts Options,
 	fetchRange messageFetchRange, wsLabel, chLabel string, timeline, threads, replyTotal, excludedTotal, saved, skipped, failed int,
-	users map[string]*slack.User, customEmoji map[string]string, assets *output.Assets) error {
+	users map[string]*slack.User, bots map[string]*slack.Bot, customEmoji map[string]string, assets *output.Assets) error {
 
 	common := output.CacheCommon{SchemaVersion: output.SchemaVersion, GeneratedAt: now.UTC().Format(time.RFC3339)}
 
@@ -1060,12 +1142,19 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 
 	cachedUsers := map[string]cachedUser{}
 	for id, u := range users {
-		cachedUsers[id] = cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: avatarURL(u)}
+		cachedUsers[id] = cachedUser{
+			DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: avatarURL(u), IsBot: u.IsBot,
+		}
+	}
+	cachedBots := map[string]cachedBot{}
+	for id, bot := range bots {
+		cachedBots[id] = cachedBot{Name: bot.Name, AvatarURL: bot.Icons.URL()}
 	}
 	apiCache := map[string]any{
 		"schema_version": common.SchemaVersion,
 		"generated_at":   common.GeneratedAt,
 		"users":          cachedUsers,
+		"bots":           cachedBots,
 		"emoji":          customEmoji,
 		"workspace":      auth,
 		"channel":        ch,
@@ -1250,6 +1339,73 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+// collectBotIDs returns the unique bot IDs that still need a bots.info call:
+// bot messages that carry only bot_id, and those whose inline bot_profile is
+// missing either the name or the icon. A bot_profile carrying both already
+// answers everything slapex renders, so it costs no call (decision log 0054).
+func collectBotIDs(messages []slack.Message, replies map[string][]slack.Message) []string {
+	seen := map[string]bool{}
+	add := func(m *slack.Message) {
+		if m.User != "" || m.BotID == "" {
+			return
+		}
+		if m.BotProfile != nil && m.BotProfile.Name != "" && m.BotProfile.Icons.URL() != "" {
+			return
+		}
+		seen[m.BotID] = true
+	}
+	for i := range messages {
+		add(&messages[i])
+	}
+	for _, rs := range replies {
+		for i := range rs {
+			add(&rs[i])
+		}
+	}
+	ids := make([]string, 0, len(seen))
+	for id := range seen {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+// resolveTargetsLabel / resolvedTargetsLabel / reusedTargetsMeta render the Users
+// phase counts. Bots only appear once the channel actually has bot posts to
+// resolve, so a channel without them keeps the original wording.
+func resolveTargetsLabel(users, bots int) string {
+	if bots == 0 {
+		return fmt.Sprintf("%d users", users)
+	}
+	return fmt.Sprintf("%d users, %s", users, botCountLabel(bots))
+}
+
+func resolvedTargetsLabel(users, bots int) string {
+	if bots == 0 {
+		return fmt.Sprintf("%d resolved", users)
+	}
+	return fmt.Sprintf("%d users, %s resolved", users, botCountLabel(bots))
+}
+
+func reusedTargetsMeta(users, bots int) string {
+	switch {
+	case users > 0 && bots > 0:
+		return fmt.Sprintf("%d from cache, users.info / bots.info skipped", users+bots)
+	case users > 0:
+		return fmt.Sprintf("%d from cache, users.info skipped", users)
+	case bots > 0:
+		return fmt.Sprintf("%d from cache, bots.info skipped", bots)
+	}
+	return ""
+}
+
+func botCountLabel(n int) string {
+	if n == 1 {
+		return "1 bot"
+	}
+	return fmt.Sprintf("%d bots", n)
 }
 
 // avatarURL is the avatar image URL slapex saves for a user: the 72px image,

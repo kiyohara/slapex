@@ -39,6 +39,7 @@ token type による主な違い:
 | `conversations.history` | timeline 上の親投稿の取得 | 取得範囲制限に達するまで(pagination) |
 | `conversations.replies` | thread replies の取得 | thread を持つ親投稿ごと(pagination) |
 | `users.info` | 投稿者・mention の表示名解決 | unique な user ID ごとに 1 回 |
+| `bots.info` | bot 投稿の app 名と app icon の解決 | 解決が必要な unique な bot ID ごとに 1 回 |
 | `emoji.list` | カスタム絵文字 URL の取得 | 1 回 |
 | HTTP GET(`url_private_download`) | 添付ファイル・画像の download | 保存対象 asset ごと |
 
@@ -71,8 +72,18 @@ token type による主な違い:
 - 取得済みメッセージの投稿者と本文中の mention に現れる unique な user ID を集め、`users.info` で表示名を解決する。
 - 解決結果は `.cache/slack_api_cache.json` に蓄積し、同一実行内で再問い合わせしない。
 - 表示名は display name を優先し、無ければ real name、それも無ければ user ID へ fallback する。
-- bot 投稿(`bot_message` subtype や `bot_id` 付き)は `bot_profile` / `username` を優先して表示名にする。
 - 解決失敗(退会ユーザーなど)は user ID をそのまま表示する。
+
+### bot 投稿の表示名と avatar
+
+slash command の `in_channel` 応答、incoming webhook、`response_url` 経由の投稿は `subtype: bot_message` と `bot_id` だけを持ち、`user` も `bot_profile` も `username` も持たない。この形の投稿は `users.info` では一切解決できないため、`bot_id` を `bots.info` に渡して app 名と app icon を解決する(`decision-log/0054-bot-author-resolution.md`)。
+
+- 収集対象は、`user` が空で `bot_id` を持つ message とする。`bot_profile` が名前と icon の両方を持つ message は `bots.info` を呼ばずに済ませる。
+- `bots.info` は unique な bot ID ごとに 1 回だけ呼ぶ。解決結果は `.cache/slack_api_cache.json` の `bots` に蓄積し、同一実行内で再問い合わせしない。
+- 表示名の優先順位: `users.info` の表示名 → `bot_profile.name` → `username` → `bots.info` の `name` → `bot_id` → `(unknown)`。
+- avatar の優先順位: `users.info` の image → `bot_profile.icons`(`image_72` 優先、`image_48` fallback)→ `bots.info` の `icons`(同じ優先)→ 頭文字 fallback。
+- `bots.info` の失敗(`bot_not_found`、scope 不足、ネットワークエラーなど)は警告して継続し、export 全体は失敗させない。`users.info` の失敗と同じ扱いである。
+- 必要な scope は `users:read` で、既存の manifest から追加は要らない(`../help/slack-app-setup.md`)。
 
 ## emoji 解決
 
@@ -104,5 +115,7 @@ token type による主な違い:
 - Slack Developer Docs: [`conversations.history`](https://docs.slack.dev/reference/methods/conversations.history)
 - Slack Developer Docs: [`conversations.replies`](https://docs.slack.dev/reference/methods/conversations.replies/)
 - Slack Developer Docs: [`users.info`](https://docs.slack.dev/reference/methods/users.info)
+- Slack Developer Docs: [`bots.info`](https://docs.slack.dev/reference/methods/bots.info)
+- Slack Developer Docs: [`bot_message` subtype](https://docs.slack.dev/reference/events/message/bot_message)
 - Slack Developer Docs: [`emoji.list`](https://docs.slack.dev/reference/methods/emoji.list)
 - Slack Developer Docs: [Rate limits](https://docs.slack.dev/apis/web-api/rate-limits/)

@@ -77,13 +77,16 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 
 | 分類 | subtype の例 | 表示 |
 |---|---|---|
-| 通常表示 | subtype なし、`file_share`、`thread_broadcast`、`bot_message`、`me_message` | 通常の投稿として表示する(`me_message` は斜体) |
+| 通常表示 | subtype なし、`file_share`、`thread_broadcast`、`bot_message`、`me_message` | 通常の投稿として表示する(`me_message` は斜体、bot / app 投稿は投稿者名の右に `APP` chip) |
 | システム行 | `channel_join`、`channel_leave`、`channel_topic`、`channel_purpose`、`channel_name`、`channel_archive`、`channel_unarchive`、`pinned_item` | avatar なしの 1 行システムメッセージとして控えめに表示する |
 | 置換表示 | `tombstone`(削除済みだが thread が残る親投稿) | 「(削除されたメッセージ)」のプレースホルダを表示し、その thread replies は通常どおり表示する |
 | 未知の subtype | 上記以外 | `text` があれば通常表示に準じ、無ければ「(未対応のメッセージ種別: subtype名)」のシステム行にする |
 
 - `channel_join` の system 行で `inviter` field がある場合は、追加操作を行ったユーザーを display name 優先で解決し、本文末尾に `(invited by @表示名)` 相当の補足を表示する。`inviter` が空、参加した `user` と同一、解決不能、または本文にすでに inviter mention が含まれる場合は補足しない。
 - `channel_topic`、`channel_purpose`、`channel_name` の system 行で `text` 先頭に actor が含まれない場合は、`user` field を display name 優先で解決し、`@表示名` 相当の prefix を補完する。`user` が空または解決不能の場合は `text` のみ表示する。
+- bot / app が投稿した message は、投稿者名を app 名、avatar を app icon として表示する。名前と icon の解決順は `slack-api-usage.md` の「bot 投稿の表示名と avatar」を正本とする。
+- bot / app 投稿には、Slack の `APP` バッジ相当として投稿者名の右に控えめな `APP` chip を表示する。次のいずれかを満たす message を bot 投稿として扱う: `bot_id` を持つ、`bot_profile` を持つ、または `user` を `users.info` で解決した結果の `is_bot` が true(bot user として `chat.postMessage` した投稿。Slackbot は `is_bot` が false なので対象外)。
+- `APP` chip は timeline と thread 内の返信の両方に表示し、system 行と thread label の参加者 avatar には表示しない(`decision-log/0054-bot-author-resolution.md`)。
 - `thread_broadcast` は Slack の表示と同様、channel timeline と thread 内の両方に表示する。
 - 編集済みメッセージは本文末尾に「(edited)」相当の控えめな表示を付ける。reaction や編集の履歴は表示しない。
 - 本文がない編集済みメッセージでは、添付ファイルや URL preview などの主要表示の後に控えめな fallback として「(edited)」相当の表示を付ける。
