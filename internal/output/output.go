@@ -418,9 +418,11 @@ func extensionFor(meta AssetMeta, srcURL, contentType, sniffed string) string {
 }
 
 // mimetypeFor decides the manifest mimetype of an asset that carries no Slack
-// file metadata. It follows the same judgement as extensionFor — sniffed bytes
-// first, the response Content-Type otherwise — so the recorded mimetype and the
-// saved file's extension never contradict each other (Issue #183).
+// file metadata: the sniffed type when the bytes identified themselves, the
+// response Content-Type otherwise. A sniffed asset therefore gets its mimetype
+// and its extension from the one judgement, which is what the gravatar case
+// needed (Issue #183). An asset the sniff could not identify still takes its
+// extension from the display name or the URL, so the two can differ there.
 func mimetypeFor(contentType, sniffed string) string {
 	if _, ok := sniffedExtensions[sniffed]; ok {
 		return sniffed

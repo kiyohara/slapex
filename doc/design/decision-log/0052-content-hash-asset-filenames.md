@@ -1,9 +1,9 @@
 # 0052 asset ファイル名の内容 hash 化
 
-- 状態: decided(extension の決め方は 2026-09-03 の追記で「download 内容からの判別を最優先」へ変更)
+- 状態: decided(extension の決め方は 0055 で download 内容からの判別優先へ変更)
 - 作成日: 2026-07-08
 - 最終更新日: 2026-09-03
-- 関連: `../output-format.md`, `../cache.md`, `0016-asset-filenames.md`, `0030-cache-schema-and-reuse-validation.md`
+- 関連: `../output-format.md`, `../cache.md`, `0016-asset-filenames.md`, `0030-cache-schema-and-reuse-validation.md`, `0055-asset-extension-from-content.md`
 
 ## 背景
 
@@ -52,32 +52,8 @@ asset のローカルファイル名を、元 URL の hash ではなく download
 - 同一 kind ディレクトリ内で内容 hash が衝突する事態(現実的には sha256 でほぼ起きない)や、内容が同じでも別ファイルとして残したい要件が出た場合。
 - 人間可読なファイル名の価値が衝突リスクを上回る場合(0016 の見直し条件と同じ)。
 
-## 追記(2026-09-03): extension を download 内容から決める
+## 追記(2026-09-03)
 
-本ログの「決定」で「extension は従来どおり `extensionFor`(元の表示ファイル名 → URL 拡張子 → content type)で決める」とした部分を、**download した内容からの判別を最優先**する方式へ変更した(Issue #183)。
+本ログの「決定」にある「extension は従来どおり `extensionFor`(元の表示ファイル名 → URL 拡張子 → content type)で決める」という部分は、[0055-asset-extension-from-content.md](0055-asset-extension-from-content.md) で **download した内容の判別を最優先**する方式へ変更した。gravatar 由来の avatar のように、URL の path が `.jpg` でも実体が PNG である asset で、extension と manifest の `mimetype` とファイルの実体が矛盾していたためである(Issue #183)。
 
-### 変更の理由
-
-v1.2.0 の実 export で、gravatar を avatar 元にしている user の avatar が、内容は PNG なのに `.jpg` として保存されていた。Slack の `users.info` が返す gravatar URL は path が常に `.jpg` で終わり、gravatar は `d=` に指定された Slack の default 画像(PNG)へ redirect するため、URL の拡張子と実体が食い違う。URL 拡張子を Content-Type より優先していたので、この asset では「ファイル名の extension」「manifest の `mimetype`」「ファイルの実体」の 3 者が矛盾していた。
-
-同一内容の PNG が `.jpg` の URL と `.png` の URL の両方から来た場合、内容 hash が同じでも extension が違うため別ファイルとして保存される。本ログが定めた「同一内容・同一 extension は同一 path」という前提から見ても、URL の拡張子に引きずられるのは不自然である。
-
-内容 hash と同じく、実体を基準に名前を決める方が本ログの趣旨に合う。
-
-### 変更後の順序
-
-1. download した先頭 512 byte を `http.DetectContentType` で判別する。既知の型(`image/png` → `.png`、`image/jpeg` → `.jpg`、`image/gif` → `.gif`、`image/webp` → `.webp`、`image/bmp` → `.bmp`、`image/x-icon` / `image/vnd.microsoft.icon` → `.ico`、`application/pdf` → `.pdf`)ならその extension を使う。
-2. 判別できない場合は従来の順序(元の表示ファイル名 → URL 拡張子 → Content-Type → `.bin`)へ fallback する。SVG は magic bytes を持たず `http.DetectContentType` では判別できないため、この経路で従来どおり `.svg` になる。
-3. Content-Type → extension の対応表に `image/x-icon` / `image/vnd.microsoft.icon` → `.ico`、`image/svg+xml` → `.svg`、`image/bmp` → `.bmp`、`application/pdf` → `.pdf` を追加した。URL に拡張子の無い favicon などが `.bin` になるのを避ける。
-
-manifest の `mimetype` も同じ判断に揃える。Slack の file metadata(upload / attachment で渡される `mimetype`)がある場合はそれを維持し、無い場合は 1 で採用した判別結果、判別できなければ response の Content-Type を使う。extension と `mimetype` が別々の源から決まる状態を解消する。
-
-### 変えていないこと
-
-内容 hash 命名(sha256)、kind ディレクトリ構成、manifest を `source_url` 単位で記録すること、`--reuse-cache` が `local_path` を verbatim に再利用することは本ログのまま維持する。cache schema の変更も無い。
-
-判別は download 中に先頭 512 byte を保持する writer を既存の `io.MultiWriter`(一時ファイル + sha256)へ足す形で行い、再 download も一時ファイルの再読込も追加していない。本ログの「再読込しない」方針は保たれている。
-
-### 影響範囲
-
-既に保存済みの archive や、`--reuse-cache` で引き継がれる旧 `.jpg` ファイル名は rename しない。HTML の表示はブラウザが内容で画像形式を判別するため、変更前後どちらでも変わらない。同梱サンプル(`doc/samples/**`)の asset は SVG と PDF で、SVG は判別対象外、PDF は URL 拡張子と実体が一致するため、出力に差分は出ない。
+内容 hash 命名(sha256)、kind ディレクトリ構成、manifest を `source_url` 単位で記録すること、`--reuse-cache` の verbatim copy は本ログのまま維持する。判別も既存の `io.MultiWriter` に先頭 512 byte を保持する writer を足す形で行うため、本ログの「再 download / 再読込をしない」方針は保たれている。詳細は 0055 を参照する。

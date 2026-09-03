@@ -10,7 +10,7 @@ Issue #183 の対応。asset の保存拡張子が URL path 由来のため、gr
 
 ## 現在の状況
 
-実装・テスト・ドキュメント更新・sample 再生成まで完了し、PR #185 を作成した。レビュー待ち。
+実装・テスト・ドキュメント更新・sample 再生成まで完了し、PR #185 を作成した。review comment 2 件(P2)へ対応済み。
 
 ## 決定事項
 
@@ -21,7 +21,8 @@ Issue #183 の「採用方針」に従った。
 - manifest の `mimetype` は Slack の file metadata があればそれを優先し、無ければ判別結果、判別不能なら Content-Type を使う。
 - 判別のための再 download / 一時ファイル再読込はしない。既存の `io.MultiWriter`(一時ファイル + sha256)に先頭 512 byte だけ保持する `headBuffer` を足した。
 - 内容 hash 命名、kind ディレクトリ、manifest の記録単位、`--reuse-cache` の verbatim copy は変えていない。cache schema の変更も無い。
-- decision log は既存主題の更新として 0052 に追記し、状態行と `index.md` の該当行も更新した。
+- decision log は当初 0052 への追記だけで済ませたが、review 指摘を受けて 0055 を新設した。0016 → 0052 と同じ形(部分的に変わった決定は新ログを切り、旧ログは `decided` のまま注記から辿れるようにする)に揃えている。0052 全体は superseded にしない(内容 hash の決定は有効なまま)。
+- 拡張子と `mimetype` の一致は、内容を判別できた asset に限る。判別できない形式では extension が表示ファイル名 / URL 由来になり `mimetype` は Content-Type 由来になるため、一致は保証しない。ドキュメントとコードコメントもこの範囲に限定した。
 
 ### sample export の扱い
 
@@ -64,3 +65,4 @@ Issue #183 の「採用方針」に従った。
 - 2026-09-03: ブランチ作成、note 作成。Issue #183 の依存は「なし」で着手条件を満たしていることを確認。
 - 2026-09-03: `internal/output/output.go` に `headBuffer` / `sniffedExtensions` / `contentTypeExtensions` / `mimetypeFor` を追加し、`extensionFor` に判別結果を渡す形へ変更。unit / integration test 追加。`output-format.md`、`cache.md`、decision log 0052 と index を更新。検証一式を実行して pass。
 - 2026-09-03: PR #185 を作成し、note を採番した。
+- 2026-09-03: `review-pull-request` skill の `address-comments` モードで review comment へ対応。decision log 0055 を新設し、0052 は短い追記 + `関連` から辿る形へ戻した。`cache.md` / `index.md` / `mimetypeFor` のコメント / PR description の「食い違わない」という断定を、判別できた場合に限定する記述へ修正した。
