@@ -40,6 +40,8 @@
 
 2026-07-13 に v1.2.0 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.2.0"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.2.0` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `slapex --version` が upgrade 前に `slapex 1.1.2`、`brew update && brew upgrade --cask slapex && slapex --version` 後に `slapex 1.2.0` を返すことを確認した。
 
+2026-09-03 に v1.2.1 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.2.1"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.2.1` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `slapex --version` が upgrade 前に `slapex 1.2.0`、`brew update && brew upgrade --cask slapex && slapex --version` 後に `slapex 1.2.1` を返すことを確認した。
+
 ## 理由
 
 - 案B は最小コストで「1 コマンド導入」を即時に届けられ、外部依存もない。
