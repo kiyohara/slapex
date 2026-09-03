@@ -10,7 +10,7 @@ Issue #183 の対応。asset の保存拡張子が URL path 由来のため、gr
 
 ## 現在の状況
 
-実装・テスト・ドキュメント更新・sample 再生成まで完了。PR 作成待ち。
+実装・テスト・ドキュメント更新・sample 再生成まで完了し、PR #185 を作成した。レビュー待ち。
 
 ## 決定事項
 
@@ -29,7 +29,7 @@ Issue #183 の「採用方針」に従った。
 
 ## 次にやること
 
-- PR 作成後に note を `<PR 番号>_asset-extension-from-content.md` へ rename する。
+- レビュー指摘への対応。merge はユーザーが行う。
 
 ## 検証
 
@@ -63,3 +63,4 @@ Issue #183 の「採用方針」に従った。
 
 - 2026-09-03: ブランチ作成、note 作成。Issue #183 の依存は「なし」で着手条件を満たしていることを確認。
 - 2026-09-03: `internal/output/output.go` に `headBuffer` / `sniffedExtensions` / `contentTypeExtensions` / `mimetypeFor` を追加し、`extensionFor` に判別結果を渡す形へ変更。unit / integration test 追加。`output-format.md`、`cache.md`、decision log 0052 と index を更新。検証一式を実行して pass。
+- 2026-09-03: PR #185 を作成し、note を採番した。
