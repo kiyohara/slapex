@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `refresh-architecture-documentation`
-- PR: 未採番
+- PR: #199
 - 最終更新: 2026-09-05
 
 ## 目的
