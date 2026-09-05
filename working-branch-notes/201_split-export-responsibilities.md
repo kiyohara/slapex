@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `split-export-responsibilities`
-- PR: (未作成)
+- PR: #201
 - 最終更新: 2026-09-06
 
 ## 目的
