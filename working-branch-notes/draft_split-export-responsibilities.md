@@ -11,7 +11,9 @@ Issue #190(RF-02)。`internal/export/export.go`(1,501 行)から取得期間、c
 ## 現在の状況
 
 - 基準 commit は main `2855a32`(PR #200 merge 後)。
-- 基準 commit で固定 sample を生成し、committed `doc/samples/ja` / `en` と無差分であることを確認済み(下記「検証」)。
+- 機械分割(commit 1)と命名変更(commit 2)を実施し、検証まで完了。`progress.md` の RF-02 行を更新済み。PR 作成待ち。
+- 分割後の行数: `export.go` 539(Run + Options + phase label / 保存 URL / 小 helper)、`message_view.go` 363、`fetch_range.go` 211、`cache.go` 139、`channel.go` 125、`message_collect.go` 116、`message_filter.go` 74。production 側の総行数は 1,501 → 1,567(+66 は各ファイルの package 行・import・先頭コメント)。総行数削減は目的ではない。
+- 命名変更(識別子のみ、`git diff -w` で 29 行): `builder` → `messageViewBuilder`、`builder.limit` → `maxAttachmentBytes`、Run 内の局所変数 `b` → `viewBuilder`、`newThreadIDs` → `unfetchedThreadIDs`(「未取得 thread の ID」であり constructor ではない)、`selectChannel` 内の `opts`(huh の選択肢)→ `choices`(package 内で `opts` は `Options` の慣用名のため)。`reuse.go` の `toUser` / `toBot` コメントにある `builder` 言及も追従。receiver `b` / `r` / `f` は変更しない。
 
 ## 決定事項
 
@@ -29,13 +31,19 @@ Issue #190(RF-02)。`internal/export/export.go`(1,501 行)から取得期間、c
 
 ## 次にやること
 
-- 機械分割 commit → 命名 commit → 検証 → progress.md 更新 → PR 作成。
+- PR 作成、note の rename(`number-working-branch-note` skill)。
 
 ## 検証
 
 Docker Compose(`docker compose run --rm --no-deps dev ...`)で実行。実 token は使わず、fake Slack server と架空 fixture のみ。
 
-- 基準 commit(`2855a32`)での固定 sample: `TZ=Asia/Tokyo`、`go run ./tools/gensample -time 2026-07-04T16:32:41+09:00 -out /work/slapex-refactor-samples-base` → `diff -r doc/samples/ja ...` / `en` とも無差分。
+- 基準 commit(`2855a32`)での固定 sample: `TZ=Asia/Tokyo`、`go run ./tools/gensample -time 2026-07-04T16:32:41+09:00 -out /work/slapex-refactor-samples-base` → `diff -r doc/samples/ja ...` / `en` とも無差分(committed footer は `2026-07-04 16:32 (UTC+09:00) / 2026-07-04T07:32:41Z` で decision log 0056 の基準どおり)。
+- 変更後の固定 sample: 同条件で `-out /work/slapex-refactor-samples-after` → committed `doc/samples/ja` / `en` と無差分、基準 commit の生成物とも `diff -r` で無差分。ファイル数は ja / en 合計 36 で一致。生成物は commit しない(出力ディレクトリは `.gitignore` の `/slapex-*/` に一致)。
+- 機械分割 commit: `gofmt -l .` → 出力なし。`go vet ./...` → ok。`go test -count=1 ./...` → 9 package すべて ok。`git diff --color-moved=plain` で移動判定されなかった追加・削除行は、各ファイルの package 行・import・先頭コメント、`maxSelectable` の単独 `const` 化(空白揃えの違いのみ)、旧 `// --- xxx ---` 区切りコメント 3 行の削除だけ。宣言(`func` / `type` / `var` / `const` / struct field)の集合は `main` の `export.go` + `export_test.go` と一致。
+- 命名 commit: `gofmt` / `go vet` / `go test -count=1 ./...` → すべて ok。差分の `-` 行と、`+` 行の新識別子を旧識別子へ戻したものが集合として一致することを確認(識別子以外の変更なし)。
+- 両 commit で `git diff --check` → 問題なし。
+- sample / screenshot / demo 各 skill の適用条件: 出力 HTML / CSS / DOM / asset path / fixture 表示内容 / CLI の phase 名・表示文言に変更はなく、固定 sample の無差分で裏付けた。`update-sample-exports` / `update-readme-preview-screenshots` / `update-readme-demo-gif` はいずれも不要。
+- `doc/design/architecture.md` の `internal/export` 行は package 入口として `export.go` を指し、責務の説明も package 単位のため変更不要。`reuse.go` への参照も同じ。
 
 ## リスク・ブロッカー
 
@@ -44,3 +52,4 @@ Docker Compose(`docker compose run --rm --no-deps dev ...`)で実行。実 token
 ## セッションログ
 
 - 2026-09-06: Issue #190 を読み、依存 #188(PR #197 merge 済み)を確認。ブランチと note を作成。基準 commit で固定 sample の無差分を確認。
+- 2026-09-06: `export.go` を 7 ファイルへ機械分割し、unit test も対応ファイルへ分割。移動確認・test・固定 sample 比較まで完了。続けて識別子のみの命名変更を実施し、同じ検証を再実行。
