@@ -45,7 +45,7 @@
 
 `fetch.target_range` は option の表現から独立した取得対象そのものを記録する。`start` / `end` は ISO 8601 UTC、`start_slack_ts` / `end_slack_ts` は Slack API 境界値とする。`--date`、`--from` / `--to`、`--days` はいずれも開始・終了を持つ半開区間として記録する。将来 open-ended range を導入する場合は、上限が無い側を `null` とする。
 
-`fetch.options` は export 実行時に指定・適用された option を記録する。`range_mode` は `date` / `datetime-range` / `days` とし、range option の raw input である `date`、`from` / `to`、`days` のうち有効なものだけを入れる。`max_posts` と `max_attachment_size_bytes` もここへ置く。`--exclude-body-emoji` が有効な場合は正規化済みの名前を `exclude_body_emoji`、`--exclude-reaction-emoji` が有効な場合は `exclude_reaction_emoji` に記録する。schema version 1 の既存 reader との互換性のため、従来からある flat な `days` / `max_posts` / `max_attachment_size_bytes` / `oldest_ts` / `executed_at` は当面残す。`latest_ts` は Issue #154 で `oldest_ts` と対になる終了境界として flat 欄にも追加する。新しい reader は `target_range` と `options` を優先する。
+`fetch.options` は export 実行時に指定・適用された option を記録する。`range_mode` は `date` / `datetime-range` / `days` とし、range option の raw input である `date`、`from` / `to`、`days` のうち有効なものだけを入れる。`max_posts` と `max_attachment_size_bytes` もここへ置く。`--exclude-body-emoji` が有効な場合は正規化済みの名前を `exclude_body_emoji`、`--exclude-reaction-emoji` が有効な場合は `exclude_reaction_emoji` に記録する。schema version 1 の既存 reader との互換性のため、従来からある flat な `days` / `max_posts` / `max_attachment_size_bytes` / `oldest_ts` / `executed_at` は当面残す。`latest_ts` は `oldest_ts` と対になる終了境界として flat 欄にも記録する。新しい reader は `target_range` と `options` を優先する。
 
 `counts.excluded_messages` は、本文または reaction の emoji filter で除外した message を timestamp 単位で一意に数える。両条件に一致した場合や、timeline と thread の両方に同じ message が現れた場合も二重計上しない。
 
@@ -101,8 +101,16 @@
 
 取得条件(`--date` / `--from`・`--to` / `--days` / `--max-posts`)の差異は再利用可否の判定に使わない。cache の主な再利用対象は assets manifest と user / emoji の解決結果であり、メッセージ本文は毎回取得し直すためである。token の scope 差異も事前検証しない。scope 不足による個別 asset の取得失敗は通常の失敗として manifest に記録され、HTML 上では置換表示になる。
 
+## 確認済みの仕様と実装の差
+
+未保存 asset の `local_path` は上記 schema では `null` とするが、現行の [ManifestEntry](../../internal/output/output.go) は `string` + `json:"local_path,omitempty"` であり、`skipped_size` / `failed` の保存先が空の場合に field を省略する。
+
+仕様確定時(commit `21a360c`)から `null` と記載され、PoC 実装(commit `eb9da63`)から field 省略の実装である。[0030](decision-log/0030-cache-schema-and-reuse-validation.md) は schema を確定しているが、`null` から省略への変更判断は記録されていない。この差は単なる記述誤りとは断定せず、[Issue #195](https://github.com/kiyohara/slapex/issues/195) で確認した未解決の仕様差として扱う。
+
+現行の [cache reader](../../internal/export/reuse.go) は `ManifestEntry` に decode し、`status == "saved"` かつ空でない `local_path` / `source_url` を持つ entry のみを再利用対象にする。未保存 entry の `null` / 省略の違いはこの再利用条件に影響しないが、外部 reader に対する互換性まで保証するものではない。仕様と実装のどちらを変更するかは別途判断し、本整理では schema version と出力を変更しない。
+
 ## 未決事項
 
-このファイルが扱う範囲に現時点の未決事項はない。以前未決だった「`.cache/` 再利用時の整合性検証」は `decision-log/0030-cache-schema-and-reuse-validation.md` で確定した。
+上記 `local_path` の表現差を統一する方針は未決である。以前未決だった「`.cache/` 再利用時の整合性検証」は [0030](decision-log/0030-cache-schema-and-reuse-validation.md) で確定した。
 
 全体の未決事項一覧は `decision-log/index.md` を参照する。

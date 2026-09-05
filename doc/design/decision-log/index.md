@@ -73,6 +73,7 @@
 
 | 主題 | 状態 | 次に決めること | 関連ログ |
 |---|---|---|---|
+| 未保存 asset の `local_path` の表現(`null` / field 省略) | open | 仕様表を省略に合わせるか、実装を `null` 出力に変えるか(外部 reader の互換性を含む) | [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md)、[確認済みの仕様差](../cache.md#確認済みの仕様と実装の差)、[Issue #195](https://github.com/kiyohara/slapex/issues/195) |
 | 差分取得と再実行 | open | 既存出力への上書き、差分取得、再実行時の扱い(メッセージ raw response の cache 保存方針も含む) | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md), [0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md) |
 | CI artifact 化 | open | CI で生成した HTML / assets / cache を artifact として保存・共有する方法 | [0008-default-output-root.md](0008-default-output-root.md) |
 | thread replies を含む全体取得量 | open | 取得前の見込み表示、または親投稿と thread replies を合わせた全体上限を設けるか | [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md) |
