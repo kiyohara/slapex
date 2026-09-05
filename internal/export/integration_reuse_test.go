@@ -1,13 +1,15 @@
 package export
 
-// Integration --reuse-cache scenarios for v1-10 (Issue #24). Each test builds on
-// the v1-07 fake Slack server harness (happyPathScenario / newFakeSlackServer)
-// and runs the export twice against one shared server: run 1 populates and keeps
-// the .cache/, run 2 points --reuse-cache at it. Comparing the fake server's
-// per-endpoint request counts between the two runs is the practical check that
-// reuse skipped users.info / emoji.list / asset downloads, while history /
-// replies are always re-fetched. The expected behaviour is the confirmed spec in
-// doc/design/cache.md「--reuse-cache の整合性検証」and decision log 0030.
+// Integration --reuse-cache scenarios for v1-10 (Issue #24). Each test takes a
+// fixture (happyPathScenario / baseScenario in integration_fixture_test.go) and
+// runs the export twice against one shared fake server
+// (integration_fakeserver_test.go) through the runReuseScenario harness below:
+// run 1 populates and keeps the .cache/, run 2 points --reuse-cache at it.
+// Comparing the fake server's per-endpoint request counts between the two runs
+// is the practical check that reuse skipped users.info / emoji.list / asset
+// downloads, while history / replies are always re-fetched. The expected
+// behaviour is the confirmed spec in doc/design/cache.md「--reuse-cache の整合性
+// 検証」and decision log 0030.
 //
 // The two runs share one server on purpose: cached avatar / emoji / asset URLs
 // embed the workspace (here, the test server) URL, so reuse only matches when the
@@ -347,18 +349,17 @@ func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, o
 	return reuseRun{dir1: dir1, dir2: dir2, assets: assets, before: before, after: after, logs2: logs2}
 }
 
+// reuseOptions is integrationOptions with the two fields the reuse runs decide
+// per run: whether the run keeps its cache, and a clock pinned to one hour
+// after the newest happy-path message so both runs resolve the same --days
+// window (Run is called directly here, so the harness's automatic pin does
+// not apply).
 func reuseOptions(t *testing.T, keepCache bool) Options {
 	t.Helper()
-	return Options{
-		ChannelKeyword: "project-alpha",
-		OutputDir:      t.TempDir(),
-		MaxPosts:       10,
-		Days:           90,
-		MaxAttachBytes: 1 << 20,
-		KeepCache:      keepCache,
-		ToolVersion:    "test",
-		Now:            time.Unix(1700000003, 0).Add(time.Hour),
-	}
+	opts := integrationOptions(t, 10)
+	opts.KeepCache = keepCache
+	opts.Now = time.Unix(1700000003, 0).Add(time.Hour)
+	return opts
 }
 
 // image48AvatarScenario is a minimal valid scenario whose single resolved user
