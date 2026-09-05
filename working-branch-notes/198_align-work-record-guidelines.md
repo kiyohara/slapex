@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `align-work-record-guidelines`
-- PR:
+- PR: #198
 - 最終更新: 2026-09-05
 
 ## 目的
