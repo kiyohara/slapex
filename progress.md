@@ -28,7 +28,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 |---|---|---|---|---|---|
 | RF-00 | [#188](https://github.com/kiyohara/slapex/issues/188) 調査・評価 | done(PR merge後) | - | merge後にRF-08へ | [#197](https://github.com/kiyohara/slapex/pull/197) |
 | RF-08 | [#196](https://github.com/kiyohara/slapex/issues/196) 記録配置の整合 | done(PR merge後) | #188 | merge後にRF-07へ | [#198](https://github.com/kiyohara/slapex/pull/198) |
-| RF-07 | [#195](https://github.com/kiyohara/slapex/issues/195) 現行設計文書 | done(PR merge後) | #188 | merge後にRF-01へ。local_path表現差はcache.md参照 | - |
+| RF-07 | [#195](https://github.com/kiyohara/slapex/issues/195) 現行設計文書 | done(PR merge後) | #188 | merge後にRF-01へ。local_path表現差はcache.md参照 | [#199](https://github.com/kiyohara/slapex/pull/199) |
 | RF-01 | [#189](https://github.com/kiyohara/slapex/issues/189) test準備集約 | todo | #188 | fixture/helperを整理 | - |
 | RF-02 | [#190](https://github.com/kiyohara/slapex/issues/190) export分割・命名 | todo | #188 | 同一package内で機械分割 | - |
 | RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | todo | #188, #189, #190 | 工程の入出力を整理 | - |
