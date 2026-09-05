@@ -71,7 +71,7 @@ Go は合計40ファイル、13,453行。test が約54%を占める。本体の�
 | RF-03 / [#191](https://github.com/kiyohara/slapex/issues/191) | `Run` の fetch/resolve/view/output を工程化。`threadFetches` の bool値を廃し取得済み集合にする | 状態重複削減 小、理解容易性 高 / L / 高 | `newThreadIDs` はキー存在だけを参照する。除外は `messageFilter` が既に保持。親除外後の補充・broadcast・件数・phaseを保持する |
 | RF-04 / [#192](https://github.com/kiyohara/slapex/issues/192) | `slack.Client.withRetry` / `downloadRetry` の429/5xx/待機/回数管理を共通化 | 総量削減 中、変更点集約 高 / M / 中〜高 | 明確な制御の重複。API body read errorの再試行とdownload streamingは異なるため保持。認証処理は経路別のまま |
 | RF-05 / [#193](https://github.com/kiyohara/slapex/issues/193) | CLI通常/demo/export間の取得・出力option転記を集約、mainを責務別に配置 | 総量削減 小〜中、転記漏れ防止 高 / M / 中 | 追加optionの同期先を減らせる。demo固有のfake client/非対話/接続先制約は `demo.Export` に残す |
-| RF-06 / [#194](https://github.com/kiyohara/slapex/issues/194) | `writeCaches` の21引数、特に連続する7個のintを責務別の入力型にまとめる。cache変換を同じ場所に集める | 総量増加も許容、取り違え防止 高 / M / 中 | 行数より呼出し契約の明瞭化に価値がある。JSONのnull/省略/空配列、legacy fields、旧bots無しcacheを維持 |
+| RF-06 / [#194](https://github.com/kiyohara/slapex/issues/194) | `writeCaches` の19引数、特に連続する7個のintを責務別の入力型にまとめる。cache変換を同じ場所に集める | 総量増加も許容、取り違え防止 高 / M / 中 | 行数より呼出し契約の明瞭化に価値がある。JSONのnull/省略/空配列、legacy fields、旧bots無しcacheを維持 |
 | RF-07 / [#195](https://github.com/kiyohara/slapex/issues/195) | architecture.md のPoC/Compose/release将来形、7 API表記、datetime/demo/ui欠落を更新。cache記述差も確認 | 情報重複削減 小、現行理解 高 / S〜M / 低 | 実装とspec双方で裏付け可能。`local_path` の未保存null記述とomitemptyは差異として扱い、黙って挙動を変更しない |
 | RF-08 / [#196](https://github.com/kiyohara/slapex/issues/196) | decision-log-guidelines.md:46 の「試行錯誤をprogressへ」と、薄い索引方針の不整合を訂正。note長期情報の移転先を明確化 | 行数ほぼ不変、判断の一貫性 高 / S / 低 | 作業記録を肥大化させる矛盾した指示を解消する。rule本文をshimや入口へ増殖させない |
 
@@ -85,7 +85,7 @@ Go は合計40ファイル、13,453行。test が約54%を占める。本体の�
 
 | ID | 候補 / 根拠 | 評価・見送り理由 | 再検討条件 |
 |---|---|---|---|
-| H-01 | demoと結合testのfake Slack server統合。両方にhandleAPI/writeSlackOKがある | 削減 中 / L / 高。demo→exportの依存があり、export内部testからdemoへ依存すると循環する。test側の故障注入・request count・range未加工応答とdemo側range filteringが異なる | 共通serverの変更漏れが繰り返し発生し、独立した下位fixture packageの移行費用を上回る場合 |
+| H-01 | demoと結合testのfake Slack server統合。両方にhandleAPI/writeSlackOKがある | 削減 中 / L / 高。external test package化で循環は回避可能だが、現状はtsTime/hostOf/testPrinter等の非公開helperに依存し移行作業を要する。主な保留理由はtest側の故障注入・request count・range未加工応答とdemo側range filteringが異なる | 共通serverの変更漏れが繰り返し発生し、機能差の吸収とexternal test化または下位fixture package化の費用を上回る場合 |
 | H-02 | cache payloadを全面struct化、新cache package化 | 型安全性 中 / L / 中。動的range optionやnull/省略を維持する型が増える。RF-06の小さな入力型で主要問題を解消可能 | schema変更が頻発し、read/write不一致が実害を生んだ場合 |
 | H-03 | `tools/genscreenshot/main.go`(514行)を複数moduleに分割、純粋crop/image helperのunit test追加 | 効果 中 / M / 中。独立関数とborder validationは既に存在。変更頻度・障害履歴を定量確認しておらず、今回の主要重複ではない | crop規則の追加や回帰発生時。純粋計算のtestを先に足す候補とする |
 | H-04 | CLI/exportの日付検証とSlack timestamp変換を一律統合 | 削減 小 / M / 高。CLIの早期診断と直接export呼び出しの検証は別契約。`datetime.Parse`は既に共有。float timestampの精度改善は挙動変更を伴い得る | precision/境界の具体的な不具合、または新range mode導入時に別Issueで検討 |
@@ -103,10 +103,10 @@ Go は合計40ファイル、13,453行。test が約54%を占める。本体の�
 ## 依存・実施順序
 
 - 全8施策は調査PR(#188対応)のmergeを着手条件とする。計画のレビュー・合意待ちであり、実装を開始していない。
-- 必須依存: RF-03はRF-01/RF-02完了後、RF-06はRF-03完了後。
+- 必須依存: RF-03はRF-01/RF-02完了後、RF-06は#188のみを必須依存とし、RF-03の後は推奨順に留める。現行Runにもcache入力型を導入でき、先行時はRF-03がその型を再利用する。
 - 推奨順: RF-08 → RF-07 → RF-01 → RF-02 → RF-03 → RF-06 → RF-04 → RF-05。最初に現行文書を整え、testの足場と機械移動を先にする。
 - RF-07/RF-08、retry、CLIは技術的には分離可能だが、プロジェクト方針に従い全Issueを直列実行する。必須依存に単なる推奨順を混ぜない。
-- RF-02/RF-03/RF-06は同じexportを触るので直列必須。各PRが自分の構成変更に必要な文書だけ同期する。
+- RF-02/RF-03/RF-06は同じexportを触るので競合回避のため直列実行する。RF-06の技術的な着手条件にRF-03は含めない。各PRが自分の構成変更に必要な文書だけ同期する。
 - `progress.md` はこの依存と状態の索引のみとし、詳細は各Issueを正本とする。
 
 ## 次にやること
@@ -132,3 +132,40 @@ Go は合計40ファイル、13,453行。test が約54%を占める。本体の�
 - 2026-09-05: Issue #188 を作成し、最新 main からブランチを作成した。
 - 2026-09-05: 規模集計とコード/spec/既存Issue確認により17候補を比較し、8採用・5保留・4不採用とした。
 - 2026-09-05: #189〜#196を作成・再取得した。register-progress-issueの手順で索引化し、構造変更と論理変更の分離を記録した。
+
+## PR review対応(1周目)
+
+対象cycle: `claude-code-71c307b-20260905053435`。10件を検証した。
+
+- 引数は19(対象等8 + counts7 + 解決情報等4)に訂正した。RF-06の採用理由は不変。
+- RF-06のRF-03依存を解除した。現行Runでcounts型を導入でき、結果型をRF-03だけで設計する必然性はない。推奨順は維持する。
+- RF-01は結合testのfixture/server/実行helper、RF-02はproduction関数に対応するunit test配置を担当する。RF-02でRF-01の共通fixtureを再移動しない。
+- RF-01に通常成功時のphase完了順(Workspace → Channel → Messages → Users → Emoji → Assets → Done)のcharacterization testを追加する。既存の個別文字列assertだけでは順序を証明できない。test追加は後続#189で行う。
+- RF-03のthread集合化は工程抽出と別commitにする。局所変更だけの新Issueは作らず、同じPR内でレビューを分離する。
+- RF-02は機械移動と命名変更を別commitにし、移動を `git diff --color-moved=dimmed-zebra` で確認する。
+- RF-05はexport.Options/demo.Optionsのfield形状を維持し、変換関数で集約する。埋め込み型への変更と既存literalの一括移行は対象外。転記総数を実測し、単なる移動を削減と扱わない。
+- retry closure案は#192の設計候補として記録し、具体的な型設計は着手時に比較する。
+- H-01は機能差を主要理由にした。external test化は可能だが、現行testがexported APIのみを使うという前提はtsTime/hostOf参照から成立しない。
+- RF-02/RF-03/RF-05に固定時刻sample比較を追加する。cacheはsampleに含まれないため#194のJSON比較で補う。
+
+### 集計の再現
+
+repo rootで次を実行する。基準commitは上記SHA、変更後比較は `rev = "HEAD"` に置き換える。tracked blobのみを使い、空行・コメントを含む物理行数を同じ方法で数える。
+
+```python
+import subprocess
+from collections import defaultdict
+rev = "d5aa977725fbf3c8f65c8b3e6bb9bfa8cba29b55"
+totals = defaultdict(lambda: [0, 0, 0])
+for path in subprocess.check_output(["git", "ls-tree", "-r", "--name-only", rev], text=True).splitlines():
+    if not path.endswith(".go"):
+        continue
+    group = "test" if path.endswith("_test.go") else "tools" if path.startswith("tools/") else "production"
+    data = subprocess.check_output(["git", "show", rev + ":" + path])
+    totals[group][0] += 1
+    totals[group][1] += len(data.splitlines())
+    totals[group][2] += len(data)
+print(dict(totals))  # files, physical lines, bytes
+```
+
+検証結果: Docker Composeで `-time 2026-07-04T16:32:41+09:00`、`TZ=Asia/Tokyo`、`-out /tmp/refactor-review-samples` を指定し、ja/enの `diff -r` は無差分。Z表記ではExportedのoffsetがUTCになる差を確認し、検証手順を訂正した。文書のみの修正のためGo testは再実行していない。

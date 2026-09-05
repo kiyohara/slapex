@@ -22,7 +22,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 
 ## 進行中タスク: 段階的リファクタリング
 
-調査PRのmerge後、表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。RF-03/RF-06はexportの変更を積み重ねるため直列必須。他の施策は技術的に分離可能だが、運用上は並行実行しない。全施策の現在の着手条件は調査PRのmergeである。
+調査PRのmerge後、表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。RF-03/RF-06は同じexportを触るため推奨順で直列実行するが、RF-06はRF-03なしでも着手可能。他の施策は技術的に分離可能だが、運用上は並行実行しない。全施策の現在の着手条件は調査PRのmergeである。
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
@@ -32,7 +32,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 | RF-01 | [#189](https://github.com/kiyohara/slapex/issues/189) test準備集約 | todo | #188 | fixture/helperを整理 | - |
 | RF-02 | [#190](https://github.com/kiyohara/slapex/issues/190) export分割・命名 | todo | #188 | 同一package内で機械分割 | - |
 | RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | todo | #188, #189, #190 | 工程の入出力を整理 | - |
-| RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188, #191 | 同型位置引数を集約 | - |
+| RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188 | 同型位置引数を集約 | - |
 | RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | streamingとの差を保って共通化 | - |
 | RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
 

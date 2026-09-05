@@ -32,7 +32,7 @@ testの共通準備には整理余地があるが、検証ケースや独立し�
 候補2を採用する。これは実施順と評価原則の決定であり、新packageの具体設計や破壊的変更の承認ではない。
 
 - 採用施策: test準備集約 [#189](https://github.com/kiyohara/slapex/issues/189)、export機械分割・命名 [#190](https://github.com/kiyohara/slapex/issues/190)、Run工程/状態整理 [#191](https://github.com/kiyohara/slapex/issues/191)、retry共通化 [#192](https://github.com/kiyohara/slapex/issues/192)、CLI option集約 [#193](https://github.com/kiyohara/slapex/issues/193)、cache入力整理 [#194](https://github.com/kiyohara/slapex/issues/194)、現行設計文書更新 [#195](https://github.com/kiyohara/slapex/issues/195)、作業記録配置の整合 [#196](https://github.com/kiyohara/slapex/issues/196)。
-- 全施策は調査PRのmerge後、1 Issue = 1 PRで直列実行する。#191は#189/#190の後、#194は#191の後とする。
+- 全施策は調査PRのmerge後、1 Issue = 1 PRで直列実行する。#191は#189/#190の後、#194の必須依存は#188のみとする。#191後の実施は結果型の再利用と競合回避のための推奨順であり、現行Runにもcache入力型を導入できる。先行した場合は#191がその型を再利用する。
 - #196 → #195 → #189 → #190 → #191 → #194 → #192 → #193を推奨順とする。推奨順と必須依存を区別する。
 - cache全面型付け、新cache package、fake server統合、screenshot tool再編、日付/timestamp一律統合、過去note cleanupは今回の実装対象にしない。
 - 具体的な名称改善は責務抽出の範囲で行い、機械移動とアルゴリズム変更を分離する。
@@ -50,3 +50,11 @@ testの共通準備には整理余地があるが、検証ケースや独立し�
 ## 後から見直す条件
 
 実装時に互換性を保てない、型・配線の増加が重複削減効果を上回る、既存testに重要な検証不足が見つかる、または新機能によってpackage境界が変わる場合は、該当Issueの範囲と順序を再評価する。新依存や仕様変更は本計画から暗黙採用しない。
+
+### Reviewでの具体化(2026-09-05)
+
+#189は結合testの共通準備と通常成功時phase完了順のcharacterization test、#190はproduction関数に対応するunit test配置を担当する。共通fixtureを二重移動しない。#190の機械移動と命名変更、#191のthread集合化と工程抽出はそれぞれ別commitにする。#193はOptionsのfield形状を維持し変換関数で集約する。
+
+#190/#191/#193では、着手時のcommitted sampleのfooterに合わせて時刻とTZを固定し、ja/enのHTML・CSS・assetsを再生成してファイル集合とbytesを比較する。現基準は `2026-07-04T16:32:41+09:00`、`TZ=Asia/Tokyo`。`go run ./tools/gensample -time 2026-07-04T16:32:41+09:00 -out /tmp/refactor-samples` をDocker Compose内で実行し、`diff -r doc/samples/ja /tmp/refactor-samples/ja` とen側の比較が無差分であることを確認する。基準commitと変更後で同じ条件を使い、基準に既存差分があれば記録して両生成結果を比較する。説明不能な差分でbaselineを上書きしない。cache JSONはsampleに含まれないため#194で別途検証する。既存sample更新skillの架空データ・参照検証を守り、無差分検証のためだけに生成物をcommitしない。
+
+検証ではZ表記だとNowのlocationがUTCとなりExportedの表示が変わった。+09:00指定ではja/enとも全ファイルが一致したため、時刻の瞬間だけでなくoffsetも固定する。
