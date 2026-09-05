@@ -55,11 +55,16 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 // so a later reorganisation of Run's stages (Issue #191) is checked against
 // the observable order without a brittle whole-log snapshot. Individual phase
 // lines keep their own assertions in the cases that care about them.
+//
+// Run passes the labels capitalised ("Workspace", ...); the lowercase values
+// below are what ui.Printer.EndPhase prints in plain mode, which lowercases the
+// label. The test reads that plain-mode output, hence the lowercase list.
 func TestRunIntegrationPhaseOrder(t *testing.T) {
 	t.Parallel()
 
 	got := runExportScenario(t, happyPathScenario(), integrationOptions(t, 10))
 
+	// Plain-mode labels: lowercase, as EndPhase prints them.
 	want := []string{"workspace", "channel", "messages", "users", "emoji", "assets", "done"}
 	isPhase := map[string]bool{}
 	for _, label := range want {

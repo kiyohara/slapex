@@ -4,11 +4,12 @@ package export
 // fixture (happyPathScenario / baseScenario in integration_fixture_test.go) and
 // runs the export twice against one shared fake server
 // (integration_fakeserver_test.go) through the runReuseScenario harness below:
-// run 1 populates and keeps the .cache/, run 2 points --reuse-cache at it. Comparing the fake server's
-// per-endpoint request counts between the two runs is the practical check that
-// reuse skipped users.info / emoji.list / asset downloads, while history /
-// replies are always re-fetched. The expected behaviour is the confirmed spec in
-// doc/design/cache.md「--reuse-cache の整合性検証」and decision log 0030.
+// run 1 populates and keeps the .cache/, run 2 points --reuse-cache at it.
+// Comparing the fake server's per-endpoint request counts between the two runs
+// is the practical check that reuse skipped users.info / emoji.list / asset
+// downloads, while history / replies are always re-fetched. The expected
+// behaviour is the confirmed spec in doc/design/cache.md「--reuse-cache の整合性
+// 検証」and decision log 0030.
 //
 // The two runs share one server on purpose: cached avatar / emoji / asset URLs
 // embed the workspace (here, the test server) URL, so reuse only matches when the

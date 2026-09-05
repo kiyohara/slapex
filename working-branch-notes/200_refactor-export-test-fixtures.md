@@ -10,7 +10,7 @@ Issue #189(RF-01)。`internal/export` の結合テストで、fixture / fake Sla
 
 ## 現在の状況
 
-- 実装・検証まで完了。PR 作成待ち。基準 commit は main `b30f707`(PR #199 merge 後)。
+- 実装・検証まで完了。PR #200 作成済み、レビュー待ち。基準 commit は main `b30f707`(PR #199 merge 後)。
 - 新規 4 ファイル(helper のみ。テストケースは既存ファイルに残す):
   - `integration_fixture_test.go`: `exportScenario` と fault / asset 型、`happyPathScenario` / `baseScenario`、`testUser` / `botProfile*` / `editedAt` / `botIcons` / `pngAsset`。
   - `integration_fakeserver_test.go`: `integrationTestToken`、`fakeSlackServer` 一式、`writeSlackOK` / `writeSlackError`、`replaceBaseURL`。
@@ -72,7 +72,7 @@ top-level test 関数: 45 → 44(2 組の統合で −2、PhaseOrder で +1)。l
 
 ## 次にやること
 
-- PR 作成、note の rename、`progress.md` の PR 欄更新。
+- PR #200 のレビュー指摘への対応。note の rename と `progress.md` の PR 欄更新は完了済み。
 
 ## 検証
 
@@ -94,3 +94,4 @@ Docker Compose(`docker compose run --rm --no-deps dev ...`)で実行。実 token
 
 - 2026-09-05: Issue #189 を読み、依存 #188(PR #197 merge 済み)を確認。ブランチと note を作成。
 - 2026-09-05: helper 4 ファイルへ集約、Options 初期化と HTML / manifest 読み取りの寄せ、対称 2 組の subtest 化、PhaseOrder 追加。Docker Compose で全 test ok。
+- 2026-09-06: PR #200 の review comment 3 件([fyi] 1、[nit] 2)をすべて採用し、note の状況表現、reuse ファイル先頭コメントの折り返し、PhaseOrder のコメント補足を修正。
