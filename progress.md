@@ -27,7 +27,7 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
 | RF-00 | [#188](https://github.com/kiyohara/slapex/issues/188) 調査・評価 | done(PR merge後) | - | merge後にRF-08へ | [#197](https://github.com/kiyohara/slapex/pull/197) |
-| RF-08 | [#196](https://github.com/kiyohara/slapex/issues/196) 記録配置の整合 | todo | #188 | guidelineの矛盾を修正 | - |
+| RF-08 | [#196](https://github.com/kiyohara/slapex/issues/196) 記録配置の整合 | done(PR merge後) | #188 | merge後にRF-07へ | - |
 | RF-07 | [#195](https://github.com/kiyohara/slapex/issues/195) 現行設計文書 | todo | #188 | 現行構成とspecを突合 | - |
 | RF-01 | [#189](https://github.com/kiyohara/slapex/issues/189) test準備集約 | todo | #188 | fixture/helperを整理 | - |
 | RF-02 | [#190](https://github.com/kiyohara/slapex/issues/190) export分割・命名 | todo | #188 | 同一package内で機械分割 | - |

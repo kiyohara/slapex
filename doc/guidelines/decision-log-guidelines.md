@@ -43,7 +43,7 @@ doc/design/decision-log/
 - 以前の方針を変更、撤回、上書きするとき。
 - 後続の AI agent が判断理由を知らないと同じ議論を繰り返しそうなとき。
 
-小さな作業メモ、単純な TODO、実装中の一時的な試行錯誤は `progress.md` に寄せ、decision log を肥大化させない。
+ブランチ内の小さな作業メモ、TODO、一時的な試行錯誤は `working-branch-notes/` に置く。タスクの実行指示は GitHub Issue、横断的な状態・依存と Issue / PR 参照は `progress.md` に置き、decision log に作業ログを混ぜない。
 
 ## AI agent の記録手順
 
