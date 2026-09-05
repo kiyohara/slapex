@@ -18,7 +18,23 @@
 
 v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
-GitHub 上の open Issue を確認した範囲では、現在追跡中の横断タスクはない。新しい横断タスクが始まったら、状態・依存・Issue / PR 参照だけを示す索引表を追加する。
+リファクタリングの調査・評価(#188)で採用した8施策を追跡する。実施方針は [decision log 0056](doc/design/decision-log/0056-incremental-refactoring-plan.md)、詳細な作業条件は各Issueを参照する。
+
+## 進行中タスク: 段階的リファクタリング
+
+調査PRのmerge後、表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。RF-03/RF-06は同じexportを触るため推奨順で直列実行するが、RF-06はRF-03なしでも着手可能。他の施策は技術的に分離可能だが、運用上は並行実行しない。全施策の現在の着手条件は調査PRのmergeである。
+
+| ID | Issue | 状態 | 依存 | 次にやること | PR |
+|---|---|---|---|---|---|
+| RF-00 | [#188](https://github.com/kiyohara/slapex/issues/188) 調査・評価 | done(PR merge後) | - | merge後にRF-08へ | [#197](https://github.com/kiyohara/slapex/pull/197) |
+| RF-08 | [#196](https://github.com/kiyohara/slapex/issues/196) 記録配置の整合 | todo | #188 | guidelineの矛盾を修正 | - |
+| RF-07 | [#195](https://github.com/kiyohara/slapex/issues/195) 現行設計文書 | todo | #188 | 現行構成とspecを突合 | - |
+| RF-01 | [#189](https://github.com/kiyohara/slapex/issues/189) test準備集約 | todo | #188 | fixture/helperを整理 | - |
+| RF-02 | [#190](https://github.com/kiyohara/slapex/issues/190) export分割・命名 | todo | #188 | 同一package内で機械分割 | - |
+| RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | todo | #188, #189, #190 | 工程の入出力を整理 | - |
+| RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188 | 同型位置引数を集約 | - |
+| RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | streamingとの差を保って共通化 | - |
+| RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
 
 ## リリース履歴
 
