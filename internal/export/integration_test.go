@@ -1,37 +1,36 @@
 package export
 
+// Integration cases for the export as a whole (v1-07, Issue #21) plus the
+// emoji-filter (Issue #155 / #156) and fetch-range (Issue #153 / #154) cases
+// that build on the same happy-path fixture. Shared test infrastructure lives
+// in the files named for it:
+//
+//   - integration_fixture_test.go:    exportScenario, happyPathScenario, baseScenario
+//   - integration_fakeserver_test.go: the fake Slack server and its request counts
+//   - integration_harness_test.go:    runExportScenario / runExportScenarioRaw, integrationOptions
+//   - integration_assert_test.go:     readIndexHTML, mustContain, manifest / log helpers
+//
+// The helpers kept here encode this file's own expectations: the happy-path
+// output / HTML / cache assertions and the emoji-filter metadata checks.
+
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-const integrationTestToken = "xoxb-integration-test-token"
+// --- happy path ---------------------------------------------------------------
 
 func TestRunIntegrationHappyPath(t *testing.T) {
 	t.Parallel()
 
-	sc := happyPathScenario()
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword: "project-alpha",
-		OutputDir:      t.TempDir(),
-		MaxPosts:       10,
-		Days:           90,
-		MaxAttachBytes: 1 << 20,
-		KeepCache:      true,
-		ToolVersion:    "test",
-	})
+	got := runExportScenario(t, happyPathScenario(), integrationOptions(t, 10))
 
 	assertOutputFiles(t, got.OutputDir)
 	assertHTMLMarkers(t, filepath.Join(got.OutputDir, "index.html"))
@@ -46,6 +45,40 @@ func TestRunIntegrationHappyPath(t *testing.T) {
 		"/api/bots.info":             0,
 		"/api/emoji.list":            1,
 	})
+}
+
+// TestRunIntegrationPhaseOrder is a characterization test for the stage
+// sequence Run reports on a normal successful export. Each phase closes with
+// one plain-mode "OK: <label>: ..." line, and the labels must complete in the
+// order Workspace → Channel → Messages → Users → Emoji → Assets → Done. Only
+// the label sequence is pinned — not the phase text, counts, paths or times —
+// so a later reorganisation of Run's stages (Issue #191) is checked against
+// the observable order without a brittle whole-log snapshot. Individual phase
+// lines keep their own assertions in the cases that care about them.
+func TestRunIntegrationPhaseOrder(t *testing.T) {
+	t.Parallel()
+
+	got := runExportScenario(t, happyPathScenario(), integrationOptions(t, 10))
+
+	want := []string{"workspace", "channel", "messages", "users", "emoji", "assets", "done"}
+	isPhase := map[string]bool{}
+	for _, label := range want {
+		isPhase[label] = true
+	}
+	var completed []string
+	for _, line := range got.Logs {
+		rest, ok := strings.CutPrefix(line, "OK: ")
+		if !ok {
+			continue
+		}
+		label, _, ok := strings.Cut(rest, ": ")
+		if ok && isPhase[label] {
+			completed = append(completed, label)
+		}
+	}
+	if !slices.Equal(completed, want) {
+		t.Fatalf("phase completion order = %v, want %v\nlogs:\n%s", completed, want, strings.Join(got.Logs, "\n"))
+	}
 }
 
 // TestRunIntegrationAssetExtensionFromContent covers the gravatar shape end to
@@ -66,29 +99,10 @@ func TestRunIntegrationAssetExtensionFromContent(t *testing.T) {
 	sc.Users["U01"] = testUser("U01", "alice", "Alice Example", "Alice", "{{base}}"+gravatarPath+gravatarQuery)
 	sc.Assets[gravatarPath] = fakeAsset{ContentType: "image/png", Body: "\x89PNG\r\n\x1a\nfake png body"}
 
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword: "project-alpha",
-		OutputDir:      t.TempDir(),
-		MaxPosts:       10,
-		Days:           90,
-		MaxAttachBytes: 1 << 20,
-		KeepCache:      true,
-		ToolVersion:    "test",
-	})
-
-	var manifest struct {
-		Assets []struct {
-			Kind      string `json:"kind"`
-			SourceURL string `json:"source_url"`
-			LocalPath string `json:"local_path"`
-			Mimetype  string `json:"mimetype"`
-			Status    string `json:"status"`
-		} `json:"assets"`
-	}
-	readJSON(t, filepath.Join(got.OutputDir, ".cache/assets_manifest.json"), &manifest)
+	got := runExportScenario(t, sc, integrationOptions(t, 10))
 
 	var checked int
-	for _, asset := range manifest.Assets {
+	for _, asset := range readManifestEntries(t, got.OutputDir) {
 		if asset.Status != "saved" {
 			continue
 		}
@@ -115,87 +129,158 @@ func TestRunIntegrationAssetExtensionFromContent(t *testing.T) {
 	}
 }
 
-func TestRunIntegrationExcludeBodyEmojiParentAndThread(t *testing.T) {
+// --- emoji filters (--exclude-body-emoji / --exclude-reaction-emoji) ----------
+
+// TestRunIntegrationExcludeEmojiParentAndThread: marking the thread parent of
+// the happy-path fixture for exclusion — by a body shortcode or by a reaction —
+// drops the parent and its whole thread from the HTML, skips the replies fetch,
+// records exactly one excluded message under the right option name, and keeps
+// the excluded content out of every cache file. The two filters share every
+// expectation except how the message is marked and which option / summary
+// label names it, so they run as named subtests over one fixture shape.
+func TestRunIntegrationExcludeEmojiParentAndThread(t *testing.T) {
 	t.Parallel()
 
-	sc := happyPathScenario()
-	sc.Messages[1].Text += " :shushing_face:"
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword:   "project-alpha",
-		OutputDir:        t.TempDir(),
-		MaxPosts:         10,
-		Days:             90,
-		ExcludeBodyEmoji: []string{"shushing_face"},
-		MaxAttachBytes:   1 << 20,
-		KeepCache:        true,
-		ToolVersion:      "test",
-	})
+	for _, tc := range []struct {
+		name          string
+		mark          func(parent *slack.Message) // marks Messages[1], the thread parent
+		apply         func(opts *Options)
+		optionsLine   string
+		bodyNames     []string
+		reactionNames []string
+		summaryLabel  string // the one summary label the run must print
+		otherLabel    string // the single-filter label it must not print
+	}{
+		{
+			name:          "body",
+			mark:          func(parent *slack.Message) { parent.Text += " :shushing_face:" },
+			apply:         func(opts *Options) { opts.ExcludeBodyEmoji = []string{"shushing_face"} },
+			optionsLine:   "--exclude-body-emoji shushing_face",
+			bodyNames:     []string{"shushing_face"},
+			reactionNames: nil,
+			summaryLabel:  "excluded by body emoji: 1",
+			otherLabel:    "excluded by reaction emoji",
+		},
+		{
+			name: "reaction",
+			mark: func(parent *slack.Message) {
+				parent.Reactions = append(parent.Reactions, slack.Reaction{Name: "speak_no_evil", Count: 1})
+			},
+			apply:         func(opts *Options) { opts.ExcludeReactionEmoji = []string{"speak_no_evil"} },
+			optionsLine:   "--exclude-reaction-emoji speak_no_evil",
+			bodyNames:     nil,
+			reactionNames: []string{"speak_no_evil"},
+			summaryLabel:  "excluded by reaction emoji: 1",
+			otherLabel:    "excluded by body emoji",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	bodyBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
-	if err != nil {
-		t.Fatal(err)
+			sc := happyPathScenario()
+			tc.mark(&sc.Messages[1])
+			opts := integrationOptions(t, 10)
+			tc.apply(&opts)
+
+			got := runExportScenario(t, sc, opts)
+			body := readIndexHTML(t, got.OutputDir)
+
+			for _, excluded := range []string{"Starting the launch thread", "Reply with screenshot", "Thread is wrapped up"} {
+				mustNotContain(t, body, excluded)
+			}
+			mustContain(t, body, tc.optionsLine)
+			assertEndpointCounts(t, got.Server, map[string]int{"/api/conversations.replies": 0})
+			assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, tc.bodyNames, tc.reactionNames)
+			assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
+			if !logsContain(got.Logs, tc.summaryLabel) {
+				t.Fatalf("summary missing %q: %v", tc.summaryLabel, got.Logs)
+			}
+			if logsContain(got.Logs, tc.otherLabel) {
+				t.Fatalf("%s-only logs contain the other filter's label %q: %v", tc.name, tc.otherLabel, got.Logs)
+			}
+		})
 	}
-	body := string(bodyBytes)
-	for _, excluded := range []string{"Starting the launch thread", "Reply with screenshot", "Thread is wrapped up"} {
-		if strings.Contains(body, excluded) {
-			t.Fatalf("index.html contains excluded content %q", excluded)
-		}
-	}
-	if !strings.Contains(body, "--exclude-body-emoji shushing_face") {
-		t.Fatal("index.html does not show the active normalized filter")
-	}
-	assertEndpointCounts(t, got.Server, map[string]int{"/api/conversations.replies": 0})
-	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, []string{"shushing_face"}, nil)
-	assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
 }
 
-func TestRunIntegrationExcludeBodyEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
+// TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts: when
+// the newest thread parent is excluded, its thread_broadcast copy on the
+// timeline goes with it, and --max-posts 2 is refilled from the next history
+// page so two retained messages still render. Body and reaction marking share
+// the expectation, so both run as named subtests.
+func TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
 	t.Parallel()
 
-	const parentTS = "1700000003.000000"
-	parent := slack.Message{
-		Type:       "message",
-		TS:         parentTS,
-		ThreadTS:   parentTS,
-		User:       "U01",
-		Text:       "private parent :shushing_face:",
-		ReplyCount: 1,
-	}
-	broadcast := slack.Message{
-		Type:     "message",
-		Subtype:  "thread_broadcast",
-		TS:       "1700000004.000000",
-		ThreadTS: parentTS,
-		User:     "U02",
-		Text:     "private broadcast",
-	}
-	sc := baseScenario()
-	sc.Messages = []slack.Message{
-		broadcast,
-		parent,
-		{Type: "message", TS: "1700000002.000000", User: "U01", Text: "retained newer"},
-		{Type: "message", TS: "1700000001.000000", User: "U02", Text: "retained older"},
-	}
-	sc.Replies[parentTS] = []slack.Message{parent, broadcast}
-	opts := renderingOptions(t)
-	opts.MaxPosts = 2
-	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+	for _, tc := range []struct {
+		name          string
+		parentText    string
+		reactions     []slack.Reaction
+		apply         func(opts *Options)
+		bodyNames     []string
+		reactionNames []string
+	}{
+		{
+			name:       "body",
+			parentText: "private parent :shushing_face:",
+			apply:      func(opts *Options) { opts.ExcludeBodyEmoji = []string{"shushing_face"} },
+			bodyNames:  []string{"shushing_face"},
+		},
+		{
+			name:          "reaction",
+			parentText:    "private parent",
+			reactions:     []slack.Reaction{{Name: "speak_no_evil", Count: 1}},
+			apply:         func(opts *Options) { opts.ExcludeReactionEmoji = []string{"speak_no_evil"} },
+			reactionNames: []string{"speak_no_evil"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	got := runExportScenario(t, sc, opts)
-	body := readIndexHTML(t, got.OutputDir)
+			const parentTS = "1700000003.000000"
+			parent := slack.Message{
+				Type:       "message",
+				TS:         parentTS,
+				ThreadTS:   parentTS,
+				User:       "U01",
+				Text:       tc.parentText,
+				ReplyCount: 1,
+				Reactions:  tc.reactions,
+			}
+			broadcast := slack.Message{
+				Type:     "message",
+				Subtype:  "thread_broadcast",
+				TS:       "1700000004.000000",
+				ThreadTS: parentTS,
+				User:     "U02",
+				Text:     "private broadcast",
+			}
+			sc := baseScenario()
+			sc.Messages = []slack.Message{
+				broadcast,
+				parent,
+				{Type: "message", TS: "1700000002.000000", User: "U01", Text: "retained newer"},
+				{Type: "message", TS: "1700000001.000000", User: "U02", Text: "retained older"},
+			}
+			sc.Replies[parentTS] = []slack.Message{parent, broadcast}
+			opts := integrationOptions(t, 2)
+			tc.apply(&opts)
 
-	for _, excluded := range []string{"private parent", "private broadcast"} {
-		mustNotContain(t, body, excluded)
+			got := runExportScenario(t, sc, opts)
+			body := readIndexHTML(t, got.OutputDir)
+
+			for _, excluded := range []string{"private parent", "private broadcast"} {
+				mustNotContain(t, body, excluded)
+			}
+			for _, retained := range []string{"retained newer", "retained older"} {
+				mustContain(t, body, retained)
+			}
+			assertEndpointCounts(t, got.Server, map[string]int{
+				"/api/conversations.history": 2,
+				"/api/conversations.replies": 1,
+			})
+			assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, tc.bodyNames, tc.reactionNames)
+			assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
+		})
 	}
-	for _, retained := range []string{"retained newer", "retained older"} {
-		mustContain(t, body, retained)
-	}
-	assertEndpointCounts(t, got.Server, map[string]int{
-		"/api/conversations.history": 2,
-		"/api/conversations.replies": 1,
-	})
-	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, []string{"shushing_face"}, nil)
-	assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
 }
 
 func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
@@ -232,31 +317,17 @@ func TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts(t *testing.T) {
 	sc := happyPathScenario()
 	sc.Messages[0].Text = "private newest :do_not_archive:"
 	sc.Replies["1700000002.000000"][2].Text = "private reply :speak_no_evil:"
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword:   "project-alpha",
-		OutputDir:        t.TempDir(),
-		MaxPosts:         2,
-		Days:             90,
-		ExcludeBodyEmoji: []string{"do_not_archive", "speak_no_evil"},
-		MaxAttachBytes:   1 << 20,
-		KeepCache:        true,
-		ToolVersion:      "test",
-	})
+	opts := integrationOptions(t, 2)
+	opts.ExcludeBodyEmoji = []string{"do_not_archive", "speak_no_evil"}
 
-	bodyBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	body := string(bodyBytes)
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
 	for _, excluded := range []string{"private newest", "private reply", "screenshot.png"} {
-		if strings.Contains(body, excluded) {
-			t.Fatalf("index.html contains excluded content %q", excluded)
-		}
+		mustNotContain(t, body, excluded)
 	}
 	for _, included := range []string{"Starting the launch thread", "First timeline note", "Thread is wrapped up"} {
-		if !strings.Contains(body, included) {
-			t.Fatalf("index.html is missing retained content %q", included)
-		}
+		mustContain(t, body, included)
 	}
 	assertExcludedMetadata(t, got.OutputDir, 2, 1, 1, 2, []string{"do_not_archive", "speak_no_evil"}, nil)
 	assertCacheOmits(t, got.OutputDir, "screenshot-original.png", "screenshot-thumb.png")
@@ -268,110 +339,15 @@ func TestRunIntegrationExcludeBodyEmojiHidesEmptyThread(t *testing.T) {
 	sc := happyPathScenario()
 	sc.Replies["1700000002.000000"][1].Text += " :speak_no_evil:"
 	sc.Replies["1700000002.000000"][2].Text += " :speak_no_evil:"
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword:   "project-alpha",
-		OutputDir:        t.TempDir(),
-		MaxPosts:         10,
-		Days:             90,
-		ExcludeBodyEmoji: []string{"speak_no_evil"},
-		MaxAttachBytes:   1 << 20,
-		KeepCache:        true,
-		ToolVersion:      "test",
-	})
-
-	bodyBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	body := string(bodyBytes)
-	if !strings.Contains(body, "Starting the launch thread") {
-		t.Fatal("index.html is missing the retained parent message")
-	}
-	if strings.Contains(body, `summary class="thread-label"`) {
-		t.Fatal("index.html shows thread UI after every reply was excluded")
-	}
-	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 2, []string{"speak_no_evil"}, nil)
-}
-
-func TestRunIntegrationExcludeReactionEmojiParentAndThread(t *testing.T) {
-	t.Parallel()
-
-	sc := happyPathScenario()
-	sc.Messages[1].Reactions = append(sc.Messages[1].Reactions, slack.Reaction{Name: "speak_no_evil", Count: 1})
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword:       "project-alpha",
-		OutputDir:            t.TempDir(),
-		MaxPosts:             10,
-		Days:                 90,
-		ExcludeReactionEmoji: []string{"speak_no_evil"},
-		MaxAttachBytes:       1 << 20,
-		KeepCache:            true,
-		ToolVersion:          "test",
-	})
-
-	body := readIndexHTML(t, got.OutputDir)
-	for _, excluded := range []string{"Starting the launch thread", "Reply with screenshot", "Thread is wrapped up"} {
-		mustNotContain(t, body, excluded)
-	}
-	mustContain(t, body, "--exclude-reaction-emoji speak_no_evil")
-	assertEndpointCounts(t, got.Server, map[string]int{"/api/conversations.replies": 0})
-	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 1, nil, []string{"speak_no_evil"})
-	assertCacheOmits(t, got.OutputDir, "U01", "screenshot-original.png", "og-launch.png")
-	if !logsContain(got.Logs, "excluded by reaction emoji: 1") {
-		t.Fatalf("summary missing reaction exclusion count: %v", got.Logs)
-	}
-	if logsContain(got.Logs, "excluded by body emoji") {
-		t.Fatalf("reaction-only logs contain the body-filter label: %v", got.Logs)
-	}
-}
-
-func TestRunIntegrationExcludeReactionEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
-	t.Parallel()
-
-	const parentTS = "1700000003.000000"
-	parent := slack.Message{
-		Type:       "message",
-		TS:         parentTS,
-		ThreadTS:   parentTS,
-		User:       "U01",
-		Text:       "private parent",
-		ReplyCount: 1,
-		Reactions:  []slack.Reaction{{Name: "speak_no_evil", Count: 1}},
-	}
-	broadcast := slack.Message{
-		Type:     "message",
-		Subtype:  "thread_broadcast",
-		TS:       "1700000004.000000",
-		ThreadTS: parentTS,
-		User:     "U02",
-		Text:     "private broadcast",
-	}
-	sc := baseScenario()
-	sc.Messages = []slack.Message{
-		broadcast,
-		parent,
-		{Type: "message", TS: "1700000002.000000", User: "U01", Text: "retained newer"},
-		{Type: "message", TS: "1700000001.000000", User: "U02", Text: "retained older"},
-	}
-	sc.Replies[parentTS] = []slack.Message{parent, broadcast}
-	opts := renderingOptions(t)
-	opts.MaxPosts = 2
-	opts.ExcludeReactionEmoji = []string{"speak_no_evil"}
+	opts := integrationOptions(t, 10)
+	opts.ExcludeBodyEmoji = []string{"speak_no_evil"}
 
 	got := runExportScenario(t, sc, opts)
 	body := readIndexHTML(t, got.OutputDir)
-	for _, excluded := range []string{"private parent", "private broadcast"} {
-		mustNotContain(t, body, excluded)
-	}
-	for _, retained := range []string{"retained newer", "retained older"} {
-		mustContain(t, body, retained)
-	}
-	assertEndpointCounts(t, got.Server, map[string]int{
-		"/api/conversations.history": 2,
-		"/api/conversations.replies": 1,
-	})
-	assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, nil, []string{"speak_no_evil"})
-	assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
+
+	mustContain(t, body, "Starting the launch thread")
+	mustNotContain(t, body, `summary class="thread-label"`)
+	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 2, []string{"speak_no_evil"}, nil)
 }
 
 func TestRunIntegrationEmojiFiltersORReplyCustomAndMaxPosts(t *testing.T) {
@@ -381,19 +357,13 @@ func TestRunIntegrationEmojiFiltersORReplyCustomAndMaxPosts(t *testing.T) {
 	sc.Messages[0].Text += " :speak_no_evil:"
 	sc.Messages[0].Reactions = []slack.Reaction{{Name: "do_not_archive", Count: 1}}
 	sc.Replies["1700000002.000000"][2].Reactions = []slack.Reaction{{Name: "shushing_face", Count: 1}}
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword:       "project-alpha",
-		OutputDir:            t.TempDir(),
-		MaxPosts:             2,
-		Days:                 90,
-		ExcludeBodyEmoji:     []string{"speak_no_evil"},
-		ExcludeReactionEmoji: []string{"do_not_archive", "shushing_face"},
-		MaxAttachBytes:       1 << 20,
-		KeepCache:            true,
-		ToolVersion:          "test",
-	})
+	opts := integrationOptions(t, 2)
+	opts.ExcludeBodyEmoji = []string{"speak_no_evil"}
+	opts.ExcludeReactionEmoji = []string{"do_not_archive", "shushing_face"}
 
+	got := runExportScenario(t, sc, opts)
 	body := readIndexHTML(t, got.OutputDir)
+
 	for _, excluded := range []string{"Final timeline update", "Reply with screenshot", "screenshot.png"} {
 		mustNotContain(t, body, excluded)
 	}
@@ -414,6 +384,8 @@ func TestRunIntegrationEmojiFiltersORReplyCustomAndMaxPosts(t *testing.T) {
 	}
 }
 
+// assertCacheOmits fails if any of the values (excluded-only text, user IDs or
+// asset names) leaked into one of the three .cache/ files.
 func assertCacheOmits(t *testing.T, dir string, values ...string) {
 	t.Helper()
 	for _, name := range []string{"metadata.json", "assets_manifest.json", "slack_api_cache.json"} {
@@ -429,6 +401,8 @@ func assertCacheOmits(t *testing.T, dir string, values ...string) {
 	}
 }
 
+// assertExcludedMetadata checks metadata.json's counts and the recorded
+// exclude_body_emoji / exclude_reaction_emoji option values.
 func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies, excluded int, bodyNames, reactionNames []string) {
 	t.Helper()
 	var metadata struct {
@@ -457,6 +431,8 @@ func assertExcludedMetadata(t *testing.T, dir string, timeline, threads, replies
 		t.Fatalf("exclude_reaction_emoji = %v, want %v", metadata.Fetch.Options.ExcludeReactionEmoji, reactionNames)
 	}
 }
+
+// --- fetch range (--date / --from / --to) -------------------------------------
 
 func TestRunIntegrationDateRange(t *testing.T) {
 	t.Parallel()
@@ -499,21 +475,13 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 	oldReplies[0].TS = sc.Messages[1].TS
 	sc.Replies[sc.Messages[1].TS] = oldReplies
 
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword: "project-alpha",
-		OutputDir:      t.TempDir(),
-		MaxPosts:       2,
-		Date:           input,
-		MaxAttachBytes: 1 << 20,
-		KeepCache:      true,
-		ToolVersion:    "test",
-	})
+	opts := integrationOptions(t, 2)
+	opts.Days = 0 // --date replaces the --days window; metadata records days as given
+	opts.Date = input
 
-	htmlBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	html := string(htmlBytes)
+	got := runExportScenario(t, sc, opts)
+	html := readIndexHTML(t, got.OutputDir)
+
 	displayTimezone := environmentRangeDisplayTimezone(time.Local)
 	for _, want := range []string{
 		"First timeline note",
@@ -526,13 +494,9 @@ func assertDateRangeExport(t *testing.T, input string, start time.Time) {
 		)),
 		escapePlusForHTMLAssertion("<dt>Options</dt><dd>--date &#34;" + input + "&#34;"),
 	} {
-		if !strings.Contains(html, want) {
-			t.Fatalf("HTML missing %q", want)
-		}
+		mustContain(t, html, want)
 	}
-	if strings.Contains(html, "Final timeline update") {
-		t.Fatal("HTML contains message at the exclusive end boundary")
-	}
+	mustNotContain(t, html, "Final timeline update") // the exclusive end boundary
 
 	var metadata struct {
 		Fetch struct {
@@ -587,22 +551,14 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 
 	fromInput := "2026-07-03T09:30"
 	toInput := end.Format(time.RFC3339)
-	got := runExportScenario(t, sc, Options{
-		ChannelKeyword: "project-alpha",
-		OutputDir:      t.TempDir(),
-		MaxPosts:       2,
-		From:           fromInput,
-		To:             toInput,
-		MaxAttachBytes: 1 << 20,
-		KeepCache:      true,
-		ToolVersion:    "test",
-	})
+	opts := integrationOptions(t, 2)
+	opts.Days = 0 // --from / --to replace the --days window; metadata records days as given
+	opts.From = fromInput
+	opts.To = toInput
 
-	htmlBytes, err := os.ReadFile(filepath.Join(got.OutputDir, "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	html := string(htmlBytes)
+	got := runExportScenario(t, sc, opts)
+	html := readIndexHTML(t, got.OutputDir)
+
 	displayTimezone := chooseDateTimeRangeDisplayTimezone(fromInput, toInput, time.Local)
 	for _, want := range []string{
 		"First timeline note",
@@ -615,13 +571,9 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 		)),
 		escapePlusForHTMLAssertion("<dt>Options</dt><dd>--from &#34;" + fromInput + "&#34;, --to &#34;" + toInput + "&#34;"),
 	} {
-		if !strings.Contains(html, want) {
-			t.Fatalf("HTML missing %q", want)
-		}
+		mustContain(t, html, want)
 	}
-	if strings.Contains(html, "Final timeline update") {
-		t.Fatal("HTML contains message at the exclusive end boundary")
-	}
+	mustNotContain(t, html, "Final timeline update") // the exclusive end boundary
 
 	var metadata struct {
 		Fetch struct {
@@ -665,499 +617,10 @@ func escapePlusForHTMLAssertion(value string) string {
 	return strings.ReplaceAll(value, "+", "&#43;")
 }
 
-// runExportScenario is the integration-test entry point for happy-path
-// scenarios: define an exportScenario fixture, call this helper, then assert on
-// the returned output directory and fake Slack request counters. It fails the
-// test if Run returns an error; error-path scenarios use runExportScenarioRaw
-// (integration_error_test.go) instead.
-func runExportScenario(t *testing.T, sc exportScenario, opts Options) exportRunResult {
-	t.Helper()
+// --- happy-path expectations --------------------------------------------------
 
-	got, _, err := runExportScenarioRaw(t, sc, opts)
-	if err != nil {
-		t.Fatalf("Run() error = %v\nlogs:\n%s", err, strings.Join(got.Logs, "\n"))
-	}
-	return got
-}
-
-type exportRunResult struct {
-	OutputDir string
-	Server    *fakeSlackServer
-	Logs      []string
-}
-
-type exportScenario struct {
-	Auth     slack.AuthTest
-	TeamInfo *slack.TeamInfo
-	Channels []slack.Channel
-	Messages []slack.Message
-	Replies  map[string][]slack.Message
-	Users    map[string]slack.User
-	Bots     map[string]slack.Bot
-	Emoji    map[string]string
-	Assets   map[string]fakeAsset
-
-	// APIFaults / AssetFaults inject error and rate-limit behaviour for the
-	// v1-09 error scenarios, keyed by request path (e.g.
-	// "/api/conversations.history" or "/files/flaky.pdf"). A nil/empty map
-	// keeps the happy behaviour, so v1-07 / v1-08 fixtures are unaffected.
-	APIFaults   map[string]*endpointFault
-	AssetFaults map[string]*endpointFault
-}
-
-type fakeAsset struct {
-	ContentType string
-	Body        string
-	RejectAuth  bool
-}
-
-// endpointFault injects error / rate-limit behaviour for one fake server
-// endpoint (an API path or an asset path) in the v1-09 error scenarios.
-type endpointFault struct {
-	// transient responses are emitted one per call, in order, before the
-	// endpoint falls through to its normal handler. Used for "429 once then
-	// succeed" and "5xx then succeed".
-	transient []faultResponse
-	// sticky, when non-nil, is returned on every call once transient responses
-	// are drained. Used for persistent Slack errors (invalid_auth,
-	// missing_scope, not_in_channel), a persistent 429 (retry-limit reached)
-	// and a persistent download failure.
-	sticky *faultResponse
-}
-
-// faultResponse is a single fake response. A non-zero httpStatus (429 or 5xx)
-// is written directly, with Retry-After taken from retryAfterSec when > 0. An
-// httpStatus of 0 with slackError set yields an {"ok":false,...} body;
-// otherwise the endpoint's normal handler runs.
-type faultResponse struct {
-	httpStatus    int
-	retryAfterSec int
-	slackError    string
-}
-
-func happyPathScenario() exportScenario {
-	return exportScenario{
-		Auth: slack.AuthTest{
-			URL:    "https://acme.example.slack.com/",
-			Team:   "Acme Workspace",
-			TeamID: "TACME123",
-			User:   "slapex",
-			UserID: "USLAPEX",
-			BotID:  "BSLAPEX",
-		},
-		TeamInfo: &slack.TeamInfo{
-			ID:     "TACME123",
-			Name:   "Acme Workspace",
-			Domain: "acme",
-			Icon: slack.TeamIcon{
-				Image68: "{{base}}/files/workspace-icon.png",
-			},
-		},
-		Channels: []slack.Channel{
-			{ID: "C999", Name: "random", IsMember: true},
-			{ID: "C123", Name: "project-alpha", IsMember: true},
-		},
-		Messages: []slack.Message{
-			{
-				Type: "message",
-				TS:   "1700000003.000000",
-				User: "U02",
-				Text: "Final timeline update",
-			},
-			{
-				Type:       "message",
-				TS:         "1700000002.000000",
-				ThreadTS:   "1700000002.000000",
-				User:       "U01",
-				Text:       "Starting the launch thread with :party_sloth: and <@U02>",
-				ReplyCount: 2,
-				Attachments: []slack.Attachment{
-					{
-						ServiceName: "Example News",
-						ServiceIcon: "{{base}}/files/service-example-news.png",
-						Title:       "Launch checklist",
-						TitleLink:   "https://example.com/launch-checklist",
-						Text:        "Read <@U02>'s notes",
-						ImageURL:    "{{base}}/files/og-launch.png",
-					},
-				},
-				Reactions: []slack.Reaction{
-					{Name: "smile", Count: 3},
-					{Name: "party_sloth", Count: 2},
-				},
-			},
-			{
-				Type: "message",
-				TS:   "1700000001.000000",
-				User: "U02",
-				Text: "First timeline note",
-				Files: []slack.File{
-					{
-						ID:                 "F-DOC",
-						Name:               "runbook.pdf",
-						Mimetype:           "application/pdf",
-						Size:               18,
-						URLPrivateDownload: "{{base}}/files/runbook.pdf",
-					},
-				},
-				Reactions: []slack.Reaction{{Name: "smile", Count: 1}},
-			},
-		},
-		Replies: map[string][]slack.Message{
-			"1700000002.000000": {
-				{
-					Type:       "message",
-					TS:         "1700000002.000000",
-					ThreadTS:   "1700000002.000000",
-					User:       "U01",
-					Text:       "Starting the launch thread with :party_sloth: and <@U02>",
-					ReplyCount: 2,
-				},
-				{
-					Type:     "message",
-					TS:       "1700000002.200000",
-					ThreadTS: "1700000002.000000",
-					User:     "U01",
-					Text:     "Thread is wrapped up :party_sloth:",
-				},
-				{
-					Type:     "message",
-					TS:       "1700000002.100000",
-					ThreadTS: "1700000002.000000",
-					User:     "U02",
-					Text:     "Reply with screenshot",
-					Files: []slack.File{
-						{
-							ID:                 "F-IMG",
-							Name:               "screenshot.png",
-							Mimetype:           "image/png",
-							Size:               32,
-							URLPrivateDownload: "{{base}}/files/screenshot-original.png",
-							Thumb360:           "{{base}}/files/screenshot-thumb.png",
-						},
-					},
-				},
-			},
-		},
-		Users: map[string]slack.User{
-			"U01": testUser("U01", "alice", "Alice Example", "Alice", "{{base}}/files/avatar-u01.png"),
-			"U02": testUser("U02", "bob", "Bob Builder", "Bob", "{{base}}/files/avatar-u02.png"),
-		},
-		Emoji: map[string]string{
-			"party_sloth": "{{base}}/files/emoji-party-sloth.png",
-		},
-		Assets: map[string]fakeAsset{
-			"/files/avatar-u01.png":           {ContentType: "image/png", Body: "avatar-u01"},
-			"/files/avatar-u02.png":           {ContentType: "image/png", Body: "avatar-u02"},
-			"/files/workspace-icon.png":       {ContentType: "image/png", Body: "workspace-icon"},
-			"/files/emoji-party-sloth.png":    {ContentType: "image/png", Body: "custom-emoji"},
-			"/files/service-example-news.png": {ContentType: "image/png", Body: "service-icon", RejectAuth: true},
-			"/files/og-launch.png":            {ContentType: "image/png", Body: "og-image"},
-			"/files/runbook.pdf":              {ContentType: "application/pdf", Body: "runbook attachment"},
-			"/files/screenshot-original.png":  {ContentType: "image/png", Body: "screenshot original"},
-			"/files/screenshot-thumb.png":     {ContentType: "image/png", Body: "screenshot thumb"},
-		},
-	}
-}
-
-func testUser(id, name, realName, displayName, imageURL string) slack.User {
-	u := slack.User{ID: id, Name: name, RealName: realName}
-	u.Profile.DisplayName = displayName
-	u.Profile.RealName = realName
-	u.Profile.Image48 = imageURL
-	u.Profile.Image72 = imageURL
-	return u
-}
-
-type fakeSlackServer struct {
-	t   *testing.T
-	srv *httptest.Server
-	sc  *exportScenario
-
-	mu     sync.Mutex
-	counts map[string]int
-}
-
-func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
-	t.Helper()
-
-	f := &fakeSlackServer{
-		t:      t,
-		sc:     sc,
-		counts: map[string]int{},
-	}
-	mux := http.NewServeMux()
-	for path := range sc.Assets {
-		mux.HandleFunc(path, f.handleAsset)
-	}
-	// Asset paths that only exist to inject a download failure (no body in
-	// Assets) still need a handler so the fault response is served.
-	for path := range sc.AssetFaults {
-		if _, ok := sc.Assets[path]; !ok {
-			mux.HandleFunc(path, f.handleAsset)
-		}
-	}
-	for _, path := range []string{
-		"/api/auth.test",
-		"/api/team.info",
-		"/api/conversations.list",
-		"/api/conversations.history",
-		"/api/conversations.replies",
-		"/api/users.info",
-		"/api/bots.info",
-		"/api/emoji.list",
-	} {
-		mux.HandleFunc(path, f.handleAPI)
-	}
-	f.srv = httptest.NewServer(mux)
-	sc.replaceBaseURL(f.srv.URL)
-	return f
-}
-
-func (f *fakeSlackServer) URL() string { return f.srv.URL }
-
-func (f *fakeSlackServer) Close() {
-	f.srv.Close()
-}
-
-func (f *fakeSlackServer) Count(path string) int {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.counts[path]
-}
-
-func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if got := r.Header.Get("Authorization"); got != "Bearer "+integrationTestToken {
-		http.Error(w, "missing auth", http.StatusUnauthorized)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	f.record(r)
-	if resp := f.nextFault(f.sc.APIFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
-		return
-	}
-
-	switch r.URL.Path {
-	case "/api/auth.test":
-		writeSlackOK(w, f.sc.Auth)
-	case "/api/team.info":
-		team := f.sc.TeamInfo
-		if team == nil {
-			team = &slack.TeamInfo{
-				ID:     f.sc.Auth.TeamID,
-				Name:   f.sc.Auth.Team,
-				Domain: strings.TrimSuffix(hostOf(f.sc.Auth.URL), ".slack.com"),
-				Icon:   slack.TeamIcon{ImageDefault: true},
-			}
-		}
-		writeSlackOK(w, map[string]any{"team": team})
-	case "/api/conversations.list":
-		writeSlackOK(w, map[string]any{"channels": f.sc.Channels})
-	case "/api/conversations.history":
-		if got := r.PostForm.Get("channel"); !f.hasChannel(got) {
-			writeSlackError(w, "channel_not_found")
-			return
-		}
-		writeSlackOK(w, map[string]any{"messages": f.sc.Messages})
-	case "/api/conversations.replies":
-		replies, ok := f.sc.Replies[r.PostForm.Get("ts")]
-		if !ok {
-			writeSlackError(w, "thread_not_found")
-			return
-		}
-		writeSlackOK(w, map[string]any{"messages": replies})
-	case "/api/users.info":
-		user, ok := f.sc.Users[r.PostForm.Get("user")]
-		if !ok {
-			writeSlackError(w, "user_not_found")
-			return
-		}
-		writeSlackOK(w, map[string]any{"user": user})
-	case "/api/bots.info":
-		bot, ok := f.sc.Bots[r.PostForm.Get("bot")]
-		if !ok {
-			writeSlackError(w, "bot_not_found")
-			return
-		}
-		writeSlackOK(w, map[string]any{"bot": bot})
-	case "/api/emoji.list":
-		writeSlackOK(w, map[string]any{"emoji": f.sc.Emoji})
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func (f *fakeSlackServer) hasChannel(id string) bool {
-	return slices.ContainsFunc(f.sc.Channels, func(ch slack.Channel) bool {
-		return ch.ID == id
-	})
-}
-
-func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
-	f.record(r)
-	if resp := f.nextFault(f.sc.AssetFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
-		return
-	}
-	asset, ok := f.sc.Assets[r.URL.Path]
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-	if asset.RejectAuth && r.Header.Get("Authorization") != "" {
-		http.Error(w, "unexpected auth header", http.StatusBadRequest)
-		return
-	}
-	w.Header().Set("Content-Type", asset.ContentType)
-	fmt.Fprint(w, asset.Body)
-}
-
-func (f *fakeSlackServer) record(r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.counts[r.URL.Path]++
-}
-
-// nextFault returns the fault response the endpoint should emit for this call,
-// or nil to fall through to the normal handler. transient responses are
-// consumed first; once drained, the sticky response (if any) applies to every
-// later call.
-func (f *fakeSlackServer) nextFault(faults map[string]*endpointFault, path string) *faultResponse {
-	if faults == nil {
-		return nil
-	}
-	fault := faults[path]
-	if fault == nil {
-		return nil
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if len(fault.transient) > 0 {
-		resp := fault.transient[0]
-		fault.transient = fault.transient[1:]
-		return &resp
-	}
-	return fault.sticky
-}
-
-// writeFault emits resp and reports whether it handled the request. A 429 or
-// 5xx status is written directly (with Retry-After for 429); httpStatus 0 with
-// slackError yields an {"ok":false} body. Any other shape returns false so the
-// caller runs the endpoint's normal handler.
-func (f *fakeSlackServer) writeFault(w http.ResponseWriter, resp *faultResponse) bool {
-	switch {
-	case resp.httpStatus == http.StatusTooManyRequests:
-		if resp.retryAfterSec > 0 {
-			w.Header().Set("Retry-After", strconv.Itoa(resp.retryAfterSec))
-		}
-		w.WriteHeader(http.StatusTooManyRequests)
-		return true
-	case resp.httpStatus >= 500:
-		w.WriteHeader(resp.httpStatus)
-		return true
-	case resp.slackError != "":
-		writeSlackError(w, resp.slackError)
-		return true
-	default:
-		return false
-	}
-}
-
-func writeSlackOK(w http.ResponseWriter, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	body := map[string]any{"ok": true}
-	if payload != nil {
-		data, err := json.Marshal(payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		var fields map[string]any
-		if err := json.Unmarshal(data, &fields); err == nil {
-			for key, value := range fields {
-				if key != "ok" {
-					body[key] = value
-				}
-			}
-		} else {
-			body["payload"] = payload
-		}
-	}
-	if err := json.NewEncoder(w).Encode(body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func writeSlackError(w http.ResponseWriter, code string) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"ok":false,"error":%q}`, code)
-}
-
-func (sc *exportScenario) replaceBaseURL(baseURL string) {
-	repl := func(s string) string {
-		return strings.ReplaceAll(s, "{{base}}", baseURL)
-	}
-	for i := range sc.Messages {
-		replaceMessageBaseURL(&sc.Messages[i], repl)
-	}
-	for threadTS, replies := range sc.Replies {
-		for i := range replies {
-			replaceMessageBaseURL(&replies[i], repl)
-		}
-		sc.Replies[threadTS] = replies
-	}
-	for id, u := range sc.Users {
-		u.Profile.Image48 = repl(u.Profile.Image48)
-		u.Profile.Image72 = repl(u.Profile.Image72)
-		sc.Users[id] = u
-	}
-	for id, b := range sc.Bots {
-		b.Icons.Image36 = repl(b.Icons.Image36)
-		b.Icons.Image48 = repl(b.Icons.Image48)
-		b.Icons.Image72 = repl(b.Icons.Image72)
-		sc.Bots[id] = b
-	}
-	if sc.TeamInfo != nil {
-		sc.TeamInfo.Icon.Image34 = repl(sc.TeamInfo.Icon.Image34)
-		sc.TeamInfo.Icon.Image44 = repl(sc.TeamInfo.Icon.Image44)
-		sc.TeamInfo.Icon.Image68 = repl(sc.TeamInfo.Icon.Image68)
-		sc.TeamInfo.Icon.Image88 = repl(sc.TeamInfo.Icon.Image88)
-		sc.TeamInfo.Icon.Image102 = repl(sc.TeamInfo.Icon.Image102)
-		sc.TeamInfo.Icon.Image132 = repl(sc.TeamInfo.Icon.Image132)
-		sc.TeamInfo.Icon.Image230 = repl(sc.TeamInfo.Icon.Image230)
-	}
-	for name, rawURL := range sc.Emoji {
-		sc.Emoji[name] = repl(rawURL)
-	}
-}
-
-func replaceMessageBaseURL(m *slack.Message, repl func(string) string) {
-	if m.BotProfile != nil {
-		m.BotProfile.Icons.Image36 = repl(m.BotProfile.Icons.Image36)
-		m.BotProfile.Icons.Image48 = repl(m.BotProfile.Icons.Image48)
-		m.BotProfile.Icons.Image72 = repl(m.BotProfile.Icons.Image72)
-	}
-	for i := range m.Files {
-		m.Files[i].URLPrivate = repl(m.Files[i].URLPrivate)
-		m.Files[i].URLPrivateDownload = repl(m.Files[i].URLPrivateDownload)
-		m.Files[i].Thumb360 = repl(m.Files[i].Thumb360)
-		m.Files[i].Thumb480 = repl(m.Files[i].Thumb480)
-		m.Files[i].Thumb160 = repl(m.Files[i].Thumb160)
-		m.Files[i].Thumb64 = repl(m.Files[i].Thumb64)
-	}
-	for i := range m.Attachments {
-		m.Attachments[i].ImageURL = repl(m.Attachments[i].ImageURL)
-		m.Attachments[i].ThumbURL = repl(m.Attachments[i].ThumbURL)
-		m.Attachments[i].ServiceIcon = repl(m.Attachments[i].ServiceIcon)
-	}
-}
-
+// assertOutputFiles checks that every output path the happy-path fixture must
+// produce exists (one directory per asset kind, the three .cache/ files).
 func assertOutputFiles(t *testing.T, dir string) {
 	t.Helper()
 
@@ -1183,6 +646,9 @@ func assertOutputFiles(t *testing.T, dir string) {
 	}
 }
 
+// assertHTMLMarkers checks the happy-path index.html for the header, every
+// message, the resolved mention, reactions, the date divider, each asset
+// directory reference and the timeline / thread order.
 func assertHTMLMarkers(t *testing.T, htmlPath string) {
 	t.Helper()
 
@@ -1235,22 +701,9 @@ func assertHTMLMarkers(t *testing.T, htmlPath string) {
 	}
 }
 
-func assertOrder(t *testing.T, body string, markers ...string) {
-	t.Helper()
-
-	last := -1
-	for _, marker := range markers {
-		idx := strings.Index(body, marker)
-		if idx < 0 {
-			t.Fatalf("missing marker %q", marker)
-		}
-		if idx <= last {
-			t.Fatalf("marker %q appeared out of order", marker)
-		}
-		last = idx
-	}
-}
-
+// assertCacheFiles checks the happy-path .cache/ files: workspace / channel
+// identity and counts in metadata.json, one saved asset of every kind in
+// assets_manifest.json, and the resolved users / emoji in slack_api_cache.json.
 func assertCacheFiles(t *testing.T, dir string) {
 	t.Helper()
 
@@ -1297,13 +750,10 @@ func assertCacheFiles(t *testing.T, dir string) {
 		t.Fatalf("metadata fetch = %+v, want absolute start/end and --days 90", metadata.Fetch)
 	}
 
-	var manifest struct {
-		Assets []manifestAsset `json:"assets"`
-	}
-	readJSON(t, filepath.Join(dir, ".cache/assets_manifest.json"), &manifest)
+	manifest := readManifestEntries(t, dir)
 	for _, kind := range []string{"workspace_icon", "avatar", "emoji", "service_icon", "og_image", "upload_thumb", "upload_original", "attachment"} {
-		if !hasSavedAsset(manifest.Assets, kind) {
-			t.Fatalf("assets_manifest.json missing saved %s asset: %+v", kind, manifest.Assets)
+		if !hasSavedAsset(manifest, kind) {
+			t.Fatalf("assets_manifest.json missing saved %s asset: %+v", kind, manifest)
 		}
 	}
 
@@ -1319,38 +769,5 @@ func assertCacheFiles(t *testing.T, dir string) {
 	}
 	if !strings.Contains(apiCache.Emoji["party_sloth"], "/files/emoji-party-sloth.png") {
 		t.Fatalf("slack_api_cache emoji = %+v, want party_sloth URL", apiCache.Emoji)
-	}
-}
-
-func readJSON(t *testing.T, path string, out any) {
-	t.Helper()
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	if err := json.Unmarshal(data, out); err != nil {
-		t.Fatalf("decode %s: %v", path, err)
-	}
-}
-
-type manifestAsset struct {
-	Kind   string `json:"kind"`
-	Status string `json:"status"`
-}
-
-func hasSavedAsset(assets []manifestAsset, kind string) bool {
-	return slices.ContainsFunc(assets, func(asset manifestAsset) bool {
-		return asset.Kind == kind && asset.Status == "saved"
-	})
-}
-
-func assertEndpointCounts(t *testing.T, fake *fakeSlackServer, want map[string]int) {
-	t.Helper()
-
-	for path, count := range want {
-		if got := fake.Count(path); got != count {
-			t.Fatalf("%s count = %d, want %d", path, got, count)
-		}
 	}
 }

@@ -1,11 +1,13 @@
 package export
 
 // Integration error / rate-limit scenarios for v1-09 (Issue #23). Each case is
-// an independent test that builds a minimal fixture on top of the v1-07 fake
-// Slack server harness (exportScenario / runExportScenarioRaw) and injects an
-// error or rate-limit fault through the exportScenario.APIFaults /
-// AssetFaults maps. The 429 path cannot be exercised safely against the real
-// Slack API, so these tests are the practical guard for it.
+// an independent test that fills in baseScenario (integration_fixture_test.go),
+// injects an error or rate-limit fault through the exportScenario.APIFaults /
+// AssetFaults maps, and runs it through runExportScenarioRaw
+// (integration_harness_test.go), which returns Run's error and the recorded
+// sleeper durations instead of failing the test. The 429 path cannot be
+// exercised safely against the real Slack API, so these tests are the
+// practical guard for it.
 //
 // Expected behaviour follows the confirmed specs:
 //   - exit code mapping and partial-failure handling: doc/design/cli-interface.md
@@ -21,84 +23,14 @@ package export
 // in each case comment to tie the two halves together.
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/kiyohara/slapex/internal/slack"
 )
-
-// runExportScenarioRaw runs the export against a fresh fake server built from
-// sc and returns the result, the durations passed to the injected sleeper, and
-// the error from Run, without failing the test. Error-path scenarios assert on
-// the returned error; rate-limit scenarios assert on the recorded sleeps. The
-// sleeper never actually waits, so the tests run in real time regardless of the
-// injected Retry-After / backoff durations.
-func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (exportRunResult, []time.Duration, error) {
-	t.Helper()
-	if opts.Now.IsZero() && len(sc.Messages) > 0 {
-		latest := tsTime(sc.Messages[0].TS)
-		for i := 1; i < len(sc.Messages); i++ {
-			if candidate := tsTime(sc.Messages[i].TS); candidate.After(latest) {
-				latest = candidate
-			}
-		}
-		opts.Now = latest.Add(time.Hour)
-	}
-
-	fake := newFakeSlackServer(t, &sc)
-	t.Cleanup(fake.Close)
-
-	var (
-		mu     sync.Mutex
-		logs   []string
-		sleeps []time.Duration
-	)
-	printer := testPrinter(func(line string) {
-		mu.Lock()
-		logs = append(logs, line)
-		mu.Unlock()
-	})
-	client := slack.New(integrationTestToken,
-		slack.WithBaseURL(fake.URL()+"/api/"),
-		slack.WithSleeper(func(_ context.Context, d time.Duration) error {
-			mu.Lock()
-			sleeps = append(sleeps, d)
-			mu.Unlock()
-			return nil
-		}),
-	)
-	client.Logf = printer.Noticef
-
-	outDir, err := Run(context.Background(), client, opts, printer)
-
-	mu.Lock()
-	defer mu.Unlock()
-	return exportRunResult{OutputDir: outDir, Server: fake, Logs: append([]string(nil), logs...)},
-		append([]time.Duration(nil), sleeps...), err
-}
-
-func hasSleepAtLeast(sleeps []time.Duration, atLeast time.Duration) bool {
-	for _, d := range sleeps {
-		if d >= atLeast {
-			return true
-		}
-	}
-	return false
-}
-
-func logsContain(logs []string, substr string) bool {
-	for _, line := range logs {
-		if strings.Contains(line, substr) {
-			return true
-		}
-	}
-	return false
-}
 
 // --- case 1: auth.test invalid_auth -> auth error (exit 3) -------------------
 

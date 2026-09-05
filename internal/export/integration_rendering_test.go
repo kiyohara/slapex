@@ -1,16 +1,17 @@
 package export
 
 // Integration rendering scenarios for v1-08 (Issue #22). Each case is an
-// independent test that builds a minimal fixture on top of the v1-07 fake
-// Slack server harness (runExportScenario / exportScenario) and asserts the
-// end-to-end HTML / manifest output. The expected behaviour is the confirmed
-// display spec in doc/design/html-rendering.md and doc/design/output-format.md
-// (subtypes, tombstone, size-limit replacement, 1000-reply cap, emoji).
+// independent test that fills in baseScenario (integration_fixture_test.go),
+// runs it through runExportScenario / renderingOptions
+// (integration_harness_test.go) and asserts the end-to-end HTML / manifest
+// output with the helpers in integration_assert_test.go. The expected
+// behaviour is the confirmed display spec in doc/design/html-rendering.md and
+// doc/design/output-format.md (subtypes, tombstone, size-limit replacement,
+// 1000-reply cap, emoji).
 
 import (
 	"crypto/sha256"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,118 +19,6 @@ import (
 	"github.com/kiyohara/slapex/internal/emoji"
 	"github.com/kiyohara/slapex/internal/slack"
 )
-
-// --- shared fixture / helpers ------------------------------------------------
-
-// baseScenario is a minimal valid scenario: one member channel matching the
-// "project-alpha" keyword, two resolvable users, no emoji and no assets. Each
-// test fills in Messages / Replies / Assets for the path it exercises.
-func baseScenario() exportScenario {
-	return exportScenario{
-		Auth: slack.AuthTest{
-			URL:    "https://acme.example.slack.com/",
-			Team:   "Acme Workspace",
-			TeamID: "TACME123",
-			User:   "slapex",
-			UserID: "USLAPEX",
-			BotID:  "BSLAPEX",
-		},
-		Channels: []slack.Channel{
-			{ID: "C123", Name: "project-alpha", IsMember: true},
-		},
-		Users: map[string]slack.User{
-			"U01": testUser("U01", "alice", "Alice Example", "Alice", ""),
-			"U02": testUser("U02", "bob", "Bob Builder", "Bob", ""),
-		},
-		Emoji:   map[string]string{},
-		Assets:  map[string]fakeAsset{},
-		Replies: map[string][]slack.Message{},
-	}
-}
-
-func renderingOptions(t *testing.T) Options {
-	t.Helper()
-	return Options{
-		ChannelKeyword: "project-alpha",
-		OutputDir:      t.TempDir(),
-		MaxPosts:       1000,
-		Days:           90,
-		MaxAttachBytes: 1 << 20, // 1MB
-		KeepCache:      true,
-		ToolVersion:    "test",
-	}
-}
-
-func readIndexHTML(t *testing.T, dir string) string {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join(dir, "index.html"))
-	if err != nil {
-		t.Fatalf("read index.html: %v", err)
-	}
-	return string(data)
-}
-
-func mustContain(t *testing.T, body, marker string) {
-	t.Helper()
-	if !strings.Contains(body, marker) {
-		t.Fatalf("index.html missing marker %q", marker)
-	}
-}
-
-func mustNotContain(t *testing.T, body, marker string) {
-	t.Helper()
-	if strings.Contains(body, marker) {
-		t.Fatalf("index.html unexpectedly contains marker %q", marker)
-	}
-}
-
-// manifestEntryFull mirrors the fields of assets_manifest.json the rendering
-// cases assert on (status, size, identity).
-type manifestEntryFull struct {
-	Kind         string `json:"kind"`
-	Status       string `json:"status"`
-	FileID       string `json:"file_id"`
-	OriginalName string `json:"original_name"`
-	SizeBytes    int64  `json:"size_bytes"`
-}
-
-func readManifestEntries(t *testing.T, dir string) []manifestEntryFull {
-	t.Helper()
-	var manifest struct {
-		Assets []manifestEntryFull `json:"assets"`
-	}
-	readJSON(t, filepath.Join(dir, ".cache/assets_manifest.json"), &manifest)
-	return manifest.Assets
-}
-
-func findManifest(entries []manifestEntryFull, match func(manifestEntryFull) bool) (manifestEntryFull, bool) {
-	for _, e := range entries {
-		if match(e) {
-			return e, true
-		}
-	}
-	return manifestEntryFull{}, false
-}
-
-// botProfileName / botProfileFull / editedAt build the bot_profile and edited
-// values used by slack.Message.
-func botProfileName(name string) *slack.BotProfile {
-	return &slack.BotProfile{Name: name}
-}
-
-// botProfileFull is a bot_profile carrying both the app name and its icons, the
-// case that needs no bots.info call at all (decision log 0054).
-func botProfileFull(name, iconURL string) *slack.BotProfile {
-	return &slack.BotProfile{Name: name, Icons: slack.BotIcons{Image48: iconURL, Image72: iconURL}}
-}
-
-func editedAt(ts string) *struct {
-	TS string `json:"ts"`
-} {
-	return &struct {
-		TS string `json:"ts"`
-	}{TS: ts}
-}
 
 // --- case 1: fenced code block with URL and multiple lines -------------------
 
@@ -779,15 +668,6 @@ func TestRunIntegrationEmojiRendering(t *testing.T) {
 // can derive the expected src without reading the manifest.
 func savedAvatarPath(body string) string {
 	return fmt.Sprintf("assets/avatars/%x.png", sha256.Sum256([]byte(body)))
-}
-
-func pngAsset(body string) fakeAsset {
-	return fakeAsset{ContentType: "image/png", Body: body}
-}
-
-// botIcons builds a bots.info / bot_profile icons block from one URL.
-func botIcons(url string) slack.BotIcons {
-	return slack.BotIcons{Image48: url, Image72: url}
 }
 
 // TestRunIntegrationBotAuthorResolution covers the name / avatar fallback chain
