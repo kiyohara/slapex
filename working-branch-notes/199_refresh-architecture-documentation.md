@@ -17,7 +17,7 @@ Issue #195 に従い、現行 package の責務・依存方向・開発/配布�
 
 ## 決定事項
 
-- 過去 decision log は変更せず、現行文書と実装の差を区別する。
+- 過去の個別 decision log は変更せず、現行文書と実装の差を区別する。
 - `local_path` は仕様確定 commit `21a360c` で未保存時 `null`、PoC commit `eb9da63` から実装は `omitempty`。明示的な仕様変更の根拠がないため、仕様表を実装へ合わせず差異として報告する。
 
 ## 次にやること
@@ -32,7 +32,7 @@ Issue #195 に従い、現行 package の責務・依存方向・開発/配布�
 - go.mod、compose.yaml、CI/release workflow、.goreleaser.yaml、slack-api-usage.md と突合。API 件数は列挙せず spec へ参照を集約した。
 - 将来形の残存箇所を確認。PoC・Compose・release の古い予定は現況へ更新。段階的リファクタリング、cache の open-ended range、外部 reader を含む仕様差判断は将来の事項として維持。
 - note の情報統制チェック: 秘密情報・個人情報・認証付き URL・ログ全文なし。
-- 文書のみのため Issue 指定どおり Go tests は未実施。CLI / cache / HTML のコードと過去 decision log は変更していない。
+- 文書のみのため Issue 指定どおり Go tests は未実施。CLI / cache / HTML のコードと過去の個別 decision log は変更していない。
 
 ## リスク・ブロッカー
 
@@ -41,3 +41,10 @@ Issue #195 に従い、現行 package の責務・依存方向・開発/配布�
 ## セッションログ
 
 - 2026-09-05: Issue 本文・comments・sub-issues・labels と依存 PR を確認。追加指示・子 Issue・label はなし。
+
+### Review 対応(2026-09-05)
+
+- Review cycle `claude-code-7ef1301-20260905120107` の 2 件を採用。
+- 未決事項の index 登録漏れを補い、0030・cache.md の確認済み仕様差・Issue #195 を参照する 1 行を追加。仕様の統一判断は行わず、個別ログは維持する。
+- `export.Run` の `KeepCache` 判定と `output.RemoveCache` の削除実装を突合し、責務表を「cleanup の判定」と「.cache/ の削除」に書き分けた。
+- 検証: `git diff --check`、変更文書の相対リンク先存在・追加 anchor・index 表の列数を確認。文書のみのため Go tests は未実施。

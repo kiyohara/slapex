@@ -32,9 +32,9 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 | package / 入口 | 責務 | 直接依存する内部 package |
 |---|---|---|
 | [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
-| [internal/export](../../internal/export/export.go) | `Run` による workspace/channel 解決、対話選択、取得範囲・filter、history/replies、user/bot/emoji 解決、asset 保存、表示用データ組立、cache の組立・再利用・cleanup | datetime、emoji、output、render、slack、ui |
+| [internal/export](../../internal/export/export.go) | `Run` による workspace/channel 解決、対話選択、取得範囲・filter、history/replies、user/bot/emoji 解決、asset 保存、表示用データ組立、cache の組立・再利用・cleanup の判定 | datetime、emoji、output、render、slack、ui |
 | [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、method ごとの平準化、retry、認証送信先を制限した download | なし |
-| [internal/output](../../internal/output/output.go) | 出力 root・label、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し | slack |
+| [internal/output](../../internal/output/output.go) | 出力 root・label、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し、`.cache/` の削除 | slack |
 | [internal/render](../../internal/render/html.go) | 表示用データ型、mrkdwn 変換、HTML template、埋込み CSS/logo の書き出し | なし |
 | [internal/emoji](../../internal/emoji/emoji.go) | 埋込み標準絵文字・渡された custom emoji map の解決、alias/skin tone 処理、除外名の正規化・照合 | なし |
 | [internal/datetime](../../internal/datetime/parse.go) | CLI の日時書式と timezone に基づく parse | なし |
