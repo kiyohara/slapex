@@ -53,7 +53,7 @@ slapex の `progress.md` を整理して、横断的な作業状況ボードと�
 
 - `AGENTS.md` / `doc/README.md` / `doc/design/README.md` — 「作業状況の一覧は `progress.md`」という配置ルール。
 - `doc/guidelines/issue-driven-task-execution.md` — タスク表を依存確認・状態更新の索引に使う。
-- `doc/guidelines/decision-log-guidelines.md` — 小さな TODO / 作業メモの寄せ先。
+- `doc/guidelines/decision-log-guidelines.md` — 横断的な状態・依存と Issue / PR 参照の配置先。
 - `.agents/skills/release/SKILL.md` — リリースごとに `progress.md` を更新する。
 - `.claude/rules/decision-log-guidelines.md` の `paths:` frontmatter / `.github/copilot-instructions.md` — `progress.md` を対象に含む。
 
