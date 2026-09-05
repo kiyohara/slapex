@@ -2,7 +2,7 @@
 
 - ブランチ: `refactor-assessment`
 - Issue: [#188](https://github.com/kiyohara/slapex/issues/188)
-- PR: 未作成
+- PR: [#197](https://github.com/kiyohara/slapex/pull/197)
 - 最終更新: 2026-09-05
 
 ## 目的
