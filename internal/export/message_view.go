@@ -42,18 +42,18 @@ var normalSubtypes = map[string]bool{
 	"me_message":       true,
 }
 
-type builder struct {
-	users      map[string]*slack.User
-	avatars    map[string]string
-	bots       map[string]*slack.Bot
-	botAvatars map[string]string
-	emoji      *emoji.Resolver
-	assets     *output.Assets
-	limit      int64
+type messageViewBuilder struct {
+	users              map[string]*slack.User
+	avatars            map[string]string
+	bots               map[string]*slack.Bot
+	botAvatars         map[string]string
+	emoji              *emoji.Resolver
+	assets             *output.Assets
+	maxAttachmentBytes int64
 }
 
 // UserName implements render.TextResolver.
-func (b *builder) UserName(id string) string {
+func (b *messageViewBuilder) UserName(id string) string {
 	if u, ok := b.users[id]; ok {
 		return u.DisplayName()
 	}
@@ -61,7 +61,7 @@ func (b *builder) UserName(id string) string {
 }
 
 // EmojiHTML implements render.TextResolver.
-func (b *builder) EmojiHTML(name string) string {
+func (b *messageViewBuilder) EmojiHTML(name string) string {
 	literal := html.EscapeString(":" + name + ":")
 	r := b.emoji.Resolve(name)
 	switch {
@@ -77,7 +77,7 @@ func (b *builder) EmojiHTML(name string) string {
 	}
 }
 
-func (b *builder) messageView(m *slack.Message) *render.MessageView {
+func (b *messageViewBuilder) messageView(m *slack.Message) *render.MessageView {
 	t := tsTime(m.TS)
 	v := &render.MessageView{
 		TimeLabel: t.Format("2006-01-02 15:04"),
@@ -120,7 +120,7 @@ func (b *builder) messageView(m *slack.Message) *render.MessageView {
 	return v
 }
 
-func (b *builder) systemBody(m *slack.Message) template.HTML {
+func (b *messageViewBuilder) systemBody(m *slack.Message) template.HTML {
 	body := render.Mrkdwn(m.Text, b)
 	if suffix, ok := b.channelJoinInviterSuffix(m); ok {
 		body += suffix
@@ -133,7 +133,7 @@ func (b *builder) systemBody(m *slack.Message) template.HTML {
 	return render.Safe(prefix) + body
 }
 
-func (b *builder) channelJoinInviterSuffix(m *slack.Message) (template.HTML, bool) {
+func (b *messageViewBuilder) channelJoinInviterSuffix(m *slack.Message) (template.HTML, bool) {
 	if m.Subtype != "channel_join" || m.Inviter == "" || m.Inviter == m.User || systemTextMentionsUser(m.Text, m.Inviter) {
 		return "", false
 	}
@@ -148,7 +148,7 @@ func (b *builder) channelJoinInviterSuffix(m *slack.Message) (template.HTML, boo
 // authorName resolves the displayed poster name. For a bot message the inline
 // bot_profile / username overrides come first, then the bots.info name, and only
 // then the raw bot_id (decision log 0054).
-func (b *builder) authorName(m *slack.Message) string {
+func (b *messageViewBuilder) authorName(m *slack.Message) string {
 	if m.User != "" {
 		return b.UserName(m.User)
 	}
@@ -172,7 +172,7 @@ func (b *builder) authorName(m *slack.Message) string {
 // empty result leaves the initial fallback in place (decision log 0035 / 0054).
 // Both bot icons are saved on demand; output.Assets deduplicates by source URL,
 // so repeated posts from the same app download once.
-func (b *builder) authorAvatar(m *slack.Message) string {
+func (b *messageViewBuilder) authorAvatar(m *slack.Message) string {
 	if m.User != "" {
 		return b.avatars[m.User]
 	}
@@ -196,7 +196,7 @@ func isBotMessage(m *slack.Message, u *slack.User) bool {
 	return u != nil && u.IsBot
 }
 
-func (b *builder) userDisplayName(id string) (string, bool) {
+func (b *messageViewBuilder) userDisplayName(id string) (string, bool) {
 	if id == "" {
 		return "", false
 	}
@@ -224,7 +224,7 @@ func systemTextMentionsUser(text, userID string) bool {
 	return userID != "" && (strings.Contains(text, "<@"+userID+">") || strings.Contains(text, "<@"+userID+"|"))
 }
 
-func (b *builder) addFiles(v *render.MessageView, m *slack.Message) {
+func (b *messageViewBuilder) addFiles(v *render.MessageView, m *slack.Message) {
 	for i := range m.Files {
 		f := &m.Files[i]
 		switch {
@@ -238,7 +238,7 @@ func (b *builder) addFiles(v *render.MessageView, m *slack.Message) {
 	}
 }
 
-func (b *builder) addImage(v *render.MessageView, f *slack.File) {
+func (b *messageViewBuilder) addImage(v *render.MessageView, f *slack.File) {
 	meta := output.AssetMeta{FileID: f.ID, OriginalName: f.Name, Mimetype: f.Mimetype, SizeBytes: f.Size}
 	thumbURL := f.ThumbURL()
 	if thumbURL == "" && f.IsExternal {
@@ -250,10 +250,10 @@ func (b *builder) addImage(v *render.MessageView, f *slack.File) {
 		img.ThumbPath, _ = b.assets.Save(output.KindUploadThumb, thumbURL, meta)
 	}
 	switch {
-	case b.limit > 0 && f.Size > b.limit:
+	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindUploadOriginal, f.DownloadURL(), meta)
 		img.Note = fmt.Sprintf("original はサイズ上限超過のため保存されませんでした。(%s: %s, 上限 %s)",
-			f.Name, humanBytes(f.Size), humanBytes(b.limit))
+			f.Name, humanBytes(f.Size), humanBytes(b.maxAttachmentBytes))
 	case f.DownloadURL() != "":
 		if rel, ok := b.assets.Save(output.KindUploadOriginal, f.DownloadURL(), meta); ok {
 			img.OriginalPath = rel
@@ -271,7 +271,7 @@ func (b *builder) addImage(v *render.MessageView, f *slack.File) {
 	v.Images = append(v.Images, img)
 }
 
-func (b *builder) addAttachmentFile(v *render.MessageView, f *slack.File) {
+func (b *messageViewBuilder) addAttachmentFile(v *render.MessageView, f *slack.File) {
 	meta := output.AssetMeta{FileID: f.ID, OriginalName: f.Name, Mimetype: f.Mimetype, SizeBytes: f.Size}
 	name := f.Name
 	if name == "" {
@@ -280,12 +280,12 @@ func (b *builder) addAttachmentFile(v *render.MessageView, f *slack.File) {
 	switch {
 	case f.IsExternal || f.DownloadURL() == "":
 		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "(外部サービス連携のファイルのため保存対象外)"})
-	case b.limit > 0 && f.Size > b.limit:
+	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindAttachment, f.DownloadURL(), meta)
 		// 置換表示にはファイル名 / file ID / 元サイズ / 上限を含める
 		// (output-format.md「添付ファイルのサイズ制限」)。file ID は取得できる
 		// 場合のみ添える。
-		detail := fmt.Sprintf("%s, 上限 %s", humanBytes(f.Size), humanBytes(b.limit))
+		detail := fmt.Sprintf("%s, 上限 %s", humanBytes(f.Size), humanBytes(b.maxAttachmentBytes))
 		if f.ID != "" {
 			detail = fmt.Sprintf("file ID: %s, %s", f.ID, detail)
 		}
@@ -302,7 +302,7 @@ func (b *builder) addAttachmentFile(v *render.MessageView, f *slack.File) {
 	}
 }
 
-func (b *builder) addUnfurls(v *render.MessageView, m *slack.Message) {
+func (b *messageViewBuilder) addUnfurls(v *render.MessageView, m *slack.Message) {
 	for i := range m.Attachments {
 		a := &m.Attachments[i]
 		uv := render.UnfurlView{Service: a.ServiceName, Title: a.Title}

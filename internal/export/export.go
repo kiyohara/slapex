@@ -138,7 +138,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		historyLatest = oldestMessageTS(batch)
 		messages = append(messages, batch...)
 
-		threadIDs := newThreadIDs(batch, threadFetches, filter.Enabled())
+		threadIDs := unfetchedThreadIDs(batch, threadFetches, filter.Enabled())
 		threadTotal := len(threadFetches) + len(threadIDs)
 		for _, threadTS := range threadIDs {
 			threadFetchIndex++
@@ -301,14 +301,14 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		}
 	}
 
-	b := &builder{
-		users:      users,
-		avatars:    avatars,
-		bots:       bots,
-		botAvatars: botAvatars,
-		emoji:      emojiResolver,
-		assets:     assets,
-		limit:      opts.MaxAttachBytes,
+	viewBuilder := &messageViewBuilder{
+		users:              users,
+		avatars:            avatars,
+		bots:               bots,
+		botAvatars:         botAvatars,
+		emoji:              emojiResolver,
+		assets:             assets,
+		maxAttachmentBytes: opts.MaxAttachBytes,
 	}
 	var items []render.TimelineItem
 	lastDate := ""
@@ -320,11 +320,11 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			items = append(items, render.TimelineItem{IsDateDivider: true, Date: date})
 			lastDate = date
 		}
-		view := b.messageView(&m)
+		view := viewBuilder.messageView(&m)
 		if rs, ok := replies[m.TS]; ok {
 			threadCount++
 			for i := range rs {
-				view.Replies = append(view.Replies, b.messageView(&rs[i]))
+				view.Replies = append(view.Replies, viewBuilder.messageView(&rs[i]))
 			}
 			view.ThreadParticipants, view.ThreadExtraParticipants = threadParticipants(view.Replies)
 			replyCount += len(rs)

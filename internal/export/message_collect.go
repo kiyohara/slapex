@@ -10,7 +10,7 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-func newThreadIDs(messages []slack.Message, fetched map[string]bool, inspectBroadcasts bool) []string {
+func unfetchedThreadIDs(messages []slack.Message, fetched map[string]bool, inspectBroadcasts bool) []string {
 	seen := map[string]bool{}
 	var ids []string
 	for i := range messages {

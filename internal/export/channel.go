@@ -76,9 +76,9 @@ func chooseChannel(channels []slack.Channel, opts Options, wsLine string, p *ui.
 }
 
 func selectChannel(candidates []slack.Channel, tty *os.File) (slack.Channel, error) {
-	opts := make([]huh.Option[int], len(candidates))
+	choices := make([]huh.Option[int], len(candidates))
 	for i, ch := range candidates {
-		opts[i] = huh.NewOption(channelLine(ch), i)
+		choices[i] = huh.NewOption(channelLine(ch), i)
 	}
 	idx := 0
 	// Drive the form entirely over the controlling terminal so selection works
@@ -86,7 +86,7 @@ func selectChannel(candidates []slack.Channel, tty *os.File) (slack.Channel, err
 	form := huh.NewForm(huh.NewGroup(
 		huh.NewSelect[int]().
 			Title("Select a channel").
-			Options(opts...).
+			Options(choices...).
 			Value(&idx),
 	)).WithInput(tty).WithOutput(tty)
 	if err := form.Run(); err != nil {

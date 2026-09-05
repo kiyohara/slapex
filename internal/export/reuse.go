@@ -176,7 +176,7 @@ func (rc *reusableCache) reuseSource() *output.ReuseSource {
 	return &output.ReuseSource{OldDir: rc.oldDir, Entries: rc.savedAssets}
 }
 
-// toUser reconstructs the minimal slack.User the builder needs (resolved display
+// toUser reconstructs the minimal slack.User the messageViewBuilder needs (resolved display
 // name and avatar URL) from a cached entry, so a cached user needs no users.info
 // call this run.
 func (c cachedUser) toUser(id string) *slack.User {
@@ -187,7 +187,7 @@ func (c cachedUser) toUser(id string) *slack.User {
 	return u
 }
 
-// toBot reconstructs the minimal slack.Bot the builder needs (app name and icon
+// toBot reconstructs the minimal slack.Bot the messageViewBuilder needs (app name and icon
 // URL) from a cached entry, so a cached bot needs no bots.info call this run.
 func (c cachedBot) toBot(id string) *slack.Bot {
 	b := &slack.Bot{ID: id, Name: c.Name}
