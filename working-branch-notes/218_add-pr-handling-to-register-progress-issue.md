@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `add-pr-handling-to-register-progress-issue`
-- PR: 未作成
+- PR: #218
 - 最終更新: 2026-09-06
 
 ## 目的
@@ -14,7 +14,7 @@ skill は step 5(`progress.md` の編集)までしか定めておらず、`main`
 
 ## 現在の状況
 
-skill 本体と `doc/guidelines/development-loop.md` の編集を終え、Issue #217 の検証 5 項目をすべて実施した。PR 未作成。
+skill 本体と `doc/guidelines/development-loop.md` の編集を終え、Issue #217 の検証 5 項目をすべて実施した。PR #218 作成済み。
 
 ## 決定事項
 
@@ -26,7 +26,6 @@ skill 本体と `doc/guidelines/development-loop.md` の編集を終え、Issue 
 
 ## 次にやること
 
-- PR を作成し、note を採番する。
 - ユーザーの review と merge 判断を待つ。
 
 ## 検証
@@ -55,3 +54,4 @@ Issue #217 の検証 5 項目をすべて実施した。
 
 - 2026-09-06: Issue #217 に着手。bizdate の Issue / PR を確認し、slapex との差分(参照する正本の既存分、起点 Issue を持たない運用作業が 3 種ある点)を洗い出した。main から分岐し、本 note を作成した。
 - 2026-09-06: skill に step 6(PR 化)を挿入し、既存 6・7 を繰り下げ。「参照する正本」に 2 本、「やらないこと」に 2 項目、「終了報告」に PR URL を追加した。`development-loop.md` の基本方針・標準フロー・資材表・参照順の 4 箇所へ、起点 Issue を作らない運用作業の扱いを反映した。検証 5 項目を実施し、すべて通過した。
+- 2026-09-06: PR #218 を作成し、note を採番した。
