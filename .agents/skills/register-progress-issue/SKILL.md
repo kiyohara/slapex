@@ -47,7 +47,7 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
    - ブロッカー: 外部待ち、設計判断待ち、未 merge PR など。
    - 並行可否: 同時に進めても競合しにくいか、同じファイルや同じ方針に触れるため直列がよいか。
 5. `progress.md` を最小限に編集する。
-   - 編集を始める前に、step 6 の専用ブランチと working branch note を作る。`doc/guidelines/issue-driven-task-execution.md` はブランチ作成 → note 作成 → 作業の順であり、note は作業中の判断を残す前提の資材である。
+   - 編集を始める前に、専用ブランチを切り、`doc/guidelines/working-branch-notes-handling.md` に従って working branch note を作る(commit / PR の扱いは step 6)。note は作業中の判断を残す前提の資材である。
    - 行には ID、Issue、状態、依存、次にやること、PR 参照など、既存表の列に合わせた情報だけを書く。
    - Issue 本文の詳細、検討経緯、長い背景説明、作業ログを複製しない。
    - 状態は `todo` / `doing` / `blocked` / `done` など既存表に合わせる。

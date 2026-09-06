@@ -6,7 +6,7 @@
 
 ## 基本方針
 
-- 作業は必ず GitHub Issue から始める。例外は、個別 Issue の実装に対応しない運用作業に限る。`progress.md` の索引登録(`register-progress-issue`)、進捗整理(`maintain-progress`)、リリース(`release`)がこれにあたり、いずれも起点 Issue を作らず、PR に `Closes` を付けない。索引登録でいえば「Issue を索引に登録するための Issue」は指示書として意味を持たないためである。例外はこの 3 種に限り、実装作業へ広げない。
+- 作業は必ず GitHub Issue から始める。例外は、個別 Issue の実装に対応しない運用作業に限る。`progress.md` の索引登録(`register-progress-issue`)、進捗整理(`maintain-progress`)、リリース(`release`。リリース準備 PR と、その後の検証記録 PR の両方を含む)がこれにあたり、いずれも起点 Issue を作らず、PR に `Closes` を付けない。索引登録でいえば「Issue を索引に登録するための Issue」は指示書として意味を持たないためである。例外はこの 3 種に限り、実装作業へ広げない。
 - 複数 Issue をまとめて 1 ブランチで進めない。実行時は `doc/guidelines/issue-driven-task-execution.md` に従い、1 Issue = 1 ブランチ = 1 PR とする。
 - 横断的に見渡したい Issue 群は、任意だが推奨の準備として `progress.md` の進行中タスク索引に登録する。
 - PR の merge は agent が行わない。レビューと merge 判断はユーザーが行う。
