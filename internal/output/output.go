@@ -110,7 +110,7 @@ type Assets struct {
 	known   map[string]string
 	entries []ManifestEntry
 	reuse   *ReuseSource // previous run's assets to copy instead of downloading
-	reused  int          // assets copied from the reuse source
+	reused  int          // assets taken from the reuse source instead of downloaded
 	Logf    func(format string, args ...any)
 }
 
@@ -138,8 +138,10 @@ func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Ass
 // SetReuseSource enables copy-from-previous-run behaviour in Save (--reuse-cache).
 func (a *Assets) SetReuseSource(r *ReuseSource) { a.reuse = r }
 
-// Reused returns how many assets were copied from the reuse source instead of
-// being downloaded.
+// Reused returns how many assets came from the reuse source instead of being
+// downloaded. An asset that already sits at its destination — the reuse source
+// is this run's own output directory — counts too, even though copyFromReuse
+// copied nothing.
 func (a *Assets) Reused() int { return a.reused }
 
 // limitFor returns the per-file byte limit that applies to kind (0 = unlimited).
@@ -276,11 +278,19 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 		return "", false
 	}
 	dst := filepath.Join(a.dir, filepath.FromSlash(entry.LocalPath))
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return "", false
-	}
-	if err := copyFile(src, dst); err != nil {
-		return "", false
+	// --reuse-cache may point at the directory this run is writing to: re-running
+	// with the same --output and channel resolves OldDir and a.dir to one
+	// directory, so src and dst are the same file. Copying it onto itself would
+	// truncate it to 0 bytes and destroy both runs' asset, so leave the file
+	// alone and count it as reused — its bytes are already what a copy would
+	// have produced (Issue #202).
+	if !sameFile(info, dst) {
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return "", false
+		}
+		if err := copyFile(src, dst); err != nil {
+			return "", false
+		}
 	}
 	if meta.SizeBytes == 0 {
 		meta.SizeBytes = entry.SizeBytes
@@ -296,12 +306,31 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	return entry.LocalPath, true
 }
 
+// sameFile reports whether dst is the same existing file as the one srcInfo
+// describes, following the identity os.SameFile defines (hard links and
+// different spellings of one path included) rather than comparing path strings.
+func sameFile(srcInfo os.FileInfo, dst string) bool {
+	dstInfo, err := os.Stat(dst)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(srcInfo, dstInfo)
+}
+
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
+	// Never copy a file onto itself: os.Create would truncate the source that is
+	// open for reading and io.Copy would then write nothing, leaving 0 bytes. The
+	// destination already holds the intended content, so this is a no-op success.
+	// The check uses the open handle's own metadata, so a path that starts
+	// resolving elsewhere between the open and the check cannot slip past it.
+	if srcInfo, err := in.Stat(); err == nil && sameFile(srcInfo, dst) {
+		return nil
+	}
 	out, err := os.Create(dst)
 	if err != nil {
 		return err

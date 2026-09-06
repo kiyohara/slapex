@@ -96,6 +96,103 @@ func TestRunIntegrationReuseCacheAcceptsOutputDir(t *testing.T) {
 	assertAssetsIdentical(t, r.dir1, r.dir2)
 }
 
+// TestRunIntegrationReuseCacheIntoSameOutputDir re-runs into the very directory
+// the reused cache came from: the same --output and the same channel resolve to
+// one channel directory, so every reused asset's copy source and destination are
+// the same file. Copying such a file onto itself used to truncate it to 0 bytes,
+// silently destroying both runs' assets while the manifest still claimed they
+// were saved at their previous size (Issue #202).
+func TestRunIntegrationReuseCacheIntoSameOutputDir(t *testing.T) {
+	t.Parallel()
+
+	opts1 := reuseOptions(t, true)
+	opts2 := reuseOptions(t, true) // keep run 2's cache so its manifest can be read
+	opts2.OutputDir = opts1.OutputDir
+
+	// The tamper hook runs between the two runs; here it only records run 1's
+	// asset bytes and manifest, which run 2 must reproduce exactly.
+	var before map[string][]byte
+	var manifest1 []manifestEntryFull
+	r := runReuseScenarioOptsWithReusePath(t, happyPathScenario(), opts1, opts2,
+		func(t *testing.T, cacheDir string) {
+			before = collectAssetFiles(t, filepath.Dir(cacheDir))
+			manifest1 = readManifestEntries(t, filepath.Dir(cacheDir))
+		},
+		func(channelDir, _ string) string { return channelDir },
+	)
+
+	// Both runs really did write to one directory (otherwise the self-copy this
+	// test covers never happens and the assertions below prove nothing).
+	if r.dir1 != r.dir2 {
+		t.Fatalf("run 2 output dir = %s, want the same as run 1 (%s)", r.dir2, r.dir1)
+	}
+	if !logsContain(r.logs2, "Reusing cache from") {
+		t.Fatalf("run 2 did not report cache reuse:\n%s", strings.Join(r.logs2, "\n"))
+	}
+	for _, p := range r.assets {
+		if d := delta(r.before, r.after, p); d != 0 {
+			t.Fatalf("asset %s download delta = %d, want 0 (reused in place, not re-downloaded)", p, d)
+		}
+	}
+
+	// Every asset still holds run 1's bytes: none was emptied or rewritten.
+	after := collectAssetFiles(t, r.dir2)
+	if len(before) == 0 {
+		t.Fatalf("no asset files collected from run 1 (%s)", r.dir1)
+	}
+	if len(after) != len(before) {
+		t.Fatalf("asset file count changed: before=%d after=%d", len(before), len(after))
+	}
+	for rel, want := range before {
+		got, ok := after[rel]
+		if !ok {
+			t.Fatalf("asset %s disappeared after the re-run", rel)
+		}
+		if len(got) == 0 {
+			t.Fatalf("asset %s is empty after the re-run (self-copy truncated it)", rel)
+		}
+		if !bytes.Equal(got, want) {
+			t.Fatalf("asset %s changed (before=%d bytes, after=%d bytes)", rel, len(want), len(got))
+		}
+	}
+
+	// The manifest still describes those files: run 2 records every asset exactly
+	// as run 1 did, so nothing claims a size or a path the directory no longer
+	// backs. (size_bytes is not compared against the file size directly: Slack's
+	// declared file.size wins over the downloaded byte count when present, which
+	// the fixture's F-IMG upload deliberately disagrees with.)
+	saved := 0
+	byURL := map[string]manifestEntryFull{}
+	for _, e := range readManifestEntries(t, r.dir2) {
+		byURL[e.SourceURL] = e
+	}
+	for _, want := range manifest1 {
+		got, ok := byURL[want.SourceURL]
+		if !ok {
+			t.Fatalf("run 2 manifest is missing %s", want.SourceURL)
+		}
+		if got != want {
+			t.Fatalf("manifest entry for %s changed:\nrun 1: %+v\nrun 2: %+v", want.SourceURL, want, got)
+		}
+		if want.Status != "saved" || want.LocalPath == "" {
+			continue
+		}
+		saved++
+		if _, err := os.Stat(filepath.Join(r.dir2, filepath.FromSlash(want.LocalPath))); err != nil {
+			t.Fatalf("saved asset %s missing: %v", want.LocalPath, err)
+		}
+	}
+	if saved == 0 {
+		t.Fatalf("no saved asset entries in run 1's manifest")
+	}
+
+	// The rendered output still references the surviving assets and the reused
+	// user / emoji data.
+	body := readIndexHTML(t, r.dir2)
+	mustContain(t, body, "Bob")
+	mustContain(t, body, `assets/emoji/`)
+}
+
 // --- cases 2-5: invalid / unusable cache falls back to a normal fetch --------
 
 // Each case makes the kept cache fail one of the validation conditions (or makes
