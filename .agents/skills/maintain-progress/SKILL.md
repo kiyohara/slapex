@@ -24,6 +24,8 @@ slapex の `progress.md` を整理して、横断的な作業状況ボードと�
 
 ## 整理の観点
 
+編集を始める前に、専用ブランチを切り、`doc/guidelines/working-branch-notes-handling.md` に従って working branch note を作る。note は作業中の判断を残す前提の資材である。
+
 各観点を順に確認し、必要な箇所だけ最小限に編集する。判断に迷う箇所は止めてユーザーに確認する。
 
 ### 1. 現況
@@ -65,12 +67,26 @@ slapex の `progress.md` を整理して、横断的な作業状況ボードと�
 - ブランチ単位の作業目的・引き継ぎは書かない。それは `working-branch-notes/`。
 - `working-branch-notes/**` と既存 decision log は履歴記録なので、本 skill では遡って書き換えない。
 
+## 整理後の commit / PR
+
+整理した `progress.md` は、次の扱いで PR にする。
+
+- `progress.md` に変更が生じなかった場合は、commit と PR を作らず、その旨を伝えて終了する。観点別チェックの結果、整理する箇所が無いという結末があり得るためである。
+- `main` へ直接 push しない。**専用ブランチを切り、独立した PR** として出す。他の作業 PR へ同梱しない。
+- **進捗整理そのものには起点 Issue を作らない。PR に `Closes` を付けない。** 進捗整理は個別 Issue の実装と分けて扱う運用作業だからである(`doc/guidelines/development-loop.md` の基本方針。先例: PR #167 / PR #178 の note)。
+- `doc/guidelines/working-branch-notes-handling.md` に従い working branch note を作り、`doc/guidelines/working-branch-notes-security.md` の情報統制チェックを通す。PR 採番後は `number-working-branch-note` skill で採番する。
+- **PR 本文に、圧縮した完了フェーズと、参照をどこへどう残したかを書く。** 圧縮で `progress.md` から行ごとの詳細が消えるため、何を畳んで何を残す判断をしたかは PR 側に残す。
+- commit / push は `doc/guidelines/git-operation-guidelines.md`、PR title / description は `doc/guidelines/pull-request-guidelines.md` に従う。
+- **PR の merge は行わない。** レビューと merge 判断はユーザーが行う。
+
 ## やらないこと
 
 - `progress.md` の廃止やファイル削除(役割変更を伴うため本 skill の範囲外。前項 5 を参照)。
 - decision log・working-branch-notes の内容を `progress.md` へ転記する/それらを書き換える。
 - リリース履歴の見出し・列構成を `release` skill と無断で食い違わせる。
 - 進行中・未着手を含む表の繰り上げ圧縮。
+- 進捗整理による `progress.md` の変更を他の作業 PR へ同梱する。
+- PR を merge する。
 
 ## 終了時の確認
 
@@ -78,3 +94,4 @@ slapex の `progress.md` を整理して、横断的な作業状況ボードと�
 - 圧縮した完了フェーズに decision log / Issue / PR への参照が残っている。
 - 参照側ドキュメント(観点 5)の前提を壊していない(役割変更をしていないこと)。
 - 変更は status board として最小限で、検討経緯や引き継ぎメモを持ち込んでいない。
+- 整理した内容が専用ブランチの独立 PR になっている(`progress.md` に変更が無かった場合は、commit と PR を作らずに終えている)。
