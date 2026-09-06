@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-09-05
-- 最終更新日: 2026-09-05
+- 最終更新日: 2026-09-06
 - 関連: [architecture](../architecture.md)、[CLI](../cli-interface.md)、[cache](../cache.md)、[HTML](../html-rendering.md)、[依存方針0033](0033-go-dependency-policy.md)、[調査Issue #188](https://github.com/kiyohara/slapex/issues/188)
 
 ## 背景
@@ -58,3 +58,12 @@ testの共通準備には整理余地があるが、検証ケースや独立し�
 #190/#191/#193では、着手時のcommitted sampleのfooterに合わせて時刻とTZを固定し、ja/enのHTML・CSS・assetsを再生成してファイル集合とbytesを比較する。現基準は `2026-07-04T16:32:41+09:00`、`TZ=Asia/Tokyo`。`go run ./tools/gensample -time 2026-07-04T16:32:41+09:00 -out /tmp/refactor-samples` をDocker Compose内で実行し、`diff -r doc/samples/ja /tmp/refactor-samples/ja` とen側の比較が無差分であることを確認する。基準commitと変更後で同じ条件を使い、基準に既存差分があれば記録して両生成結果を比較する。説明不能な差分でbaselineを上書きしない。cache JSONはsampleに含まれないため#194で別途検証する。既存sample更新skillの架空データ・参照検証を守り、無差分検証のためだけに生成物をcommitしない。
 
 検証ではZ表記だとNowのlocationがUTCとなりExportedの表示が変わった。+09:00指定ではja/enとも全ファイルが一致したため、時刻の瞬間だけでなくoffsetも固定する。
+
+### 見直し(2026-09-06)
+
+#190 の PR #201 review で、リファクタリングのスコープ外にある既存挙動の不具合・改善点が見つかり、Issue #202〜#211 として登録した。本計画の直列実行と互換性維持の原則は変えず、着手順だけを次のとおり見直す。
+
+- データ破壊(#202、`--reuse-cache` の再利用元が今回の出力先と同じときの自己コピー)は #191 より先に修正する。
+- Run の取得工程に関わる修正(#206、#207)は #191 の後に置き、#191 の結果型と thread 集合の整理を前提にする。#207 は #191 で吸収してよい。
+- 表示・cache の修正(#203、#204、#205、#208)、API 呼び出し・edge case の改善(#209、#210)、分割後の後片付け(#211)は、リファクタリング施策の間に挟む。#211 の項目は #191 / #194 で該当箇所を触る場合にそちらで吸収してよい。
+- 全体の順序と状態は progress.md を索引とする。各 Issue の確認状況(code 読解のみか、実行で再現済みか)は Issue 本文に明記し、着手時に再確認する。
