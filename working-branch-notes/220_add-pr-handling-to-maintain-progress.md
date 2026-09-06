@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `add-pr-handling-to-maintain-progress`
-- PR: PR 未作成
+- PR: #220
 - 最終更新: 2026-09-06
 
 ## 目的
@@ -12,7 +12,7 @@ PR #218 は `development-loop.md` の基本方針へ「起点 Issue を作らな
 
 ## 現在の状況
 
-skill への追記を実施し、PR 作成前。
+skill への追記を実施し、PR #220 を作成済み。review 待ち。
 
 ## 決定事項
 
@@ -26,8 +26,8 @@ skill への追記を実施し、PR 作成前。
 
 ## 次にやること
 
-- PR を作成する。
-- PR 採番後に `number-working-branch-note` skill で本 note を採番する。
+- review 指摘があれば対応する。
+- merge はユーザーが行う。
 
 ## 検証
 
@@ -49,3 +49,4 @@ Issue #219 の検証 4 項目。
 ## セッションログ
 
 - 2026-09-06: Issue #219 を開始。PR #218 の merge を確認し、`main` を最新化してブランチを作成。skill へ `## 整理後の commit / PR` を追加し、`整理の観点` の前置き・「やらないこと」・「終了時の確認」を追随させた。
+- 2026-09-06: PR #220 を作成し、`number-working-branch-note` skill で本 note を採番した。
