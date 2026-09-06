@@ -67,7 +67,7 @@
 | 0053 | decided | Cursor MCP 設定の command path | `.cursor/mcp.json` の `github-op-integrated` 起動 command を `${workspaceFolder}` から project root 基準の相対 path へ統一。cursor-agent が変数を展開せず `ENOENT` になる問題(Issue #151)を解消。0023 の Cursor path 推奨を補正 | [0053-cursor-mcp-config-path.md](0053-cursor-mcp-config-path.md) |
 | 0054 | decided | bot 投稿の投稿者名 / avatar 解決と APP 表示 | `bot_id` しか持たない `bot_message` を `bots.info` で解決し、app 名と app icon を表示する。bot 投稿には投稿者名の右に `APP` chip を出す。cache に `bots` と `users[].is_bot` を追加(`schema_version` は据え置き)。0025 が未定義にしていた場合を確定し、0035 のイニシャル fallback を `bots.info` でも取れない場合に限定 | [0054-bot-author-resolution.md](0054-bot-author-resolution.md) |
 | 0055 | decided | asset の extension を download 内容から決める | 保存 asset の extension を download 内容の判別(`http.DetectContentType`)から決め、判別できない場合だけ 0052 までの順序(表示ファイル名 → URL 拡張子 → Content-Type → `.bin`)へ fallback する。manifest の `mimetype` も同じ並びで決める。判別できた場合は extension と `mimetype` が一致し、判別不能な形式では一致を保証しない。0052 の「extension は従来どおり」部分を上書きし、内容 hash 命名と kind ディレクトリは 0052 のまま維持 | [0055-asset-extension-from-content.md](0055-asset-extension-from-content.md) |
-| 0056 | decided | 互換性を維持した段階的リファクタリング | 重複削減と責務整理を分けて評価し、test整理・機械分割・工程抽出の順に直列実行する。実施条件は #189〜#196、状態索引は progress.md | [0056-incremental-refactoring-plan.md](0056-incremental-refactoring-plan.md) |
+| 0056 | decided | 互換性を維持した段階的リファクタリング | 重複削減と責務整理を分けて評価し、test整理・機械分割・工程抽出の順に直列実行する。実施条件は #189〜#196、状態索引は progress.md。#190 review で見つかった既存挙動の修正 Issue #202〜#211 は 2026-09-06 追記の順で挟む | [0056-incremental-refactoring-plan.md](0056-incremental-refactoring-plan.md) |
 
 ## 未決事項
 

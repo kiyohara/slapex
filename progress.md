@@ -20,6 +20,8 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 
 リファクタリングの調査・評価(#188)で採用した8施策を追跡する。実施方針は [decision log 0056](doc/design/decision-log/0056-incremental-refactoring-plan.md)、詳細な作業条件は各Issueを参照する。
 
+PR #201(RF-02)の review で見つかった既存挙動の修正・改善 Issue #202〜#211 も追跡する。優先順位と、リファクタリング施策と合わせた全体の着手順は「進行中タスク: review で見つかった既存挙動の修正」を参照する。
+
 ## 進行中タスク: 段階的リファクタリング
 
 調査PRのmerge後、表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。RF-03/RF-06は同じexportを触るため推奨順で直列実行するが、RF-06はRF-03なしでも着手可能。他の施策は技術的に分離可能だが、運用上は並行実行しない。全施策の現在の着手条件は調査PRのmergeである。
@@ -35,6 +37,27 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 | RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188 | 同型位置引数を集約 | - |
 | RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | streamingとの差を保って共通化 | - |
 | RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
+
+## 進行中タスク: review で見つかった既存挙動の修正
+
+PR #201(RF-02)の review 補助分析で見つかった、リファクタリングのスコープ外にある既存挙動を Issue #202〜#211 として登録した。表の順を優先順とし、データ破壊 → 利用者に見える表示の誤り → 件数・cache の整合 → API 呼び出しの無駄と edge case → 後片付け、の順に並べる。各 Issue の確認状況(code 読解のみか、実行で再現済みか)と作業条件は Issue 本文を正本とする。
+
+段階的リファクタリングと合わせた全体の着手順は次のとおり。FU-01 はデータ破壊のため RF-03 より先に実施し、Run の取得工程に関わる FU-05 / FU-06 は RF-03(#191)の後に置く。それ以外は技術的に独立だが、運用上は並行実行しない。順序見直しの経緯は decision log 0056 の 2026-09-06 追記を参照する。
+
+FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → FU-07 → RF-04 → RF-05 → FU-08 → FU-09 → FU-10
+
+| ID | Issue | 状態 | 依存 | 次にやること | PR |
+|---|---|---|---|---|---|
+| FU-01 | [#202](https://github.com/kiyohara/slapex/issues/202) reuse-cache 自己コピーで asset が 0 byte | todo | - | RF-03 より先に修正。patch release 候補 | - |
+| FU-02 | [#203](https://github.com/kiyohara/slapex/issues/203) download 時の size 超過が HTML で取得失敗表示 | todo | - | RF-03 の後。Save の失敗理由を view へ渡す | - |
+| FU-03 | [#204](https://github.com/kiyohara/slapex/issues/204) URL 無し upload が外部連携表示 | todo | - | FU-02 の後(同じ関数)。hidden_by_limit の payload を確認 | - |
+| FU-04 | [#205](https://github.com/kiyohara/slapex/issues/205) unfurl text の mention 未解決 | todo | - | RF-03 の後。収集対象に attachment text を追加 | - |
+| FU-05 | [#206](https://github.com/kiyohara/slapex/issues/206) filter 時の broadcast thread 件数不整合 | todo | #191 | RF-03 後に characterization test から着手 | - |
+| FU-06 | [#207](https://github.com/kiyohara/slapex/issues/207) Done 経過時間が Now 起点 | todo | - | RF-03 で吸収可。残れば単独修正 | - |
+| FU-07 | [#208](https://github.com/kiyohara/slapex/issues/208) upload_thumb manifest の mimetype / size | todo | - | RF-06 の後(cache 検証を共有) | - |
+| FU-08 | [#209](https://github.com/kiyohara/slapex/issues/209) label 付き mention の users.info | todo | - | FU-04 の後(同じ関数) | - |
+| FU-09 | [#210](https://github.com/kiyohara/slapex/issues/210) 取得境界の秒未満切り捨て | todo | - | 精度統一か入力拒否かを決めて実装 | - |
+| FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 / RF-06 で吸収可。残った項目だけ実施 | - |
 
 ## リリース履歴
 
