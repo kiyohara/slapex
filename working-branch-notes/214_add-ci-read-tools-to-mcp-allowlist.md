@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `add-ci-read-tools-to-mcp-allowlist`
-- PR: (採番前)
+- PR: #214
 - 最終更新: 2026-09-06
 
 ## 目的
@@ -12,7 +12,7 @@ Issue #213。`github-op-integrated` の tool allowlist に CI の read 3 tool(`a
 
 ## 現在の状況
 
-5 ファイルの編集と Issue 記載の検証が完了。PR 作成待ち。
+5 ファイルの編集と Issue 記載の検証が完了。PR #214 作成済み。
 
 - `.config/github-op-integrated.conf.example` — `GITHUB_TOOLS` に read 3 tool を追加(13 → 16)。除外理由を英語コメントで追記。
 - `doc/guidelines/github-mcp-guidelines.md` — 適用範囲に CI read を追加、対象外の `workflow dispatch` を具体化、第一選択表に CI read 3 行を追加、「CI 操作の境界」と「PAT に付与する権限」を新設、allowlist 運用の記述を現状へ更新。
@@ -32,8 +32,7 @@ Issue #213。`github-op-integrated` の tool allowlist に CI の read 3 tool(`a
 
 ## 次にやること
 
-1. PR 作成と note の rename。
-2. ユーザーによる review / merge。
+1. ユーザーによる review / merge。
 
 ## 検証
 
