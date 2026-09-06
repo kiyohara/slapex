@@ -48,7 +48,7 @@ FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → 
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| FU-01 | [#202](https://github.com/kiyohara/slapex/issues/202) reuse-cache 自己コピーで asset が 0 byte | done(PR merge後) | - | merge後にRF-03へ。patch release 候補 | - |
+| FU-01 | [#202](https://github.com/kiyohara/slapex/issues/202) reuse-cache 自己コピーで asset が 0 byte | done(PR merge後) | - | merge後にRF-03へ。patch release 候補 | [#221](https://github.com/kiyohara/slapex/pull/221) |
 | FU-02 | [#203](https://github.com/kiyohara/slapex/issues/203) download 時の size 超過が HTML で取得失敗表示 | todo | - | RF-03 の後。Save の失敗理由を view へ渡す | - |
 | FU-03 | [#204](https://github.com/kiyohara/slapex/issues/204) URL 無し upload が外部連携表示 | todo | - | FU-02 の後(同じ関数)。hidden_by_limit の payload を確認 | - |
 | FU-04 | [#205](https://github.com/kiyohara/slapex/issues/205) unfurl text の mention 未解決 | todo | - | RF-03 の後。収集対象に attachment text を追加 | - |

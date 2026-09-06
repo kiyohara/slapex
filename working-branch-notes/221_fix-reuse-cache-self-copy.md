@@ -12,7 +12,7 @@ Issue #202 (FU-01) の修正。`--reuse-cache` の再利用元が今回の出力
 
 ## 現在の状況
 
-実装と検証は完了。PR 作成待ち。
+実装と検証は完了。PR #221 を作成し、note の採番と `progress.md` の更新まで済ませた。review 待ち。
 
 ## 決定事項
 
@@ -25,8 +25,7 @@ Issue #202 (FU-01) の修正。`--reuse-cache` の再利用元が今回の出力
 
 ## 次にやること
 
-- PR を作成し、note を `<PR番号>_fix-reuse-cache-self-copy.md` へ rename する。
-- `progress.md` の FU-01 行の PR 欄を採番後の番号へ更新する。
+- PR #221 の review 指摘に対応する。
 
 ## 検証
 
@@ -66,3 +65,4 @@ manifest の検証は「`size_bytes` == 実ファイル size」ではなく「1 
 
 - 2026-09-07: Issue #202 を読み、`internal/output/output.go` と `internal/export/reuse.go` の現行実装を確認。ブランチ作成と note 作成。
 - 2026-09-07: `copyFromReuse` と `copyFile` に同一ファイル guard を実装。`doc/design/cache.md` の `--reuse-cache` 節に挙動を 1 段落追記。unit test 2 件と結合 test 1 件を追加。修正前に 3 件とも失敗することを確認したうえで、全 test の pass を確認。
+- 2026-09-07: PR #221 を作成。note を採番し、`progress.md` の FU-01 行を done / PR #221 へ更新。
