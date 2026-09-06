@@ -26,6 +26,8 @@ MCP host 用の project 設定ファイル(`.cursor/mcp.json`、repo root の `.
 - [1Password CLI(`op`)](https://developer.1password.com/docs/cli/) がインストール・認証済みで、biometric unlock または session が有効であること。
 - 1Password に、この repository だけに権限を絞った GitHub fine-grained Personal Access Token(PAT)が保存されていること。
   - PR / Issues / レビューコメントの read & write を許可する。
+  - CI の read tool を使うため、`Actions: Read`(workflow / run / job / artifact と job log)、`Checks: Read`(check run)、`Commit statuses: Read`(commit status)を許可する。
+  - `Actions: Write` は付与しない。workflow の実行・再実行・cancel・run log 削除は allowlist から外した `actions_run_trigger` の領域であり、PAT 側でも塞いで承認なしの実行経路を作らない。
 
 ## セットアップ
 
@@ -36,7 +38,7 @@ MCP host 用の project 設定ファイル(`.cursor/mcp.json`、repo root の `.
    $EDITOR .config/github-op-integrated.conf
    ```
 
-   `op://<VAULT>/<ITEM>/<FIELD>` を、自分の 1Password 上の PAT を指す reference に置き換える。raw token は config file に書かない。`GITHUB_TOOLS` の allowlist は、レビューを経た変更でない限り初期値のまま使う。
+   `op://<VAULT>/<ITEM>/<FIELD>` を、自分の 1Password 上の PAT を指す reference に置き換える。raw token は config file に書かない。`GITHUB_TOOLS` の allowlist は、レビューを経た変更でない限り template の値のまま使う。
 
 2. wrapper が使う環境変数を確認する。token 値そのものは端末ログ・画面共有・MCP / IDE のログ収集に残るおそれがあるため、出力せず存在確認だけ行う。
 
@@ -61,14 +63,14 @@ main worktree に `.config/github-op-integrated.conf` があればコピーさ�
 
 ## tool allowlist の方針
 
-`.config/github-op-integrated.conf.example` のデフォルト `GITHUB_TOOLS` は、本プロジェクトの初期 MCP 化スコープ(利用頻度の高い collaboration write 操作と、それらを行うために必要な read)を反映している。
+`.config/github-op-integrated.conf.example` のデフォルト `GITHUB_TOOLS` は、本プロジェクトの MCP 化スコープ(利用頻度の高い collaboration write 操作と、それらを行うために必要な read、および CI の read)を反映している。
 
 次の高リスク write 操作は意図的に除外している。
 
 - `merge_pull_request`
 - ファイル内容を branch に push する系の tool
 - `create_release`
-- workflow dispatch
+- `actions_run_trigger`(workflow の実行・再実行・cancel・run log 削除)
 - repository / branch protection / secrets / org settings 変更
 
 新しい MCP 化対象を追加する場合は方針変更として扱い、`doc/guidelines/github-mcp-guidelines.md` に照らしてレビューしたうえで、`.config/github-op-integrated.conf.example` と該当 guideline 本文を同期する。

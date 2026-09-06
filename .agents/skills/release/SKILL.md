@@ -45,7 +45,9 @@ hotfix・pre-release・複数 target の同時公開など通常フローに乗�
 GitHub 操作のポリシー(MCP 優先)は常時ロードの rule にあるため再掲しない。この skill で迷いやすい運用差分だけ示す。
 
 - PR / issue の read / write は、必ず最初に `github-op-integrated` MCP tool を試す。必要な MCP tool が現在の tools に見えていない場合は、`gh` へ進む前に利用中 agent の tool discovery 機構(利用可能なら `tool_search`)で `github-op-integrated` を検索する。見つからない場合のみ `gh` へ fallback する。
-- **Release / workflow run / asset の確認系は `github-op-integrated` に該当 tool が無い**ため、`doc/guidelines/github-cli-guidelines.md` に従い `gh`(`.op/` と `op` が使える場合は `op plugin run -- gh ...`)で行う。`gh release view` / `gh run watch` / `gh run list` などが該当する。
+- **workflow run の確認は `github-op-integrated` の MCP tool を先に使う。** run / job の一覧と詳細は `actions_list` / `actions_get`、失敗 job の log は `get_job_logs`、PR 単位の CI 状態は `pull_request_read(get_check_runs / get_status)` を第一選択にする。
+- **Release / asset の確認系は `github-op-integrated` に該当 tool が無い**ため、`doc/guidelines/github-cli-guidelines.md` に従い `gh`(`.op/` と `op` が使える場合は `op plugin run -- gh ...`)で行う。`gh release view` などが該当する。release 系 tool は allowlist に追加していない。
+- `gh run watch` のように完了までブロックして待つ挙動には MCP の等価 tool が無いため、意図的に `gh` を使う(手順 8 参照)。
 - write 系を `gh` に fallback する場合は、`doc/guidelines/github-mcp-guidelines.md` の write fallback 注意に従い、再実行前に read 系で対象の現状を確認してから実行する。
 - `git commit` / `git tag -s` / `git push`(SSH remote)は MCP に寄せず `doc/guidelines/git-operation-guidelines.md` に従う。署名失敗・1Password 承認プロンプト不達・socket 通信エラーが起きた場合は、制約のない実行環境で同じコマンドを再実行する。
 
@@ -62,7 +64,7 @@ git status
 ```
 
 - 現在ブランチが `main` で、`origin/main` と同一 commit であることを確認する。乖離・未コミット変更があれば停止。
-- リリース対象 commit(通常 `main` HEAD)の CI が success であることを確認する(`gh run list --branch main --limit 5` 等。Release / workflow 系は `gh`)。
+- リリース対象 commit(通常 `main` HEAD)の CI が success であることを確認する(`actions_list(list_workflow_runs)` を第一選択にする。MCP が使えない場合だけ `gh run list --branch main --limit 5` 等へ fallback する)。
 - success でない、または対象 commit が判別できない場合は停止し、ユーザーに確認する。
 
 ### 2. バージョン決定
@@ -134,7 +136,7 @@ git push origin vX.Y.Z
 
 ### 8. GoReleaser workflow の監視
 
-- tag push をトリガに走る Release workflow の success を確認する(`gh run watch <run-id> --exit-status` 等。`gh` 系)。
+- tag push をトリガに走る Release workflow の success を確認する(`gh run watch <run-id> --exit-status` 等)。`gh run watch` は完了までブロックして待つ挙動であり、MCP に等価な tool が無い。ポーリングで代替すると挙動が変わるため、ここは意図的に `gh` を維持する。run-id の特定や完了後の状態確認には `actions_list(list_workflow_runs)` / `actions_get(get_workflow_run)` を使ってよい。
 - 失敗時は log を確認し、ユーザーに報告する。
 
 ### 9. 検証

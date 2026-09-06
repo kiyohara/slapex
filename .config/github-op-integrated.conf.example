@@ -11,8 +11,14 @@
 GITHUB_PERSONAL_ACCESS_TOKEN=op://<VAULT>/<ITEM>/<FIELD>
 
 # MCP tools enabled for github-op-integrated.
-# The default allowlist covers PR / issue / review comment collaboration.
-GITHUB_TOOLS=list_pull_requests,search_pull_requests,pull_request_read,create_pull_request,update_pull_request,issue_read,list_issues,search_issues,issue_write,add_issue_comment,add_reply_to_pull_request_comment,pull_request_review_write,add_comment_to_pending_review
+# The allowlist covers PR / issue / review comment collaboration, plus read-only
+# CI inspection (workflows, runs, jobs, artifacts, job logs).
+#
+# `actions_run_trigger` is intentionally excluded. Running, re-running and
+# cancelling workflows have side effects, and deleting run logs cannot be undone.
+# Those stay high-risk writes executed via `gh` with explicit approval
+# (see doc/guidelines/github-cli-guidelines.md).
+GITHUB_TOOLS=list_pull_requests,search_pull_requests,pull_request_read,create_pull_request,update_pull_request,issue_read,list_issues,search_issues,issue_write,add_issue_comment,add_reply_to_pull_request_comment,pull_request_review_write,add_comment_to_pending_review,actions_get,actions_list,get_job_logs
 
 # Optional: enable read-only mode. Write tools are disabled even if listed above.
 # GITHUB_READ_ONLY=1
