@@ -22,7 +22,9 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
 - `AGENTS.md` — agent 向け入口。
 - `doc/guidelines/github-mcp-guidelines.md` — GitHub 操作は MCP 優先。
 - `doc/guidelines/development-command-guidelines.md` — 開発コマンド実行方針。
-- `doc/guidelines/working-branch-notes-handling.md` / `doc/guidelines/working-branch-notes-security.md` — 作業 note を作る場合の扱い。
+- `doc/guidelines/git-operation-guidelines.md` — commit 署名と push。
+- `doc/guidelines/pull-request-guidelines.md` — PR title / description の書式。
+- `doc/guidelines/working-branch-notes-handling.md` / `doc/guidelines/working-branch-notes-security.md` — 作業 note の作成・採番と情報統制。
 - `doc/guidelines/issue-driven-task-execution.md` — 登録後に issue-driven task として実行する場合の依存確認と状態更新。
 - `progress.md` — 既存の進行中タスク索引とリリース台帳。
 
@@ -45,14 +47,23 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
    - ブロッカー: 外部待ち、設計判断待ち、未 merge PR など。
    - 並行可否: 同時に進めても競合しにくいか、同じファイルや同じ方針に触れるため直列がよいか。
 5. `progress.md` を最小限に編集する。
+   - 編集を始める前に、専用ブランチを切り、`doc/guidelines/working-branch-notes-handling.md` に従って working branch note を作る(commit / PR の扱いは step 6)。note は作業中の判断を残す前提の資材である。
    - 行には ID、Issue、状態、依存、次にやること、PR 参照など、既存表の列に合わせた情報だけを書く。
    - Issue 本文の詳細、検討経緯、長い背景説明、作業ログを複製しない。
    - 状態は `todo` / `doing` / `blocked` / `done` など既存表に合わせる。
    - PR が無い場合は `-`、関連 PR がある場合は `#<番号>` とする。
-6. 必要なら Issue へ確認コメントを残す。
+6. 変更を PR として出す。
+   - `progress.md` に変更が生じなかった場合は、commit と PR を作らず、その旨を伝えて終了する。step 2 / step 3 の確認により 1 件も登録しない結末があり得るためである。
+   - `main` へ直接 push しない。**専用ブランチを切り、独立した PR** として出す。他の作業 PR へ同梱しない。
+   - **索引登録そのものには起点 Issue を作らない。PR に `Closes` を付けない。**「Issue を索引に登録するための Issue」は指示書として意味を持たないためである。
+   - `doc/guidelines/working-branch-notes-handling.md` に従い working branch note を作る。PR 採番後は `number-working-branch-note` skill で採番する。
+   - **PR 本文に、登録した Issue の一覧と、順序・依存・ブロッカーの根拠を書く。** 索引の行は最小情報に絞る方針のため、判断の根拠は PR 側に残す。
+   - commit / push は `doc/guidelines/git-operation-guidelines.md`、PR title / description は `doc/guidelines/pull-request-guidelines.md` に従う。
+   - **PR の merge は行わない。** レビューと merge 判断はユーザーが行う。
+7. 必要なら Issue へ確認コメントを残す。
    - 依存やスコープが曖昧で登録判断ができない場合は、勝手に解釈せずユーザーに報告する。
    - Issue コメントを残す場合も MCP 優先で、write fallback の二重投稿防止ルールに従う。
-7. 終了時に確認する。
+8. 終了時に確認する。
    - `progress.md` を冒頭から読んで、リリース履歴と完了済みフェーズの役割が壊れていない。
    - 登録行から Issue / PR へ辿れる。
    - 依存欄が既存登録 Issue との順序・ブロッカーを表している。
@@ -64,6 +75,8 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
 - `progress.md` を詳細な作業メモや仕様書にしない。
 - issue-driven task の実行そのものは行わない。登録後に実行する場合は `doc/guidelines/issue-driven-task-execution.md` に従う。
 - closed Issue を過去履歴として大量に登録しない。
+- 索引登録による `progress.md` の変更を他の作業 PR へ同梱しない。
+- PR を merge しない。
 
 ## 終了報告
 
@@ -72,4 +85,5 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
 - 登録または更新した Issue 番号と `progress.md` 上の ID。
 - 依存・順序・ブロッカー・並行可否の判断。
 - 変更した `progress.md` のセクション。
+- 作成した PR の URL。変更が無く PR を作らなかった場合はその旨。
 - 登録しなかった Issue があれば、その理由。
