@@ -40,11 +40,11 @@ PR #201(RF-02)の review で見つかった既存挙動の修正・改善 Issue 
 
 ## 進行中タスク: review で見つかった既存挙動の修正
 
-PR #201(RF-02)の review 補助分析で見つかった、リファクタリングのスコープ外にある既存挙動を Issue #202〜#211 として登録した。表の順を優先順とし、データ破壊 → 利用者に見える表示の誤り → 件数・cache の整合 → API 呼び出しの無駄と edge case → 後片付け、の順に並べる。各 Issue の確認状況(code 読解のみか、実行で再現済みか)と作業条件は Issue 本文を正本とする。
+PR #201(RF-02)の review 補助分析で見つかった、リファクタリングのスコープ外にある既存挙動を Issue #202〜#211 として登録した。表の順を優先順とし、データ破壊 → 利用者に見える表示の誤り → 件数・cache の整合 → API 呼び出しの無駄と edge case → 後片付け、の順に並べる。各 Issue の確認状況(code 読解のみか、実行で再現済みか)と作業条件は Issue 本文を正本とする。その後 PR #221(FU-01)の review で見つかった Issue #222 も、発生経路と性質が同じ follow-up として同じ表で追跡する。
 
 段階的リファクタリングと合わせた全体の着手順は次のとおり。FU-01 はデータ破壊のため RF-03 より先に実施し、Run の取得工程に関わる FU-05 / FU-06 は RF-03(#191)の後に置く。それ以外は技術的に独立だが、運用上は並行実行しない。順序見直しの経緯は decision log 0056 の 2026-09-06 追記を参照する。
 
-FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → FU-07 → RF-04 → RF-05 → FU-08 → FU-09 → FU-10
+FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → FU-07 → RF-04 → RF-05 → FU-08 → FU-09 → FU-10 → FU-11
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
@@ -58,6 +58,7 @@ FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → 
 | FU-08 | [#209](https://github.com/kiyohara/slapex/issues/209) label 付き mention の users.info | todo | - | FU-04 の後(同じ関数) | - |
 | FU-09 | [#210](https://github.com/kiyohara/slapex/issues/210) 取得境界の秒未満切り捨て | todo | - | 精度統一か入力拒否かを決めて実装 | - |
 | FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 / RF-06 で吸収可。残った項目だけ実施 | - |
+| FU-11 | [#222](https://github.com/kiyohara/slapex/issues/222) 同一ファイル再利用時の summary 文言 | todo | PR #221 | #221 merge 後。文言のみで件数と挙動は正しい | - |
 
 ## リリース履歴
 
