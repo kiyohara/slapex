@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `register-review-followup-issues`
-- PR: (未作成)
+- PR: #212
 - 最終更新: 2026-09-06
 
 ## 目的
@@ -25,7 +25,7 @@ PR #201(Issue #190 / RF-02)の review 補助分析で見つかった、リファ
 
 ## 次にやること
 
-- PR 作成、note の rename(`number-working-branch-note` skill)。
+- PR #212 の review / merge を待つ。note の rename は完了済み。
 
 ## 検証
 
@@ -41,3 +41,4 @@ PR #201(Issue #190 / RF-02)の review 補助分析で見つかった、リファ
 ## セッションログ
 
 - 2026-09-06: PR #201 の review 補助分析の指摘を code で裏取りし、Issue #202〜#211 を作成。`progress.md` / decision log 0056 / index.md を更新。
+- 2026-09-06: PR #212 を作成し、note を採番。
