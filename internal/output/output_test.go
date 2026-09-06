@@ -253,7 +253,9 @@ func TestAssetsSaveReuseFromOwnOutputKeepsAsset(t *testing.T) {
 }
 
 // TestCopyFileOntoItselfKeepsContent guards copyFile itself, so a future caller
-// that resolves both sides to one file cannot empty it (Issue #202).
+// that resolves both sides to one file cannot empty it (Issue #202). The hard
+// link and symlink cases are what pin os.SameFile specifically: a path-string
+// comparison would report those two names as different files and truncate.
 func TestCopyFileOntoItselfKeepsContent(t *testing.T) {
 	t.Parallel()
 
@@ -262,18 +264,37 @@ func TestCopyFileOntoItselfKeepsContent(t *testing.T) {
 	if err := os.WriteFile(path, []byte("keep me"), 0o644); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
-	// Same path, and the same file reached through a different spelling.
-	for _, dst := range []string{path, filepath.Join(dir, ".", "asset.bin")} {
-		if err := copyFile(path, dst); err != nil {
-			t.Fatalf("copyFile(%q, %q) error: %v", path, dst, err)
-		}
-		got, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read back: %v", err)
-		}
-		if string(got) != "keep me" {
-			t.Fatalf("content after copyFile onto itself (dst %q) = %q, want %q", dst, got, "keep me")
-		}
+	// The destination path itself, plus two other names for that one file. A "."
+	// or ".." spelling would prove nothing here, because filepath.Clean folds it
+	// away and a plain path comparison would reject it too; hard links and
+	// symlinks are the cases only os.SameFile decides, and copying onto either
+	// truncates the shared file when the guard is missing.
+	dsts := []struct{ name, path string }{{"destination path", path}}
+	link := filepath.Join(dir, "hard-link.bin")
+	if err := os.Link(path, link); err != nil {
+		t.Logf("hard link unsupported, case skipped: %v", err)
+	} else {
+		dsts = append(dsts, struct{ name, path string }{"hard link", link})
+	}
+	sym := filepath.Join(dir, "symlink.bin")
+	if err := os.Symlink(path, sym); err != nil {
+		t.Logf("symlink unsupported, case skipped: %v", err)
+	} else {
+		dsts = append(dsts, struct{ name, path string }{"symlink", sym})
+	}
+	for _, tc := range dsts {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := copyFile(path, tc.path); err != nil {
+				t.Fatalf("copyFile onto the %s (%q): %v", tc.name, tc.path, err)
+			}
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read back after the %s copy: %v", tc.name, err)
+			}
+			if string(got) != "keep me" {
+				t.Fatalf("content after copyFile onto the %s = %q, want %q", tc.name, got, "keep me")
+			}
+		})
 	}
 
 	// A real copy to a different file still works.

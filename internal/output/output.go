@@ -110,7 +110,7 @@ type Assets struct {
 	known   map[string]string
 	entries []ManifestEntry
 	reuse   *ReuseSource // previous run's assets to copy instead of downloading
-	reused  int          // assets copied from the reuse source
+	reused  int          // assets taken from the reuse source instead of downloaded
 	Logf    func(format string, args ...any)
 }
 
@@ -138,8 +138,10 @@ func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Ass
 // SetReuseSource enables copy-from-previous-run behaviour in Save (--reuse-cache).
 func (a *Assets) SetReuseSource(r *ReuseSource) { a.reuse = r }
 
-// Reused returns how many assets were copied from the reuse source instead of
-// being downloaded.
+// Reused returns how many assets came from the reuse source instead of being
+// downloaded. An asset that already sits at its destination — the reuse source
+// is this run's own output directory — counts too, even though copyFromReuse
+// copied nothing.
 func (a *Assets) Reused() int { return a.reused }
 
 // limitFor returns the per-file byte limit that applies to kind (0 = unlimited).
