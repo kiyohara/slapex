@@ -217,9 +217,9 @@ func TestRunIntegrationReuseCacheImage48Avatar(t *testing.T) {
 
 // A previous run saved an attachment under a large --max-attachment-size. On a
 // reuse run with a smaller limit — and a Slack file.size that understates the real
-// bytes, so the builder pre-check passes — copyFromReuse must NOT copy the file: it
-// re-downloads so the limit is enforced and the asset is recorded skipped_size,
-// exactly like a fresh run.
+// bytes, so the messageViewBuilder pre-check passes — copyFromReuse must NOT copy
+// the file: it re-downloads so the limit is enforced and the asset is recorded
+// skipped_size, exactly like a fresh run.
 func TestRunIntegrationReuseCacheOversizeNotCopied(t *testing.T) {
 	t.Parallel()
 
@@ -232,7 +232,7 @@ func TestRunIntegrationReuseCacheOversizeNotCopied(t *testing.T) {
 					ID:                 "F-BIG",
 					Name:               "report.pdf",
 					Mimetype:           "application/pdf",
-					Size:               50, // understates the real size, so the builder pre-check passes
+					Size:               50, // understates the real size, so the messageViewBuilder pre-check passes
 					URLPrivateDownload: "{{base}}/files/report.pdf",
 				},
 			},
