@@ -2,6 +2,7 @@
 // render.MessageView tree (author, avatar, body, files, unfurls, reactions,
 // thread participants) while saving the assets they reference
 // (doc/design/html-rendering.md, doc/design/output-format.md).
+
 package export
 
 import (

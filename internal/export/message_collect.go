@@ -1,6 +1,7 @@
 // Message collection helpers: which threads still need conversations.replies,
 // which user / bot IDs need resolving, and the oldest timestamp of a history
 // batch (doc/design/slack-api-usage.md).
+
 package export
 
 import (

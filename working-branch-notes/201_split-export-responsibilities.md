@@ -11,7 +11,7 @@ Issue #190(RF-02)。`internal/export/export.go`(1,501 行)から取得期間、c
 ## 現在の状況
 
 - 基準 commit は main `2855a32`(PR #200 merge 後)。
-- 機械分割(commit 1)と命名変更(commit 2)を実施し、検証まで完了。`progress.md` の RF-02 行を更新済み。PR #201 作成済み、レビュー待ち。
+- 機械分割(commit 1)と命名変更(commit 2)を実施し、検証まで完了。`progress.md` の RF-02 行を更新済み。PR #201 作成済み。review comment 4 件への対応を push 済み、再確認待ち。
 - 分割後の行数: `export.go` 539(Run + Options + phase label / 保存 URL / 小 helper)、`message_view.go` 363、`fetch_range.go` 211、`cache.go` 139、`channel.go` 125、`message_collect.go` 116、`message_filter.go` 74。production 側の総行数は 1,501 → 1,567(+66 は各ファイルの package 行・import・先頭コメント)。総行数削減は目的ではない。
 - 命名変更(識別子のみ、`git diff -w` で 29 行): `builder` → `messageViewBuilder`、`builder.limit` → `maxAttachmentBytes`、Run 内の局所変数 `b` → `viewBuilder`、`newThreadIDs` → `unfetchedThreadIDs`(「未取得 thread の ID」であり constructor ではない)、`selectChannel` 内の `opts`(huh の選択肢)→ `choices`(package 内で `opts` は `Options` の慣用名のため)。`reuse.go` の `toUser` / `toBot` コメントにある `builder` 言及も追従。receiver `b` / `r` / `f` は変更しない。
 
@@ -48,9 +48,11 @@ Docker Compose(`docker compose run --rm --no-deps dev ...`)で実行。実 token
 ## リスク・ブロッカー
 
 - 1 対多分割のため `git` の rename 検出は効かない。移動確認は `--color-moved` に頼り、移動以外の追加行が package 行・import・ファイル先頭コメントだけであることを確認する。
+- review で挙がったスコープ外の観察: `Run` の `Done` phase が表示する経過時間は `time.Since(now)` で、`Options.Now` を固定する gensample の `-time` 指定では起点が固定時刻になり `in 1528h51m30s` のような値になる(HTML には出ない)。本 PR は Run を変えない条件なので対応せず、#191 の Run 工程整理か別 Issue で扱う。
 
 ## セッションログ
 
 - 2026-09-06: Issue #190 を読み、依存 #188(PR #197 merge 済み)を確認。ブランチと note を作成。基準 commit で固定 sample の無差分を確認。
-- 2026-09-06: PR #201 を作成し、note を採番。`progress.md` の PR 欄を更新。
 - 2026-09-06: `export.go` を 7 ファイルへ機械分割し、unit test も対応ファイルへ分割。移動確認・test・固定 sample 比較まで完了。続けて識別子のみの命名変更を実施し、同じ検証を再実行。
+- 2026-09-06: PR #201 を作成し、note を採番。`progress.md` の PR 欄を更新。
+- 2026-09-06: PR #201 の review comment 4 件([should] 1、[nit] 1、[fyi] 2)に対応。新規 6 ファイルの先頭コメントと `package export` の間に空行を入れて package doc から外し、`builder` 言及の追従漏れ 3 箇所(`integration_reuse_test.go`、`internal/output/output.go`)を `messageViewBuilder` に揃え、セッションログの順序を修正。`time.Since(now)` の指摘はスコープ外として下記に記録。

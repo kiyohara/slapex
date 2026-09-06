@@ -270,8 +270,8 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	// A previous run may have saved this asset under a larger --max-attachment-size.
 	// If its real size now exceeds this run's limit, do not copy it: fall back to a
 	// normal download so it is enforced and recorded as skipped_size, exactly like a
-	// fresh run (the builder's pre-check uses Slack's file.size, which can be absent
-	// or understated).
+	// fresh run (the export messageViewBuilder pre-check uses Slack's file.size, which
+	// can be absent or understated).
 	if limit := a.limitFor(kind); limit > 0 && info.Size() > limit {
 		return "", false
 	}

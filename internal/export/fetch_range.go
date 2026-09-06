@@ -1,6 +1,7 @@
 // Fetch range resolution: the --days / --date / --from / --to inputs become one
 // absolute [start, end) window, the timezone used to display it, and the
 // progress / footer labels derived from it (doc/design/cli-interface.md).
+
 package export
 
 import (

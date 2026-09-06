@@ -1,6 +1,7 @@
 // Cache output: assembles the metadata.json / assets_manifest.json /
 // slack_api_cache.json payloads written under .cache/ (doc/design/cache.md).
 // Reading them back for --reuse-cache lives in reuse.go.
+
 package export
 
 import (
