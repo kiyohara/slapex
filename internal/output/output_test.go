@@ -189,6 +189,127 @@ func TestAssetsSaveContentHashDeduplicatesByContent(t *testing.T) {
 	assertEntry(t, entries, "https://b.example.com/photo.png", "saved", first)
 }
 
+// TestAssetsSaveReuseFromOwnOutputKeepsAsset covers --reuse-cache pointed at the
+// directory this run writes to: the reuse copy's source and destination are one
+// file, and copying it onto itself used to truncate it to 0 bytes, destroying
+// both runs' asset (Issue #202). The file must be kept as it is and still count
+// as reused, while a reuse source in another directory still copies.
+func TestAssetsSaveReuseFromOwnOutputKeepsAsset(t *testing.T) {
+	t.Parallel()
+
+	const (
+		srcURL   = "https://example.com/avatar.png"
+		localRel = "assets/avatars/avatar.png"
+		body     = "avatar-bytes"
+	)
+	oldDir := t.TempDir()
+	writeAssetFile(t, oldDir, localRel, body)
+	reuse := &ReuseSource{
+		OldDir: oldDir,
+		Entries: map[string]ManifestEntry{
+			srcURL: {
+				Kind: KindAvatar, SourceURL: srcURL, LocalPath: localRel,
+				SizeBytes: int64(len(body)), Status: "saved",
+			},
+		},
+	}
+
+	// The downloader knows no URL, so any fallback to a normal download fails the
+	// Save and is reported below instead of silently hiding the reuse behaviour.
+	assets := NewAssets(context.Background(), &fakeDownloader{}, oldDir, 0)
+	assets.SetReuseSource(reuse)
+
+	rel, ok := assets.Save(KindAvatar, srcURL, AssetMeta{})
+	if !ok || rel != localRel {
+		t.Fatalf("Save into the reuse source directory = %q ok=%v, want %q true", rel, ok, localRel)
+	}
+	if got := readAssetFile(t, oldDir, localRel); got != body {
+		t.Fatalf("reused asset content = %q, want %q (self-copy must not truncate it)", got, body)
+	}
+	if assets.Reused() != 1 {
+		t.Fatalf("Reused() = %d, want 1", assets.Reused())
+	}
+	entry := findEntry(t, assets.Entries(), srcURL)
+	if entry.Status != "saved" || entry.LocalPath != localRel {
+		t.Fatalf("manifest entry = %+v, want status saved at %q", entry, localRel)
+	}
+	if entry.SizeBytes != int64(len(body)) {
+		t.Fatalf("manifest size_bytes = %d, want %d (must match the file on disk)", entry.SizeBytes, len(body))
+	}
+
+	// A reuse source in another directory is unaffected: the asset is copied.
+	newDir := t.TempDir()
+	other := NewAssets(context.Background(), &fakeDownloader{}, newDir, 0)
+	other.SetReuseSource(reuse)
+	if rel, ok := other.Save(KindAvatar, srcURL, AssetMeta{}); !ok || rel != localRel {
+		t.Fatalf("Save into a separate directory = %q ok=%v, want %q true", rel, ok, localRel)
+	}
+	if got := readAssetFile(t, newDir, localRel); got != body {
+		t.Fatalf("copied asset content = %q, want %q", got, body)
+	}
+	if got := readAssetFile(t, oldDir, localRel); got != body {
+		t.Fatalf("reuse source content after copy = %q, want %q", got, body)
+	}
+}
+
+// TestCopyFileOntoItselfKeepsContent guards copyFile itself, so a future caller
+// that resolves both sides to one file cannot empty it (Issue #202).
+func TestCopyFileOntoItselfKeepsContent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "asset.bin")
+	if err := os.WriteFile(path, []byte("keep me"), 0o644); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+	// Same path, and the same file reached through a different spelling.
+	for _, dst := range []string{path, filepath.Join(dir, ".", "asset.bin")} {
+		if err := copyFile(path, dst); err != nil {
+			t.Fatalf("copyFile(%q, %q) error: %v", path, dst, err)
+		}
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read back: %v", err)
+		}
+		if string(got) != "keep me" {
+			t.Fatalf("content after copyFile onto itself (dst %q) = %q, want %q", dst, got, "keep me")
+		}
+	}
+
+	// A real copy to a different file still works.
+	dst := filepath.Join(dir, "copy.bin")
+	if err := copyFile(path, dst); err != nil {
+		t.Fatalf("copyFile to a new path: %v", err)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("read copy: %v", err)
+	}
+	if string(got) != "keep me" {
+		t.Fatalf("copied content = %q, want %q", got, "keep me")
+	}
+}
+
+func writeAssetFile(t *testing.T, dir, rel, body string) {
+	t.Helper()
+	path := filepath.Join(dir, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir for %s: %v", rel, err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatalf("write %s: %v", rel, err)
+	}
+}
+
+func readAssetFile(t *testing.T, dir, rel string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatalf("read %s: %v", rel, err)
+	}
+	return string(data)
+}
+
 func TestAssetsLimitFor(t *testing.T) {
 	t.Parallel()
 
