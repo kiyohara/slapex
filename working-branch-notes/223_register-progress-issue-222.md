@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `register-progress-issue-222`
-- PR: (未採番)
+- PR: #223
 - 最終更新: 2026-09-07
 
 ## 目的
@@ -10,7 +10,7 @@ Issue #222(`--reuse-cache` の同一ファイル再利用時に summary の copi
 
 ## 現在の状況
 
-`progress.md` の編集を実施。PR 作成待ち。
+`progress.md` の編集と PR #223 の作成まで完了。review 待ち。
 
 ## 決定事項
 
@@ -23,7 +23,7 @@ Issue #222(`--reuse-cache` の同一ファイル再利用時に summary の copi
 
 ## 次にやること
 
-- PR を作成し、note を採番する。
+- PR #223 の review 対応。
 
 ## 検証
 
