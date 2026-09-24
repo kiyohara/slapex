@@ -15,7 +15,7 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 ## 現在の状況
 
 - 作業内容 0〜4 と、bizdate PR #72 / #78 相当の取り込みを済ませ、Issue の「検証」を実行した(P1)。
-- 自己適用は P4 まで進んだ。review cycle `claude-code-d4b22c6-20260924112150` の指摘 5 件へ対応し、P5 の再確認を待つ。
+- 自己適用は P6 まで終えた。review cycle `claude-code-d4b22c6-20260924112150` は、指摘 5 件がすべて resolve 可、未対応 0 件で収束した。review 済みの head は `57c3646` で、残るのは人間の手番だけである。
 - 追加: `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md`、`.claude/skills/drive-issue-to-reviewed-pr`(symlink)、decision log 0059 / 0060 / 0061。
 - 追記: `doc/guidelines/development-loop.md`(「使う skill」表に 1 行)、`.agents/skills/run-issue-task/SKILL.md` と `.agents/skills/review-pull-request/SKILL.md`(呼ばれ得ることの参照を 1 段落ずつ)、decision log の `index.md`。
 - #72 相当: `doc/guidelines/pull-request-guidelines.md`(「Tool 名と model の識別子の扱い」)、`review-pull-request` の `Model` の項、正本の要約を持つ `release` と `number-working-branch-note` の skill。
@@ -43,13 +43,14 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 - 出力生成系 3 skill は、ドキュメントだけの変更で各 skill の「いつ使うか」に当たらないため適用しない。
 - decision log の番号は 0059〜0061(0058 は #226 が使った)。
 - P4 では review の指摘 5 件をすべて採用した。subagent が読む `review-pull-request` に、brief で渡された上位の指示を `Model` に当てはめる項を足した。cloud session の説明行の `unknown` の条件を 0060 に揃えた。cloud session で `gh` を使う範囲の例外を comment / review 本文の編集に限って明記した(`github-cli-guidelines.md` からも参照)。再開位置の表を排他にし、「判断に追加情報が必要である」の返信を返信済みに数えないことにした。Issue の入力で open PR がある場合は PR の入口として扱い、PR の head branch へ push できない場合は push の前で止まる。
+- P5 の完了要約の fyi(PR の入口で P1 の完了条件を確かめる規定が無い)は、指摘の範囲外で修正前からある性質のため本 PR では直さず、follow-up の候補とした(本 skill の「判断基準」のスコープ外の扱い)。
 
 ## 次にやること
 
-- PR を作成し、note を採番する。(完了)
-- 追加した SKILL.md を path で読み、PR 番号の入口から P2〜P6 を実行する。P4 まで済み。次は P5(subagent による再確認)。
-- 各フェーズの結果をセッションログに残す。
-- 人間: thread の resolve と PR の merge。
+- 人間: review cycle `claude-code-d4b22c6-20260924112150` の 5 thread を resolve する。
+- 人間: PR を ready for review にし、review して merge する。
+- 人間: follow-up の候補(PR の入口で P1 の完了条件を確かめる)を Issue にするか判断する。
+- 人間: 新しい session を開始し、description による発火を確かめる(未検証事項)。
 
 ## 検証
 
@@ -68,14 +69,17 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 | description による発火 | 未検証。新しい session を開始して確かめる |
 | `get_session` の field | `external_metadata.last_served_model`、`session_context.model`、`configured_model` があることを確かめた。接尾辞の有無は「決定事項」のとおり |
 | 自己適用の P2 で subagent が報告した実行環境 | subagent の system prompt には、model の識別子の記載範囲の指示も footer の指示も無かった。server が review 本文と各 inline comment に footer を付け、5 行と footer の間に空行が入った。brief で渡した上位の指示を当てはめ、`Model` は `unknown` と理由の 1 行になった |
+| 自己適用の P5 で subagent が報告した実行環境 | P2 と同じく、system prompt に記載範囲の指示も footer の指示も無かった。brief で渡した上位の指示は、`review-pull-request` の「`Model` の確認手段」に P4 で足した項だけを根拠に当てはめられた。server が付けた footer と 5 行の間に空行が入った |
+| P5 の read-back(orchestrator が取り直した) | 5 thread とも指摘、処置の返信、再確認の返信の 3 件で、すべて unresolved。conversation comment は完了要約の 1 本。完了要約の 5 行はキーの順に連続し、`Reviewed head` は PR head の `57c3646` と一致した |
+| metadata の誤りの訂正(`gh api` での編集) | 未検証。自己適用の投稿に誤りが無く、使わなかった |
 | 自己適用の P1 判断 | 依存なし、推奨ブランチ名あり(PR description に記録)、`progress.md` の索引外で更新不要、ドキュメントだけの変更で出力生成系 3 skill は不適用、と判断できた |
 | Go の test | Go のコードを変更しないため、ローカルでは実行しない。CI の check runs 5 件で確かめる |
 
 ## リスク・ブロッカー
 
-- 未検証: description による発火。
-- 自己適用の盲点: skill を設計した orchestrator が SKILL.md を読むため、記述の不足を context で補って動けてしまう。P2 の subagent に SKILL.md の自己完結性を観点として渡す。
-- 自己適用は、この PR で変えた `review-pull-request` の metadata の規定(footer の直前に置く、`Model` の確認手段)で行う。規定と実際の投稿が合っているかを、P2 / P5 の read-back で確かめる。
+- 未検証: description による発火と、metadata の誤りを `gh api` で編集する手順(自己適用では誤りが無く、使わなかった)。
+- 自己適用の盲点: skill を設計した orchestrator が SKILL.md を読むため、記述の不足を context で補って動けてしまう。P2 の subagent に SKILL.md の自己完結性を観点として渡した。
+- 自己適用は、この PR で変えた `review-pull-request` の metadata の規定(footer の直前に置く、`Model` の確認手段)で行った。P2 / P5 の read-back で、規定と実際の投稿が合っていることを確かめた。
 - この session の実行環境は、model の識別子をチャットの返答以外に書かないよう求めている。orchestrator の投稿では `Model` を `unknown` とし、その旨を 1 行残す(0060)。subagent には指示の内容を事実として渡し、値は指示しない(0061)。
 
 ## セッションログ
@@ -86,3 +90,5 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 - 2026-09-24: PR #233 を作成し、note を採番した(P1)。head `d4b22c6` の check runs 5 件が success。出力生成系 3 skill は不適用。
 - 2026-09-24: P2 の subagent が review した。review cycle `claude-code-d4b22c6-20260924112150`、`Reviewed head` `d4b22c6`、指摘 5 件(inline 5、top-level 0)。P3 で P4 へ進んだ。
 - 2026-09-24: P4 で 5 件とも採用し、`d1d2bb5` で修正した。出力生成系 3 skill はドキュメントだけの変更のまま不適用。
+- 2026-09-24: P5 の subagent が対象 cycle を head `57c3646` で再確認した。resolve 可 5 件、未対応 0 件。完了要約の fyi 1 件(PR の入口で P1 の完了条件を確かめる規定が無い)は follow-up の候補とした。
+- 2026-09-24: P6 で終了した。PR #233 は draft のまま、review 済みの head は `57c3646`(check runs 5 件が success)。この更新は note だけの commit である。残りは人間の手番(5 thread の resolve、ready for review への変更と review、merge)。
