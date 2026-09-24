@@ -19,9 +19,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -61,6 +63,9 @@ func TestRunIntegrationReuseCacheReducesRequests(t *testing.T) {
 	if !logsContain(r.logs2, "Reusing cache from") {
 		t.Fatalf("run 2 did not report cache reuse:\n%s", strings.Join(r.logs2, "\n"))
 	}
+	// Run 2 copied every asset run 1 saved from run 1's directory, and the
+	// summary counts each of them as reused.
+	assertReusedAssetsSummary(t, r.logs2, countSavedAssets(readManifestEntries(t, r.dir1)))
 
 	// Output is equivalent to run 1: byte-identical asset files, and the reused
 	// users / emoji still render (a cached display name and the copied custom
@@ -185,6 +190,10 @@ func TestRunIntegrationReuseCacheIntoSameOutputDir(t *testing.T) {
 	if saved == 0 {
 		t.Fatalf("no saved asset entries in run 1's manifest")
 	}
+
+	// The summary counts those assets as reused even though nothing was copied,
+	// so its wording must not claim a copy (Issue #222).
+	assertReusedAssetsSummary(t, r.logs2, saved)
 
 	// The rendered output still references the surviving assets and the reused
 	// user / emoji data.
@@ -566,6 +575,42 @@ func collectAssetFiles(t *testing.T, dir string) map[string][]byte {
 		t.Fatalf("walk assets in %s: %v", dir, err)
 	}
 	return out
+}
+
+// assertReusedAssetsSummary checks the two summary lines that report reused
+// assets: the Assets phase meta and the Done detail line. Both must count want
+// assets as reused from cache, in wording that also holds when the reuse source
+// is this run's own output directory and copyFromReuse copied nothing
+// (Issue #222).
+func assertReusedAssetsSummary(t *testing.T, logs []string, want int) {
+	t.Helper()
+	if want == 0 {
+		t.Fatalf("want 0 reused assets: the summary lines under test only appear when an asset is reused")
+	}
+	meta := fmt.Sprintf(" (%d reused from cache, no download)", want)
+	detail := fmt.Sprintf("    (of which %d reused from cache, no download)", want)
+	var assetsLine string
+	for _, line := range logs {
+		if strings.HasPrefix(line, "OK: assets: ") {
+			assetsLine = line
+		}
+	}
+	if !strings.HasSuffix(assetsLine, meta) {
+		t.Fatalf("assets phase line = %q, want suffix %q\nlogs:\n%s", assetsLine, meta, strings.Join(logs, "\n"))
+	}
+	if !slices.Contains(logs, detail) {
+		t.Fatalf("done summary has no line %q\nlogs:\n%s", detail, strings.Join(logs, "\n"))
+	}
+}
+
+func countSavedAssets(entries []manifestEntryFull) int {
+	n := 0
+	for _, e := range entries {
+		if e.Status == "saved" {
+			n++
+		}
+	}
+	return n
 }
 
 // --- bot reuse (Issue #182, decision log 0054) -------------------------------

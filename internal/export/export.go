@@ -376,7 +376,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	}
 	assetsMeta := ""
 	if n := assets.Reused(); n > 0 {
-		assetsMeta = fmt.Sprintf("%d copied from reused cache, no download", n)
+		assetsMeta = fmt.Sprintf("%d reused from cache, no download", n)
 	}
 	p.EndPhase(assetsStatus, "Assets",
 		fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", saved, skipped, failed), assetsMeta)
@@ -403,7 +403,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	}
 	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
 	if n := assets.Reused(); n > 0 {
-		p.Plainf("    (of which %d copied from reused cache, no download)", n)
+		p.Plainf("    (of which %d reused from cache, no download)", n)
 	}
 	p.Plainf("  output: %s", abs)
 	return abs, nil
