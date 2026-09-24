@@ -155,6 +155,7 @@ setup script は 5 分以内に終わる必要がある。`--provision` は通�
 - 公式ドキュメントは `gh` を preinstall としているが、この environment の image には無かった(2026-09-24)。platform の変更で挙動が変わり得るため、`gh` の導入経路や proxy の規則に関わる変更をするときは実測し直す。
 - environment の setup script は agent proxy が立つ前に走る。container の中から外へ出る処理(`go mod download` など)は setup script では通らないため、`--provision` に足さない。
 - environment の setup script は branch をまたいで共有される。stub は script が無ければ skip して exit 0 するため、script を含まない branch(merge 前の main など)で session を開いても起動を妨げない。stub を `exec` だけの形に書き換えない。
+- script を含まない branch(merge 前の main など)の session で setup script が走ると、provision を skip したまま cache が作られる。script が main に入っても setup script のテキストが変わらなければ cache は作り直されず、hook は「environment cache: 未登録」を出し、`gh` も入らない。setup script の本文を変える(空行を足すなど)と、次の session で provision が走る。
 - stub は既定の clone 先(単一 repository の session は `/home/user/slapex`、複数 repository の session は `/home/claude/slapex`)から script を探す。
 
 ## 関連ルール
