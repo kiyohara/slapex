@@ -29,7 +29,7 @@ PR を作成した直後に `working-branch-notes/` 配下の `draft_...md` を 
 - `doc/guidelines/github-mcp-guidelines.md` — GitHub 操作で `github-op-integrated` MCP tool を優先する方針。
 - `doc/guidelines/github-cli-guidelines.md` — MCP fallback として `gh` を実行する場合の `op plugin run -- gh ...` 形式と実行環境制約。
 - `doc/guidelines/git-operation-guidelines.md` — `git commit` / `git push` (SSH remote) の 1Password SSH agent 連携と実行環境制約。
-- `doc/guidelines/pull-request-guidelines.md` — PR title / description の書式(日本語、title に tool 名なし、既存表現の置換に留める)。
+- `doc/guidelines/pull-request-guidelines.md` — PR title / description の書式(日本語、title に tool 名と model の識別子なし、既存表現の置換に留める)。
 
 ## GitHub 操作形式
 

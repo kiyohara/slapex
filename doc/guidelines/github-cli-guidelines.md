@@ -48,7 +48,7 @@ cloud session の sandbox には `op` が無く、`gh` は environment の setup
 - `op plugin run --` を介さず、`gh ...` を直接実行する。`.op/` と `op` の確認は要らない。
 - 認証は platform の GitHub proxy が request ごとに差し替える。`gh auth login` をせず、`GH_TOKEN` / `GITHUB_TOKEN` を上書きしない。PAT を environment の環境変数に設定しない。
 - proxy は REST だけを通す。`gh api`(REST。例: `gh api 'repos/kiyohara/slapex/pulls?state=open'`)を基本とし、GraphQL を使う subcommand(`gh pr view` など)と `gh auth status` を使わない。認証エラーを疑うときは `gh api user` など REST の read で確かめる。
-- `gh` は組み込み tool に無い操作だけを補う。MCP tool の write が失敗したときに同じ write を `gh` で再実行しない。
+- `gh` は組み込み tool に無い操作だけを補う。例外(comment / review 本文の編集)は `doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」に従う。MCP tool の write が失敗したときに同じ write を `gh` で再実行しない。
 - merge、`APPROVE` / `REQUEST_CHANGES`、review thread の resolve、auto-merge の変更、API 経由の file push は `gh api` でも実行しない。
 - job log は組み込み tool の `get_job_logs` で取る。log の配信元が許可リストに無いため、`gh run view --log` は通らない。
 - `gh` が無い session では、agent が `gh` の導入を試みない。組み込み tool だけで進め、足りない操作はユーザーに報告する。

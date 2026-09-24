@@ -51,6 +51,7 @@ flowchart TD
 |---|---|---|
 | 既存 Issue 群を索引化したいとき | `register-progress-issue` | GitHub Issue を読み、依存・順序・ブロッカーを整理して `progress.md` に最小限の行を追加または更新する。 |
 | 個別 Issue に着手するとき | `run-issue-task` | Issue 番号を入力に、依存確認、ブランチ作成、note 作成、実装、検証、PR 作成までを進める。 |
+| Issue 着手から review と再確認まで一括で進めるとき | `drive-issue-to-reviewed-pr` | Issue 番号または PR 番号を入力に、`run-issue-task` と `review-pull-request` を決まった順で呼ぶ orchestrator。review と再確認は context を分離するため subagent へ委譲し、review 済みの PR で止まる。merge と resolve はしない。 |
 | 新しいバージョンを公開するとき | `release` | リリース PR、tag、GitHub Release、配布物検証を安全に進める。merge と tag push の最終実行はユーザーが行う。 |
 | リリース前後や Issue 群完了後 | `maintain-progress` | `progress.md` を薄く保ち、完了済みタスクを要約し、リリース台帳と進行中タスク索引を最新化する。 |
 
