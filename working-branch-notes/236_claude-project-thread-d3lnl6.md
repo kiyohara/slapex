@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-d3lnl6`(cloud session が指定。Issue の推奨ブランチ名は `fix-reused-asset-summary-wording`)
-- PR: 未作成
+- PR: #236
 - 最終更新: 2026-09-24
 
 ## 目的
