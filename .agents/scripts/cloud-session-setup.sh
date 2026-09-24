@@ -230,8 +230,11 @@ image_tag_matches() {
 
 # dev image を用意する。setup script の文脈では daemon が直接 (VM の system CA で) mirror から
 # pull できる。hook の文脈では daemon が agent proxy を経由する。
+# 引数に秒数を渡すと pull をその時間で打ち切る (provision 用)。打ち切った pull の続きは
+# 後続の stop_daemon が daemon ごと止める。
 ensure_image() {
-  local image
+  local image limit="${1:-}"
+  local -a pull_cmd=(docker pull -q)
   image="$(dev_image)"
   if [ -z "$image" ]; then
     say "image: compose 定義から dev の image 名を取れない"
@@ -241,8 +244,13 @@ ensure_image() {
     say "image: $image あり"
     return 0
   fi
-  say "image: $image を pull する"
-  if docker pull -q "$image" >>"$log_file" 2>&1 </dev/null; then
+  if [ -n "$limit" ]; then
+    pull_cmd=(timeout "$limit" docker pull -q)
+    say "image: $image を pull する (${limit}s で打ち切る)"
+  else
+    say "image: $image を pull する"
+  fi
+  if "${pull_cmd[@]}" "$image" >>"$log_file" 2>&1 </dev/null; then
     say "image: pull 完了"
     return 0
   fi
@@ -269,6 +277,19 @@ report_gh() {
 # setup script は 5 分以内に終わる必要があり、後に dev image の pull が続く。apt-get の
 # 3 段は gh_step_timeout ずつ、最悪でも合計 135 秒で打ち切る。
 gh_step_timeout=45
+
+# setup script 全体の上限 (5 分) に対し、--provision は開始から provision_budget 秒以内に
+# image の pull を終える。残り時間は daemon の停止 (最大 30 秒) と state の記録に充てる。
+# pull の上限は開始からの経過時間を引いて決め、pull_timeout_min 秒を下回らせない。
+# gh と daemon 起動が最悪の時間を使っても、全体は 4 分程度に収まる。
+provision_budget=200
+pull_timeout_min=20
+
+provision_pull_timeout() {
+  local left=$(( provision_budget - SECONDS ))
+  [ "$left" -ge "$pull_timeout_min" ] || left="$pull_timeout_min"
+  echo "$left"
+}
 
 ensure_gh() {
   if command -v gh >/dev/null 2>&1; then
@@ -433,7 +454,7 @@ if ! start_daemon; then
 fi
 
 if [ "$mode" = "provision" ]; then
-  ensure_image || true
+  ensure_image "$(provision_pull_timeout)" || true
   write_state || say "state: 書けなかった"
   stop_daemon
   say "provision 完了"

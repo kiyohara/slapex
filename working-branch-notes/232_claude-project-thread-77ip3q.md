@@ -75,3 +75,4 @@ Issue #226。Claude Code on the web の cloud session で、Docker Compose 経�
 
 - 2026-09-24: bizdate `34b33b1` を確認。Issue #226 の作業内容 0〜11 を実施。spike、script、override、guideline、decision log 0058、note を作成。
 - 2026-09-24: review cycle `claude-code-0f65eb9-20260924075407`(Claude Code、subagent)で指摘 3 件。address-comments で全件採用: `--doctor` を daemon 停止・image 無しでも exit 1 にした、既存の Claude Code shim(`github-mcp-guidelines`、`development-command-guidelines`)と Cursor の `development-command-guidelines` に cloud session の例外を 1 行ずつ追加、作業内容 0 の再確認結果を Issue #226 のコメントに追記。
+- 2026-09-24: クロスチェック(review cycle `codex-405ba11-20260924083150`、Codex)で指摘 1 件。`--provision` の image pull に上限(開始から 200 秒、最短 20 秒)を設け、打ち切っても daemon の停止へ進むようにした。stub の docker で打ち切りを確認。

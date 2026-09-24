@@ -127,7 +127,7 @@ sandbox での実測(2026-09-24、4 vCPU、project の thread の session)。
 | `go test ./...`(vet の後) | 約 5 秒 |
 | `gofmt -l .` / `go build ./...` | 各 1 秒程度 |
 
-setup script は 5 分以内に終わる必要がある。`--provision` は通常 1 分程度に収まる。`gh` の導入は `apt-get` の 3 段を各 45 秒で打ち切るため、最悪でも 135 秒に image の pull を足して 3 分程度である。setup script では container の network が通らないため、`go mod download` などの事前実行は含めない。
+setup script は 5 分以内に終わる必要がある。`--provision` は通常 1 分程度に収まる。`gh` の導入は `apt-get` の 3 段を各 45 秒で打ち切る。image の pull は開始から 200 秒の時点(最短でも 20 秒後)で打ち切り、打ち切っても daemon の停止へ進む。最悪でも 4 分程度に収まる。setup script では container の network が通らないため、`go mod download` などの事前実行は含めない。
 
 ## 利用開始手順
 
