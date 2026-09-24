@@ -141,6 +141,7 @@ metadata を含む投稿の前に、次を確かめる。
 
 - 本 skill が投稿するすべての GitHub コメント(review body、inline comment、返信、PR conversation comment)は日本語で書く。
 - 文体は `doc/guidelines/document-style-guidelines.md` の開発者向け文体(常体)に合わせる。
+- `review` モードの指摘には、`.github/copilot-instructions.md` の「原則」にある prefix(`[must]` / `[ask]` / `[imo]` / `[nits]` / `[fyi]`)を付ける。使い分けは同ファイルを正とし、定義をここに複製しない。同じ PR に並ぶ Copilot と AI agent の指摘で語彙を揃え、merge 前に直すべき指摘かを投稿者によらず同じ基準で読めるようにするためである。
 
 ## 組み込み / 汎用 review capability の再利用
 
@@ -166,6 +167,7 @@ metadata を含む投稿の前に、次を確かめる。
 | Review thread の resolve | 自動実行しない。`verify-comments` は resolve 可マーカー付き返信までを行い、resolve は人間が GitHub UI で行う |
 | PR conversation comment | `add_issue_comment`(PR 番号を `issue_number` として渡す) |
 | Check runs の確認 | `pull_request_read(get_check_runs)` |
+| CI の workflow run / job / log の確認 | `actions_list` / `actions_get` / `get_job_logs` |
 
 - 上記 tool はすべて現行 `.config/github-op-integrated.conf.example` の allowlist に含まれる。本 skill のための tool allowlist 追加は不要である。
 

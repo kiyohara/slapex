@@ -75,7 +75,7 @@ GitHub 宛ての request は platform の GitHub proxy が実際の credential �
 | Check runs / commit status の確認 | `pull_request_read(get_check_runs / get_status)` | PR 単位の CI 状態はこれで足りる。Actions 系 tool を先行しない。 |
 | workflow / run / job / artifact の一覧 | `actions_list(list_workflows / list_workflow_runs / list_workflow_jobs / list_workflow_run_artifacts)` | `owner` / `repo` / `method` が必須。`gh run list` を先行しない。 |
 | workflow / run / job の詳細取得 | `actions_get(get_workflow / get_workflow_run / get_workflow_job / download_workflow_run_artifact / get_workflow_run_usage / get_workflow_run_logs_url)` | `owner` / `repo` / `method` に加えて `resource_id` が必須。 |
-| 失敗 job の log 取得 | `get_job_logs` | `job_id` 単体、または `run_id` + `failed_only=true`。`return_content` / `tail_lines` で取得量を絞る。 |
+| 失敗 job の log 取得 | `get_job_logs` | `job_id` 単体、または `run_id` + `failed_only=true`。本文は `return_content=true` で返り、省くと download URL だけが返る(cloud session では URL の配信元に届かない)。`tail_lines` で末尾に絞れるが、末尾は後処理の行が占めるため、小さくすると失敗箇所が入らない。 |
 | commit / fetch / push | local git | MCP 対象外。`doc/guidelines/git-operation-guidelines.md` に従う。 |
 | merge / file push / release / workflow の実行・再実行・cancel・run log 削除 / settings | `gh` fallback | MCP allowlist の対象外。CI の read は上の 3 行のとおり MCP 側にある。`doc/guidelines/github-cli-guidelines.md` に従う。 |
 
