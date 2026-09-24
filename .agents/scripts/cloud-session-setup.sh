@@ -51,7 +51,8 @@ options:
   --force       CLAUDE_CODE_REMOTE=true でなくても hook と同じ動作を行う
   --provision   environment の setup script 用。gh を導入し、dev image を pull し、state file を
                 書き、自分で起動した daemon を止める
-  --doctor      daemon / image / gh / environment cache の状態を表示し、問題があれば exit 1
+  --doctor      daemon / image / gh / environment cache の状態を表示する。daemon 停止、image 無し、
+                image tag の不一致、cache の drift、cloud 以外の環境では exit 1
   --print-stub  environment の setup script に貼る stub を生成する
   -h, --help    この help を表示する
 USAGE
@@ -368,12 +369,19 @@ doctor() {
     say "この環境は cloud session の sandbox ではない (dockerd が無い)"
     return 1
   fi
-  if daemon_ready; then say "dockerd: 起動済み"; else say "dockerd: 停止中"; fi
+  # exit 0 を「dev で開発コマンドを実行できる」の判定に使えるよう、daemon 停止と image 無しも exit 1 にする。
+  if daemon_ready; then
+    say "dockerd: 起動済み"
+  else
+    say "dockerd: 停止中 (--force で起動する)"
+    rc=1
+  fi
   image="$(dev_image)"
   if [ -n "$image" ] && docker image inspect "$image" >/dev/null 2>&1; then
     say "image: $image あり"
   else
-    say "image: ${image:-?} 無し"
+    say "image: ${image:-?} 無し (--force で pull する)"
+    rc=1
   fi
   if image_tag_matches; then
     say "image tag: compose.yaml と compose.cloud.yaml で一致 (${image##*/})"

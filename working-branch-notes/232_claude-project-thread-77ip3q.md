@@ -40,6 +40,7 @@ Issue #226。Claude Code on the web の cloud session で、Docker Compose 経�
 | `--provision`(`gh` 未導入、image 無しから) | exit 0、約 51 秒。`gh` 2.45.0 を `apt-get` で導入、dockerd 起動 2 秒、mirror から pull、state file 記録、dockerd 停止 |
 | hook mode(`CLAUDE_CODE_REMOTE=true`、`CLAUDE_ENV_FILE` あり)2 回 | 1 回目 1.4 秒(dockerd 起動 1 秒)、2 回目 0.4 秒。`CLAUDE_ENV_FILE` への `export COMPOSE_FILE=...` は 1 行だけ |
 | `--doctor` | exit 0(daemon、image、tag 一致、`gh`、state、cache 一致) |
+| `--doctor`(daemon 停止を `DOCKER_HOST` の無効化で再現、review 指摘 1 の修正後) | exit 1。正常時は exit 0 |
 | `--doctor`(state の digest を書き換えて drift を再現) | exit 1、貼り直し用の stub を出力。state を戻して exit 0 |
 | `docker compose config \| grep -E 'network_mode\|image:'`(cloud) | `mirror.gcr.io/library/golang:1.26`、`network_mode: host` |
 | `go version`(container) | go1.26.8 |
@@ -68,8 +69,9 @@ Issue #226。Claude Code on the web の cloud session で、Docker Compose 経�
 ## リスク・ブロッカー
 
 - 組み込み GitHub tool の allowlist 外操作は仕組みで塞げず、guideline の禁止に依存する。
-- bizdate main の `ab7c88e` 以降に PR #78(bizdate#69 の対応。cloud session での review canonical metadata と `Model` の確認手段)が merge された。#226 のスコープ外だが、#227 を cloud session で実行すると同じ問題に当たる見込みがある。
+- bizdate main の `ab7c88e` 以降に PR #78(bizdate#69 の対応。cloud session での review canonical metadata と `Model` の確認手段)が merge された。#226 のスコープ外だが、#227 を cloud session で実行すると同じ問題に当たる見込みがある。作業内容 0 の再確認結果(HEAD `34b33b1`、PR #78 の分類)は Issue #226 のコメント(https://github.com/kiyohara/slapex/issues/226#issuecomment-5810201422)に追記した。
 
 ## セッションログ
 
 - 2026-09-24: bizdate `34b33b1` を確認。Issue #226 の作業内容 0〜11 を実施。spike、script、override、guideline、decision log 0058、note を作成。
+- 2026-09-24: review cycle `claude-code-0f65eb9-20260924075407`(Claude Code、subagent)で指摘 3 件。address-comments で全件採用: `--doctor` を daemon 停止・image 無しでも exit 1 にした、既存の Claude Code shim(`github-mcp-guidelines`、`development-command-guidelines`)と Cursor の `development-command-guidelines` に cloud session の例外を 1 行ずつ追加、作業内容 0 の再確認結果を Issue #226 のコメントに追記。

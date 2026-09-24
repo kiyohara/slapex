@@ -83,7 +83,7 @@ cloud session の `dev` は local と同じ `golang` 公式 image(同じ tag)を
 hook の出力に `WARNING` が含まれる場合は、次の順で扱う。
 
 1. `bash .agents/scripts/cloud-session-setup.sh --force` で再試行する。
-2. `bash .agents/scripts/cloud-session-setup.sh --doctor` で daemon / image / cache の状態を見る。
+2. `bash .agents/scripts/cloud-session-setup.sh --doctor` で daemon / image / cache の状態を見る。`--doctor` は daemon 停止、`dev` の image 無し、image tag の不一致、cache の drift のいずれかで exit 1 になり、exit 0 は `dev` で開発コマンドを実行できる状態を表す(`gh` の有無は判定に含めない)。
 3. それでも起動しなければ、host の `go` で代替せず、実行できなかった検証を未実施として理由(hook の出力)とともに note と PR に書き、ユーザーに報告する。
 
 ## environment cache と drift
