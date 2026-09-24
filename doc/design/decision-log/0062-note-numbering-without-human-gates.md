@@ -63,7 +63,9 @@ A と D を採用する。
 | 前提条件の不成立 | `run-issue-task`(依存未完了)、`register-progress-issue`(closed など)、`review-pull-request`(open PR が無いなど、verify の担当不一致)、`release`(適用範囲、CI)、`drive-issue-to-reviewed-pr`(依存未完了、head の想定外の変化、push できない、subagent を起動できない、write の失敗)、`number-working-branch-note`(適用範囲、前提チェック、番号付き note との衝突) |
 | 判断不能な場面の安全弁 | `maintain-progress`(判断に迷う箇所)、`run-issue-task`(仕様判断を補完しない)、`release`(判断に迷うとき、decision log の要否)、`review-pull-request`(Agent 種別を判定できない、反復上限)、`update-sample-exports`(実質差分か判断できない)、`drive-issue-to-reviewed-pr`(仕様との食い違い、CI や生成物の説明できない差分、追加情報が必要な指摘、反復上限)、`number-working-branch-note`(手順の前置き、ファイル名参照の判別) |
 | 影響の大きさ・取り消しにくさ | merge、resolve、`APPROVE` / `REQUEST_CHANGES` の自動実行をしないこと(`review-pull-request`、`release`、`maintain-progress`、`register-progress-issue`)、課金や cloud 実行を伴う review 機能(`review-pull-request`)、`progress.md` の役割変更(`maintain-progress`)、実 token・外部通信(`update-sample-exports`、`update-readme-demo-gif`)、host OS での実行(`drive-issue-to-reviewed-pr`) |
-| 1Password(Issue #229 の担当) | `number-working-branch-note` と `release` の署名・push 失敗時の再実行と `op` 固有の分岐、`release` の Step 5 の push 確認と tag push の承認 |
+| 被委譲 skill の停止の中継 | `drive-issue-to-reviewed-pr`(subagent は止めて、確認事項を停止理由として返す) |
+| 1Password(Issue #229 の担当) | `number-working-branch-note` と `release` の署名・push 失敗時の再実行と `op` 固有の分岐 |
+| 1Password と取り消しにくさの切り分けが要る(Issue #229 の担当) | `release` の Step 5 の push 確認と tag push の承認 |
 
 成果物の内容判断を理由とするゲートは見つからなかった。判断不能な場面の安全弁は、判断できる場合にまで合意を求めるものではなく、本決定の対象外とする。`update-sample-exports` の「実質差分か判断できない場合はユーザーに確認する」もこれに当たり、変えない。別 Issue は切らない。
 
