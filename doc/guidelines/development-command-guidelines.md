@@ -30,6 +30,8 @@ docker info
 
 `docker` コマンドが見つからない、または Docker daemon に接続できない場合は、host OS 上で開発環境を直接構築する方法へ即時 fallback しない。Docker Desktop などを起動して再試行できるかユーザーに確認する。
 
+Claude Code on the web の cloud session(`CLAUDE_CODE_REMOTE=true`)では、ユーザーに確認せず agent が daemon を起動してよい。SessionStart hook が `.agents/scripts/cloud-session-setup.sh` で daemon を起動し、cloud 専用の override(`compose.cloud.yaml`)を `COMPOSE_FILE` で重ねる。hook が動かない session では同 script を `--force` で実行する。Compose 経由の原則と開発コマンドの形は変えず、daemon が起動しない場合も host の `go` で代替しない。cloud session で使える service は `dev` だけである。詳細は `doc/guidelines/cloud-session-guidelines.md` を参照する。
+
 ## 実行の基本形
 
 開発作業は `dev` service 経由の `docker compose run` を基本形とする。

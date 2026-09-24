@@ -1,0 +1,17 @@
+---
+description: cloud session(Claude Code on the web)で作業するとき、または cloud session 向けの設定(実行環境 script / SessionStart hook 登録 / cloud 専用 compose override)を変更するときに読む共通正本への入口
+globs:
+  - ".agents/scripts/**"
+  - ".claude/settings.json"
+  - "compose.cloud.yaml"
+  - "compose.yaml"
+alwaysApply: false
+---
+
+# Cloud Session 実行ルール
+
+- 詳細は `doc/guidelines/cloud-session-guidelines.md`
+- cloud session 向けの設定を変更する前に共通正本を読む。
+- `.claude/settings.json` には hook の登録だけを書く。処理本体は `.agents/scripts/` に置く。
+- Cursor は cloud session の対象外。同じ script を呼ぶ入口が必要になった時点で足す。
+- tool 固有入口だけに恒久ルールを書かない。

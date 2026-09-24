@@ -21,6 +21,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - Working branch notes 取り扱いルール(性質・整合性スコープ・ライフサイクル・メンテコスト判断): `doc/guidelines/working-branch-notes-handling.md`
 - Working branch notes 情報統制ルール(`working-branch-notes/**/*.md` のセキュリティ禁則): `doc/guidelines/working-branch-notes-security.md`
 - Issue 駆動タスク実行ルール(Issue 指定タスクの消化手順 / 1 Issue = 1 PR / merge はユーザー): `doc/guidelines/issue-driven-task-execution.md`
+- Cloud session 実行ルール(Claude Code on the web の cloud session での開発コマンド・GitHub 操作・git の例外 / environment cache): `doc/guidelines/cloud-session-guidelines.md`
 
 ## ドキュメント配置
 
@@ -61,6 +62,7 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - token / cookie / Authorization header などの認証情報を HTTP client / asset download / 外部通信で扱うときは `doc/guidelines/credential-scope-guidelines.md` に従い、明示 allowlist の host 以外へ送らない。
 - PR を作成または更新するときは `doc/guidelines/pull-request-guidelines.md` に従う。
 - GitHub Issue を指定されてタスクを消化するときは `doc/guidelines/issue-driven-task-execution.md` に従う。
+- Claude Code on the web の cloud session で作業するとき、または cloud session 向けの設定(`.agents/scripts/cloud-session-setup.sh`、`.claude/settings.json`、`compose.cloud.yaml`、environment の setup script)を変更するときは `doc/guidelines/cloud-session-guidelines.md` に従う。
 - ドキュメントを作成・移動・分類変更するときは、まず `doc/README.md` と該当ディレクトリの `README.md` を確認する。
 - 日本語ドキュメントを作成・編集するときは `doc/guidelines/document-style-guidelines.md` に従い、読者層別の文末(利用者向けはですます調、開発者向けは常体)とトーンを守る。
 - 設計判断、方針変更、重要な検討経緯を記録するときは `doc/guidelines/decision-log-guidelines.md` に従う。
