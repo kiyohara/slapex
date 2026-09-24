@@ -103,6 +103,7 @@ Mode: <review | address-comments | verify-comments>
 - 書くのは API で使う形の識別子(exact model ID。上記 `Model` の項の例と同じ形)とし、表示名は書かない。投稿者によって表記が分かれると、記録として揃わないためである。実行環境が表示名しか示さない場合は、確認できないものとして扱う。
 - 同じ理由から、context window を示す接尾辞(`[1m]` など角括弧の部分)は除いて書く。`session_context.model` や system prompt の識別子には付くことがあり、`last_served_model` には付かない。
 - どの手段でも値を確認できない場合は `unknown` とする。session ID など `get_session` の他の値は書かない。
+- 委譲元(orchestrator など)が従う上位の指示の内容が、委譲の brief で事実として渡された場合は、自身の実行環境の指示と同じく上記 `Model` の項に当てはめる。渡されるのは指示の内容だけであり、値は自分で確かめる。
 - 上記 `Model` の項により上位の指示で記載を控える場合は、確かめた値を書かず `unknown` とする。
 
 ### 投稿前の確認と誤りの訂正

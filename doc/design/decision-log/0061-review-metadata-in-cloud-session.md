@@ -43,24 +43,24 @@ conversation comment の編集の手段(G を採る場合):
 ## 検討内容
 
 - A: footer は harness の指示で、付けなければ server が付ける。repository のルールでは止められない。
-- B: footer の有無と内容に依存しない。footer が付かない環境(ローカルの Claude Code、Codex、Cursor)では、footer の直前という条件が消えるだけで、これまでと同じ書き方になる。5 行と footer の間に空行が無いと、`---` の直前の行(`Mode`)が Markdown の見出し(setext heading)として表示されるため、空行を 1 行置く。キーの並びで探すため、1 投稿に 2 組あると特定できない。1 投稿 1 組とし、他の投稿の metadata を行ごと引用しないことにする。
+- B: footer の有無と内容に依存しない。footer が付かない環境(ローカルの Claude Code、Codex、Cursor)では、footer の直前という条件が消えるだけで、これまでと同じ書き方になる。5 行と footer の間に空行が無いと、`---` の直前の行(`Mode`)が Markdown の見出し(setext heading)として表示されるため、空行を 1 行置く。キーの並びで探すため、1 投稿に 2 組あると特定できない。1 投稿 1 組とし、他の投稿の metadata を行ごと引用しないことにする。PR #233 の review(2026-09-24)では、cloud session の subagent の system prompt に footer の指示は無く、server が review 本文と各 inline comment の末尾に footer を付けた。5 行と footer の間には空行が入っていた。
 - C: cloud session の system prompt は、model を答えるときに `get_session` で確かめるよう求めている。設定された model と実際に応答した model は fallback などで異なり得るとも述べている。system prompt の記載だけでは、実際に応答した model を表さない場合がある。
 - D: `get_session` の `external_metadata.last_served_model` は、実際に応答した model を表す。一方で `get_session` が示すのは session の model であり、subagent が別の model で起動されている場合がある。bizdate は 2026-09-24 に、cloud session の subagent の system prompt に exact model ID の行があることを確かめている。
 - D の補足: 2026-09-24 に slapex の project の thread の session で `get_session` を呼んだところ、`session_context.model` と `configured_model` には context window を示す接尾辞(`[1m]`)が付き、`last_served_model` には付かなかった。session 本体の system prompt が示す exact model ID にも、同じ接尾辞が付いていた。そのまま書くと、session 本体と subagent で表記が分かれる。
-- E: bizdate の PR #67 では、orchestrator が subagent に `unknown` を指示し、投稿者によって値が分かれた。確認していない値を写すことになり、記録として使えない。ただし、orchestrator が従う上位の指示(model の識別子の記載範囲)は、subagent の実行環境に載っているとは限らない。subagent の投稿は orchestrator の session の出力でもあるため、値ではなく指示の内容を事実として渡す必要がある。slapex の project の thread の指示(チャットの返答以外に書かない)がこれに当たる。
+- E: bizdate の PR #67 では、orchestrator が subagent に `unknown` を指示し、投稿者によって値が分かれた。確認していない値を写すことになり、記録として使えない。ただし、orchestrator が従う上位の指示(model の識別子の記載範囲)は、subagent の実行環境に載っているとは限らない。subagent の投稿は orchestrator の session の出力でもあるため、値ではなく指示の内容を事実として渡す必要がある。slapex の project の thread の指示(チャットの返答以外に書かない)がこれに当たる。PR #233 の review では、cloud session の subagent の system prompt に記載範囲の指示が無かった。渡した事実を subagent がどう扱うかは、subagent が読む `review-pull-request` の側にも書く必要がある(同 review の指摘)。
 - F: 1 投稿 1 組と、完了要約 1 本の前提が崩れる。どちらの組が正しいかを parse で決められない。
 - G: 編集で直せば、前提を保てる。削除して再投稿すると記録が消え、取り消せないため選ばない。
 - H1: 0058 の「allowlist 外の tool は使わない」に反する。0058 は、組み込み tool の見え方ではなく guideline の境界で禁止を保つと決めている。
 - H3: 編集の tool を足すと、各利用者の `.config/github-op-integrated.conf` の更新が要る。allowlist を広げるのは `doc/guidelines/github-mcp-guidelines.md` の「tool allowlist の運用」で別途 review する扱いであり、#227 の範囲を超える。
-- H2: 編集は allowlist に無い操作であり、ローカルでは既存の `gh` fallback にそのまま当たる。cloud session では `gh` を setup script が入れ、組み込み tool で扱えない操作を `gh api` で補う位置づけ(0058)に当たる。inline comment と review 本文も `gh api` でしか編集できないため、手段が 1 つに揃う。`gh` が無い session では conversation comment も直せないが、inline comment と同じく人間に依頼すれば足りる。
+- H2: 編集は allowlist に無い操作であり、ローカルでは既存の `gh` fallback にそのまま当たる。cloud session では `gh` を setup script が入れ、組み込み tool で扱えない操作を `gh api` で補う位置づけ(0058)に当たる。inline comment と review 本文も `gh api` でしか編集できないため、手段が 1 つに揃う。`gh` が無い session では conversation comment も直せないが、inline comment と同じく人間に依頼すれば足りる。ただし、0058 の「`gh` は組み込み tool に無い操作だけを補う」を、allowlist 外で使えない組み込み tool の操作一般へ広げるものではない。広げると、禁止・要承認の列挙に無い他の操作も `gh api` で行えると読める。例外は comment / review 本文の編集に限り、guideline に明記する(PR #233 の review の指摘)。
 
 ## 決定
 
 - 位置は B とする。投稿の末尾に置き、実行環境が footer を付ける(または付けるよう求める)場合はその直前に置く。footer を自分で書く場合は間に空行を 1 行置く。footer を書くよう求められていない agent(cloud session の subagent など)は 5 行で投稿を終え、実行環境が付けた footer との間の空行を read-back で確かめる。parse は 5 つのキーがこの順で連続する 5 行で行う。1 投稿に 1 組とする。
 - `Model` の確認手段は D とする。cloud session の session 本体は `get_session`(`session_id` を省略)の `external_metadata.last_served_model` を書き、無い場合は `session_context.model` を書く。subagent は自身の system prompt が示す識別子を書く。それ以外の環境では、実行環境が示す識別子を書く。書くのは exact model ID とし、表示名は書かない。context window を示す接尾辞は除く。`get_session` は投稿の直前に呼ぶ。確認できない場合と、上位の指示で記載を控える場合は `unknown` とする(0060)。
-- 委譲する側は `Model` の値と、skill と異なる書き方を指示しない(E を採らない)。orchestrator が従う上位の指示が model の識別子の記載範囲を定めている場合は、その内容を事実として brief に添える。`drive-issue-to-reviewed-pr` の委譲の節と brief の形にこれを明記する。
+- 委譲する側は `Model` の値と、skill と異なる書き方を指示しない(E を採らない)。orchestrator が従う上位の指示が model の識別子の記載範囲を定めている場合は、その内容を事実として brief に添える。`drive-issue-to-reviewed-pr` の委譲の節と brief の形にこれを明記する。受け取った subagent は、その内容を自身の実行環境の指示と同じく `Model` の項に当てはめ、値は自分で確かめる。`review-pull-request` の「`Model` の確認手段」にこれを明記する。
 - 投稿の前に、キーの並びと位置、`Agent` と `Model` の確認元、`Review cycle`、投稿直前に取り直した head SHA、`Mode` を確かめる。
-- 誤りの訂正は G とし、編集の手段は H2 とする。conversation comment、inline comment とその返信、提出済み review の本文は、いずれも `gh api` で編集する。cloud session の組み込みの `update_issue_comment` は使わない。`gh` が使えない場合と、誤りが `Agent` 行にあるなどで同じ Agent 種別の投稿だと確認できない場合は、対象と正しい値を報告して人間に GitHub の UI での編集を依頼する。subagent は note を書かず、報告を orchestrator へ返す。
+- 誤りの訂正は G とし、編集の手段は H2 とする。conversation comment、inline comment とその返信、提出済み review の本文は、いずれも `gh api` で編集する。cloud session の組み込みの `update_issue_comment` は使わない。0058 の `gh` の範囲に対する例外は comment / review 本文の編集に限り、`doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」に明記する。`gh` が使えない場合と、誤りが `Agent` 行にあるなどで同じ Agent 種別の投稿だと確認できない場合は、対象と正しい値を報告して人間に GitHub の UI での編集を依頼する。subagent は note を書かず、報告を orchestrator へ返す。
 - 正本は `.agents/skills/review-pull-request/SKILL.md` の「可視 metadata の canonical フォーマット」とその下の 2 節(「`Model` の確認手段」「投稿前の確認と誤りの訂正」)とする。cloud session 固有の事情は `doc/guidelines/cloud-session-guidelines.md` の「なぜ専用の設定が要るか」に 1 行、編集の tool routing は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に 1 行置き、skill を参照する。
 
 ## 理由
@@ -71,7 +71,7 @@ footer は repository のルールの外で付くため、規定の側を footer
 
 - `.agents/skills/review-pull-request/SKILL.md` の「可視 metadata の canonical フォーマット」を改め、「`Model` の確認手段」と「投稿前の確認と誤りの訂正」を加えた。
 - `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md` の「subagent への委譲」に、metadata の値と書き方を brief で指示しないこと、上位の指示の内容を事実として添えることを加え、brief の形と「返させる出力」「終了時の報告」を合わせた。
-- `doc/guidelines/cloud-session-guidelines.md` の「なぜ専用の設定が要るか」と、`doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に 1 行ずつ加えた。
+- `doc/guidelines/cloud-session-guidelines.md` の「なぜ専用の設定が要るか」と、`doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に 1 行ずつ加えた。`doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」に `gh` の範囲の例外を書き、`doc/guidelines/github-cli-guidelines.md` の「cloud session(Claude Code on the web)」から参照した。
 - bizdate との差分は、conversation comment の編集の手段(H2)、context window の接尾辞を除くこと、上位の指示の内容を brief に添えることの 3 点である。
 - `.github/copilot-instructions.md` と入口 shim は同期しない。どちらも review metadata の書き方を扱っていない。
 

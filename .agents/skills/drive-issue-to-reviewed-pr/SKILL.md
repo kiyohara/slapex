@@ -33,6 +33,7 @@ review(P2)と再確認(P5)を subagent へ分けるのは、context を分離す
   - 別リポジトリの URL である。
   - 複数の Issue または PR を同時に指定されている。
   - 対象 PR が closed または merged である。
+- Issue を入力された場合でも、その Issue を `Closes` する open PR が既にある場合は、PR 番号を入力されたものとして「PR から始める場合」に進む。前の session が P2 以降で途切れた場合などに、ブランチと PR を作り直さないためである。該当する PR が一意に決まらない場合は、始めずにユーザーに確認する。
 
 ### PR から始める場合
 
@@ -41,6 +42,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - metadata は、同節の規定どおり、5 つのキーがこの順で連続する 5 行を探して読む。投稿内の位置には依存しない。
 - 対象 review cycle は、`Agent` が現在の Agent 種別と一致する review cycle のうち最も新しいものとする。それ以外の cycle と人間の review は「他の review cycle の扱い」に従う。
 - 関連 Issue は PR description の `Closes #<番号>` から取る。起点 Issue を持たない PR(索引登録、進捗整理、リリース)では `なし` とする。
+- 現在のブランチが PR の head branch と異なる場合は、head branch に切り替えてから進める。切り替えられない場合(cloud session で、PR を作った session と別の session から再開した場合など)は、push を伴う手順(P4 の修正、P6 の note の更新)の前で止まる(「停止とエスカレーション」)。
 
 最新の完了要約とは、対象 review cycle の `review` と `verify-comments` の完了要約のうち最も新しいものを指す。
 
@@ -48,10 +50,11 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 | --- | --- |
 | 無い | P2 |
 | 最新の完了要約で指摘または未対応が 1 件以上あり、その後の `address-comments` の返信がまだ付いていない指摘がある | P4(「反復の上限」に従う) |
-| 最新の完了要約の後に、対応が要る指摘のすべてへ `address-comments` の返信が付いている | P5 |
+| 最新の完了要約で指摘または未対応が 1 件以上あり、その後に、対応が要る指摘のすべてへ `address-comments` の返信が付いている | P5 |
 | 最新の完了要約で指摘または未対応が 0 件 | 完了要約の `Reviewed head` から現在の head までの差分が `working-branch-notes/` だけなら P6。それ以外の差分があれば、新しい review cycle を P2 から始める |
 
 - top-level の指摘は、同じ cycle の `address-comments` の PR conversation comment があれば返信済みとみなす。
+- 処置が「判断に追加情報が必要である」の返信は、返信済みに数えない。その指摘が残る場合は P4 から再開し、「停止とエスカレーション」に従って確認事項を報告する。
 - metadata が崩れている、または状態を一意に決められない場合は、始めずにユーザーに確認する。
 
 ## 起動前提
@@ -251,6 +254,7 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 | CI の失敗が差分から説明できない。check runs が完了しない | 推測で修正を重ねず、失敗内容と切り分けの結果を報告する |
 | 出力生成系 skill の生成物に説明できない差分がある | commit せず、各 skill の「生成後の確認」に従って報告する |
 | PR head が想定外に動いた。PR が closed / merged になった | 古い diff を前提に進めず、報告する |
+| PR の head branch へ push できない(cloud session で、PR を作った session と別の session から再開した場合など) | push を伴う手順の前で止まり、PR の head branch へ push できる環境での再開を依頼する(`doc/guidelines/git-operation-guidelines.md` の「cloud session(Claude Code on the web)」) |
 | `address-comments` の処置が「判断に追加情報が必要である」になった指摘がある | 確認事項を報告し、回答を得てから P4 を続ける |
 | `review-pull-request` の反復上限に達した | 同 skill の「反復の上限」のエスカレーションに合流する |
 | subagent を起動できない | 「subagent が使えない環境」に従い、再開手順を返す |
