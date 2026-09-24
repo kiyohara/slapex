@@ -29,6 +29,24 @@
 2. 操作が MCP の allowlist に無い、MCP が未設定、MCP が起動失敗・応答失敗するなどの場合は、`doc/guidelines/github-cli-guidelines.md` に従って `gh` に fallback する。
 3. local git / SSH / commit signing を伴う操作は MCP に寄せず、`doc/guidelines/git-operation-guidelines.md` に従う。
 
+cloud session(Claude Code on the web)では上記の優先順位を後述の「cloud session(Claude Code on the web)」で読み替える。
+
+### cloud session(Claude Code on the web)
+
+cloud session の sandbox には `op` が無く、`github-op-integrated` は起動できない(MCP host に出る起動失敗の表示は想定どおりで、診断や再接続の依頼をしない)。代わりに session が組み込みの GitHub MCP tool を提供する。`gh` は environment の setup script(`.agents/scripts/cloud-session-setup.sh --provision`)が入れる(`doc/guidelines/cloud-session-guidelines.md`)。
+
+- 組み込み GitHub tool を第一選択とする。「操作別の第一選択」の tool 名はそのまま読み替え、skill 内の `github-op-integrated` の記載も組み込み tool に読み替える。
+- 組み込み tool には `github-op-integrated` の allowlist(`.config/github-op-integrated.conf.example`)外の tool も見える。見えていても使わない。特に merge(`merge_pull_request`)、file push(`push_files` / `create_or_update_file` / `delete_file`)、workflow の実行・再実行・cancel・run log 削除(`actions_run_trigger`)、review thread の resolve(`resolve_review_thread`)、auto-merge の変更(`enable_pr_auto_merge` / `disable_pr_auto_merge`)、PR branch の更新(`update_pull_request_branch`)は実行しない。「CI 操作の境界」と「tool allowlist の運用」はそのまま適用する。
+- 「セッション途中で MCP が切断された場合」の Docker 起因の MCP 起動失敗の扱いは、cloud session には当てはめない。
+- `gh` は、組み込み tool に無い操作を補うためだけに使う。MCP tool で足りる操作を `gh` に置き換えない。
+- write が失敗したら read 系 tool で反映を確認し、未反映なら同じ tool で再試行するか、ユーザーに報告する。同じ write を `gh` で再実行しない。
+
+GitHub 宛ての request は platform の GitHub proxy が実際の credential に差し替える。`GH_TOKEN` / `GITHUB_TOKEN` には placeholder が入っており、token は VM に入らない。proxy は REST だけを通し、GraphQL を使う subcommand と `gh auth status` は通らない。`gh` の実行形式は `doc/guidelines/github-cli-guidelines.md` の「cloud session(Claude Code on the web)」に従う。
+
+禁止と要承認の操作は `gh` の経路でも同じである。merge、`APPROVE` / `REQUEST_CHANGES`、review thread の resolve、auto-merge の変更、API 経由の file push は `gh api` でも実行しない。workflow の実行・再実行・cancel・run log 削除、release、repository settings の変更は、`doc/guidelines/github-cli-guidelines.md` のとおり `gh` で扱う高リスク write であり、ユーザーの承認を得てから実行する。
+
+`gh` が入っていない session(setup script の stub が未登録、または導入に失敗した)では、`gh` の導入を agent が試みず、組み込み tool だけで進める。組み込み tool に無い操作が必要になったら、ユーザーに報告する。
+
 ### 汎用 skill / plugin と競合する場合
 
 汎用 skill、plugin、user-level skill / rule が GitHub app や `gh` を第一選択としていても、このリポジトリでは本ガイドラインの tool 優先順位で上書きする。複数の skill が同時に該当する場合も、slapex の project-specific skill と本ガイドラインを優先する。
