@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-4l4ad6`(cloud session が指定。Issue の推奨ブランチ名は `check-phase-completion-on-pr-entry`)
-- PR:
+- PR: #237
 - 最終更新: 2026-09-24
 
 ## 目的
@@ -30,7 +30,7 @@ Issue #234。`drive-issue-to-reviewed-pr` を PR 番号の入口から再開す�
 
 ## 次にやること
 
-- PR を作成し、note を採番する(P1)。
+- PR を作成し、note を採番する(P1)。(完了)
 - 最新 head の check runs を確かめ、P2 を subagent に委譲する。
 
 ## 検証
