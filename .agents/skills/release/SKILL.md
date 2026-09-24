@@ -34,7 +34,7 @@ hotfix・pre-release・複数 target の同時公開など通常フローに乗�
 - `doc/guidelines/git-operation-guidelines.md` — 署名付き tag 作成(`git tag -s`)・SSH remote への push の 1Password SSH agent 連携と実行環境制約。
 - `doc/guidelines/github-mcp-guidelines.md` — GitHub 操作で `github-op-integrated` MCP tool を優先する方針。
 - `doc/guidelines/github-cli-guidelines.md` — MCP fallback として `gh` を実行する場合の `op plugin run -- gh ...` 形式と実行環境制約。
-- `doc/guidelines/pull-request-guidelines.md` — リリース PR の title / description 書式(日本語、title に tool 名なし)。
+- `doc/guidelines/pull-request-guidelines.md` — リリース PR の title / description 書式(日本語、title に tool 名と model の識別子なし)。
 - `doc/guidelines/working-branch-notes-handling.md` / `doc/guidelines/working-branch-notes-security.md` — note のファイル名規約と push 前の情報統制チェック。
 - `doc/guidelines/development-command-guidelines.md` — build / checksum 照合など開発コマンドを Docker Compose 経由で実行する方針。
 - `doc/guidelines/decision-log-guidelines.md` — リリースに伴う方針更新を decision log に記録するときの手順。
