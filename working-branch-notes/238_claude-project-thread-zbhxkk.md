@@ -17,6 +17,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - 変更: `.agents/skills/number-working-branch-note/SKILL.md`(手順の前置き、「stale 表現の定型置換」の完了タスク行と共通の扱い、Step 5、Step 10、「終了時の報告」、「やらないこと」)。
 - 追加: decision log `0062-note-numbering-without-human-gates.md` と `index.md` の行。
 - P2 の review の指摘 2 件に対応した(P4、`2f5aa44`)。P5 で再確認する。
+- P4 の push 後の head `b9e644c` で、CI の `check` が `internal/slack` の不安定な test で失敗した。本 PR の差分と無関係と判断し、PR に経緯をコメントした。
 
 ## 決定事項
 
@@ -40,6 +41,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - PR を作成し、review 対応を行う。
 - 採番の結果(書き換えた行と触らなかった行)を検証欄と PR description に記録する。(完了)
 - P2 の review を subagent に委譲する。(完了)
+- 最新 head の CI の完了を確かめる。green なら P5 へ進み、`check` がまた失敗したら job の再実行の承認をユーザーに求める。
 - P5 の再確認を subagent に委譲する。
 
 ## 検証
@@ -64,6 +66,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 
 - 並行実行の例外: #229 は同じ `number-working-branch-note/SKILL.md` の別の節を触る。後から merge する側で衝突を解消する。`index.md` の末尾の行も、同時期の PR と衝突し得る。
 - #230 は本 PR の報告項目を上位 skill へ引き上げ、decision log 0062 へ追記する予定である。
+- `internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれに失敗する(`wait = 8.33s, want in [1s, 2s)`)。本 PR と無関係で、follow-up の候補とする。
 
 ## セッションログ
 
@@ -71,3 +74,4 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - 2026-09-24: PR #238 を作成し、変更後の skill で note を採番した(P1、`b8f6d03`)。結果は「検証」のとおり。出力生成系 3 skill は不適用。
 - 2026-09-24: P1 の完了時の head `7ef24fd` の check runs 5 件が success。P2 の subagent が review した。review cycle `claude-code-7ef24fd-20260924132834`、`Reviewed head` `7ef24fd`、指摘 2 件(inline 2、top-level 0)。P3 で P4 へ進んだ。
 - 2026-09-24: P4 で 2 件とも採用し、`2f5aa44` で修正した。出力生成系 3 skill はドキュメントと skill だけの変更のまま不適用。
+- 2026-09-24: P4 の push 後の head `b9e644c` の CI で `check` が失敗した。`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp` が 8.33 秒の backoff を記録したもので、Go のコードを変えていない本 PR の差分とは無関係と判断した(同じコードの `7ef24fd` と main `02f8ac8` では成功)。Compose で test を 300 回、package を 1,200 回回したが再現しなかった。PR に経緯をコメントした。job の再実行はユーザーの承認が要るため行わず、止まった時点の状態をこの note に残した。
