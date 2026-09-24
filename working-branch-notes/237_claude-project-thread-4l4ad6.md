@@ -14,7 +14,8 @@ Issue #234。`drive-issue-to-reviewed-pr` を PR 番号の入口から再開す�
 
 - 作業内容 1〜4 を実施し、Issue の「検証」を実行した(P1)。
 - 変更: `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md` の「入力と入口」(理由の 1 文)、「PR から始める場合」(push できない場合の手順と、P2 / P5 から始める前の前のフェーズの確認)、「CI の確認点」(確認点を P2 と P5 の前へ)。decision log 0059 に追記した。
-- review cycle `claude-code-b2f5d14-20260924132259` の指摘 2 件を P4 で採用し、`b4bf5f0` で直した。
+- review cycle `claude-code-b2f5d14-20260924132259` の指摘 2 件を P4 で採用し、`b4bf5f0` で直した。P5 で 2 件とも resolve 可と確かめられ、未対応は 0 件になった。
+- PR は draft のまま、人間の review と merge を待つ(P6)。
 
 ## 決定事項
 
@@ -30,11 +31,15 @@ Issue #234。`drive-issue-to-reviewed-pr` を PR 番号の入口から再開す�
 - `address-comments` などの手順番号は書かない。並行する #216 が `address-comments.md` の手順番号をずらすためである(#216 の thread からも同じ共有を受けた)。
 - `progress.md` は索引外の単発 Issue のため更新しない。
 - 出力生成系 3 skill は、ドキュメントだけの変更で各 skill の「いつ使うか」に当たらないため適用しない。P4 の修正後も同じ。
+- commit の `Co-Authored-By` の trailer は、実行環境の attribution の指示どおりに付けた。P5 の subagent は、実行環境の別の指示(model の識別子を commit message に書かない)と食い違って読める可能性を挙げた。0060 は commit message の trailer を制限しておらず、merge 済みの PR #233 の commit と同じ扱いのため、変えていない。
 
 ## 次にやること
 
-- PR を作成し、note を採番する(P1)。(完了)
-- 最新 head の check runs を確かめ、P5 を P2 の subagent に委譲する。
+人間の手番だけが残る。
+
+- review thread 2 件の resolve(P5 で resolve 可とされた)。
+- ready for review への変更と merge。変更ファイルは並行する PR と重ならない。
+- 新しい session を開始し、description による発火を確かめる。
 
 ## 検証
 
@@ -67,13 +72,13 @@ Issue #234。`drive-issue-to-reviewed-pr` を PR 番号の入口から再開す�
 | `git diff --check` | 問題なし |
 | Go の test | Go のコードを変えないため、ローカルでは実行しない。CI の check runs で確かめる |
 | description による発火 | 未検証。frontmatter は変えていない。新しい session を開始して確かめる |
-| P2 の subagent が報告した実行環境 | brief で渡した上位の指示(model の識別子はチャットの返答だけに書く)が PR と review のコメントを対象外とすると確認できず、`Model` は `unknown` と理由の 1 行になった。server が付けた footer と 5 行の間に空行が 1 行あることを read-back で確かめた |
+| P2 / P5 の subagent が報告した実行環境 | brief で渡した上位の指示(model の識別子はチャットの返答だけに書く)が PR と review のコメントを対象外とすると確認できず、`Model` は `unknown` と理由の 1 行になった。server が付けた footer と 5 行の間に空行が 1 行あることを read-back で確かめた。P5 も同じ |
 
 ## リスク・ブロッカー
 
 - 並行実行: #230 は本 Issue と同じく、orchestrator の P1 の完了条件と PR の入口に触れる。後から着手する #230 の側で、PR の入口の P1 の確認に引き上げた項目を加える(0059 の追記の「影響」)。#216 / #222 / #228 とは触るファイルが重ならない(並行可否の評価と、P2 の subagent の確認による)。
 - 未検証: description による発火。
-- P2 の subagent は、並行する PR の変更ファイル一覧を `gh api`(REST の read)で取得した。組み込みの `pull_request_read` で足りたため、`doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」の規定から外れる。read だけで、投稿への影響は無い。
+- P2 の subagent は、並行する PR の変更ファイル一覧を `gh api`(REST の read)で取得した。組み込みの `pull_request_read` で足りたため、`doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」の規定から外れる。read だけで、投稿への影響は無い。P5 では brief でこの点を伝え、subagent は組み込みの GitHub tool だけを使った。
 
 ## セッションログ
 
@@ -81,3 +86,5 @@ Issue #234。`drive-issue-to-reviewed-pr` を PR 番号の入口から再開す�
 - 2026-09-24: PR #237 を作成し、note を採番した(P1)。head `b2f5d14` の check runs 5 件が success。出力生成系 3 skill は不適用。
 - 2026-09-24: P2 の subagent が review した。review cycle `claude-code-b2f5d14-20260924132259`、`Reviewed head` `b2f5d14`、指摘 2 件(inline 2、top-level 0)。P3 で P4 へ進んだ。
 - 2026-09-24: P4 で 2 件とも採用し、`b4bf5f0` で直した(確認点に止まる直前を含める、P5 から始める場合の P4 の記録の確認)。出力生成系 3 skill はドキュメントだけの変更のまま不適用。
+- 2026-09-24: P5 の前に head `ca78e13` の check runs 5 件が success であることを確かめ、P2 の subagent に再確認を委譲した。resolve 可 2 件、未対応 0 件。新しい指摘は無い。
+- 2026-09-24: P6 で終了時の状態を記録した(note だけの commit)。PR は draft のまま、人間の review と merge を待つ。
