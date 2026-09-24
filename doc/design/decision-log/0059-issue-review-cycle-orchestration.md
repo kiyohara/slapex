@@ -109,3 +109,31 @@ slapex には `run-issue-task`(Issue 着手から PR 作成まで)と `review-pu
 - 反復上限の範囲で収束しない事例が続いたとき。
 - subagent を起動するコストが、得られる指摘の質に見合わないと判断されたとき。
 - Codex や Cursor に同等の分離の仕組みが入り、止まる fallback が不要になったとき。
+
+## 追記(2026-09-24): PR の入口での前のフェーズの完了条件と CI の確認点
+
+Issue #234。PR 番号の入口は、対象 review cycle の状態だけから開始フェーズを決め、それより前のフェーズの完了条件を確かめていなかった。PR #233 の再確認の fyi と、同 PR への Codex の review で同じ点が挙がった。
+
+- P1 の途中(PR 作成の後、採番の前など)で途切れた session を PR の入口から再開すると、対象 review cycle が無いため P2 から始まり、note の採番と `progress.md` の PR 欄の反映が飛ばされる。Issue を入力し、`Closes` する open PR があって PR の入口に入る場合も同じである。P2 以降は採番をせず、review の途中で採番すると委譲中に push しない規定とぶつかる。
+- CI の確認点は P1 の完了時と P4 の push 後で、PR の入口からはどちらも通らない。`address-comments` の返信の後、check runs の完了前に途切れると、再開位置の表により P5 から始まり、失敗した head を再確認し得る。
+
+check runs の確認の置き方として、次の 2 案を比べた。
+
+- C1: PR の入口に、開始フェーズごとの確認を足す。P2 なら P1 の完了条件のすべて(採番、`progress.md`、check runs)を、P5 なら check runs を確かめる(Issue #234 の本文の案)。
+- C2: 確認点を「P2 と P5 を委譲する直前」に置き直し、入口によらず確かめる。PR の入口には、P1 の完了条件のうち check runs 以外(採番、`progress.md`)の確認だけを足す(Issue #234 のコメントの案。bizdate の同 skill の「head SHA と CI」と同じ形)。
+
+通常の流れでは P1 の次は P2、P4 の次は P5 であり、C2 の確認点は現行の 2 箇所と同じ時点になる。C1 は check runs の確認を「CI の確認点」と PR の入口の 2 箇所に書くことになり、入口や開始フェーズが増えるたびに書き足しが要る。C2 は 1 箇所で済み、bizdate の同じ path との差分も小さい(bizdate の Issue #82 は、この形のため P1 の残りだけを対象にしている)。
+
+決定:
+
+- C2 を採る。「CI の確認点」は、P2 と P5 を委譲する直前に最新 head の check runs を確かめる形とし、PR の入口から始めた場合もこれを通る。本ログの「決定」にある「CI は P1 の完了時と P4 の push 後の 2 箇所で」は、この形に置き換える。通常の流れで確かめる時点は変わらない。
+- PR の入口で開始フェーズが P2 の場合は、P1 の完了条件を確かめ、満たしていない条件(note の採番、索引にある Issue の `progress.md` の PR 欄)を P1 の残りの手順で満たしてから始める。手順は `number-working-branch-note` と `run-issue-task` を参照し、本 skill に複製しない。
+- P5 から始める場合の check runs の確認を含める(Issue #234 の未決事項 1 の仮決定)。P2 だけに置くと、同じ隙間が P5 に残る。
+- check runs が失敗した場合の扱い(差分に起因すれば直して再 push し、説明できなければ止まる)は変えない。bizdate は PR の外に原因がある失敗を brief に明記して委譲するが、本 Issue の範囲では slapex の停止の規定を変えない。
+- PR の head branch へ push できない場合に止まる手順に、P1 の残りの手順を含める。採番と `progress.md` の反映は push を伴うためである。
+
+影響:
+
+- `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md` の「入力と入口」「PR から始める場合」「CI の確認点」を変えた。「フェーズ」の表の完了条件は変えていない。
+- Issue #230 は P1 の完了条件に項目を足す。足す項目は、PR の入口での P1 の確認にも加える。
+- bizdate への反映は bizdate の Issue #82 で扱う。
