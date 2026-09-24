@@ -16,13 +16,15 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - 作業内容 0〜7 を実施し、採番前に行える「検証」を済ませた。
 - 変更: `.agents/skills/number-working-branch-note/SKILL.md`(手順の前置き、「stale 表現の定型置換」の完了タスク行と共通の扱い、Step 5、Step 10、「終了時の報告」、「やらないこと」)。
 - 追加: decision log `0062-note-numbering-without-human-gates.md` と `index.md` の行。
+- P2 の review の指摘 2 件に対応した(P4、`2f5aa44`)。P5 で再確認する。
 
 ## 決定事項
 
 - 作業内容 0: bizdate main の `201bda4`(2026-09-24)で確認した。`ab7c88e` 以降の first-parent の merge は PR #78、#79、#81 で、bizdate PR #54 が触った 2 ファイルを更新したものは無い。
 - 未決事項 1〜6 は仮決めのまま進めた。decision log の番号 0062 は、並行実行で coordinator が割り振った番号である(#229 は後から次の空き番号を取る)。
-- 前置きの例外は「stale 表現の定型置換」の対象の行に限った。Step 5 のファイル名参照か汎用 placeholder かの判別(「判別が難しい場合はユーザーに確認する」)は、#171 が安全停止として残したもので、Issue の走査でも判断不能な場面の安全弁に分類されているため変えない。例外の文に、止まる扱いが残る箇所を列挙した。
-- 報告の理由「汎用 placeholder か判別できない」は、placeholder で書かれた完了タスク行に当てた。placeholder が本 note 自身の採番を指すのか、引用・例示なのかを判別できない行は、完了を判断できない行として扱う 1 文を足した。
+- 前置きの例外は「stale 表現の定型置換」の対象の行に限った。Step 5 / Step 10 のファイル名参照か汎用 placeholder かの判別(Step 5 の「判別が難しい場合はユーザーに確認する」。Step 10 は「Step 5 と同じく」)は、#171 が安全停止として残したもので、Issue の走査でも判断不能な場面の安全弁に分類されているため変えない。例外の文に、止まる扱いが残る箇所を列挙した。列挙には、P2 の指摘を受けて Step 10 も明記した。
+- 報告の理由「汎用 placeholder か判別できない」は、placeholder で書かれた完了タスク行に当てた。placeholder が本 note 自身の採番を指すのか、引用・例示なのかを判別できない行は、完了を判断できない行として扱う 1 文を足した。P2 の指摘を受け、同じ文に、この行をこの理由で「触らずに残した行の一覧」へ列挙することを書いた。
+- decision log 0062 の走査の分類表は、P2 の指摘を受けて Issue と PR description の表に揃えた。`release` の Step 5 の push 確認と tag push の承認は「1Password と取り消しにくさの切り分けが要る(#229 の担当)」の行に分け、「被委譲 skill の停止の中継」の行を足した。ログの 1Password の行が挙げる `release` の署名・push 失敗時の再実行と `op` 分岐は、PR description の表に行番号(`02f8ac8` の L49、L52、L135)を足した。
 - 報告の理由に「定型に当てはまらない」を足した。Issue の作業内容 5 は 4 つの理由を挙げるが、Step 5 / Step 10 と「やらないこと」の「列挙パターンに明確に当てはまらない曖昧な表現は触らず、終了時に報告する」を受ける理由が無く、完了条件 1 を満たせないためである。
 - 旧項目の「PR description / title への変更点」は「書き換えた行の一覧」へ統合した(未決事項 3)。PR description と title の変更は PR diff に現れないため、Step 10 のファイル名参照の置換も同じ項目に含めた。
 - 適用範囲の文は、Issue の「本 skill の実行そのもので達成される要素(PR 作成、note の rename、note 参照の更新)」を、「前提として実行前に満たされている要素(PR 作成)」と「実行そのもので達成される要素(note の rename、`PR:` 欄の記入、note 参照の更新、それらの commit と push)」に分けて書いた。PR 作成は本 skill が行うものではないためで、bizdate の PR #54 の書き方と同じである。
@@ -36,8 +38,9 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 
 - PR を作成し、この note を採番する。(完了)
 - PR を作成し、review 対応を行う。
-- 採番の結果(書き換えた行と触らなかった行)を検証欄と PR description に記録する。
-- P2 の review を subagent に委譲する。
+- 採番の結果(書き換えた行と触らなかった行)を検証欄と PR description に記録する。(完了)
+- P2 の review を subagent に委譲する。(完了)
+- P5 の再確認を subagent に委譲する。
 
 ## 検証
 
@@ -46,7 +49,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 | 項目 | 結果 |
 |---|---|
 | `git grep -n '終了時に報告' -- .agents/skills/number-working-branch-note/SKILL.md` | 8 行(L80、L84、L86、L130、L184、L185、L211、L213)。L86 は報告先の定義である。他の 7 行はいずれも「終了時の報告」の「触らずに残した行の一覧」の理由(複合行、文脈が不自然、完了を判断できない、定型に当てはまらない)と対象(note のファイル名 / PR description / title)で受けられる。Step 5 と Step 10 の追加の bullet は、書き換えた行を「書き換えた行の一覧」へ回す |
-| 通読(前置き、定型置換、Step 5、Step 10、「終了時の報告」、「やらないこと」) | 完了タスク行と stale 表現の扱いに矛盾なし。前置きの例外は定型置換の対象の行に限られ、Step 5 のファイル名参照の判別の停止とは重ならない |
+| 通読(前置き、定型置換、Step 5、Step 10、「終了時の報告」、「やらないこと」) | 完了タスク行と stale 表現の扱いに矛盾なし。前置きの例外は定型置換の対象の行に限られ、Step 5 / Step 10 のファイル名参照の判別の停止とは重ならない |
 | #171 の検証コマンド(`rg -n 'ユーザー確認\|ユーザー承認\|合意を得\|確認を取ってから\|push 確認'`) | 該当なし |
 | `ls -la .claude/skills/number-working-branch-note` | `../../.agents/skills/number-working-branch-note` を指し、symlink 経由で SKILL.md を読める |
 | repo 相対 path と markdown link | 追加・変更した行に切れなし |
@@ -55,6 +58,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 | Go の test | Go のコードを変更しないため実行しない。CI の check runs で確かめる |
 | 自己適用(本 PR の採番、`b8f6d03`) | 変更後の SKILL.md を repo 相対 path で読み、人間の手番なしで Step 1〜10 を終えた。note は `PR:` 欄に `#238` を記入し、「PR 未作成。」を「PR #238 作成済み。」へ、完了タスク行「PR を作成し、この note を採番する。」を行末 `(完了)` 付きへ書き換えた。複合行「PR を作成し、review 対応を行う。」は触らなかった。記録作業の行「採番の結果(…)を検証欄と PR description に記録する。」は、適用範囲の文のとおり対象外として触らなかった。PR description はファイル名参照を 1 箇所置換し、title は変えなかった。PR #225 で未通過だった完了タスク行の書き換え経路の初回通過である |
 | 自己適用の終了時の報告 | 「書き換えた行の一覧」: note の 2 行(状況を説明する stale 表現 1、完了タスク行 1)、PR description のファイル名参照 1 箇所、title は「なし」。「触らずに残した行の一覧」: note の複合行 1 行、PR description と title は「なし」。書き換えた行と触らなかった行の両方が報告に現れた |
+| P4 の修正後の再確認(`2f5aa44`) | `終了時に報告` の 8 行と行番号は変わらない。理由「汎用 placeholder か判別できない」を使う行は L65 にあり、L200 の一覧と対応する。#171 の検証コマンドは該当なし、`git diff --check` は問題なし。decision log の表の分類は PR description の表の分類と揃い、ログの各行に行番号付きの対応行がある |
 
 ## リスク・ブロッカー
 
@@ -65,3 +69,5 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 
 - 2026-09-24: 作業内容 0〜7 を実施した。
 - 2026-09-24: PR #238 を作成し、変更後の skill で note を採番した(P1、`b8f6d03`)。結果は「検証」のとおり。出力生成系 3 skill は不適用。
+- 2026-09-24: P1 の完了時の head `7ef24fd` の check runs 5 件が success。P2 の subagent が review した。review cycle `claude-code-7ef24fd-20260924132834`、`Reviewed head` `7ef24fd`、指摘 2 件(inline 2、top-level 0)。P3 で P4 へ進んだ。
+- 2026-09-24: P4 で 2 件とも採用し、`2f5aa44` で修正した。出力生成系 3 skill はドキュメントと skill だけの変更のまま不適用。
