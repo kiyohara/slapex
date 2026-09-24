@@ -55,7 +55,7 @@ A と D を採用する。
 
 ### 他 skill の走査
 
-同種のゲート、すなわち成果物の内容判断を理由に、判断できる場合でも書き換え前にユーザーの合意を求めるものが他 skill に無いかを確かめた。`.agents/skills/` 配下の全 `SKILL.md` と `review-pull-request/references/` を、確認・合意・承認・停止などの語で走査し、該当行を読んで分類した。行番号付きの表は Issue #228 の本文(`d0800fe` 時点)と、本ログを追加した PR の description(`02f8ac8` 時点。Issue の後に追加された `drive-issue-to-reviewed-pr` を含む)にある。
+同種のゲート、すなわち成果物の内容判断を理由に、判断できる場合でも書き換え前にユーザーの合意を求めるものが他 skill に無いかを確かめた。`.agents/skills/` 配下の全 `SKILL.md` と `review-pull-request/references/` を、確認・合意・承認・停止などの語で走査し、該当行を読んで分類した。行番号付きの表は Issue #228 の本文(`d0800fe` 時点)と、本ログを追加した PR #238 の description(`02f8ac8` 時点。Issue の後に追加された `drive-issue-to-reviewed-pr` を含む)にある。
 
 | 分類 | 該当 |
 | --- | --- |
@@ -83,6 +83,7 @@ A と D を採用する。
 - `.agents/skills/number-working-branch-note/SKILL.md`: 手順の前置き、「stale 表現の定型置換」(完了タスク行と共通の扱い)、Step 5、Step 10、「終了時の報告」、「やらないこと」を揃えた。frontmatter の `description` は変えない(skill の責務は変わらない)。
 - `doc/guidelines/` と他の skill は変えない。
 - 可視化は本 skill の「終了時の報告」に依存する。報告を省いた実行は、この決定の前提を欠く。本 skill を呼ぶ上位 skill(`run-issue-task`、`release`、`maintain-progress`、`register-progress-issue`、`drive-issue-to-reviewed-pr`)は、決定時点でこの 2 項目を自身の報告へ引き上げる規定を持たない。引き上げは Issue #230 で扱う。
+- PR #238 の採番を変更後の skill で行い、人間の手番なしで完了した。PR #225 で未通過だった完了タスク行の書き換え経路を初めて通し、書き換えた行と触らなかった複合行の両方が「終了時の報告」に現れることを確かめた。
 
 ## 後から見直す条件
 
