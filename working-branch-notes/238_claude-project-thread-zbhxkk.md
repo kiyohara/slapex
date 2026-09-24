@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-zbhxkk`(cloud session が指定。Issue の推奨ブランチ名は `number-working-branch-note-report-rewritten-rows`)
-- PR:
+- PR: #238
 - 最終更新: 2026-09-24
 
 ## 目的
@@ -12,7 +12,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 
 ## 現在の状況
 
-- PR 未作成。
+- PR #238 作成済み。
 - 作業内容 0〜7 を実施し、採番前に行える「検証」を済ませた。
 - 変更: `.agents/skills/number-working-branch-note/SKILL.md`(手順の前置き、「stale 表現の定型置換」の完了タスク行と共通の扱い、Step 5、Step 10、「終了時の報告」、「やらないこと」)。
 - 追加: decision log `0062-note-numbering-without-human-gates.md` と `index.md` の行。
@@ -34,7 +34,7 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 
 ## 次にやること
 
-- PR を作成し、この note を採番する。
+- PR を作成し、この note を採番する。(完了)
 - PR を作成し、review 対応を行う。
 - 採番の結果(書き換えた行と触らなかった行)を検証欄と PR description に記録する。
 - P2 の review を subagent に委譲する。
