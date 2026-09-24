@@ -19,6 +19,8 @@ Issue #226。Claude Code on the web の cloud session で、Docker Compose 経�
 - bizdate との差分: slapex の `dev` は `image:` 指定で `Dockerfile` を持たないため、`BASE_REGISTRY` と image の build の代わりに、`compose.cloud.yaml` の `image:` に mirror(`mirror.gcr.io/library/golang:1.26`)を書き、script は pull だけを行う。tag の二重管理は `--doctor` と hook で一致を検査する。
 - stub の clone 先は `CLAUDE_PROJECT_DIR`、`/home/user/slapex`、`/home/claude/slapex` の順に探す。この session(project の thread、複数 repository)は `/home/claude/<repo>` に clone されていた。
 - environment を他の repository(bizdate)と共有する場合は、各 stub を subshell で囲んで並べる(bizdate の stub は `exec` で終わるため、そのまま連結すると後ろが動かない)。
+- 共有時に `CLAUDE_PROJECT_DIR` が bizdate を指すと、同名の script を取り違える。stub は script 内の state dir(`/opt/slapex-cloud`)を確かめてから実行し、script は repo root を `CLAUDE_PROJECT_DIR` ではなく自身の位置から解決する(bizdate との差分)。`CLAUDE_PROJECT_DIR=/home/claude/bizdate` で stub を実行し、slapex の script を選ぶことを確認した。
+- bizdate の stub は clone 先を `/home/user/bizdate` に固定しており、project の thread(`/home/claude/bizdate`)では skip する。共有用の setup script では bizdate の subshell に clone 先を渡す。bizdate 側の修正は本 Issue のスコープ外。
 - `.github/copilot-instructions.md` は変更しない(`:75` は cloud session の例外と矛盾しない)。
 - `progress.md` は索引外の単発 Issue のため更新しない。
 
@@ -39,6 +41,8 @@ Issue #226。Claude Code on the web の cloud session で、Docker Compose 経�
 | `--provision`(`gh` 未導入、image 無しから) | exit 0、約 51 秒。`gh` 2.45.0 を `apt-get` で導入、dockerd 起動 2 秒、mirror から pull、state file 記録、dockerd 停止 |
 | hook mode(`CLAUDE_CODE_REMOTE=true`、`CLAUDE_ENV_FILE` あり)2 回 | 1 回目 1.4 秒(dockerd 起動 1 秒)、2 回目 0.4 秒。`CLAUDE_ENV_FILE` への `export COMPOSE_FILE=...` は 1 行だけ |
 | `--doctor` | exit 0(daemon、image、tag 一致、`gh`、state、cache 一致) |
+| `--doctor`(state の digest を書き換えて drift を再現) | exit 1、貼り直し用の stub を出力。state を戻して exit 0 |
+| stub の repo 取り違え防止(上記の決定事項) | 変更後に `--provision` を再実行し、state の digest を更新。hook と `--doctor` は exit 0 |
 | `docker compose config \| grep -E 'network_mode\|image:'`(cloud) | `mirror.gcr.io/library/golang:1.26`、`network_mode: host` |
 | `go version`(container) | go1.26.8 |
 | `go mod download`(空の module cache) | OK、約 4 秒 |

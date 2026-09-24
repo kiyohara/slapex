@@ -105,6 +105,8 @@ setup script の実行結果は filesystem snapshot として cache され、後
 
 setup script は environment に 1 つしか置けない。同じ environment を他の repository(例: 同じ方式の stub を持つ別プロジェクト)と共有する場合は、各 stub を subshell `( ... )` で囲んで順に並べる。stub の `exec` と `exit` は subshell の中で閉じるため、先の stub が後の stub を止めない。各 stub の state file は別の path に置かれ、互いの drift 検出に影響しない。
 
+setup script の文脈の `CLAUDE_PROJECT_DIR` は、environment を共有する別の repository を指すことがある。slapex の stub は候補の path の script が slapex のもの(state dir の名前)であることを確かめてから実行し、script は repo root を自身の位置から解決する。
+
 ## Network access
 
 environment の Network access は既定の Trusted のままでよい。使う host は次のとおりで、いずれも既定の許可リストに含まれる。
