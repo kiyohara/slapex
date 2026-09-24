@@ -58,7 +58,7 @@ FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → 
 | FU-08 | [#209](https://github.com/kiyohara/slapex/issues/209) label 付き mention の users.info | todo | - | FU-04 の後(同じ関数) | - |
 | FU-09 | [#210](https://github.com/kiyohara/slapex/issues/210) 取得境界の秒未満切り捨て | todo | - | 精度統一か入力拒否かを決めて実装 | - |
 | FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 / RF-06 で吸収可。残った項目だけ実施 | - |
-| FU-11 | [#222](https://github.com/kiyohara/slapex/issues/222) 同一ファイル再利用時の summary 文言 | todo | PR #221 | #221 merge 後。文言のみで件数と挙動は正しい | - |
+| FU-11 | [#222](https://github.com/kiyohara/slapex/issues/222) 同一ファイル再利用時の summary 文言 | done(PR merge後) | PR #221 | merge後は対応なし。推奨順より先行して実施 | - |
 
 ## リリース履歴
 
