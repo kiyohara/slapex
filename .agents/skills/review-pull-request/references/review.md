@@ -2,7 +2,7 @@
 
 PR 自体をレビューし、1 review cycle につき 1 本の完了要約を投稿する。`SKILL.md` の共通 workflow(対象 PR の特定、Agent 識別と review cycle、コメント言語、capability 再利用、event / resolve の制約)を前提とする。
 
-1. `pull_request_read(get)` で PR metadata と base / head SHA を、`pull_request_read(get_diff / get_files)` で変更内容を、`pull_request_read(get_review_comments / get_reviews / get_comments)` で既存 review を、`pull_request_read(get_check_runs)` で check runs を取得する。
+1. `pull_request_read(get)` で PR metadata と base / head SHA を、`pull_request_read(get_diff / get_files)` で変更内容を、`pull_request_read(get_review_comments / get_reviews / get_comments)` で既存 review を、`pull_request_read(get_check_runs)` で check runs を取得する。CI が失敗している場合は、失敗した check run の `details_url`(`.../actions/runs/<run_id>/job/<job_id>`)から run ID を取り、`get_job_logs(run_id=..., failed_only=true, return_content=true)` で失敗 job の log を確認する。`return_content` を省くと、log の本文ではなく download URL が返る。
 2. 関連 Issue、project の正本(`doc/guidelines/` / `doc/design/`)、既存実装、working branch note、PR description と照合して review scope を確定する。
 3. correctness、regression、security、test、document / process 整合性を、変更内容に応じて確認する。分析には `SKILL.md`「組み込み / 汎用 review capability の再利用」に従い、利用可能な review capability を活用してよい。
 4. 指摘がある場合は、`pull_request_review_write(create)` で pending review を作り、`add_comment_to_pending_review` で可能な限り inline comment としてまとめ、`pull_request_review_write(submit_pending)` の `COMMENT` event で投稿する。review body をその review cycle の唯一の完了要約とし、指摘件数、実施した検証、未実施事項、canonical metadata(`Agent` / `Model` / `Review cycle` / `Reviewed head` / `Mode`)を含める。指摘要約は 1 行程度に留め、inline 本文を全文コピーしない。この場合、同趣旨の `add_issue_comment` は投稿しない。`APPROVE` / `REQUEST_CHANGES` は使わない。
