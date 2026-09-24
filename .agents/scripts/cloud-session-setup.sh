@@ -20,7 +20,7 @@
 #     `--print-stub` が生成した stub を UI に貼る。setup script は agent proxy が立つ前に
 #     走るため container 内から外へは出られない。そこで gh の導入 (Ubuntu archive)、dev image の
 #     pull (mirror)、state file の記録だけを行い、`go mod download` などは行わない。environment は
-#     repository や branch をまたいで共有されるため、stub は script が無ければ何もせず exit 0 する。
+#     slapex 専用とし、branch をまたいで共有されるため、stub は script が無ければ何もせず exit 0 する。
 #
 # 安全策:
 #   - 冪等。何度実行しても同じ状態に収束する。
@@ -74,8 +74,7 @@ if [ "$mode" = "hook" ] && [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 # repo root は script 自身の位置から解決する。hook は "$CLAUDE_PROJECT_DIR" 配下の script を呼ぶため
-# 同じ path になる。setup script の文脈では CLAUDE_PROJECT_DIR が environment を共有する別の
-# repository を指すことがあるため、CLAUDE_PROJECT_DIR は使わない。
+# 同じ path になり、setup script からの呼び出しや手動実行でも同じ規則で済む。
 script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 repo_root="$(cd "$(dirname "$script_path")/../.." && pwd)"
 cd "$repo_root" || { echo "$self: repo root に移動できない" >&2; exit 0; }
@@ -323,18 +322,16 @@ print_stub() {
 # slapex: cloud session の環境構築。正本は repository 側にある。
 #   .agents/scripts/cloud-session-setup.sh
 # この stub は薄いままにする。中身を変えるときは repository を直す。
-# environment は repository や branch をまたいで共有される。script が無ければ何もせず exit 0 する
+# environment は slapex 専用で、branch をまたいで共有される。script が無ければ何もせず exit 0 する
 # (setup script が非 0 で終わると session が起動しない)。
 # CLOUD_SETUP_INPUTS_SHA256=$(inputs_digest)
 #   ↑ script と compose.yaml / compose.cloud.yaml の digest。
 #     environment cache は setup script のテキストが変わったときだけ再構築されるため、
 #     digest を埋めてテキストが自然に変わるようにしている。
 #     貼り直す内容は \`.agents/scripts/cloud-session-setup.sh --print-stub\` で生成する。
-# 同名の script を持つ別の repository と environment を共有しても取り違えないよう、slapex の
-# script であること (state dir の名前) を確かめてから実行する。
-for dir in \${CLAUDE_PROJECT_DIR:-} $default_clone_dirs; do
+for dir in $default_clone_dirs; do
   script="\$dir/.agents/scripts/cloud-session-setup.sh"
-  if [ -f "\$script" ] && grep -q '$state_dir' "\$script"; then
+  if [ -f "\$script" ]; then
     exec bash "\$script" --provision
   fi
 done

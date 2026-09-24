@@ -25,7 +25,7 @@ cloud session の sandbox では、このリポジトリの前提が次のよう
 | `.agents/scripts/cloud-session-setup.sh` | yes | 処理本体。hook(既定)/ `--force` / `--provision` / `--doctor` / `--print-stub` の mode を持つ。動作の詳細は script 冒頭のコメントと `--help` を正とする |
 | `.claude/settings.json` | yes | SessionStart hook(`startup` と `resume`)で上記 script を呼ぶ登録だけを持つ。処理や恒久ルールを書かない。個人の設定は gitignored な `.claude/settings.local.json` に置く |
 | `compose.cloud.yaml` | yes | cloud session 専用の override。対象は `dev` だけで、container を host network にして agent proxy を通し、image を mirror(`mirror.gcr.io/library/golang`)から取る。tag は `compose.yaml` と揃え、`--doctor` が一致を検査する |
-| environment の setup script | no(claude.ai/code の UI 設定) | `--print-stub` が生成する数行の stub。上記 script を `--provision` で呼ぶだけにし、処理を UI 側に書かない。script が無い repository や branch では何もせず exit 0 する(environment は repository と branch をまたいで共有される) |
+| environment の setup script | no(claude.ai/code の UI 設定) | slapex 専用の environment に置く。`--print-stub` が生成する数行の stub で、上記 script を `--provision` で呼ぶだけにし、処理を UI 側に書かない。script が無い branch では何もせず exit 0 する(environment は branch をまたいで共有される) |
 | state file(VM 内 `/opt/slapex-cloud/state`) | no | `--provision` が snapshot の出自(入力の digest、作成時刻、image の名前)を記録する。hook が drift 検出に使う |
 
 ## 実行順序
@@ -101,12 +101,6 @@ setup script の実行結果は filesystem snapshot として cache され、後
 - 警告があっても作業は続けられる。image が無い session では hook が pull する。
 - snapshot は branch をまたいで共有される。feature branch で `compose.yaml` を変えても、stub を貼り直すまで cache は前の状態のままである。
 
-### 他の repository と environment を共有するとき
-
-setup script は environment に 1 つしか置けない。同じ environment を他の repository(例: 同じ方式の stub を持つ別プロジェクト)と共有する場合は、各 stub を subshell `( ... )` で囲んで順に並べる。stub の `exec` と `exit` は subshell の中で閉じるため、先の stub が後の stub を止めない。各 stub の state file は別の path に置かれ、互いの drift 検出に影響しない。
-
-setup script の文脈の `CLAUDE_PROJECT_DIR` は、environment を共有する別の repository を指すことがある。slapex の stub は候補の path の script が slapex のもの(state dir の名前)であることを確かめてから実行し、script は repo root を自身の位置から解決する。
-
 ## Network access
 
 environment の Network access は既定の Trusted のままでよい。使う host は次のとおりで、いずれも既定の許可リストに含まれる。
@@ -138,7 +132,7 @@ setup script は 5 分以内に終わる必要がある。`--provision` は通�
 ## 利用開始手順
 
 1. environment は既定の設定(Trusted)で使える。setup script を登録しなくても hook(または手動の `--force`)が初回に image を pull する。ただし `gh` は入らない。
-2. `gh` を入れ、session 開始を速くするには、cloud session の中で `bash .agents/scripts/cloud-session-setup.sh --print-stub` を実行し、出力を environment の setup script に貼る(他の repository と共有する場合は上記「他の repository と environment を共有するとき」)。
+2. `gh` を入れ、session 開始を速くするには、cloud session の中で `bash .agents/scripts/cloud-session-setup.sh --print-stub` を実行し、出力を slapex 用の environment の setup script に貼る。environment は他の repository と共有せず、slapex 専用に用意する。
 3. 新しい session を開き、冒頭に hook の出力(daemon、image、`gh`、`COMPOSE_FILE`)が入ることと、`docker compose run --rm dev gofmt -l .` と `gh --version` が通ることを確認する。hook が動かない session では `--force` と `--doctor` で確認する。
 
 ## 変更するとき
@@ -160,7 +154,8 @@ setup script は 5 分以内に終わる必要がある。`--provision` は通�
 - `GH_TOKEN` / `GITHUB_TOKEN` の placeholder を実際の token や PAT で上書きしない(environment の環境変数にも置かない)。credential は proxy が差し替える。
 - 公式ドキュメントは `gh` を preinstall としているが、この environment の image には無かった(2026-09-24)。platform の変更で挙動が変わり得るため、`gh` の導入経路や proxy の規則に関わる変更をするときは実測し直す。
 - environment の setup script は agent proxy が立つ前に走る。container の中から外へ出る処理(`go mod download` など)は setup script では通らないため、`--provision` に足さない。
-- environment の setup script は repository と branch をまたいで共有される。stub は script が無ければ skip して exit 0 するため、他の repository や script を含まない branch で session を開いても起動を妨げない。stub を `exec` だけの形に書き換えない。
+- environment の setup script は branch をまたいで共有される。stub は script が無ければ skip して exit 0 するため、script を含まない branch(merge 前の main など)で session を開いても起動を妨げない。stub を `exec` だけの形に書き換えない。
+- stub は既定の clone 先(単一 repository の session は `/home/user/slapex`、複数 repository の session は `/home/claude/slapex`)から script を探す。
 
 ## 関連ルール
 

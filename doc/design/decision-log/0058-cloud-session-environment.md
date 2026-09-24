@@ -58,6 +58,7 @@ Claude Code on the web(Anthropic が host する cloud session)で、Issue 駆�
 - cloud session でも開発コマンドは Compose 経由とする(候補 A)。0002 の例外は daemon の起動に限り、cloud session では agent が確認なしに `dockerd` を起動してよい。daemon が起動しない場合も host の `go` で代替せず、未実施として報告する。
 - 処理本体は `.agents/scripts/cloud-session-setup.sh`、登録は `.claude/settings.json` の SessionStart hook(`startup|resume`)。script は hook / `--force` / `--provision` / `--doctor` / `--print-stub` の mode を持ち、`CLAUDE_CODE_REMOTE=true` のときだけ hook として動く。hook が動かない session では `--force` を手動で実行する。
 - cloud 固有の差分は `dev` だけを対象に `compose.cloud.yaml` に置き(T1、E1)、hook が `COMPOSE_FILE` を session に設定する。image は `mirror.gcr.io/library/golang` から取る。
+- cloud environment は bizdate など他の repository と共有せず、slapex 専用に用意する。共有向けの仕組み(複数 stub の連結など)は持たない。
 - environment の setup script は任意とし、登録する場合は `--print-stub` が生成する stub に限る。`--provision` は `gh` の導入、daemon 起動、`dev` の image の pull、state file の記録、daemon の停止を行う。
 - 文書は新 guideline `doc/guidelines/cloud-session-guidelines.md` を正本とし(W1)、shim 2 本と `AGENTS.md` を揃える。既存 guideline と `run-issue-task` には例外と誘導だけを足す。
 - GitHub 操作は組み込み GitHub tool を第一選択とし、allowlist 外の tool は使わない。`gh` は組み込み tool に無い操作だけを `gh api`(REST)で補う。
