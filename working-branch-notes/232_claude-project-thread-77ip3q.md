@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-77ip3q`(cloud session が指定。Issue の推奨ブランチ名は `cloud-session-compose-and-github-ops`)
-- PR: 未作成
+- PR: #232
 - 最終更新: 2026-09-24
 
 ## 目的
