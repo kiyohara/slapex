@@ -16,8 +16,8 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - 作業内容 0〜7 を実施し、採番前に行える「検証」を済ませた。
 - 変更: `.agents/skills/number-working-branch-note/SKILL.md`(手順の前置き、「stale 表現の定型置換」の完了タスク行と共通の扱い、Step 5、Step 10、「終了時の報告」、「やらないこと」)。
 - 追加: decision log `0062-note-numbering-without-human-gates.md` と `index.md` の行。
-- P2 の review の指摘 2 件に対応した(P4、`2f5aa44`)。P5 で再確認する。
-- P4 の push 後の head `b9e644c` で、CI の `check` が `internal/slack` の不安定な test で失敗した。本 PR の差分と無関係と判断し、PR に経緯をコメントした。
+- `drive-issue-to-reviewed-pr` の手順を P6 まで終えた。review cycle `claude-code-7ef24fd-20260924132834` は、指摘 2 件がどちらも resolve 可、未対応 0 件で収束した。review 済みの head は `b0ff677` で、残るのは人間の手番だけである。
+- P4 の push 後の head `b9e644c` で、CI の `check` が `internal/slack` の不安定な test で失敗した。本 PR の差分と無関係と判断し、PR に経緯をコメントした。次の head `b0ff677` では check runs 5 件が success。
 
 ## 決定事項
 
@@ -31,18 +31,16 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - 適用範囲の文は、Issue の「本 skill の実行そのもので達成される要素(PR 作成、note の rename、note 参照の更新)」を、「前提として実行前に満たされている要素(PR 作成)」と「実行そのもので達成される要素(note の rename、`PR:` 欄の記入、note 参照の更新、それらの commit と push)」に分けて書いた。PR 作成は本 skill が行うものではないためで、bizdate の PR #54 の書き方と同じである。
 - 報告先の集約は「共通の扱い」に定義を置く形にした。Step 5 と Step 10 には報告先の 2 項目を名指しする bullet を 1 行ずつ足し、既存の「終了時に報告する」の文は残した。
 - 他 skill の走査は main `02f8ac8` でやり直した。Issue の後に追加された `drive-issue-to-reviewed-pr` にも、成果物の内容判断を理由とするゲートは無い。`review-pull-request` と `run-issue-task` は行番号がずれていたため、PR description の表は `02f8ac8` の行番号で書いた。
-- `release` の Step 5 の push 確認は #229 へ申し送る(未決事項 5)。PR description に記載する。
+- `release` の Step 5 の push 確認は #229 へ申し送る(未決事項 5)。PR description と decision log 0062 に記載した。
 - `progress.md` は索引外の単発 Issue のため更新しない。
 - 出力生成系 3 skill は、ドキュメントと skill だけの変更で各 skill の「いつ使うか」に当たらないため適用しない。
 
 ## 次にやること
 
-- PR を作成し、この note を採番する。(完了)
-- PR を作成し、review 対応を行う。
-- 採番の結果(書き換えた行と触らなかった行)を検証欄と PR description に記録する。(完了)
-- P2 の review を subagent に委譲する。(完了)
-- 最新 head の CI の完了を確かめる。green なら P5 へ進み、`check` がまた失敗したら job の再実行の承認をユーザーに求める。
-- P5 の再確認を subagent に委譲する。
+- 人間: review cycle `claude-code-7ef24fd-20260924132834` の 2 thread を resolve する。
+- 人間: PR を ready for review にし、review して merge する。並行実行した 4 PR の merge 順の目安は #222、#216、#234、#228 で、`index.md` の末尾の行の衝突は後から merge する側で解消する。
+- 人間: follow-up の候補(`internal/slack` の不安定な test)を Issue にするか判断する。
+- 人間: 新しい session を開始し、description による発火を確かめる(未検証事項)。
 
 ## 検証
 
@@ -61,12 +59,15 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 | 自己適用(本 PR の採番、`b8f6d03`) | 変更後の SKILL.md を repo 相対 path で読み、人間の手番なしで Step 1〜10 を終えた。note は `PR:` 欄に `#238` を記入し、「PR 未作成。」を「PR #238 作成済み。」へ、完了タスク行「PR を作成し、この note を採番する。」を行末 `(完了)` 付きへ書き換えた。複合行「PR を作成し、review 対応を行う。」は触らなかった。記録作業の行「採番の結果(…)を検証欄と PR description に記録する。」は、適用範囲の文のとおり対象外として触らなかった。PR description はファイル名参照を 1 箇所置換し、title は変えなかった。PR #225 で未通過だった完了タスク行の書き換え経路の初回通過である |
 | 自己適用の終了時の報告 | 「書き換えた行の一覧」: note の 2 行(状況を説明する stale 表現 1、完了タスク行 1)、PR description のファイル名参照 1 箇所、title は「なし」。「触らずに残した行の一覧」: note の複合行 1 行、PR description と title は「なし」。書き換えた行と触らなかった行の両方が報告に現れた |
 | P4 の修正後の再確認(`2f5aa44`) | `終了時に報告` の 8 行と行番号は変わらない。理由「汎用 placeholder か判別できない」を使う行は L65 にあり、L200 の一覧と対応する。#171 の検証コマンドは該当なし、`git diff --check` は問題なし。decision log の表の分類は PR description の表の分類と揃い、ログの各行に行番号付きの対応行がある |
+| P5 の read-back(orchestrator が取り直した) | 2 thread とも指摘、処置の返信、再確認の返信の 3 件で、どちらも unresolved(decision log の thread は行がずれて outdated)。conversation comment は CI の経緯のコメントと完了要約の 2 本。完了要約の 5 行はキーの順に連続し、`Reviewed head` は PR head の `b0ff677` と一致した |
+| description による発火 | 未検証。frontmatter の `name` と `description` は変えていない。新しい session を開始して確かめる |
 
 ## リスク・ブロッカー
 
 - 並行実行の例外: #229 は同じ `number-working-branch-note/SKILL.md` の別の節を触る。後から merge する側で衝突を解消する。`index.md` の末尾の行も、同時期の PR と衝突し得る。
 - #230 は本 PR の報告項目を上位 skill へ引き上げ、decision log 0062 へ追記する予定である。
-- `internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれに失敗する(`wait = 8.33s, want in [1s, 2s)`)。本 PR と無関係で、follow-up の候補とする。
+- `internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれに失敗する(`wait = 8.33s, want in [1s, 2s)`)。本 PR と無関係で、原因は特定できていない。follow-up の候補とし、PR のコメントに診断のための変更案(`*WaitsBeforeGivingUp` の 2 test で `c.Logf = t.Logf` とする)を残した。
+- 未検証: description による発火。
 
 ## セッションログ
 
@@ -75,3 +76,5 @@ Issue #228。`number-working-branch-note` の「終了時の報告」に、書�
 - 2026-09-24: P1 の完了時の head `7ef24fd` の check runs 5 件が success。P2 の subagent が review した。review cycle `claude-code-7ef24fd-20260924132834`、`Reviewed head` `7ef24fd`、指摘 2 件(inline 2、top-level 0)。P3 で P4 へ進んだ。
 - 2026-09-24: P4 で 2 件とも採用し、`2f5aa44` で修正した。出力生成系 3 skill はドキュメントと skill だけの変更のまま不適用。
 - 2026-09-24: P4 の push 後の head `b9e644c` の CI で `check` が失敗した。`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp` が 8.33 秒の backoff を記録したもので、Go のコードを変えていない本 PR の差分とは無関係と判断した(同じコードの `7ef24fd` と main `02f8ac8` では成功)。Compose で test を 300 回、package を 1,200 回回したが再現しなかった。PR に経緯をコメントした。job の再実行はユーザーの承認が要るため行わず、止まった時点の状態をこの note に残した。
+- 2026-09-24: 次の head `b0ff677` の check runs 5 件が success。P5 の subagent が対象 cycle を head `b0ff677` で再確認した。resolve 可 2 件、未対応 0 件、新たな指摘なし。
+- 2026-09-24: P6 で終了した。PR #238 は draft のまま、review 済みの head は `b0ff677`(check runs 5 件が success)。この更新は note だけの commit である。残りは人間の手番(2 thread の resolve、ready for review への変更と review、merge)。
