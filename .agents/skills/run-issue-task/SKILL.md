@@ -42,6 +42,7 @@ GitHub Issue を 1 件選び、Issue 駆動タスクとして実行するため�
    - 未完了の依存があれば作業を始めず、未完了依存を報告して終了する。
 3. `main` を最新化し、Issue 記載の推奨ブランチ名があればそれを使って作業ブランチを作る。
    - 推奨ブランチ名が無い場合は、Issue title から短く意味が分かる kebab-case のブランチ名を決める。
+   - cloud session(Claude Code on the web)では platform が作ったブランチをそのまま使い、推奨ブランチ名は PR description に記録する(`doc/guidelines/cloud-session-guidelines.md`)。
    - git 操作は `doc/guidelines/git-operation-guidelines.md` に従う。
 4. `working-branch-notes/draft_<escaped-branch-name>.md` を作る。
    - `working-branch-notes/_template.md` を基本形にする。

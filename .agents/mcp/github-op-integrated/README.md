@@ -23,6 +23,7 @@ MCP host 用の project 設定ファイル(`.cursor/mcp.json`、repo root の `.
 ## 前提条件
 
 - [Docker](https://www.docker.com/) がインストールされ、daemon が起動していること。
+- Claude Code on the web の cloud session では `op` が無いため起動しない。cloud session では組み込みの GitHub tool を使う([doc/guidelines/cloud-session-guidelines.md](../../../doc/guidelines/cloud-session-guidelines.md))。
 - [1Password CLI(`op`)](https://developer.1password.com/docs/cli/) がインストール・認証済みで、biometric unlock または session が有効であること。
 - 1Password に、この repository だけに権限を絞った GitHub fine-grained Personal Access Token(PAT)が保存されていること。
   - PR / Issues / レビューコメントの read & write を許可する。

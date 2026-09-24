@@ -9,6 +9,7 @@ GitHub の PR / issue / レビューコメントなどの操作は、原則 `doc
 - GitHub MCP Server が未設定、または当該ユーザー環境で利用できない。
 - 対象の GitHub 操作が MCP 化対象の allowlist に含まれていない(merge、file push、release、workflow の実行・再実行・cancel・run log 削除、repository settings 変更などの高リスク write 操作はこちらに該当する)。CI の read(workflow / run / job / artifact の一覧と詳細、job log、check run、commit status)は MCP 側の allowlist にあるため、ここには該当しない。
 - MCP 経由の実行が失敗し、`gh` で再試行する必要がある。
+- cloud session(Claude Code on the web)で、組み込みの GitHub MCP tool に無い操作を `gh api` で補う。範囲は `doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」に従い、実行形式は下記「cloud session(Claude Code on the web)」に従う。
 
 つまり本ルールは、GitHub MCP の fallback と、MCP 化対象外の操作に対する一次ルールである。
 
@@ -39,6 +40,18 @@ op plugin run -- gh run view
 各 AI agent は、現在の実行環境で 1Password 連携が阻害されることが事前に分かる場合、最初から制約のない実行環境で `op plugin run -- gh ...` を実行する。
 
 事前に判断できない場合は、通常の実行環境で試してよい。ただし、1Password desktop app への接続失敗、承認プロンプト不達、socket 通信エラー、またはそれに類するエラーが出た場合は、同じ `op plugin run -- gh ...` コマンドを制約のない実行環境で再実行する。
+
+## cloud session(Claude Code on the web)
+
+cloud session の sandbox には `op` が無く、`gh` は environment の setup script が入れる(`doc/guidelines/cloud-session-guidelines.md`)。
+
+- `op plugin run --` を介さず、`gh ...` を直接実行する。`.op/` と `op` の確認は要らない。
+- 認証は platform の GitHub proxy が request ごとに差し替える。`gh auth login` をせず、`GH_TOKEN` / `GITHUB_TOKEN` を上書きしない。PAT を environment の環境変数に設定しない。
+- proxy は REST だけを通す。`gh api`(REST。例: `gh api 'repos/kiyohara/slapex/pulls?state=open'`)を基本とし、GraphQL を使う subcommand(`gh pr view` など)と `gh auth status` を使わない。認証エラーを疑うときは `gh api user` など REST の read で確かめる。
+- `gh` は組み込み tool に無い操作だけを補う。MCP tool の write が失敗したときに同じ write を `gh` で再実行しない。
+- merge、`APPROVE` / `REQUEST_CHANGES`、review thread の resolve、auto-merge の変更、API 経由の file push は `gh api` でも実行しない。
+- job log は組み込み tool の `get_job_logs` で取る。log の配信元が許可リストに無いため、`gh run view --log` は通らない。
+- `gh` が無い session では、agent が `gh` の導入を試みない。組み込み tool だけで進め、足りない操作はユーザーに報告する。
 
 ## 関連ルール
 

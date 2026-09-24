@@ -12,7 +12,7 @@
 
 1. 対象 Issue を読む。GitHub 操作は `doc/guidelines/github-mcp-guidelines.md` に従い MCP を優先する。
 2. Issue の「依存」に挙がるタスクがすべて done であることを確認する。該当タスクが `progress.md` の索引表にあればそれで確認し、無ければ各依存タスクの Issue / PR が merge 済みかで確認する。未完了の依存があれば作業を始めず、その旨をユーザーに報告して終了する。
-3. `main` を最新化し、Issue 記載のブランチ名で作業ブランチを作る(`doc/guidelines/git-operation-guidelines.md`)。
+3. `main` を最新化し、Issue 記載のブランチ名で作業ブランチを作る(`doc/guidelines/git-operation-guidelines.md`)。cloud session(Claude Code on the web)では session 開始時に platform が作ったブランチをそのまま作業ブランチとして使い、Issue 記載の推奨ブランチ名へは切り替えない。推奨ブランチ名は PR description に記録する(同ガイドラインの「cloud session(Claude Code on the web)」)。note のファイル名は実際のブランチ名を escape したもの(例: `draft_claude-<slug>.md`)にする。
 4. `working-branch-notes/draft_<escaped-branch-name>.md` を作る(`doc/guidelines/working-branch-notes-handling.md` と `doc/guidelines/working-branch-notes-security.md` に従う)。
 5. Issue の「作業内容」を実施する。「スコープ外」の事項には手を付けない。開発コマンドは `doc/guidelines/development-command-guidelines.md` に従い Docker Compose 経由で実行する。
 6. Issue の「検証」をすべて実行し、結果を note の検証セクションに記録する。

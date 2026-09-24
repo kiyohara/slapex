@@ -27,6 +27,15 @@
 
 事前に判断できない場合は、通常の実行環境で試してよい。ただし、1Password SSH agent への接続失敗、署名失敗、承認プロンプト不達、SSH 認証失敗、socket 通信エラー、またはそれに類するエラーが出た場合は、同じ `git` コマンドを制約のない実行環境で再実行する。
 
+## cloud session(Claude Code on the web)
+
+cloud session では上記「1Password 連携が必要な操作」を適用しない(`doc/guidelines/cloud-session-guidelines.md`)。
+
+- commit 署名と author は platform が管理する(`gpg.ssh.program` は platform の signer を指す)。1Password は関与しない。
+- 作業ブランチは session 作成時に platform が決めたもの(`claude/<slug>` の形)に固定され、push はそのブランチにだけ許可される。別名のブランチを作らない。
+- remote は HTTPS のまま platform の proxy が認証する。`main` への直接 push 禁止と PR 経由の原則は変わらない。
+- tag の push はできない。署名付き tag の作成・push と `release` skill は cloud session では行わず、ローカルで行う。
+
 ## 通常の実行環境でよい操作
 
 次のようなローカル参照・差分確認は、原則として通常の実行環境で実行してよい。

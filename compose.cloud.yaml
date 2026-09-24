@@ -1,0 +1,19 @@
+# Claude Code on the web の cloud session 専用の override。
+# SessionStart hook (.agents/scripts/cloud-session-setup.sh) が
+# COMPOSE_FILE=compose.yaml:compose.cloud.yaml で有効化する。local 開発では使わない。
+# 対象は dev service だけ。vhs / screenshot は cloud session で使わない。
+# 詳細は doc/guidelines/cloud-session-guidelines.md を参照する。
+services:
+  dev:
+    # Docker Hub の blob 配信元は setup script の文脈 (agent proxy が立つ前) から届かないため、
+    # 配信元が許可リスト内 (googleapis) にある gcr.io の Docker Hub mirror を使う。
+    # tag は compose.yaml の dev と揃える (cloud-session-setup.sh --doctor が一致を検査する)。
+    image: mirror.gcr.io/library/golang:1.26
+    # sandbox の外向き通信は 127.0.0.1 の agent proxy を経由する必要がある。
+    # container から同じ proxy へ到達させるため host network を使う。
+    # NO_PROXY は渡さない。直接接続は gateway が TLS を再終端し、container 内の
+    # CA では検証できないため、全て proxy 経由にする。
+    network_mode: host
+    environment:
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      https_proxy: ${https_proxy:-}
