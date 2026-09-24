@@ -15,6 +15,7 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 ## 現在の状況
 
 - 作業内容 0〜4 と、bizdate PR #72 / #78 相当の取り込みを済ませ、Issue の「検証」を実行した(P1)。
+- 自己適用は P4 まで進んだ。review cycle `claude-code-d4b22c6-20260924112150` の指摘 5 件へ対応し、P5 の再確認を待つ。
 - 追加: `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md`、`.claude/skills/drive-issue-to-reviewed-pr`(symlink)、decision log 0059 / 0060 / 0061。
 - 追記: `doc/guidelines/development-loop.md`(「使う skill」表に 1 行)、`.agents/skills/run-issue-task/SKILL.md` と `.agents/skills/review-pull-request/SKILL.md`(呼ばれ得ることの参照を 1 段落ずつ)、decision log の `index.md`。
 - #72 相当: `doc/guidelines/pull-request-guidelines.md`(「Tool 名と model の識別子の扱い」)、`review-pull-request` の `Model` の項、正本の要約を持つ `release` と `number-working-branch-note` の skill。
@@ -41,11 +42,12 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 - `progress.md` は索引外の単発 Issue のため更新しない。
 - 出力生成系 3 skill は、ドキュメントだけの変更で各 skill の「いつ使うか」に当たらないため適用しない。
 - decision log の番号は 0059〜0061(0058 は #226 が使った)。
+- P4 では review の指摘 5 件をすべて採用した。subagent が読む `review-pull-request` に、brief で渡された上位の指示を `Model` に当てはめる項を足した。cloud session の説明行の `unknown` の条件を 0060 に揃えた。cloud session で `gh` を使う範囲の例外を comment / review 本文の編集に限って明記した(`github-cli-guidelines.md` からも参照)。再開位置の表を排他にし、「判断に追加情報が必要である」の返信を返信済みに数えないことにした。Issue の入力で open PR がある場合は PR の入口として扱い、PR の head branch へ push できない場合は push の前で止まる。
 
 ## 次にやること
 
 - PR を作成し、note を採番する。(完了)
-- 追加した SKILL.md を path で読み、PR 番号の入口から P2〜P6 を実行する。
+- 追加した SKILL.md を path で読み、PR 番号の入口から P2〜P6 を実行する。P4 まで済み。次は P5(subagent による再確認)。
 - 各フェーズの結果をセッションログに残す。
 - 人間: thread の resolve と PR の merge。
 
@@ -65,6 +67,7 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 | session 途中の skill 検出 | 検出された。symlink と SKILL.md を作った直後に、session を再起動せず skill 一覧へ載った。検出は保証されないため、SKILL.md は path 直読を既定にしている |
 | description による発火 | 未検証。新しい session を開始して確かめる |
 | `get_session` の field | `external_metadata.last_served_model`、`session_context.model`、`configured_model` があることを確かめた。接尾辞の有無は「決定事項」のとおり |
+| 自己適用の P2 で subagent が報告した実行環境 | subagent の system prompt には、model の識別子の記載範囲の指示も footer の指示も無かった。server が review 本文と各 inline comment に footer を付け、5 行と footer の間に空行が入った。brief で渡した上位の指示を当てはめ、`Model` は `unknown` と理由の 1 行になった |
 | 自己適用の P1 判断 | 依存なし、推奨ブランチ名あり(PR description に記録)、`progress.md` の索引外で更新不要、ドキュメントだけの変更で出力生成系 3 skill は不適用、と判断できた |
 | Go の test | Go のコードを変更しないため、ローカルでは実行しない。CI の check runs 5 件で確かめる |
 
@@ -80,3 +83,6 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 - 2026-09-24: bizdate main `34b33b1` を確認した(作業内容 0)。`ab7c88e` 以降の関連 merge は PR #78 の 1 件で、結果は Issue #227 のコメントに追記した。
 - 2026-09-24: 作業内容 1〜4 を実施し、Issue の「検証」を実行した。
 - 2026-09-24: ユーザーの判断で bizdate PR #78 と前提の PR #72 に相当する変更を取り込み、decision log 0060 / 0061 を追加した。検証をやり直した。
+- 2026-09-24: PR #233 を作成し、note を採番した(P1)。head `d4b22c6` の check runs 5 件が success。出力生成系 3 skill は不適用。
+- 2026-09-24: P2 の subagent が review した。review cycle `claude-code-d4b22c6-20260924112150`、`Reviewed head` `d4b22c6`、指摘 5 件(inline 5、top-level 0)。P3 で P4 へ進んだ。
+- 2026-09-24: P4 で 5 件とも採用し、`d1d2bb5` で修正した。出力生成系 3 skill はドキュメントだけの変更のまま不適用。
