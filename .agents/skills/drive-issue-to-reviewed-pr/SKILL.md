@@ -33,7 +33,7 @@ review(P2)と再確認(P5)を subagent へ分けるのは、context を分離す
   - 別リポジトリの URL である。
   - 複数の Issue または PR を同時に指定されている。
   - 対象 PR が closed または merged である。
-- Issue を入力された場合でも、その Issue を `Closes` する open PR が既にある場合は、PR 番号を入力されたものとして「PR から始める場合」に進む。前の session が P2 以降で途切れた場合などに、ブランチと PR を作り直さないためである。該当する PR が一意に決まらない場合は、始めずにユーザーに確認する。
+- Issue を入力された場合でも、その Issue を `Closes` する open PR が既にある場合は、PR 番号を入力されたものとして「PR から始める場合」に進む。前の session が PR の作成後に途切れた場合などに、ブランチと PR を作り直さないためである。該当する PR が一意に決まらない場合は、始めずにユーザーに確認する。
 
 ### PR から始める場合
 
@@ -42,7 +42,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - metadata は、同節の規定どおり、5 つのキーがこの順で連続する 5 行を探して読む。投稿内の位置には依存しない。
 - 対象 review cycle は、`Agent` が現在の Agent 種別と一致する review cycle のうち最も新しいものとする。それ以外の cycle と人間の review は「他の review cycle の扱い」に従う。
 - 関連 Issue は PR description の `Closes #<番号>` から取る。起点 Issue を持たない PR(索引登録、進捗整理、リリース)では `なし` とする。
-- 現在のブランチが PR の head branch と異なる場合は、head branch に切り替えてから進める。切り替えられない場合(cloud session で、PR を作った session と別の session から再開した場合など)は、push を伴う手順(P4 の修正、P6 の note の更新)の前で止まる(「停止とエスカレーション」)。
+- 現在のブランチが PR の head branch と異なる場合は、head branch に切り替えてから進める。切り替えられない場合(cloud session で、PR を作った session と別の session から再開した場合など)は、push を伴う手順(下記の P1 や P4 の残りの手順、P4 の修正、P6 の note の更新など)の前で止まる(「停止とエスカレーション」)。
 
 最新の完了要約とは、対象 review cycle の `review` と `verify-comments` の完了要約のうち最も新しいものを指す。
 
@@ -56,6 +56,16 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - top-level の指摘は、同じ cycle の `address-comments` の PR conversation comment があれば返信済みとみなす。
 - 処置が「判断に追加情報が必要である」の返信は、返信済みに数えない。その指摘が残る場合は P4 から再開し、「停止とエスカレーション」に従って確認事項を報告する。
 - metadata が崩れている、または状態を一意に決められない場合は、始めずにユーザーに確認する。
+
+開始フェーズが P2 または P5 の場合は、前のフェーズの完了条件(「フェーズ」の表)を確かめてから始める。前の session がフェーズの途中(PR 作成の後で採番の前、返信の後で note の push の前など)で途切れた場合に、残りの手順を飛ばさないためである。満たしていない条件は、そのフェーズの残りの手順で満たす。note の無い PR では、note の手順を行わない。
+
+- P2 から始める場合は、P1 の完了条件を確かめる。
+  - note が採番前(`doc/guidelines/working-branch-notes-handling.md` の「note の探し方」で `draft_` の note しか見つからない)なら、`number-working-branch-note` を実行する。
+  - 関連 Issue が `progress.md` の索引にあり、対応行の PR 欄が反映されていなければ、`run-issue-task` の手順どおりに更新して push する。
+- P5 から始める場合は、P4 の完了条件を確かめる。
+  - その周の P4 の記録(「working branch note」の表)が note に無ければ、追記して push する。
+  - 返信は再開位置の判定で確かめている。修正の push は、`address-comments` が対応済みの返信の前に確かめている。
+- 最新 head の check runs は、どちらの場合も「CI の確認点」で、P2 / P5 の前に確かめる。
 
 ## 起動前提
 
@@ -209,7 +219,7 @@ subagent を起動できない実行環境では、P2 と P5 の前で止まる�
 
 ## CI の確認点
 
-- P1 の完了時(PR 作成、採番、`progress.md` 反映の push 後)と、P4 の push 後の 2 箇所で、最新 head の check runs が完了するまで待ってから次のフェーズへ進む。check runs と失敗 job の log の取得は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に従う。
+- P2 と P5 の前(委譲する直前。subagent が使えない環境では、P2 / P5 の前で止まる直前)に、最新 head の check runs がすべて完了し success であることを確かめる。未完了なら完了を待つ。通常の流れでは P1 の完了時(PR 作成、採番、`progress.md` 反映の push 後)と P4 の完了時に当たる。PR の入口から始めた場合も、この確認を通る。check runs と失敗 job の log の取得は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に従う。
 - 失敗した場合、差分に起因するなら修正して再 push し、完了を待ち直す。差分から説明できなければ止まる。
 - Issue の「検証」にある Docker Compose での検証は、PR 作成前の必須手順である。CI はその結果を GitHub 上の head で確かめる位置づけとする。CI は Compose での検証に無い job(`cross-compile` など)を含むため、Compose での検証の代わりにも、Compose での検証が CI の代わりにもならない。
 - P6 で note だけを push した場合、その head は確認点に含めない。終了時の報告に、その時点の check runs の状態をそのまま書く。
