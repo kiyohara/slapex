@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-25vuaa`(cloud session が指定。Issue の推奨ブランチ名は `add-drive-issue-to-reviewed-pr-skill`)
-- PR:
+- PR: #233
 - 最終更新: 2026-09-24
 
 ## 目的
@@ -44,7 +44,7 @@ Issue #227。Issue 着手から review と再確認まで済んだ PR までを 
 
 ## 次にやること
 
-- PR を作成し、note を採番する。
+- PR を作成し、note を採番する。(完了)
 - 追加した SKILL.md を path で読み、PR 番号の入口から P2〜P6 を実行する。
 - 各フェーズの結果をセッションログに残す。
 - 人間: thread の resolve と PR の merge。
