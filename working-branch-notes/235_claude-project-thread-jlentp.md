@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-jlentp`(cloud session が指定。Issue の推奨ブランチ名は `align-review-comment-prefix-and-verification`)
-- PR:
+- PR: #235
 - 最終更新: 2026-09-24
 
 ## 目的
@@ -16,7 +16,7 @@ Issue #216。bizdate の PR #4 で先に入れたレビュー品質の改善 3 �
 
 ## 現在の状況
 
-- 作業内容 1〜3 を実施し、Issue の「検証」を実行した(P1)。PR 未作成。
+- 作業内容 1〜3 を実施し、Issue の「検証」を実行した(P1)。PR #235 作成済み。
 - 変更: `.agents/skills/review-pull-request/SKILL.md`(「コメント言語と文体」と「操作別の第一選択 tool」に 1 行ずつ)、`references/address-comments.md`(手順 4 を挿入し、以降を繰り下げ)、`references/review.md`(手順 1 に失敗 job の log の取得)。
 
 ## 決定事項
@@ -34,7 +34,7 @@ Issue #216。bizdate の PR #4 で先に入れたレビュー品質の改善 3 �
 
 ## 次にやること
 
-- PR を作成し、note を採番する。
+- PR を作成し、note を採番する。(完了)
 - P2〜P6 を `drive-issue-to-reviewed-pr` の手順で進める。
 
 ## 検証
