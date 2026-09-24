@@ -12,8 +12,8 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 
 ## 現在の状況
 
-- 文言の修正、結合 test への assertion の追加、Issue の「検証」を終えた(P1 の途中)。
-- 次は PR の作成、note の採番、`progress.md` の PR 欄の反映。
+- 文言の修正、結合 test への assertion の追加、Issue の「検証」を終え、PR #236 を draft で作成した。note の採番と `progress.md` の PR 欄の反映も済ませた(P1)。
+- 次は最新 head の check runs の完了を待ち、P2 の review を subagent へ委譲する。
 
 ## 決定事項
 
@@ -28,7 +28,7 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 
 ## 次にやること
 
-- PR を作り、note を採番し、`progress.md` の PR 欄を反映する(P1)。
+- 最新 head の check runs の完了を待つ(P1 の完了条件)。
 - P2 の review を subagent へ委譲する。
 
 ## 検証
@@ -44,7 +44,7 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 | `gofmt -l .` | 出力なし |
 | `git diff --check` | 出力なし |
 | 足した assertion が旧文言で失敗すること | 旧文言の `export.go` で 2 件とも失敗し、新文言で成功した。詳細行だけを旧文言に戻した場合も、詳細行の assertion で 2 件とも失敗した |
-| 実際の CLI での表示(`tools/gensample -serve` の架空 fixture、token は `demo.FakeToken`) | run 1 は `--keep-cache` で出力し、再利用の行は無い。run 2 は別の `--output` へ再利用し、run 3 は run 1 と同じ `--output` へ再利用した。run 2 と run 3 はどちらも `(15 reused from cache, no download)` と `(of which 15 reused from cache, no download)` を表示した。run 3 の後に 0 byte の asset は無い |
+| 実際の CLI での表示(`tools/gensample -serve` の架空 fixture、token は `demo.FakeToken`) | run 1 は `--keep-cache` で出力し、再利用の行は無い。run 2 は別の `--output` へ再利用し、run 3 は run 1 と同じ `--output` へ再利用した。run 2 と run 3 はどちらも `(15 reused from cache, no download)` と `(of which 15 reused from cache, no download)` を表示した。run 3 の後に 0 byte の asset は無い。run 2 と run 3 を pty の下で実行し、styled(TTY)出力でも同じ 2 行を確かめた |
 
 ## リスク・ブロッカー
 
@@ -55,3 +55,4 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 
 - 2026-09-24: Issue #222 と並行評価のファイルを読んだ。依存の PR #221 は merge 済み。文言が `export.go` の 2 箇所だけにあることを確かめた。
 - 2026-09-24: 2 箇所の文言を直し、結合 test 2 件に assertion を足した。Issue の「検証」と CLI での表示の確認を済ませた。出力生成系 3 skill は適用しない。
+- 2026-09-24: PR #236 を draft で作成し、note を採番した。`progress.md` の FU-11 の PR 欄を #236 にした(P1)。検証はすべて pass。出力生成系 3 skill は適用しない。
