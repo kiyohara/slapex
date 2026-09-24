@@ -12,8 +12,8 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 
 ## 現在の状況
 
-- 文言の修正、結合 test への assertion の追加、Issue の「検証」を終え、PR #236 を draft で作成した。note の採番と `progress.md` の PR 欄の反映も済ませた(P1)。
-- 次は最新 head の check runs の完了を待ち、P2 の review を subagent へ委譲する。
+- P1〜P6 を終えた。review cycle `claude-code-83a30d4-20260924132127` は指摘 0 件で、P3 から P6 へ進んだ(P4 / P5 は無し)。
+- review 済みの head は `83a30d4`(check runs 5 件が success)。PR #236 は draft のままで、残りは人間の手番だけである。
 
 ## 決定事項
 
@@ -28,8 +28,7 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 
 ## 次にやること
 
-- 最新 head の check runs の完了を待つ(P1 の完了条件)。
-- P2 の review を subagent へ委譲する。
+- 人間: PR #236 を ready for review にし、review して merge する。resolve する thread は無い。
 
 ## 検証
 
@@ -45,6 +44,7 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 | `git diff --check` | 出力なし |
 | 足した assertion が旧文言で失敗すること | 旧文言の `export.go` で 2 件とも失敗し、新文言で成功した。詳細行だけを旧文言に戻した場合も、詳細行の assertion で 2 件とも失敗した |
 | 実際の CLI での表示(`tools/gensample -serve` の架空 fixture、token は `demo.FakeToken`) | run 1 は `--keep-cache` で出力し、再利用の行は無い。run 2 は別の `--output` へ再利用し、run 3 は run 1 と同じ `--output` へ再利用した。run 2 と run 3 はどちらも `(15 reused from cache, no download)` と `(of which 15 reused from cache, no download)` を表示した。run 3 の後に 0 byte の asset は無い。run 2 と run 3 を pty の下で実行し、styled(TTY)出力でも同じ 2 行を確かめた |
+| P2 の read-back(orchestrator が取り直した) | conversation comment は完了要約の 1 本だけで、review と review thread は 0 件。完了要約の 5 行はキーの順に連続し、`Reviewed head` は PR head の `83a30d4` と一致した。server が付けた footer と 5 行の間に空行がある。`Model` は上位の指示により `unknown` で、理由の 1 行がある |
 
 ## リスク・ブロッカー
 
@@ -56,3 +56,6 @@ Issue #222(FU-11)。`--reuse-cache` の再利用元が今回の出力先と同�
 - 2026-09-24: Issue #222 と並行評価のファイルを読んだ。依存の PR #221 は merge 済み。文言が `export.go` の 2 箇所だけにあることを確かめた。
 - 2026-09-24: 2 箇所の文言を直し、結合 test 2 件に assertion を足した。Issue の「検証」と CLI での表示の確認を済ませた。出力生成系 3 skill は適用しない。
 - 2026-09-24: PR #236 を draft で作成し、note を採番した。`progress.md` の FU-11 の PR 欄を #236 にした(P1)。検証はすべて pass。出力生成系 3 skill は適用しない。
+- 2026-09-24: head `83a30d4` の check runs 5 件が success になり、P1 を終えた。
+- 2026-09-24: P2 の subagent が review した。review cycle `claude-code-83a30d4-20260924132127`、`Reviewed head` `83a30d4`、指摘 0 件(inline 0、top-level 0)。完了要約は PR conversation comment の 1 本。P3 で P6 へ進んだ。
+- 2026-09-24: P6 で終了した。PR #236 は draft のまま、review 済みの head は `83a30d4`(check runs 5 件が success)。この更新は note だけの commit である。残りは人間の手番(ready for review への変更、review、merge)。
