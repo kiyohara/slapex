@@ -16,7 +16,7 @@ Issue #216。bizdate の PR #4 で先に入れたレビュー品質の改善 3 �
 
 ## 現在の状況
 
-- P1〜P4 を終えた。P2 の review(cycle `claude-code-f0588a9-20260924131945`)の指摘 1 件を P4 で採用し、`ece8726` で直した。次は P5(再確認)。
+- P1〜P6 を終えた。review cycle `claude-code-f0588a9-20260924131945` は、指摘 1 件が resolve 可、未対応 0 件で収束した。review 済みの head は `a95a9de` で、残るのは人間の手番だけである。
 - 変更: `.agents/skills/review-pull-request/SKILL.md`(「コメント言語と文体」と「操作別の第一選択 tool」に 1 行ずつ)、`references/address-comments.md`(手順 4 を挿入し、以降を繰り下げ)、`references/review.md`(手順 1 に失敗 job の log の取得)、`doc/guidelines/github-mcp-guidelines.md`(「失敗 job の log 取得」の行。P4)。
 
 ## 決定事項
@@ -35,8 +35,10 @@ Issue #216。bizdate の PR #4 で先に入れたレビュー品質の改善 3 �
 
 ## 次にやること
 
-- PR を作成し、note を採番する。(完了)
-- P5〜P6 を `drive-issue-to-reviewed-pr` の手順で進める。
+- 人間: review cycle `claude-code-f0588a9-20260924131945` の 1 thread を目視で確かめて resolve する。
+- 人間: PR を ready for review にし、review して merge する。並行した 4 本の merge 順の目安は #222、#216、#234、#228。
+- 人間: follow-up の候補(`drive-issue-to-reviewed-pr` を prefix に合わせる。判断基準の理由の文言と 0059、P2 の「返させる出力」に prefix を含めるか)を Issue にするか判断する。
+- 人間: 新しい session を開始し、description による発火を確かめる(未検証事項)。
 
 ## 検証
 
@@ -56,6 +58,9 @@ Issue #216。bizdate の PR #4 で先に入れたレビュー品質の改善 3 �
 | `git diff --check` | 問題なし(P4 の修正後も) |
 | Go の test | Go のコードを変えないため実行しない。CI の check runs で確かめる |
 | description による発火 | 未検証。description は変えていない。新しい session で確かめる |
+| 自己適用 | P2 の指摘には変更後の規定どおり prefix(`[imo]`)が付いた。P4 では追加した手順 4 に従い、指摘の前提を実物で確かめてから採用した。P2 / P5 の subagent も `get_job_logs` を実際に呼んで確かめた |
+| P2 / P5 の subagent の実行環境 | system prompt に、model の識別子の記載範囲の指示も footer の指示も無かった。brief で渡した上位の指示を `Model` の項に当てはめ、`unknown` と理由の 1 行にした。server が footer を付け、5 行と footer の間に空行が入った |
+| P5 の read-back(orchestrator が取り直した) | thread は指摘、処置の返信、再確認の返信の 3 件で unresolved。conversation comment は完了要約の 1 本。完了要約の 5 行はキーの順に連続し、`Reviewed head` は PR head の `a95a9de` と一致した |
 
 ## リスク・ブロッカー
 
@@ -69,3 +74,5 @@ Issue #216。bizdate の PR #4 で先に入れたレビュー品質の改善 3 �
 - 2026-09-24: PR #235 を作成し、note を採番した(P1)。head `f0588a9` の check runs 5 件が success。出力生成系 3 skill は不適用。
 - 2026-09-24: P2 の subagent が review した。review cycle `claude-code-f0588a9-20260924131945`、`Reviewed head` `f0588a9`、指摘 1 件(inline 1、top-level 0。`[imo]`)。P3 で P4 へ進んだ。
 - 2026-09-24: P4 で指摘 1 件を採用し、`ece8726` で guideline の行を直した。出力生成系 3 skill はドキュメントだけの変更のまま不適用。
+- 2026-09-24: P5 で P2 の subagent が対象 cycle を head `a95a9de` で再確認した。resolve 可 1 件、未対応 0 件。head `a95a9de` の check runs 5 件が success。
+- 2026-09-24: P6 で終了した。PR #235 は draft のまま、review 済みの head は `a95a9de`。この更新は note だけの commit である。残りは人間の手番(1 thread の resolve、ready for review への変更と review、merge)。
