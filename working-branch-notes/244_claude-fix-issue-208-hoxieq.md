@@ -12,7 +12,7 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 
 ## 現在の状況
 
-- P1(実装と PR 作成)の途中。実装と検証を終え、PR 作成の前。
+- P1(実装と PR 作成)を終えた。PR #244 は draft。次は最新 head の CI を確かめ、review(P2)を subagent に委譲する。
 
 ## 決定事項
 
@@ -33,7 +33,7 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 
 ## 次にやること
 
-- PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する(P1 の残り)。
+- PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する(P1 の残り)。(完了)
 - CI の確認後、subagent に review(P2)を委譲する。
 
 ## 検証
@@ -62,3 +62,4 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 
 - 2026-09-25: Issue #208 と並行評価のファイルを読んだ。依存欄は `-`。第1陣(#203 / #205 / #207)は merge 済みで、main `b405899` から始めた。
 - 2026-09-25: `addImage` の thumbnail の `Save` に渡す metadata を `FileID` / `OriginalName` だけにし、`cache.md` と test、`progress.md` の FU-07 の行を更新した。Issue の「検証」を済ませた(すべて pass)。出力生成系 3 skill は `update-sample-exports` だけを実行し、commit する差分は無かった。
+- 2026-09-25: PR #244 を draft で作成し、note を採番し(`b382e9b`)、`progress.md` の FU-07 の PR 欄を #244 にした(P1)。reviewer に user を指定する操作は PR の author と同じため GitHub に拒否された(assignee の設定は成功)。採番後の PR description の note path の置換に使う本文の取得で、MCP で足りる read を 1 回 `gh api` で行った(書き込みは MCP で行った)。
