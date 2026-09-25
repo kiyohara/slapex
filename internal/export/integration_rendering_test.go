@@ -851,6 +851,76 @@ func TestRunIntegrationAssetDownloadFailure(t *testing.T) {
 	}
 }
 
+// --- case 11b: a file slapex does not download says why ----------------------
+
+// Each file with nothing to download reads for what it is (Issue #204): an
+// external file names its service, a deleted file and a file hidden by a Free
+// plan limit (Slack redacts it to id and mode) get their placeholders, and any
+// other file without a URL, an image without a thumbnail among them, reads as
+// a file that cannot be fetched rather than an external one or a failure.
+// None of them is requested or recorded in the manifest.
+func TestRunIntegrationFilesNotDownloaded(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message",
+			TS:   "1700001150.000000",
+			User: "U01",
+			Text: "Files with nothing to download",
+			Files: []slack.File{
+				{
+					ID:         "F-EXT",
+					Name:       "roadmap.gdoc",
+					Mimetype:   "application/vnd.google-apps.document",
+					Mode:       "external",
+					IsExternal: true,
+					URLPrivate: "{{base}}/files/roadmap.gdoc", // served, but must not be requested
+				},
+				{ID: "F-DEL", Mode: "tombstone"},
+				{ID: "F-HIDDEN", Mode: "hidden_by_limit"},
+				{ID: "F-NOURL", Name: "notes.txt", Mimetype: "text/plain"},
+				{ID: "F-NOURLIMG", Name: "photo.png", Mimetype: "image/png"},
+				{ID: "F-BARE"}, // no name either: the file ID stands in for it
+			},
+		},
+	}
+	sc.Assets["/files/roadmap.gdoc"] = fakeAsset{ContentType: "application/octet-stream", Body: "roadmap"}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	const unavailable = `</span><div class="asset-note">(取得できないファイルのため保存対象外)</div>`
+	for _, row := range []string{
+		`<span class="file-link unavailable">📄 roadmap.gdoc</span><div class="asset-note">(外部サービス連携のファイルのため保存対象外)</div>`,
+		`<span class="file-link unavailable">📄 (削除されたファイル)</span>`,
+		`<span class="file-link unavailable">📄 (プランの制限により参照できないファイル)</span>`,
+		`<span class="file-link unavailable">📄 notes.txt` + unavailable,
+		`<span class="file-link unavailable">📄 photo.png` + unavailable,
+		`<span class="file-link unavailable">📄 F-BARE` + unavailable,
+	} {
+		mustContain(t, body, row)
+	}
+	if n := strings.Count(body, "外部サービス連携"); n != 1 {
+		t.Fatalf("external note count = %d, want 1 (only the external file)", n)
+	}
+	mustNotContain(t, body, "F-HIDDEN")
+	mustNotContain(t, body, "取得に失敗しました。")
+
+	if n := got.Server.Count("/files/roadmap.gdoc"); n != 0 {
+		t.Fatalf("external file requested %d times, want 0", n)
+	}
+	if e, ok := findManifest(readManifestEntries(t, got.OutputDir), func(e manifestEntryFull) bool {
+		return e.FileID != ""
+	}); ok {
+		t.Fatalf("manifest records %+v, want no entry for a file that is not downloaded", e)
+	}
+	if !logsContain(got.Logs, "0 saved, 0 skipped by size limit, 0 failed") {
+		t.Fatalf("summary counts a file that is not downloaded: %v", got.Logs)
+	}
+}
+
 // --- case 12: thread replies over 1000 are truncated with a notice ----------
 
 func TestRunIntegrationRepliesTruncated(t *testing.T) {
