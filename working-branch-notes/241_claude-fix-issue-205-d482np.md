@@ -24,7 +24,7 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 - 結合 test `TestRunIntegrationUnfurlTextMention` を `integration_rendering_test.go` の case 5(bot_message)の直後に case 5b として足した。ファイル末尾には足さない。本文が空の app 通知(timeline)と共有メッセージ(thread reply)の attachment text にだけ現れる user が表示名で出ること、`users.info` が 3 回(投稿者 U01、attachment text の U03 / U04)であることを確かめる。title にだけ現れる mention 形の文字列(U05)と、どこにも現れない U02 は呼ばれない。
 - decision log は新設しない(0064 は未使用)。
 - 出力生成系 3 skill の適用判断:
-  - `update-sample-exports`: 適用条件(`internal/export/**` の表示変換)に当たるため、`docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample` で再生成して差分を確かめた。差分は相対日時と Export information の時刻だけで、実質差分は無かったため commit しない。demo fixture の unfurl 内の mention(ja の `U03SAKURA`、en の `U03CHIKA`)は、同じ user が投稿者として出るため、修正前から解決されている。
+  - `update-sample-exports`: 適用条件(`internal/export/**` の表示変換)に当たるため、`docker compose run --rm -e TZ=Asia/Tokyo dev go run ./tools/gensample` で再生成して差分を確かめた。差分は相対日時と Export information の時刻だけで、実質差分は無かったため commit しない。committed sample の時刻(`-time 2026-07-04T16:32:41+09:00`)に固定して別ディレクトリへ再生成すると、`doc/samples/ja` と `doc/samples/en` に対して `diff -r` が無差分だった。demo fixture の unfurl 内の mention(ja の `U03SAKURA`、en の `U03CHIKA`)は、同じ user が投稿者として出るため、修正前から解決されている。
   - `update-readme-preview-screenshots`: 適用しない。sample export に実質差分が無く、screenshot に映る出力は変わらない。
   - `update-readme-demo-gif`: 適用しない。phase 名、summary、進捗表示の文言は変えない。demo fixture では収集される user の集合が変わらないため、Users phase の件数も変わらない。
 
@@ -47,7 +47,7 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 | `gofmt -l .` | 出力なし |
 | `git diff --check` | 出力なし |
 | cross-compile(`CGO_ENABLED=0`、darwin / linux × amd64 / arm64 の `go build ./cmd/slapex`) | 4 通りとも成功 |
-| sample export の再生成(`update-sample-exports`) | ja / en とも差分は相対日時と Export information の時刻だけ。commit しない |
+| sample export の再生成(`update-sample-exports`) | ja / en とも差分は相対日時と Export information の時刻だけ。commit しない。`-time 2026-07-04T16:32:41+09:00` に固定して別ディレクトリへ再生成すると、committed sample と `diff -r` で無差分 |
 
 ## リスク・ブロッカー
 
