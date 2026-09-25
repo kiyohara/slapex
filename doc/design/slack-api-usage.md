@@ -69,7 +69,7 @@ token type による主な違い:
 
 ## user 解決
 
-- 取得済みメッセージの投稿者と本文中の mention に現れる unique な user ID を集め、`users.info` で表示名を解決する。
+- 取得済みメッセージの投稿者、`channel_join` の inviter、mention に現れる unique な user ID を集め、`users.info` で表示名を解決する。mention は mrkdwn として変換するテキスト(本文と legacy attachment の本文テキスト)から集め、title など mrkdwn を通さない field からは集めない。
 - 解決結果は `.cache/slack_api_cache.json` に蓄積し、同一実行内で再問い合わせしない。
 - 表示名は display name を優先し、無ければ real name、それも無ければ user ID へ fallback する。
 - 解決失敗(退会ユーザーなど)は user ID をそのまま表示する。

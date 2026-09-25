@@ -242,6 +242,53 @@ func TestRunIntegrationMeAndBotMessage(t *testing.T) {
 	mustContain(t, body, `<span class="author">Webhook</span>`)
 }
 
+// --- case 5b: a mention only in unfurl text resolves through users.info ------
+
+// TestRunIntegrationUnfurlTextMention pins Issue #205: a legacy attachment's
+// text goes through render.Mrkdwn like the message body, so a label-less
+// mention there shows the display name even when the user neither posts nor is
+// mentioned in any body, on the timeline and inside a thread. The attachment
+// title is plain text, so a mention-shaped title costs no users.info call.
+func TestRunIntegrationUnfurlTextMention(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000552.000000"
+	sc := baseScenario()
+	sc.Users["U03"] = testUser("U03", "carol", "Carol Reviewer", "Carol", "")
+	sc.Users["U04"] = testUser("U04", "dave", "Dave Oncall", "Dave", "")
+	sc.Bots = map[string]slack.Bot{"B001": {ID: "B001", Name: "Alert Bot", AppID: "A001"}}
+	sc.Messages = []slack.Message{
+		// An app notification with an empty body: U03 appears only in the
+		// attachment text.
+		{
+			Type: "message", Subtype: "bot_message", TS: "1700000551.000000", BotID: "B001",
+			Attachments: []slack.Attachment{{Title: "Build failed <@U05>", Text: "Assigned to <@U03>"}},
+		},
+		{Type: "message", TS: parentTS, ThreadTS: parentTS, User: "U01", Text: "Handoff", ReplyCount: 1},
+	}
+	sc.Replies = map[string][]slack.Message{
+		parentTS: {
+			// A shared message with an empty body: U04 appears only in the
+			// attachment text.
+			{
+				Type: "message", TS: "1700000553.000000", ThreadTS: parentTS, User: "U01",
+				Attachments: []slack.Attachment{{Text: "Escalated to <@U04>"}},
+			},
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<div class="unfurl-text">Assigned to <span class="mention">@Carol</span></div>`)
+	mustContain(t, body, `<div class="unfurl-text">Escalated to <span class="mention">@Dave</span></div>`)
+	mustNotContain(t, body, "@U03")
+	mustNotContain(t, body, "@U04")
+	// U01 posts and U03 / U04 are mentioned in attachment text. Bob (U02)
+	// appears nowhere and U05 only in a title, so neither is looked up.
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/users.info": 3})
+}
+
 // --- case 6: edited message shows the quiet (edited) marker ------------------
 
 func TestRunIntegrationEditedMessage(t *testing.T) {

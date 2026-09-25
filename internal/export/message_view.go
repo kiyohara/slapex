@@ -311,6 +311,8 @@ func (b *messageViewBuilder) addUnfurls(v *render.MessageView, m *slack.Message)
 			uv.TitleHref = a.TitleLink
 		}
 		if a.Text != "" {
+			// collectUserIDs scans the same text for mentions; a field newly
+			// passed to Mrkdwn needs the same scan there.
 			uv.Text = render.Mrkdwn(a.Text, b)
 		}
 		if a.ServiceIcon != "" {

@@ -56,8 +56,21 @@ func oldestMessageTS(messages []slack.Message) string {
 
 var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)[|>]`)
 
+// collectUserIDs returns the unique user IDs to resolve through users.info:
+// posters, channel_join inviters and the mentions in every text the view
+// builder passes to render.Mrkdwn, that is the message text (messageView /
+// systemBody) and each legacy attachment's text (addUnfurls). Mrkdwn resolves a
+// label-less mention through messageViewBuilder.UserName, which shows the raw
+// user ID for a user not collected here, so the scanned texts must match those
+// Mrkdwn call sites. Fields rendered as plain text, such as the attachment
+// title, are not scanned.
 func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message) []string {
 	seen := map[string]bool{}
+	addMentions := func(text string) {
+		for _, match := range reMention.FindAllStringSubmatch(text, -1) {
+			seen[match[1]] = true
+		}
+	}
 	add := func(m *slack.Message) {
 		if m.User != "" {
 			seen[m.User] = true
@@ -65,8 +78,9 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 		if m.Inviter != "" {
 			seen[m.Inviter] = true
 		}
-		for _, match := range reMention.FindAllStringSubmatch(m.Text, -1) {
-			seen[match[1]] = true
+		addMentions(m.Text)
+		for i := range m.Attachments {
+			addMentions(m.Attachments[i].Text)
 		}
 	}
 	for i := range messages {
