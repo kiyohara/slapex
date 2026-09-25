@@ -13,13 +13,15 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 ## 現在の状況
 
 - 作業内容 1〜5 を実施し、Issue の「検証」を実行した。PR #256 を draft で作成し、note を採番して、`progress.md` の RV-02 の PR 欄を反映した(P1)。
-- 次は P1 の完了条件(最新 head の check runs)を確かめ、review(P2)を subagent に委譲する。
+- review(P2)の指摘 4 件をすべて採用して直した(P4)。
+- 次は最新 head の check runs を確かめ、再確認(P5)を P2 の subagent に委譲する。
 
 ## 決定事項
 
 - 未決事項 1(マーカー)と 2(他の処置への適用)は、Issue の仮決定のまま進めた。
 - `verify-comments.md` に「処置ごとの確認」の節を足し、`address-comments` の 7 つの処置ごとに、確かめることと区分を表にした。区分は修正確認済み、スコープ外として確認済み、対応不要として確認済み、未対応の 4 つとした。
   - スコープ外: スコープ外とする判断が PR の目的と関連 Issue の完了条件に照らして妥当か、follow-up の記録先(起票済みの Issue、または note / PR description の候補)があるかを確かめる。本 PR で直すべきと判断した場合と、記録先が見つからない場合は未対応(Step 5)。
+  - 採用し修正した: 修正の push と指摘の解消に加え、修正が新たな問題を生じていないことを確かめる。Step 5 の「新たな問題がある」を表に対応させ、修正が別の問題を生んだ thread を未対応に決めるため、P4 で足した(P2 の指摘)。
   - 修正を伴わない他の 4 処置(既存実装ですでに満たしている、再現しない、guideline と競合する、outdated / duplicate)は、返信が示す根拠が現在の head で成り立つかを確かめ、成り立てば対応不要として確認済みとする(未決事項 2)。確かめる事実が処置ごとに違うため、表の行を分けた。
   - 「判断に追加情報が必要である」は確かめず、未対応とする(未決事項 2 のとおり)。
   - 処置の返信が無い指摘も未対応とする。処置は最新の返信が示すものとする。2 周目で処置が改められた場合にも区分を一意にするためである。
@@ -30,9 +32,9 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 - 完了要約(Step 7)は区分ごとの件数に分け、スコープ外には follow-up の記録先を添える。未対応件数に top-level の指摘を含むことを明記した。`drive-issue-to-reviewed-pr` の P5 後の分岐が未対応件数で決まるためである。top-level の指摘にも同じ区分を当て、マーカーは付けない。
 - `drive-issue-to-reviewed-pr`:
   - 「判断基準」の P5 後の項に、妥当と確かめた修正を伴わない処置を未対応に数えないことを、`verify-comments.md` の「処置ごとの確認」への参照で書いた(作業内容 5)。規定は複製しない。
-  - スコープ外の follow-up 候補を P4 で note に残すことを、「判断基準」と「working branch note」の P4 の行に足した。orchestrator の流れでは起票しないため、P5 の再確認が確かめる記録先は note になる。従来は「終了時の報告に挙げる」とだけあり、P5 の時点で記録先が無いことがあり得た。
+  - スコープ外の follow-up 候補を P4 で note に残すことを、「判断基準」と「working branch note」の P4 の行に足した。note の無い PR では PR description に残す(P2 の指摘を受けて P4 で足した)。orchestrator の流れでは起票しないため、P5 の再確認が確かめる記録先は note か PR description になる。従来は「終了時の報告に挙げる」とだけあり、P5 の時点で記録先が無いことがあり得た。
   - 「返させる出力」の再確認の結果、「working branch note」の P5 の行、「終了時の報告」の resolve 可とした thread を、区分ごとの表記に揃えた。
-- decision log は作らない。Issue に指示が無く、同じ skill の文言を変えた #216(PR #235)と #222(PR #236)も作っていない。判断の理由は Issue の未決事項、本 note、PR description に残す。
+- decision log は作らない。#253 には作成・追記の指示が無い。同じ `drive-issue-to-reviewed-pr` を変えた #234(PR #237)と、#252 には 0059 への追記の指示がある。候補の比較と採否の理由(既存マーカーの流用を採らない理由など)は、Issue の未決事項、本 note、PR description に残る。`review-pull-request` の文言を変えた #216(PR #235)も作っていない。
 - `address-comments.md` は変えない(処置の分類はスコープ外)。スコープ外の返信に記録先を書く規定も足さない。記録先は verifier が note、PR description、Issue で確かめる。
 - 出力生成系 3 skill は、ドキュメントだけの変更で各 skill の「いつ使うか」に当たらないため適用しない。
 - `progress.md` は RV-02 の行を done(PR merge後)にした。
@@ -40,7 +42,8 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 ## 次にやること
 
 - PR を作成し、note を採番する(P1)。(完了)
-- review(P2)を subagent に委譲し、指摘があれば対応(P4)と再確認(P5)を回す。
+- review(P2)を subagent に委譲し、指摘に対応する(P4)。(完了)
+- 再確認(P5)を subagent に委譲し、未対応が残れば P4 へ戻る。
 
 ## 検証
 
@@ -60,6 +63,8 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 | (追加)既存実装で満たす、再現しない、guideline と競合、outdated / duplicate の処置 | 根拠が成り立てば対応不要として確認済み(`**対応不要として確認済み(resolve 可)**`)。成り立たなければ未対応 | 未対応でなければ P6 | 表の 3〜6 行目 |
 | (追加)「判断に追加情報が必要である」の処置 | 確かめず未対応 | drive はこの処置が出た P4 で止まる(「停止とエスカレーション」)ため、通常は P5 に届かない | 表の最終行。drive の「判断基準」 |
 | (追加)top-level の指摘をスコープ外とした | 同じ区分で確かめて完了要約に含める。マーカーは付けない。未対応なら未対応件数に含める | 未対応件数で分岐する | Step 6、Step 7 |
+| (追加、P4)修正が指摘を解消したが、新たな問題を生じた | 「採用し修正した」の確かめることが成り立たないため未対応。マーカーは付けない | P4 へ戻る | 表の 1 行目、表の後の 1 つ目の箇条、Step 5 |
+| (追加、P4)note の無い PR で、スコープ外の処置 | P4 で PR description に残した候補を記録先として確かめ、成り立てばスコープ外として確認済み | 他に未対応が無ければ P6 | 表の 2 行目。drive の「判断基準」 |
 | (参考)PR #233 の Codex の cycle(#234 を起票、PR の差分は未修正) | スコープ外の判断と #234 を確かめれば、スコープ外として確認済み。変更前は未対応 1 件で未収束とされた | 未対応 0 件 | 表の 2 行目 |
 | (参考)PR #242 の `[fyi]`(note と PR description に候補、code の変更なし) | スコープ外として確認済み。変更前は `**修正確認済み(resolve 可)**` が付いた | 同上 | 表の 2 行目、`SKILL.md` の「Review event と resolve の制約」 |
 
@@ -85,3 +90,5 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 - 2026-09-25: Issue #253 と、PR #233 / PR #242 の再確認の例を読んだ。依存なし。
 - 2026-09-25: 作業内容 1〜5 を実施し、Issue の「検証」を実行した。
 - 2026-09-25: PR #256 を draft で作成し(P1)、`number-working-branch-note` で note を採番した(`f77e5ee`)。書き換えた行は、note の `PR:` 欄(`未作成` → `#256`)、「次にやること」の PR 作成と採番の行(`(完了)` を付けた)、PR description の note のファイル名の 3 つ。触らずに残した行は無い。`progress.md` の RV-02 の PR 欄を #256 にした。検証はすべて問題なし(「検証」)。出力生成系 3 skill は不適用。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
+- 2026-09-25: review(P2)を subagent に委譲した。review cycle `claude-code-c2d576d-20260925130826`、`Reviewed head` は `c2d576d`。指摘は 4 件(inline 2 件、top-level 2 件)で、`[must]` / `[ask]` は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
+- 2026-09-25: 指摘 4 件を、Issue、正本、実物(PR #235〜#237 の変更ファイル、#234 / #252 / #253 の本文)で確かめ、処置はすべて「採用し修正した」とした(P4)。inline 1(`verify-comments.md`): 「採用し修正した」の確かめることに、修正が新たな問題を生じていないことを足した。inline 2(drive の「判断基準」): note の無い PR では follow-up 候補を PR description に残すことを足した。修正 commit は `2a8c295`。top-level 1: PR description の「補足」に出力生成系 3 skill の適用判断を足した。top-level 2: decision log を作らない根拠を、#253 に指示が無いこと(#234 と #252 にはある)に直した(PR description の「レビューしてほしい点」と本 note の決定事項)。スコープ外とした指摘は無く、follow-up 候補は無い。出力生成系 3 skill は、ドキュメントだけの変更のため引き続き適用しない。
