@@ -12,7 +12,7 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 
 ## 現在の状況
 
-- P1〜P4 を終えた。review(P2)の指摘 2 件のうち `[nits]` を直し、`[fyi]` は follow-up 候補にした(処置は「決定事項」)。次は再確認(P5)。
+- P1〜P6 を終えた。review cycle `claude-code-9205e14-20260925070726` の指摘 2 件は、再確認(P5)で 2 件とも resolve 可、未対応 0 件になった。残りは人間の手番だけ(「次にやること」)。
 
 ## 決定事項
 
@@ -40,7 +40,7 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 
 ## 次にやること
 
-- 最新 head の check runs がすべて success になったら、再確認(P5)を P2 と同じ subagent で実行する。
+- ユーザー: resolve 可の 2 thread の resolve、Ready for review、merge。follow-up 候補 2 件(「リスク・ブロッカー」)を起票するかの判断。
 
 ## 検証
 
@@ -57,11 +57,12 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 | 新しい test が旧コードで失敗すること | `message_view.go` だけを main に戻すと、case 10c〜10e と case 7 の 4 件が失敗した。事前判定の既存 test(case 10a / 10b)は新旧どちらでも pass した |
 | `update-sample-exports`(`go run ./tools/gensample`、`TZ=Asia/Tokyo`) | 差分は相対日時だけ。commit しない |
 | 並行中の PR との merge(`git merge-tree`) | #241(`703ee60`)、#240(`ea268f2`、のちに `d0bca9f`)と、3 本をどの順に merge しても衝突しない。3 本を合わせた tree(#240 は `ea268f2`)で `go vet ./...`、`go build ./...`、`go test ./...` が pass |
+| 同上(P6 で取り直した) | #240 は main に merge 済み(`5b98232`)。main `5b98232`、本 PR `a6e6d0a`、#241 `0a70591` はどの順に merge しても衝突しない。3 つを合わせた tree で `gofmt -l .` は出力なし、`go vet ./...`、`go build ./...`、`go test -count=1 ./...` が pass |
 | P4 の修正(設計文書だけ) | `git diff --check` は出力なし。注記の例が `oversizeOriginalNote` / `oversizeFileNote` の出力と case 10c / 10d の assertion に一致する |
 
 ## リスク・ブロッカー
 
-- 並行実行中の #205(PR #241)、#207(PR #240)とは、ファイル単位では重なる(#241 と `message_view.go`、`integration_rendering_test.go`、`progress.md`、#240 と `progress.md`)が、hunk が離れていて衝突しない(「検証」)。並行評価の「重ならない見込み」はファイル単位では外れた。報告前に最新 head で取り直す。
+- 並行実行中の #205(PR #241)、#207(PR #240)とは、ファイル単位では重なる(#241 と `message_view.go`、`integration_rendering_test.go`、`progress.md`、#240 と `progress.md`)が、hunk が離れていて衝突しない(「検証」)。並行評価の「重ならない見込み」はファイル単位では外れた。P6 で最新 head と取り直した。
 - 既知の flaky test(`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp`)が CI で失敗した場合は、PR #238 のコメントを引いて PR に 1 回コメントする。
 - スコープ外で見つけたこと(follow-up 候補、未起票):
   - `SkipTooLarge` は URL で重複を除かない。事前判定で上限を超えたファイルを 2 回描画すると(timeline と thread の両方に出る thread_broadcast など)、manifest に 2 件記録され、summary でも 2 件と数える(scratch test で確認)。Issue #203 は事前判定の manifest を変えないとしているため、本 PR では直さない。
@@ -74,3 +75,5 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 - 2026-09-25: PR #242 を draft で作成し、note を採番した。`progress.md` の FU-02 の PR 欄を #242 にした(P1)。検証はすべて pass。出力生成系 3 skill のうち `update-sample-exports` だけを実行し、commit する差分は無かった。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
 - 2026-09-25: review(P2)を subagent で実行した。review cycle `claude-code-9205e14-20260925070726`、`Reviewed head` は `9205e14`。指摘 2 件(inline 2 件、top-level 0 件)。subagent は sibling PR の変更ファイル一覧を 1 回 `gh api`(read)で取った(MCP で足りる操作。書き込みは無い)。P3 で P4 へ進んだ。
 - 2026-09-25: P4。`[nits]` は採用し修正した(`4069986`)。`[fyi]` は妥当だが本 PR ではスコープ外とし、follow-up 候補にした。修正は設計文書だけで出力を変えないため、出力生成系 3 skill は再実行しない。
+- 2026-09-25: 再確認(P5)を P2 と同じ subagent で実行した(`Reviewed head` は `a6e6d0a`)。2 件とも resolve 可、未対応 0 件で、新しい指摘は無い。
+- 2026-09-25: P6。#240 が main に merge されたため、main と #241 の最新 head と重ねて取り直し、衝突せず test も pass した。note だけを commit して push した。
