@@ -12,7 +12,7 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 
 ## 現在の状況
 
-- P1(実装と PR 作成)の途中。実装、test、設計文書、`progress.md` の行の更新と、Issue の「検証」を済ませた。
+- P1(実装と PR 作成)を終えた。PR #243 を draft で作成し、note を採番し、`progress.md` の FU-03 の PR 欄を反映した。次は CI の完了を確かめて review(P2)に進む。
 
 ## 決定事項
 
@@ -35,7 +35,7 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 
 ## 次にやること
 
-- PR を draft で作り、note を採番し、`progress.md` の FU-03 の PR 欄を反映して push する(P1 の残り)。
+- PR を draft で作り、note を採番し、`progress.md` の FU-03 の PR 欄を反映して push する(P1 の残り)。(完了)
 - CI の完了を確かめ、review(P2)を subagent に委譲する。
 
 ## 検証
@@ -65,3 +65,4 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 
 - 2026-09-25: Issue #204、並行評価のファイル、第1陣の #203 の note を読んだ。依存欄は `-`。
 - 2026-09-25: `hidden_by_limit` の payload を公開情報で確かめ、`addFiles` / `addImage` / `addAttachmentFile` で表示を分けた。case 11b、`html-rendering.md` の表、`progress.md` の FU-03 の行を更新し、Issue の「検証」を済ませた。
+- 2026-09-25: PR #243 を draft で作成し、note を採番した(`4728965`)。`progress.md` の FU-03 の PR 欄を #243 にした(P1)。検証はすべて pass。出力生成系 3 skill のうち `update-sample-exports` だけを実行し、commit する差分は無かった。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
