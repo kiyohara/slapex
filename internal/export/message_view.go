@@ -256,6 +256,10 @@ func (b *messageViewBuilder) addFiles(v *render.MessageView, m *slack.Message) {
 		switch {
 		case f.Mode == "tombstone":
 			v.FilesList = append(v.FilesList, render.FileView{Name: "(削除されたファイル)"})
+		case f.Mode == "hidden_by_limit":
+			// Slack redacts a file hidden by a Free plan limit down to its id
+			// and mode, so there is no name or URL to show (Issue #204).
+			v.FilesList = append(v.FilesList, render.FileView{Name: "(プランの制限により参照できないファイル)"})
 		case strings.HasPrefix(f.Mimetype, "image/"):
 			b.addImage(v, f)
 		default:
@@ -269,6 +273,12 @@ func (b *messageViewBuilder) addImage(v *render.MessageView, f *slack.File) {
 	thumbURL := f.ThumbURL()
 	if thumbURL == "" && f.IsExternal {
 		v.FilesList = append(v.FilesList, render.FileView{Name: f.Name, Note: "(外部サービス連携の画像のため保存対象外)"})
+		return
+	}
+	if thumbURL == "" && f.DownloadURL() == "" {
+		// Nothing to fetch, so nothing failed: show the image like any file
+		// Slack gave no URL for (Issue #204).
+		b.addAttachmentFile(v, f)
 		return
 	}
 	img := render.ImageView{Name: f.Name}
@@ -320,8 +330,12 @@ func (b *messageViewBuilder) addAttachmentFile(v *render.MessageView, f *slack.F
 		name = f.ID
 	}
 	switch {
-	case f.IsExternal || f.DownloadURL() == "":
+	case f.IsExternal:
 		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "(外部サービス連携のファイルのため保存対象外)"})
+	case f.DownloadURL() == "":
+		// Not an external file, yet Slack returned no URL to fetch it from
+		// (Issue #204).
+		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "(取得できないファイルのため保存対象外)"})
 	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindAttachment, f.DownloadURL(), meta)
 		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: b.oversizeFileNote(f.ID, f.Size)})

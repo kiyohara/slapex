@@ -152,7 +152,7 @@ type File struct {
 	Name               string `json:"name"`
 	Mimetype           string `json:"mimetype"`
 	Size               int64  `json:"size"`
-	Mode               string `json:"mode"` // "tombstone" for deleted files
+	Mode               string `json:"mode"` // "tombstone" for deleted files, "hidden_by_limit" for files hidden by a Free plan limit
 	IsExternal         bool   `json:"is_external"`
 	URLPrivate         string `json:"url_private"`
 	URLPrivateDownload string `json:"url_private_download"`
