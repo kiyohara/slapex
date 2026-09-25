@@ -24,7 +24,7 @@ default では、直近 30 日以内かつ timeline 上の親投稿 1000 件ま�
 添付ファイルとアップロード画像の original は、1 件あたり default で 10MB(`--max-attachment-size` で変更可)を超えると保存しません。
 
 - 画像以外の添付ファイルが上限を超えた場合、HTML 上では「サイズオーバーのため保存されませんでした。」という置換表示になります。
-- アップロード画像の original が上限を超えた場合は、thumbnail 表示を残したうえで original が保存されなかったことを示します。
+- アップロード画像の original が上限を超えた場合は、thumbnail 表示を残したうえで original が保存されなかったことを示します。thumbnail も取得できない場合は、画像以外の添付ファイルと同じ置換表示になります。
 - URL preview 画像、preview の service icon、workspace icon は第三者 host 由来の public asset のため、`--max-attachment-size` とは別に 1 件あたり 5MiB の上限があり、超えると表示されません。[^spec-size]
 
 ## 表示・レンダリング

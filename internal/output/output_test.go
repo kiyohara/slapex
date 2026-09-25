@@ -141,6 +141,64 @@ func TestAssetsSaveRecordsManifestAndCounts(t *testing.T) {
 	}
 }
 
+// TestAssetsStatusTellsSizeSkipFromFailure covers the lookup the export view
+// uses to word an unavailable asset (Issue #203): Save reports only ok, so a
+// download stopped by the size limit and a real failure look the same unless
+// the caller asks Status. A repeated Save of a known URL records no new entry,
+// so Status must answer by URL rather than from the last manifest entry.
+func TestAssetsStatusTellsSizeSkipFromFailure(t *testing.T) {
+	t.Parallel()
+
+	dl := &fakeDownloader{
+		content: map[string]fakeDownload{
+			"https://example.com/too-large": {err: slack.ErrTooLarge},
+			"https://example.com/fail":      {err: errors.New("download failed")},
+			"https://example.com/saved":     {body: "saved", contentType: "application/pdf"},
+		},
+	}
+	assets := NewAssets(context.Background(), dl, t.TempDir(), 10)
+
+	if _, ok := assets.Save(KindAttachment, "https://example.com/too-large", AssetMeta{FileID: "F001"}); ok {
+		t.Fatalf("Save(too-large) ok = true, want false")
+	}
+	if _, ok := assets.Save(KindAttachment, "https://example.com/fail", AssetMeta{FileID: "F002"}); ok {
+		t.Fatalf("Save(fail) ok = true, want false")
+	}
+	if _, ok := assets.Save(KindAttachment, "https://example.com/saved", AssetMeta{FileID: "F003"}); !ok {
+		t.Fatalf("Save(saved) ok = false, want true")
+	}
+	assets.SkipTooLarge(KindUploadOriginal, "https://example.com/pre-checked", AssetMeta{FileID: "F004", SizeBytes: 99})
+
+	// The same file shown again (a second post of it, or a thread_broadcast
+	// rendered in the timeline and in its thread) is neither downloaded nor
+	// recorded again, so the last manifest entry belongs to another asset.
+	n := len(assets.Entries())
+	if _, ok := assets.Save(KindAttachment, "https://example.com/too-large", AssetMeta{FileID: "F001"}); ok {
+		t.Fatalf("repeated Save(too-large) ok = true, want false")
+	}
+	if got := len(assets.Entries()); got != n {
+		t.Fatalf("repeated Save recorded a new entry: entries %d -> %d", n, got)
+	}
+
+	for srcURL, want := range map[string]string{
+		"https://example.com/too-large":   StatusSkippedSize,
+		"https://example.com/fail":        StatusFailed,
+		"https://example.com/saved":       StatusSaved,
+		"https://example.com/pre-checked": StatusSkippedSize,
+		"https://example.com/never-seen":  "",
+	} {
+		if got := assets.Status(srcURL); got != want {
+			t.Errorf("Status(%s) = %q, want %q", srcURL, got, want)
+		}
+	}
+	// Status tells the same story as the manifest.
+	for _, e := range assets.Entries() {
+		if got := assets.Status(e.SourceURL); got != e.Status {
+			t.Errorf("Status(%s) = %q, manifest status %q", e.SourceURL, got, e.Status)
+		}
+	}
+}
+
 func TestAssetsSaveContentHashDeduplicatesByContent(t *testing.T) {
 	t.Parallel()
 

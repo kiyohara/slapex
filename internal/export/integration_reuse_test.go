@@ -366,6 +366,10 @@ func TestRunIntegrationReuseCacheOversizeNotCopied(t *testing.T) {
 	if d := delta(r.before, r.after, "/files/report.pdf"); d < 1 {
 		t.Fatalf("attachment download delta = %d, want >= 1 (oversize asset re-checked, not copied)", d)
 	}
+	// ...showed the size-limit replacement, not a download failure (Issue #203)...
+	body := readIndexHTML(t, r.dir2)
+	mustContain(t, body, "サイズオーバーのため保存されませんでした。(file ID: F-BIG, 上限 100B)")
+	mustNotContain(t, body, "取得に失敗しました。")
 	// ...and recorded it as skipped_size under the smaller limit, like a fresh run.
 	if e, ok := findManifest(readManifestEntries(t, r.dir2), func(e manifestEntryFull) bool {
 		return e.FileID == "F-BIG"

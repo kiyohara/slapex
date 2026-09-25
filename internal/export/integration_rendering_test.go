@@ -539,6 +539,181 @@ func TestRunIntegrationOversizeImageOriginal(t *testing.T) {
 	}
 }
 
+// --- case 10c: size limit hit during the download reads as a size skip -------
+
+// Slack's file.size can be absent or smaller than the real file, so the
+// messageViewBuilder pre-check lets the file through and the download itself
+// stops at the limit. The HTML must then show the pre-check's replacement, not
+// "取得に失敗しました。", so it agrees with the manifest (skipped_size) and the
+// summary (skipped by size limit). The real size is unknown, so only the limit
+// shows. The file is posted twice: the second post reuses the first download's
+// outcome without recording anything new, and must read the same (Issue #203).
+func TestRunIntegrationOversizeAttachmentAtDownload(t *testing.T) {
+	t.Parallel()
+
+	file := slack.File{
+		ID:                 "F-BIG",
+		Name:               "report.pdf",
+		Mimetype:           "application/pdf",
+		Size:               50, // understates the real 200 bytes, so the pre-check passes
+		URLPrivateDownload: "{{base}}/files/report.pdf",
+	}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1700000950.000000", User: "U01", Text: "Report", Files: []slack.File{file}},
+		{Type: "message", TS: "1700000951.000000", User: "U02", Text: "Same report again", Files: []slack.File{file}},
+	}
+	sc.Assets["/files/report.pdf"] = fakeAsset{ContentType: "application/pdf", Body: strings.Repeat("x", 200)}
+	opts := renderingOptions(t)
+	opts.MaxAttachBytes = 100
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
+	const row = `<span class="file-link unavailable">📄 report.pdf</span>` +
+		`<div class="asset-note">サイズオーバーのため保存されませんでした。(file ID: F-BIG, 上限 100B)</div>`
+	if n := strings.Count(body, row); n != 2 {
+		t.Fatalf("size-limit replacement count = %d, want 2 (both posts)", n)
+	}
+	mustNotContain(t, body, "取得に失敗しました。")
+
+	entries := readManifestEntries(t, got.OutputDir)
+	var matched []manifestEntryFull
+	for _, e := range entries {
+		if e.FileID == "F-BIG" {
+			matched = append(matched, e)
+		}
+	}
+	if len(matched) != 1 || matched[0].Kind != "attachment" || matched[0].Status != "skipped_size" {
+		t.Fatalf("F-BIG manifest entries = %+v, want one attachment entry with status skipped_size", matched)
+	}
+	if !logsContain(got.Logs, "1 skipped by size limit, 0 failed") {
+		t.Fatalf("summary does not count the size skip: %v", got.Logs)
+	}
+}
+
+// --- case 10d: an original over the limit at download keeps its thumbnail ----
+
+func TestRunIntegrationOversizeImageOriginalAtDownload(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message",
+			TS:   "1700001050.000000",
+			User: "U01",
+			Text: "Another big screenshot",
+			Files: []slack.File{
+				{
+					ID:                 "F-DLIMG",
+					Name:               "photo.png",
+					Mimetype:           "image/png",
+					Size:               0, // absent, so the pre-check passes
+					URLPrivateDownload: "{{base}}/files/photo-original.png",
+					Thumb360:           "{{base}}/files/photo-thumb.png",
+				},
+			},
+		},
+	}
+	sc.Assets["/files/photo-original.png"] = fakeAsset{ContentType: "image/png", Body: strings.Repeat("x", 200)}
+	sc.Assets["/files/photo-thumb.png"] = fakeAsset{ContentType: "image/png", Body: "photo-thumb"}
+	opts := renderingOptions(t)
+	opts.MaxAttachBytes = 100
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
+	// Same note as the pre-check (case 10b) under the kept thumbnail, without
+	// the unknown size.
+	mustContain(t, body, `<img class="upload-thumb"`)
+	mustContain(t, body, "original はサイズ上限超過のため保存されませんでした。(photo.png, 上限 100B)")
+	mustNotContain(t, body, "original の取得に失敗しました。")
+	mustNotContain(t, body, "assets/uploads/originals/")
+
+	orig, ok := findManifest(readManifestEntries(t, got.OutputDir), func(e manifestEntryFull) bool {
+		return e.Kind == "upload_original" && e.FileID == "F-DLIMG"
+	})
+	if !ok || orig.Status != "skipped_size" {
+		t.Fatalf("upload_original entry = %+v (ok=%v), want skipped_size", orig, ok)
+	}
+	if !logsContain(got.Logs, "1 skipped by size limit, 0 failed") {
+		t.Fatalf("summary does not count the size skip: %v", got.Logs)
+	}
+}
+
+// --- case 10e: an oversize image with no thumbnail keeps size and limit ------
+
+// With no thumbnail to keep a note under, an image falls back to the file row
+// (html-rendering.md). An original over the limit must still say so there with
+// its size and the limit — found by the pre-check or during the download —
+// while only a real failure reads "画像の取得に失敗しました。" (Issue #203).
+func TestRunIntegrationOversizeImageWithoutThumbnail(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message",
+			TS:   "1700001060.000000",
+			User: "U01",
+			Text: "Images without thumbnails",
+			Files: []slack.File{
+				{
+					ID:                 "F-PRE",
+					Name:               "pre-check.png",
+					Mimetype:           "image/png",
+					Size:               5000,
+					URLPrivateDownload: "{{base}}/files/pre-check.png",
+				},
+				{
+					ID:                 "F-DL",
+					Name:               "at-download.png",
+					Mimetype:           "image/png",
+					Size:               50, // understates the real 200 bytes
+					URLPrivateDownload: "{{base}}/files/at-download.png",
+				},
+				{
+					ID:                 "F-GONE",
+					Name:               "gone.png",
+					Mimetype:           "image/png",
+					Size:               50,
+					URLPrivateDownload: "{{base}}/files/gone.png", // not served -> 404
+				},
+			},
+		},
+	}
+	sc.Assets["/files/at-download.png"] = fakeAsset{ContentType: "image/png", Body: strings.Repeat("x", 200)}
+	opts := renderingOptions(t)
+	opts.MaxAttachBytes = 100
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<span class="file-link unavailable">📄 pre-check.png</span>`+
+		`<div class="asset-note">サイズオーバーのため保存されませんでした。(file ID: F-PRE, 5000B, 上限 100B)</div>`)
+	mustContain(t, body, `<span class="file-link unavailable">📄 at-download.png</span>`+
+		`<div class="asset-note">サイズオーバーのため保存されませんでした。(file ID: F-DL, 上限 100B)</div>`)
+	mustContain(t, body, `<span class="file-link unavailable">📄 gone.png</span>`+
+		`<div class="asset-note">画像の取得に失敗しました。</div>`)
+	if n := strings.Count(body, "画像の取得に失敗しました。"); n != 1 {
+		t.Fatalf("image failure note count = %d, want 1 (only the real failure)", n)
+	}
+
+	entries := readManifestEntries(t, got.OutputDir)
+	for id, want := range map[string]string{"F-PRE": "skipped_size", "F-DL": "skipped_size", "F-GONE": "failed"} {
+		e, ok := findManifest(entries, func(e manifestEntryFull) bool {
+			return e.Kind == "upload_original" && e.FileID == id
+		})
+		if !ok || e.Status != want {
+			t.Fatalf("upload_original entry for %s = %+v (ok=%v), want status %s", id, e, ok, want)
+		}
+	}
+	if !logsContain(got.Logs, "2 skipped by size limit, 1 failed") {
+		t.Fatalf("summary does not match the manifest: %v", got.Logs)
+	}
+}
+
 // --- case 11: asset download failure (404) is partial, export still succeeds -
 
 func TestRunIntegrationAssetDownloadFailure(t *testing.T) {

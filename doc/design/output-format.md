@@ -82,13 +82,15 @@ option:
 |---|---:|---|
 | `--max-attachment-size <size>` | `10MB` | 添付ファイルまたは original 画像 1 件あたりの保存上限を指定する |
 
-サイズ上限を超える添付ファイルまたは original 画像は download しない。画像以外の添付ファイルは、HTML 上では添付表示を次のようなメッセージに置き換える。original 画像が上限を超えた場合は、thumbnail 表示を残しつつ original が保存されなかったことを表示する(表示仕様は `html-rendering.md` を参照)。
+サイズ上限は 2 段階で判定する。Slack の file object の `size` が上限を超える添付ファイルまたは original 画像は download しない。`size` が無い、または実際より小さい場合はこの判定を通過するため、download 中に上限を超えた時点で中断し、保存しない。どちらもサイズ上限超過として同じに扱い、`.cache/assets_manifest.json` の status(`skipped_size`)、Assets phase と完了時の summary の件数(`skipped by size limit`)、HTML の置換表示を揃える。
+
+画像以外の添付ファイルは、HTML 上では添付表示を次のようなメッセージに置き換える。original 画像が上限を超えた場合は、thumbnail 表示を残しつつ original が保存されなかったことを表示する。thumbnail も取得できない場合は、画像以外の添付ファイルと同じメッセージに置き換える(表示仕様と文言の一覧は `html-rendering.md` の「画像と添付ファイルの表示」を参照)。
 
 ```text
 サイズオーバーのため保存されませんでした。
 ```
 
-置換表示には、可能であればファイル名、Slack file ID、元の file size、設定された size limit を含める。`.cache/assets_manifest.json` には、保存した添付ファイルだけでなく、サイズ上限超過で保存しなかった添付ファイルの状態も記録する。
+置換表示には、可能であればファイル名、Slack file ID、元の file size、設定された size limit を含める。download 中に上限を超えた場合は元の file size が分からないため、元の file size だけを省く。サイズ上限超過を、取得失敗(manifest の `failed`)の文言で表示しない。`.cache/assets_manifest.json` には、保存した添付ファイルだけでなく、サイズ上限超過で保存しなかった添付ファイルの状態も記録する。
 
 ## 出力イメージ
 

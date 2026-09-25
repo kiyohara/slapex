@@ -64,6 +64,13 @@ const (
 	KindWorkspaceIcon  = "workspace_icon"
 )
 
+// Status values stored in the manifest (doc/design/cache.md).
+const (
+	StatusSaved       = "saved"
+	StatusSkippedSize = "skipped_size"
+	StatusFailed      = "failed"
+)
+
 const publicPreviewAssetLimit int64 = 5 << 20 // 5 MiB guard for third-party unfurl assets.
 
 var kindDirs = map[string]string{
@@ -108,6 +115,7 @@ type Assets struct {
 	dir     string
 	limit   int64 // per-file byte limit, 0 = unlimited
 	known   map[string]string
+	status  map[string]string // manifest status last recorded per source URL
 	entries []ManifestEntry
 	reuse   *ReuseSource // previous run's assets to copy instead of downloading
 	reused  int          // assets taken from the reuse source instead of downloaded
@@ -126,12 +134,13 @@ type ReuseSource struct {
 
 func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Assets {
 	return &Assets{
-		ctx:   ctx,
-		dl:    dl,
-		dir:   dir,
-		limit: limit,
-		known: map[string]string{},
-		Logf:  func(string, ...any) {},
+		ctx:    ctx,
+		dl:     dl,
+		dir:    dir,
+		limit:  limit,
+		known:  map[string]string{},
+		status: map[string]string{},
+		Logf:   func(string, ...any) {},
 	}
 }
 
@@ -160,12 +169,21 @@ func (a *Assets) limitFor(kind string) int64 {
 
 // SkipTooLarge records a file that was not downloaded due to the size limit.
 func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
+	a.status[srcURL] = StatusSkippedSize
 	a.entries = append(a.entries, ManifestEntry{
-		Kind: kind, SourceURL: srcURL, Status: "skipped_size",
+		Kind: kind, SourceURL: srcURL, Status: StatusSkippedSize,
 		FileID: meta.FileID, OriginalName: meta.OriginalName,
 		Mimetype: meta.Mimetype, SizeBytes: meta.SizeBytes,
 	})
 }
+
+// Status returns the manifest status last recorded for srcURL (StatusSaved,
+// StatusSkippedSize or StatusFailed), or "" when nothing was recorded for it.
+// Save reports only ok, so a caller that got ok == false asks Status whether
+// the download stopped at the size limit or really failed (Issue #203). It is
+// looked up by URL rather than read off the last manifest entry, because a
+// repeated Save of a known URL records no new entry.
+func (a *Assets) Status(srcURL string) string { return a.status[srcURL] }
 
 // Save downloads srcURL (unless already saved) and returns the path relative
 // to the output directory. ok is false when the asset is unavailable.
@@ -185,7 +203,7 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 
 	tmp, err := os.CreateTemp(a.dir, "asset-*")
 	if err != nil {
-		a.record(kind, srcURL, meta, "", "failed", err.Error())
+		a.record(kind, srcURL, meta, "", StatusFailed, err.Error())
 		return "", false
 	}
 	defer os.Remove(tmp.Name())
@@ -202,9 +220,9 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h, &head))
 	tmp.Close()
 	if err != nil {
-		status := "failed"
+		status := StatusFailed
 		if errors.Is(err, slack.ErrTooLarge) {
-			status = "skipped_size"
+			status = StatusSkippedSize
 		}
 		a.record(kind, srcURL, meta, "", status, err.Error())
 		a.Logf("asset failed (%s): %s", kind, err)
@@ -216,11 +234,11 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	rel := filepath.Join(kindDirs[kind], base+extensionFor(meta, srcURL, contentType, sniffed))
 	dst := filepath.Join(a.dir, rel)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		a.record(kind, srcURL, meta, "", "failed", err.Error())
+		a.record(kind, srcURL, meta, "", StatusFailed, err.Error())
 		return "", false
 	}
 	if err := os.Rename(tmp.Name(), dst); err != nil {
-		a.record(kind, srcURL, meta, "", "failed", err.Error())
+		a.record(kind, srcURL, meta, "", StatusFailed, err.Error())
 		return "", false
 	}
 	if meta.SizeBytes == 0 {
@@ -229,12 +247,13 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	if meta.Mimetype == "" {
 		meta.Mimetype = mimetypeFor(contentType, sniffed)
 	}
-	a.record(kind, srcURL, meta, filepath.ToSlash(rel), "saved", "")
+	a.record(kind, srcURL, meta, filepath.ToSlash(rel), StatusSaved, "")
 	return filepath.ToSlash(rel), true
 }
 
 func (a *Assets) record(kind, srcURL string, meta AssetMeta, rel, status, errMsg string) {
 	a.known[srcURL] = rel
+	a.status[srcURL] = status
 	a.entries = append(a.entries, ManifestEntry{
 		Kind: kind, SourceURL: srcURL, LocalPath: rel,
 		FileID: meta.FileID, EmojiName: meta.EmojiName, OriginalName: meta.OriginalName,
@@ -302,7 +321,7 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	// Record under the requested kind: each source_url maps to exactly one kind,
 	// so this matches both the copied file's directory and what a fresh download
 	// would record, keeping the reused manifest identical to a normal run.
-	a.record(kind, srcURL, meta, entry.LocalPath, "saved", "")
+	a.record(kind, srcURL, meta, entry.LocalPath, StatusSaved, "")
 	return entry.LocalPath, true
 }
 
@@ -348,9 +367,9 @@ func (a *Assets) Entries() []ManifestEntry { return a.entries }
 func (a *Assets) Counts() (saved, skipped, failed int) {
 	for _, e := range a.entries {
 		switch e.Status {
-		case "saved":
+		case StatusSaved:
 			saved++
-		case "skipped_size":
+		case StatusSkippedSize:
 			skipped++
 		default:
 			failed++
