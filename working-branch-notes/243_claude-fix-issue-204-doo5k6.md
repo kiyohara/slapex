@@ -12,7 +12,7 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 
 ## 現在の状況
 
-- P1(実装と PR 作成)から 1 周目の P5(再確認)までを終え、2 周目の P4(対応)の note を push した。review cycle は `claude-code-3cd1f2a-20260925082344`。指摘 5 件のうち 4 件を採用し、1 件をスコープ外とした。1 周目の P5 で inline 3 件と top-level 1 件が確認済みになり、top-level 1 件(PR description の 1 文)が未対応として残った。次は処置を返信し、CI の完了を確かめて 2 周目の P5 に進む。
+- P6(終了)。review cycle `claude-code-3cd1f2a-20260925082344` は 2 周で収束した。指摘 5 件のうち 4 件を採用し、1 件をスコープ外とし、未対応は 0 件である。PR は draft のままで、人間の手番だけが残る。
 
 ## 決定事項
 
@@ -38,7 +38,10 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 - PR を draft で作り、note を採番し、`progress.md` の FU-03 の PR 欄を反映して push する(P1 の残り)。(完了)
 - CI の完了を確かめ、review(P2)を subagent に委譲する。(完了)
 - review の指摘 5 件へ処置を返信し、CI の完了を確かめて再確認(P5)を subagent に委譲する。(完了)
-- 2 周目: 未対応の top-level 1 件へ処置を返信し、CI の完了を確かめて再確認(P5)を subagent に委譲する。
+- 2 周目: 未対応の top-level 1 件へ処置を返信し、CI の完了を確かめて再確認(P5)を subagent に委譲する。(完了)
+- (人間)inline 3 件の thread を、resolve 可マーカーを確かめて GitHub UI で resolve する。
+- (人間)PR を ready for review にし、Codex のクロスレビューを経て merge する。
+- (人間)「リスク・ブロッカー」の follow-up 候補 3 件を起票するか決める。
 
 ## 検証
 
@@ -75,3 +78,5 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 - 2026-09-25: P4 で指摘 5 件をコードと実行で確かめた。採用 4 件(case 11b の fixture の `size`、`html-rendering.md` の file ID の注記、PR description の文言の由来、PR description の未検証事項)は `95a4c00` と PR description の更新で直し、1 件(thumbnail の有る画像の `skipped_size`)はスコープ外で follow-up 候補とした。出力生成系 3 skill はいずれも適用しない(test と開発者向け document だけの変更)。
 - 2026-09-25: 1 周目の P5 を P2 と同じ subagent に委譲した(`Reviewed head` `65e3110`)。inline 3 件は resolve 可、top-level は 1 件が確認済み、1 件が未対応だった。未対応は、PR description に足した「main の `html-rendering.md` にファイルの置換表示の文言は無い」が事実と違う点である(main には保存できなかったファイルの文言がある)。#244 の head `509fce7` との merge 結果でも vet と test が pass した。
 - 2026-09-25: 2 周目の P4 で、PR description の 1 文を「download しないファイル(削除済み、外部連携)の文言が無い」に直し、note の「決定事項」の同じ 1 文も揃えた。code の変更は無く、出力生成系 3 skill はいずれも適用しない。
+- 2026-09-25: 2 周目の P5 を同じ subagent に委譲した(`Reviewed head` `6cbad51`)。未対応は 0 件で、review cycle は 2 周で収束した。inline 3 件は 1 周目の resolve 可の返信のままである。
+- 2026-09-25: P6。head `6cbad51` の CI 5 件は success。#244 の head `509fce7` と重ねた `git merge-tree` は conflict なしで、merge 結果の tree で vet と test が pass した(`65e3110` で確認。以後の差分は note だけ)。この更新は note だけの commit で、P5 が確かめた head より後になる。
