@@ -12,7 +12,7 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 
 ## 現在の状況
 
-- 実装、test、設計文書と help の更新、`progress.md` の FU-02 行の更新を終え、Issue の「検証」を実行した。次は PR の作成。
+- P1 を終えた。PR #242 を draft で作成し、note を採番し、`progress.md` の FU-02 行の PR 欄を #242 にした。次は最新 head の check runs の完了を確かめてから review(P2)。
 
 ## 決定事項
 
@@ -37,8 +37,7 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 
 ## 次にやること
 
-- PR を作成し、note を採番して `progress.md` の PR 欄を更新する(P1)。
-- review(P2)を subagent で実行する。
+- 最新 head の check runs がすべて success になったら、review(P2)を subagent で実行する。
 
 ## 検証
 
@@ -65,3 +64,4 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 
 - 2026-09-25: Issue #203 と並行評価のファイルを読んだ。依存欄は `-`。
 - 2026-09-25: `Assets.Status` と status の定数を足し、`addImage` / `addAttachmentFile` で上限超過と取得失敗の文言を分けた。test、設計文書、help、`progress.md` を更新し、Issue の「検証」を済ませた。
+- 2026-09-25: PR #242 を draft で作成し、note を採番した。`progress.md` の FU-02 の PR 欄を #242 にした(P1)。検証はすべて pass。出力生成系 3 skill のうち `update-sample-exports` だけを実行し、commit する差分は無かった。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
