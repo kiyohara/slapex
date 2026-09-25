@@ -12,7 +12,8 @@
 
 ## 現在の状況
 
-- `progress.md` の編集を終えた。PR 作成前。
+- `progress.md` の編集を終え、PR #248 を作成して本 note を採番した。head `c7e2396` の check runs 5 件はすべて success。
+- ユーザーの review と merge、着手順の FU-12〜FU-14 の位置の確認を待つ。
 
 ## 決定事項
 
@@ -65,3 +66,4 @@
 ## セッションログ
 
 - 2026-09-25: `maintain-progress` で RF 表と FU 表の完了行を要約へ移し、着手順を実態に合わせ、#245〜#247 を FU-12〜FU-14 として登録した。
+- 2026-09-25: PR #248 を作成し、`number-working-branch-note` で本 note を採番した。
