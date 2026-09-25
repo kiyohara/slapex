@@ -880,8 +880,10 @@ func TestRunIntegrationFilesNotDownloaded(t *testing.T) {
 				},
 				{ID: "F-DEL", Mode: "tombstone"},
 				{ID: "F-HIDDEN", Mode: "hidden_by_limit"},
-				{ID: "F-NOURL", Name: "notes.txt", Mimetype: "text/plain"},
-				{ID: "F-NOURLIMG", Name: "photo.png", Mimetype: "image/png"},
+				// Over the 1MB limit, yet with no URL the limit keeps nothing
+				// out: no size note, no skipped_size entry.
+				{ID: "F-NOURL", Name: "notes.txt", Mimetype: "text/plain", Size: 2 << 20},
+				{ID: "F-NOURLIMG", Name: "photo.png", Mimetype: "image/png", Size: 2 << 20},
 				{ID: "F-BARE"}, // no name either: the file ID stands in for it
 			},
 		},
