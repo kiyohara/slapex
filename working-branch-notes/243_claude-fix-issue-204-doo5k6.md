@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fix-issue-204-doo5k6`(cloud session が指定。Issue の推奨ブランチ名は `fix-hidden-file-label`)
-- PR: 未採番
+- PR: #243
 - 最終更新: 2026-09-25
 
 ## 目的
