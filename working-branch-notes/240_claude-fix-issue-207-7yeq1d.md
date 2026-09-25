@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fix-issue-207-7yeq1d`(cloud session が指定。Issue の推奨ブランチ名は `fix-done-elapsed-time`)
-- PR: 採番前
+- PR: #240
 - 最終更新: 2026-09-25
 
 ## 目的
