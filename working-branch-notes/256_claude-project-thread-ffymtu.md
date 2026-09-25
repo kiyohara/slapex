@@ -13,8 +13,8 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 ## 現在の状況
 
 - 作業内容 1〜5 を実施し、Issue の「検証」を実行した。PR #256 を draft で作成し、note を採番して、`progress.md` の RV-02 の PR 欄を反映した(P1)。
-- review(P2)の指摘 4 件をすべて採用して直した(P4)。
-- 次は最新 head の check runs を確かめ、再確認(P5)を P2 の subagent に委譲する。
+- review(P2)の指摘 4 件をすべて採用して直した(P4)。再確認(P5)で 4 件とも修正確認済み、未対応 0 件となり、review cycle `claude-code-c2d576d-20260925130826` は完了した。
+- 残るのは人間の手番だけである(「次にやること」)。
 
 ## 決定事項
 
@@ -41,9 +41,7 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 
 ## 次にやること
 
-- PR を作成し、note を採番する(P1)。(完了)
-- review(P2)を subagent に委譲し、指摘に対応する(P4)。(完了)
-- 再確認(P5)を subagent に委譲し、未対応が残れば P4 へ戻る。
+- ユーザー: resolve 可の inline 2 thread の resolve、Ready for review、merge。follow-up 候補 1 件(「リスク・ブロッカー」)を起票するかの判断。
 
 ## 検証
 
@@ -82,8 +80,10 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 
 ## リスク・ブロッカー
 
-- 本 PR の P5 は、subagent が本 PR の `verify-comments.md` を読んで行う(自己適用)。変更後の規定を review の指摘への処置に当てはめる機会になる一方、merge 前の規定で再確認することになる。
+- 本 PR の P5 は、subagent が本 PR の `verify-comments.md` を読んで行った(自己適用)。4 件とも処置が「採用し修正した」だったため、修正を伴わない処置の区分(スコープ外として確認済み、対応不要として確認済み)とそのマーカーは、実際の再確認では使われていない。
 - 未検証: description による発火。
+- スコープ外で見つけたこと(follow-up 候補、未起票):
+  - `verify-comments.md` の「処置ごとの確認」の「採用し修正した」の行は、修正が head に push 済みであることを確かめるとし、push を伴わない修正(PR description の編集など)の確かめ方を書いていない。P5 の完了要約の `[fyi]` で、今回は GitHub 上の PR description に反映されていることで確かめた。`address-comments.md` の手順 7(修正が head branch へ push 済みであることを確かめてから返信する)も同じ前提を持つ。両方を揃えて直す方がよく、本 PR は `address-comments.md` を変えないため、本 PR では直さない。
 
 ## セッションログ
 
@@ -92,3 +92,5 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 - 2026-09-25: PR #256 を draft で作成し(P1)、`number-working-branch-note` で note を採番した(`f77e5ee`)。書き換えた行は、note の `PR:` 欄(`未作成` → `#256`)、「次にやること」の PR 作成と採番の行(`(完了)` を付けた)、PR description の note のファイル名の 3 つ。触らずに残した行は無い。`progress.md` の RV-02 の PR 欄を #256 にした。検証はすべて問題なし(「検証」)。出力生成系 3 skill は不適用。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
 - 2026-09-25: review(P2)を subagent に委譲した。review cycle `claude-code-c2d576d-20260925130826`、`Reviewed head` は `c2d576d`。指摘は 4 件(inline 2 件、top-level 2 件)で、`[must]` / `[ask]` は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
 - 2026-09-25: 指摘 4 件を、Issue、正本、実物(PR #235〜#237 の変更ファイル、#234 / #252 / #253 の本文)で確かめ、処置はすべて「採用し修正した」とした(P4)。inline 1(`verify-comments.md`): 「採用し修正した」の確かめることに、修正が新たな問題を生じていないことを足した。inline 2(drive の「判断基準」): note の無い PR では follow-up 候補を PR description に残すことを足した。修正 commit は `2a8c295`。top-level 1: PR description の「補足」に出力生成系 3 skill の適用判断を足した。top-level 2: decision log を作らない根拠を、#253 に指示が無いこと(#234 と #252 にはある)に直した(PR description の「レビューしてほしい点」と本 note の決定事項)。スコープ外とした指摘は無く、follow-up 候補は無い。出力生成系 3 skill は、ドキュメントだけの変更のため引き続き適用しない。
+- 2026-09-25: 再確認(P5)を P2 と同じ subagent で実行した(`Reviewed head` は `a680932`)。修正確認済み 4 件(inline 2 件は resolve 可、top-level 2 件)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件で、review cycle は完了した。完了要約の `[fyi]` 1 件(push を伴わない修正の確かめ方)は未対応に数えられておらず、follow-up 候補にした(「リスク・ブロッカー」)。
+- 2026-09-25: P6。note だけを commit して push した。P5 が確かめた head `a680932` の check runs は 5 件すべて success。
