@@ -12,7 +12,7 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 
 ## 現在の状況
 
-- P1(実装と PR 作成)を終えた。PR #244 は draft。次は最新 head の CI を確かめ、review(P2)を subagent に委譲する。
+- P6(終了)。subagent の review(P2)は指摘 0 件で、P4 / P5 は無い。PR #244 は draft のまま、ユーザーによる確認(Codex の cross-review)と merge を待つ。
 
 ## 決定事項
 
@@ -33,8 +33,7 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 
 ## 次にやること
 
-- PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する(P1 の残り)。(完了)
-- CI の確認後、subagent に review(P2)を委譲する。
+- (ユーザー)PR #244 を ready for review にし、Codex の cross-review のうえ merge する。resolve が要る review thread は無い。
 
 ## 検証
 
@@ -51,10 +50,11 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 | 新しい test が旧コードで失敗すること | `message_view.go` だけを main に戻すと、`TestRunIntegrationThumbnailManifestFromContent` が失敗した(thumbnail の entry が `image/heic`、4096 bytes、`.png` の path で、Issue の記述どおり)。case 8 は「現在の cache」の subtest が失敗し、「修正前の cache」の subtest は新旧どちらでも pass した(値の引き継ぎの確認であり、回帰の検知は前者と fresh run の test が担う) |
 | `update-sample-exports`(`TZ=Asia/Tokyo`) | 現在時刻での再生成は相対日時だけの差分(commit しない)。`-time 2026-07-04T16:32:41+09:00` での再生成は無差分 |
 | demo の manifest(`slapex --demo --keep-cache`) | 修正前後で、`upload_thumb` を含む全 entry が同じ(`generated_at` と source URL を除いて比較)。asset も同じ |
+| #204 の PR #243(head `3cd1f2a`)との重なり | `git merge-tree` で衝突なし。merge した tree で `go vet ./...` と `go test -count=1 ./...` が pass |
 
 ## リスク・ブロッカー
 
-- 並行実行中の #204(別 thread)とは、`message_view.go`(#204 は `addFiles` / `addAttachmentFile`、本 PR は `addImage` の thumbnail の数行)と `progress.md`(#204 は L53、本 PR は L57)が重なりうる。hunk は離れている見込みで、PR 作成後に #204 の PR と重ねて確かめる。
+- 並行実行中の #204(PR #243)とは、`message_view.go`(#243 は `addFiles` / `addAttachmentFile` と `addImage` の早期 return、本 PR は `addImage` の thumbnail の数行)と `progress.md`(#243 は L53、本 PR は L57)が重なる。#243 の head `3cd1f2a` と重ねた tree では衝突が無く、vet と test も pass した。どちらかに commit が足された場合は、後から merge する側で確かめ直す。
 - 既知の flaky test(`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp`)が CI で失敗した場合は、PR #238 のコメントを引いて PR に 1 回コメントする。
 - 内容を判別できない形式の thumbnail は、extension が original の表示ファイル名(例: `photo.heic`)から決まりうる(`extensionFor` の fallback)。Slack の thumbnail は判別できる形式(JPEG / PNG など)のため実害は見込まず、Issue が `OriginalName` を残すとしているため変えない。
 
@@ -63,3 +63,6 @@ Issue #208(FU-07)。`addImage` は original 用の `AssetMeta`(Slack の `mimety
 - 2026-09-25: Issue #208 と並行評価のファイルを読んだ。依存欄は `-`。第1陣(#203 / #205 / #207)は merge 済みで、main `b405899` から始めた。
 - 2026-09-25: `addImage` の thumbnail の `Save` に渡す metadata を `FileID` / `OriginalName` だけにし、`cache.md` と test、`progress.md` の FU-07 の行を更新した。Issue の「検証」を済ませた(すべて pass)。出力生成系 3 skill は `update-sample-exports` だけを実行し、commit する差分は無かった。
 - 2026-09-25: PR #244 を draft で作成し、note を採番し(`b382e9b`)、`progress.md` の FU-07 の PR 欄を #244 にした(P1)。reviewer に user を指定する操作は PR の author と同じため GitHub に拒否された(assignee の設定は成功)。採番後の PR description の note path の置換に使う本文の取得で、MCP で足りる read を 1 回 `gh api` で行った(書き込みは MCP で行った)。
+- 2026-09-25: 最新 head `736fd33` の check runs 5 件が success になり、P1 を終えた。#204 の PR #243(head `3cd1f2a`)と `git merge-tree` で重ね、衝突なし、merge した tree で vet と test が pass した。
+- 2026-09-25: P2 を subagent に委譲した。review cycle `claude-code-736fd33-20260925082651`、Reviewed head `736fd333c6b0994eaa2231eb7557ab1d1cf7d9d9`、指摘 0 件(inline 0、top-level 0)。完了要約は PR conversation comment 1 本(`Model` は上位の指示により `unknown`)。P3 で P6 へ進んだ(P4 / P5 は無し)。
+- 2026-09-25: P6。本 note だけを更新する commit を push した。PR は draft のまま、ユーザーの確認と merge を待つ。
