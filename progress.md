@@ -22,6 +22,8 @@ v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 を GitHub Releases
 
 PR #201(RF-02)の review などで見つかった既存挙動の修正・改善 Issue も追跡する。優先順位と、リファクタリング施策と合わせた全体の着手順は「進行中タスク: review で見つかった既存挙動の修正」を参照する。
 
+review cycle の skill(`drive-issue-to-reviewed-pr` と `review-pull-request`)の改善 Issue も、「進行中タスク: review cycle の skill 改善」で追跡する。
+
 ## 進行中タスク: 段階的リファクタリング
 
 表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。RF-03/RF-06は同じexportを触るため推奨順で直列実行するが、RF-06はRF-03なしでも着手可能。他の施策は技術的に分離可能だが、運用上は並行実行しない。完了した施策は「完了済みフェーズ(参考)」を参照する。
@@ -30,26 +32,40 @@ PR #201(RF-02)の review などで見つかった既存挙動の修正・改善 
 |---|---|---|---|---|---|
 | RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | todo | #188, #189, #190 | 工程の入出力を整理 | - |
 | RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188 | 同型位置引数を集約 | - |
-| RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | streamingとの差を保って共通化 | - |
+| RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | FU-18の後、streamingとの差を保って共通化 | - |
 | RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
 
 ## 進行中タスク: review で見つかった既存挙動の修正
 
-PR #201(RF-02)の review 補助分析で見つかった、リファクタリングのスコープ外にある既存挙動を Issue #202〜#211 として登録した。表の順を優先順とし、データ破壊 → 利用者に見える表示の誤り → 件数・cache の整合 → API 呼び出しの無駄と edge case → 後片付け、の順に並べる。各 Issue の確認状況(code 読解のみか、実行で再現済みか)と作業条件は Issue 本文を正本とする。その後 PR #221(FU-01)の review で見つかった Issue #222 も、発生経路と性質が同じ follow-up として同じ表で追跡する。PR #243(FU-03)の実装と review で見つかった Issue #245〜#247 も同様に追跡する。完了した項目は「完了済みフェーズ(参考)」を参照する。
+PR #201(RF-02)の review 補助分析で見つかった、リファクタリングのスコープ外にある既存挙動を Issue #202〜#211 として登録した。表の順を優先順とし、データ破壊 → 利用者に見える表示の誤り → 件数・cache の整合 → API 呼び出しの無駄と edge case → 後片付け、の順に並べる。各 Issue の確認状況(code 読解のみか、実行で再現済みか)と作業条件は Issue 本文を正本とする。その後 PR #221(FU-01)の review で見つかった Issue #222 も、発生経路と性質が同じ follow-up として同じ表で追跡する。PR #243(FU-03)の実装と review で見つかった Issue #245〜#247、PR #241(FU-04)と PR #242(FU-02)の実装と review で見つかった Issue #249〜#251、PR #238 の CI で見つかった flaky test の Issue #254 も同様に追跡する。完了した項目は「完了済みフェーズ(参考)」を参照する。
 
-段階的リファクタリングと合わせた残りの着手順は次のとおり。Run の取得工程に関わる FU-05 は RF-03(#191)の直後に置く。FU-13 と FU-14 は同じ `addImage` を触るため直列に進める。それ以外は技術的に独立だが、運用上は並行実行しない。順序見直しの経緯は decision log 0056 の 2026-09-06 追記を参照する。
+段階的リファクタリングと合わせた残りの着手順は次のとおり。Run の取得工程に関わる FU-05 は RF-03(#191)の直後に置く。FU-18 は RF-04 が検証に使う test を直すため、RF-04 より前に置く。FU-13 と FU-14(`addImage`)、FU-15 と FU-16(`output.Assets`)、FU-08 と FU-17(`collectUserIDs`)は、それぞれ同じ箇所を触るため直列に進める。それ以外は技術的に独立だが、運用上は並行実行しない。順序見直しの経緯は decision log 0056 の 2026-09-06 追記を参照する。
 
-RF-03 → FU-05 → FU-13 → FU-14 → RF-06 → RF-04 → RF-05 → FU-08 → FU-09 → FU-10 → FU-12
+RF-03 → FU-05 → FU-13 → FU-14 → FU-18 → FU-15 → FU-16 → RF-06 → RF-04 → RF-05 → FU-08 → FU-17 → FU-09 → FU-10 → FU-12
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
 | FU-05 | [#206](https://github.com/kiyohara/slapex/issues/206) filter 時の broadcast thread 件数不整合 | todo | #191 | RF-03 後に characterization test から着手 | - |
 | FU-13 | [#246](https://github.com/kiyohara/slapex/issues/246) 外部連携画像の url_private を original として保存 | todo | PR #243, PR #244 | 実 payload を確認し、original を取得しない形にする | - |
 | FU-14 | [#247](https://github.com/kiyohara/slapex/issues/247) URL 無し画像の size 超過で空の source_url を記録 | todo | PR #243, PR #244 | FU-13 の後(同じ `addImage`) | - |
+| FU-18 | [#254](https://github.com/kiyohara/slapex/issues/254) 429 retry test がまれに失敗 | todo | - | 失敗理由を log に出し、原因を調べる | - |
+| FU-15 | [#249](https://github.com/kiyohara/slapex/issues/249) 同じファイルの size 超過を重複記録 | todo | - | `SkipTooLarge` で記録済みの URL を足さない | - |
+| FU-16 | [#250](https://github.com/kiyohara/slapex/issues/250) download 中の size 超過を asset failed と警告 | todo | - | FU-15 の後(同じ `output.Assets`) | - |
 | FU-08 | [#209](https://github.com/kiyohara/slapex/issues/209) label 付き mention の users.info | todo | - | 収集条件を描画側に揃える | - |
+| FU-17 | [#251](https://github.com/kiyohara/slapex/issues/251) 表示しない投稿者の users.info | todo | - | FU-08 の後(同じ `collectUserIDs`) | - |
 | FU-09 | [#210](https://github.com/kiyohara/slapex/issues/210) 取得境界の秒未満切り捨て | todo | - | 精度統一か入力拒否かを決めて実装 | - |
 | FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 / RF-06 で吸収可。残った項目だけ実施 | - |
 | FU-12 | [#245](https://github.com/kiyohara/slapex/issues/245) URL 無しファイルの設計文書の記述 | todo | PR #243 | `slack-api-usage.md` の記述を実装に揃える | - |
+
+## 進行中タスク: review cycle の skill 改善
+
+PR #233、PR #235、PR #237、PR #242 の作業で見つかった、`drive-issue-to-reviewed-pr` と `review-pull-request` の review cycle に関わる Issue を追跡する。どれも `drive-issue-to-reviewed-pr` を触るため直列に進める。Issue の上では順序を問わないため、表は優先度の順に並べる。
+
+| ID | Issue | 状態 | 依存 | 次にやること | PR |
+|---|---|---|---|---|---|
+| RV-02 | [#253](https://github.com/kiyohara/slapex/issues/253) スコープ外とした指摘の再確認 | todo | - | `verify-comments` に確かめ方とマーカーを足す | - |
+| RV-03 | [#255](https://github.com/kiyohara/slapex/issues/255) cloud session の subagent の tool 選択 | todo | - | `review-pull-request` の tool routing に cloud session の節を足す | - |
+| RV-01 | [#252](https://github.com/kiyohara/slapex/issues/252) review の prefix の統一への追従 | todo | - | 判断基準の理由と decision log 0059 を直す | - |
 
 ## リリース履歴
 
