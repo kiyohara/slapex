@@ -12,7 +12,8 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 
 ## 現在の状況
 
-- 作業内容 1〜5 を実施し、Issue の「検証」を実行した(P1)。
+- 作業内容 1〜5 を実施し、Issue の「検証」を実行した。PR #256 を draft で作成し、note を採番して、`progress.md` の RV-02 の PR 欄を反映した(P1)。
+- 次は P1 の完了条件(最新 head の check runs)を確かめ、review(P2)を subagent に委譲する。
 
 ## 決定事項
 
@@ -39,6 +40,7 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 ## 次にやること
 
 - PR を作成し、note を採番する(P1)。(完了)
+- review(P2)を subagent に委譲し、指摘があれば対応(P4)と再確認(P5)を回す。
 
 ## 検証
 
@@ -82,3 +84,4 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 
 - 2026-09-25: Issue #253 と、PR #233 / PR #242 の再確認の例を読んだ。依存なし。
 - 2026-09-25: 作業内容 1〜5 を実施し、Issue の「検証」を実行した。
+- 2026-09-25: PR #256 を draft で作成し(P1)、`number-working-branch-note` で note を採番した(`f77e5ee`)。書き換えた行は、note の `PR:` 欄(`未作成` → `#256`)、「次にやること」の PR 作成と採番の行(`(完了)` を付けた)、PR description の note のファイル名の 3 つ。触らずに残した行は無い。`progress.md` の RV-02 の PR 欄を #256 にした。検証はすべて問題なし(「検証」)。出力生成系 3 skill は不適用。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。

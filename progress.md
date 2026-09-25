@@ -63,7 +63,7 @@ PR #233、PR #235、PR #237、PR #242 の作業で見つかった、`drive-issue
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| RV-02 | [#253](https://github.com/kiyohara/slapex/issues/253) スコープ外とした指摘の再確認 | done(PR merge後) | - | merge後は対応なし | - |
+| RV-02 | [#253](https://github.com/kiyohara/slapex/issues/253) スコープ外とした指摘の再確認 | done(PR merge後) | - | merge後は対応なし | [#256](https://github.com/kiyohara/slapex/pull/256) |
 | RV-03 | [#255](https://github.com/kiyohara/slapex/issues/255) cloud session の subagent の tool 選択 | todo | - | `review-pull-request` の tool routing に cloud session の節を足す | - |
 | RV-01 | [#252](https://github.com/kiyohara/slapex/issues/252) review の prefix の統一への追従 | todo | - | 判断基準の理由と decision log 0059 を直す | - |
 
