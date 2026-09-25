@@ -12,7 +12,7 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 
 ## 現在の状況
 
-- P1(実装と PR 作成)の途中。実装と Issue の「検証」を終えた。
+- PR #241 を draft で作成し、note の採番と `progress.md` の FU-04 の PR 欄の反映まで済ませた。最新 head の check runs がすべて success になった時点で P1 を終える。
 
 ## 決定事項
 
@@ -30,8 +30,7 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番して `progress.md` の FU-04 の PR 欄を反映する(P1 の残り)。
-- P2 の review を subagent へ委譲する。
+- 最新 head の check runs の完了を確かめ、P2 の review を subagent へ委譲する。
 
 ## 検証
 
@@ -59,3 +58,4 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 
 - 2026-09-25: Issue #205 と並行評価のファイルを読んだ。依存欄は `-` で、「#191 の後」は推奨順である。`collectUserIDs` が `m.Text` だけを走査し、`addUnfurls` が attachment の `text` を `render.Mrkdwn` に渡すことを確かめた。
 - 2026-09-25: 結合 test を先に足し、修正前に失敗することを確かめてから `collectUserIDs` を直した。設計文書を更新し、Issue の「検証」と sample export の再生成を済ませた。
+- 2026-09-25: PR #241 を draft で作成し、note を採番した。`progress.md` の FU-04 の PR 欄を #241 にした(P1)。検証はすべて pass。出力生成系 3 skill は適用しない(`update-sample-exports` は再生成して実質差分が無いことを確かめた)。
