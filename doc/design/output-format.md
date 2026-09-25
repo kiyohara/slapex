@@ -90,7 +90,7 @@ option:
 サイズオーバーのため保存されませんでした。
 ```
 
-置換表示には、可能であればファイル名、Slack file ID、元の file size、設定された size limit を含める。download 中に上限を超えた場合は元の file size が分からないため、file size を省いて size limit だけを示す。サイズ上限超過を、取得失敗(manifest の `failed`)の文言で表示しない。`.cache/assets_manifest.json` には、保存した添付ファイルだけでなく、サイズ上限超過で保存しなかった添付ファイルの状態も記録する。
+置換表示には、可能であればファイル名、Slack file ID、元の file size、設定された size limit を含める。download 中に上限を超えた場合は元の file size が分からないため、元の file size だけを省く。サイズ上限超過を、取得失敗(manifest の `failed`)の文言で表示しない。`.cache/assets_manifest.json` には、保存した添付ファイルだけでなく、サイズ上限超過で保存しなかった添付ファイルの状態も記録する。
 
 ## 出力イメージ
 
