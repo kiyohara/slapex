@@ -165,7 +165,7 @@ commit、push、作業ツリーのファイル変更、address-comments、thread
 | Reviewed head | 投稿の時点で確かめた full head SHA |
 | 完了要約の URL | 投稿した review body または PR conversation comment の URL |
 | 指摘件数 | 総数と、inline と top-level の内訳。P2 では指摘ごとに対象 path と thread の URL を 1 行で添える |
-| 再確認の結果 | P5 だけ。resolve 可とした件数(thread の URL の一覧)と未対応件数 |
+| 再確認の結果 | P5 だけ。区分(`.agents/skills/review-pull-request/references/verify-comments.md` の「処置ごとの確認」)ごとの確認済み件数と resolve 可とした thread の URL の一覧、未対応件数 |
 | check runs | 確かめた check runs の状態 |
 | 未実施事項 | 実施しなかった検証とその理由 |
 | 停止理由 | 途中で止まった場合の理由と、ユーザーへ中継すべき確認事項 |
@@ -199,8 +199,8 @@ subagent を起動できない実行環境では、P2 と P5 の前で止まる�
 - P3 は P2 の出力の指摘件数(inline と top-level の合計)で決める。0 件なら P6、1 件以上なら P4 へ進む。重要度の表記(prefix や優先度のラベル)は判断に使わない。review ごとに表記が揃わないためである。
 - P4 での個々の採否は `.agents/skills/review-pull-request/references/address-comments.md` の処置の分類に委ね、本 skill に分類を複製しない。全件を採用しない場合も、処置の返信は要る。
 - 指摘の正しさは推論で決めず、実物で確かめて判断する(同 reference の手順)。
-- P5 後は `.agents/skills/review-pull-request/references/verify-comments.md` の完了要約の未対応件数で決める。0 件なら P6、1 件以上なら P4 へ戻る。
-- スコープ外の指摘は、処置を「妥当だが今回はスコープ外である」とし、follow-up Issue の候補として終了時の報告に挙げる。起票はせず、止まらない。起票の可否はユーザーが終了後にまとめて判断する。
+- P5 後は `.agents/skills/review-pull-request/references/verify-comments.md` の完了要約の未対応件数で決める。0 件なら P6、1 件以上なら P4 へ戻る。スコープ外など修正を伴わない処置でも、再確認で処置が妥当と確かめられた指摘は未対応に数えない(同 reference の「処置ごとの確認」)。
+- スコープ外の指摘は、処置を「妥当だが今回はスコープ外である」とし、follow-up Issue の候補として P4 で working branch note に残し、終了時の報告に挙げる。note に残すのは、P5 の再確認が follow-up の記録先を確かめるためである。起票はせず、止まらない。起票の可否はユーザーが終了後にまとめて判断する。
 - 処置が「判断に追加情報が必要である」になった指摘がある場合は止まる(「停止とエスカレーション」)。
 
 ## 他の review cycle の扱い
@@ -232,8 +232,8 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 | --- | --- |
 | P1 | PR 番号、検証結果、出力生成系 skill の適用判断 |
 | P2 / P3 | review cycle ID、`Reviewed head`、指摘件数(inline と top-level の内訳) |
-| P4 | 処置の内訳、修正 commit、出力生成系 skill の再判断 |
-| P5 | 再確認の結果(resolve 可とした件数と未対応件数) |
+| P4 | 処置の内訳、スコープ外とした指摘の follow-up 候補、修正 commit、出力生成系 skill の再判断 |
+| P5 | 再確認の結果(区分ごとの確認済み件数と未対応件数) |
 | P6 | 終了時の状態 |
 
 - 追記は次の push にまとめてよい。ただし P2 / P5 の委譲中は push しない(「head SHA の受け渡し」)。
@@ -278,7 +278,7 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 - PR の URL と state。
 - Issue の検証結果(P1)。
 - review cycle ID ごとの指摘件数と、周ごとの処置の内訳。
-- resolve 可とした thread。resolve は人間が行う。
+- resolve 可とした thread(区分ごと)。resolve は人間が行う。
 - 未対応・未収束の指摘と、見解の相違点。
 - 再確認を人間に返すもの(他の Agent 種別の cycle や、対象 cycle 以外で対応した thread)。
 - 最新 head と check runs の状態。P6 で note だけを push した場合はその旨。
