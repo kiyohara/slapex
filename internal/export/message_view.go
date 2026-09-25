@@ -43,6 +43,31 @@ var normalSubtypes = map[string]bool{
 	"me_message":       true,
 }
 
+// messageKind is how messageView shows a message, following
+// html-rendering.md「メッセージ種別(subtype)の表示」. collectUserIDs reads the
+// same kind to scan only the texts that are rendered.
+type messageKind int
+
+const (
+	messageFull        messageKind = iota // author, body, files, unfurls and reactions
+	messageSystem                         // a one-line system row built from the body (systemBody)
+	messageTombstone                      // the deleted-message placeholder
+	messageUnsupported                    // a system row naming a bodiless unknown subtype
+)
+
+func messageKindOf(m *slack.Message) messageKind {
+	switch {
+	case systemSubtypes[m.Subtype]:
+		return messageSystem
+	case m.Subtype == "tombstone":
+		return messageTombstone
+	case !normalSubtypes[m.Subtype] && m.Text == "":
+		return messageUnsupported
+	default:
+		return messageFull
+	}
+}
+
 type messageViewBuilder struct {
 	users              map[string]*slack.User
 	avatars            map[string]string
@@ -86,17 +111,17 @@ func (b *messageViewBuilder) messageView(m *slack.Message) *render.MessageView {
 		Edited:    m.Edited != nil,
 	}
 
-	switch {
-	case systemSubtypes[m.Subtype]:
+	switch messageKindOf(m) {
+	case messageSystem:
 		v.IsSystem = true
 		v.Body = b.systemBody(m)
 		return v
-	case m.Subtype == "tombstone":
+	case messageTombstone:
 		v.Author = "(削除)"
 		v.AvatarInitial = "?"
 		v.Body = render.Safe("(削除されたメッセージ)")
 		return v
-	case !normalSubtypes[m.Subtype] && m.Text == "":
+	case messageUnsupported:
 		v.IsSystem = true
 		v.Body = render.Safe("(未対応のメッセージ種別: " + html.EscapeString(m.Subtype) + ")")
 		return v
@@ -350,6 +375,8 @@ func (b *messageViewBuilder) addUnfurls(v *render.MessageView, m *slack.Message)
 			uv.TitleHref = a.TitleLink
 		}
 		if a.Text != "" {
+			// collectUserIDs scans the same text for mentions; a field newly
+			// passed to Mrkdwn needs the same scan there.
 			uv.Text = render.Mrkdwn(a.Text, b)
 		}
 		if a.ServiceIcon != "" {

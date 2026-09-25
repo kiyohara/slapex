@@ -56,8 +56,24 @@ func oldestMessageTS(messages []slack.Message) string {
 
 var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)[|>]`)
 
+// collectUserIDs returns the unique user IDs to resolve through users.info:
+// posters, channel_join inviters and the mentions in every text the view
+// builder passes to render.Mrkdwn. Mrkdwn resolves a label-less mention through
+// messageViewBuilder.UserName, which shows the raw user ID for a user not
+// collected here, so the scanned texts must match those Mrkdwn call sites. They
+// depend on how messageView shows the message, so the scan switches on the same
+// messageKindOf: a message shown in full renders its body (messageView) and
+// each legacy attachment's text (addUnfurls), and a system row only its body
+// (systemBody). Texts that are not rendered, such as the attachments of a
+// pinned_item row or a tombstone's body, are not scanned, nor are fields
+// rendered as plain text, such as the attachment title.
 func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message) []string {
 	seen := map[string]bool{}
+	addMentions := func(text string) {
+		for _, match := range reMention.FindAllStringSubmatch(text, -1) {
+			seen[match[1]] = true
+		}
+	}
 	add := func(m *slack.Message) {
 		if m.User != "" {
 			seen[m.User] = true
@@ -65,8 +81,14 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 		if m.Inviter != "" {
 			seen[m.Inviter] = true
 		}
-		for _, match := range reMention.FindAllStringSubmatch(m.Text, -1) {
-			seen[match[1]] = true
+		switch messageKindOf(m) {
+		case messageFull:
+			addMentions(m.Text)
+			for i := range m.Attachments {
+				addMentions(m.Attachments[i].Text)
+			}
+		case messageSystem:
+			addMentions(m.Text)
 		}
 	}
 	for i := range messages {

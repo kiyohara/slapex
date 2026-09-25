@@ -51,7 +51,7 @@ FU-01 → RF-03 → FU-02 → FU-03 → FU-04 → FU-05 → FU-06 → RF-06 → 
 | FU-01 | [#202](https://github.com/kiyohara/slapex/issues/202) reuse-cache 自己コピーで asset が 0 byte | done(PR merge後) | - | merge後にRF-03へ。patch release 候補 | [#221](https://github.com/kiyohara/slapex/pull/221) |
 | FU-02 | [#203](https://github.com/kiyohara/slapex/issues/203) download 時の size 超過が HTML で取得失敗表示 | done(PR merge後) | - | merge後は対応なし。ユーザー判断で RF-03 より先行して実施 | [#242](https://github.com/kiyohara/slapex/pull/242) |
 | FU-03 | [#204](https://github.com/kiyohara/slapex/issues/204) URL 無し upload が外部連携表示 | todo | - | FU-02 の後(同じ関数)。hidden_by_limit の payload を確認 | - |
-| FU-04 | [#205](https://github.com/kiyohara/slapex/issues/205) unfurl text の mention 未解決 | todo | - | RF-03 の後。収集対象に attachment text を追加 | - |
+| FU-04 | [#205](https://github.com/kiyohara/slapex/issues/205) unfurl text の mention 未解決 | done(PR merge後) | - | merge後は対応なし。ユーザー判断で RF-03 より先行して実施 | [#241](https://github.com/kiyohara/slapex/pull/241) |
 | FU-05 | [#206](https://github.com/kiyohara/slapex/issues/206) filter 時の broadcast thread 件数不整合 | todo | #191 | RF-03 後に characterization test から着手 | - |
 | FU-06 | [#207](https://github.com/kiyohara/slapex/issues/207) Done 経過時間が Now 起点 | done(PR merge後) | - | merge後は対応なし。ユーザー判断で RF-03 より先行して実施 | [#240](https://github.com/kiyohara/slapex/pull/240) |
 | FU-07 | [#208](https://github.com/kiyohara/slapex/issues/208) upload_thumb manifest の mimetype / size | todo | - | RF-06 の後(cache 検証を共有) | - |
