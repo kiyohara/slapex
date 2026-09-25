@@ -15,8 +15,9 @@ Issue #207(FU-06)。`Run` は Done phase の経過時間を `time.Since(now)` �
 
 ## 現在の状況
 
-- P1(実装と PR 作成)の手順を終えた。PR #240 を draft で作成し、note を採番し、`progress.md` の FU-06 の PR 欄を #240 にした。
-- 次は CI の完了を確かめてから P2(subagent による review)へ進む。
+- P1〜P6 を終えた。review cycle `claude-code-ea268f2-20260925070256` は指摘 0 件で、P3 から P6 へ進んだ(P4 / P5 は無し)。
+- review 済みの head は `ea268f2`(check runs 5 件が success)。PR #240 は draft のままで、残りは人間の手番だけである。
+- 並行する #241(#205)、#242(#203)と重なるファイルは `progress.md` だけで、変える行は隣り合わない。3 本を試しに merge すると衝突は無かった(「検証」)。
 
 ## 決定事項
 
@@ -33,8 +34,7 @@ Issue #207(FU-06)。`Run` は Done phase の経過時間を `time.Since(now)` �
 
 ## 次にやること
 
-- P1 の残り: 最新 head の check runs がすべて success になることを確かめる。
-- P2 以降: review と指摘対応。
+- 人間: PR #240 を ready for review にし、Codex のクロスレビューを経て merge する。resolve する thread は無い。
 
 ## 検証
 
@@ -52,10 +52,13 @@ Issue #207(FU-06)。`Run` は Done phase の経過時間を `time.Since(now)` �
 | `git diff --check` | 出力なし |
 | 固定 sample の無差分(`TZ=Asia/Tokyo`、`gensample -time 2026-07-04T16:32:41+09:00`) | main と修正後のどちらも `doc/samples/ja` と `doc/samples/en` に対して `diff -r` が無差分 |
 | 修正後の Done 行 | 上記の 2 つの `-time` と `slapex --demo`(`Now` 未指定)で、どれも `(in 0s)` |
+| P2 の read-back(orchestrator が取り直した) | conversation comment は完了要約の 1 本だけで、review と review thread は 0 件。完了要約の 5 行はキーの順に連続し、`Reviewed head` は PR head の `ea268f2` と一致した。server が付けた footer と 5 行の間に空行がある。`Model` は上位の指示により `unknown` で、理由の 1 行がある |
+| 並行する PR との重なり(#241 head `703ee60`、#242 head `9205e14`) | 共通のファイルは `progress.md` だけで、変える行は L52(#242)、L54(#241)、L56(本 PR)と隣り合わない。`git merge-tree` で本 PR と #241 を merge し、その結果に #242 を merge すると衝突は無く、本 PR と #242 の組も衝突は無かった。3 本を merge した tree で `go vet ./...` と `go test ./...` が pass した |
 
 ## リスク・ブロッカー
 
-- 並行中の #203、#205 と触るファイルが重ならない見込みである(並行評価の結論)。merge 前に各 PR の変更ファイルを見直す。
+- 並行中の #241(#205)、#242(#203)とは、`progress.md` の別の行を除いて触るファイルが重ならない。3 本は merge の順によらず衝突しない見込みである(「検証」)。
+- merge 後は、`progress.md` の着手順の段落と行(L45、L47)が実態(FU-06 が RF-03 より先)とずれる。並行分の merge 後にまとめて反映する取り決めのため、本 PR では触らない(follow-up 候補)。
 - 既知の flaky test(`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp`)が CI で失敗した場合は、本 PR の変更によらない。PR #238 のコメントを引いて 1 回だけ PR にコメントする。
 
 ## セッションログ
@@ -63,3 +66,7 @@ Issue #207(FU-06)。`Run` は Done phase の経過時間を `time.Since(now)` �
 - 2026-09-25: Issue #207、並行評価のファイル、関連する正本を読んだ。`time.Since(now)` が main の `export.go` に残ることと、`now` の用途(footer、範囲、root 名、`.cache/` の時刻、Done)を確かめた。main で症状を再現した。
 - 2026-09-25: `Run` の冒頭で実時刻を取り、Done の経過時間の起点にした。`Options.Now` の doc comment を直し、結合 test を足した。Issue の「検証」を済ませた。出力生成系 3 skill は適用しない。
 - 2026-09-25: PR #240 を draft で作成し、note を採番した。`progress.md` の FU-06 の PR 欄を #240 にした(P1)。検証はすべて pass。出力生成系 3 skill は適用しない。
+- 2026-09-25: head `ea268f2` の check runs 5 件が success になり、P1 を終えた。
+- 2026-09-25: P2 の subagent が review した。review cycle `claude-code-ea268f2-20260925070256`、`Reviewed head` `ea268f2`、指摘 0 件(inline 0、top-level 0)。完了要約は PR conversation comment の 1 本。P3 で P6 へ進んだ。
+- 2026-09-25: 並行する #241、#242 と変更ファイルを突き合わせ、3 本の試し merge と、merge した tree での vet / test を確かめた。
+- 2026-09-25: P6 で終了した。PR #240 は draft のまま、review 済みの head は `ea268f2`(check runs 5 件が success)。この更新は note だけの commit である。残りは人間の手番(ready for review への変更、Codex のクロスレビュー、merge)。
