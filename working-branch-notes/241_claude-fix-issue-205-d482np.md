@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fix-issue-205-d482np`(cloud session が指定。Issue の推奨ブランチ名は `fix-unfurl-mention-resolution`)
-- PR: 未採番
+- PR: #241
 - 最終更新: 2026-09-25
 
 ## 目的
