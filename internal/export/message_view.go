@@ -273,7 +273,11 @@ func (b *messageViewBuilder) addImage(v *render.MessageView, f *slack.File) {
 	}
 	img := render.ImageView{Name: f.Name}
 	if thumbURL != "" {
-		img.ThumbPath, _ = b.assets.Save(output.KindUploadThumb, thumbURL, meta)
+		// Slack's mimetype and size describe the original, not the thumbnail:
+		// leave them out so the thumbnail's manifest entry takes both from its
+		// own download (Issue #208).
+		thumbMeta := output.AssetMeta{FileID: f.ID, OriginalName: f.Name}
+		img.ThumbPath, _ = b.assets.Save(output.KindUploadThumb, thumbURL, thumbMeta)
 	}
 	// oversize marks an original the size limit kept out, and origSize is the
 	// size shown for it (see oversizeFileNote).

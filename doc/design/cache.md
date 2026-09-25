@@ -59,11 +59,11 @@
 | `source_url` | 元 URL |
 | `local_path` | 出力ディレクトリからの相対 path(未保存なら `null`)。保存名は download 内容の sha256 hash + extension(`output-format.md`) |
 | `file_id` / `emoji_name` | Slack file ID または絵文字名(該当する場合のみ) |
-| `original_name` / `mimetype` / `size_bytes` | 元の表示ファイル名と metadata。`mimetype` は Slack の file metadata があればそれを使い、無ければ download 内容から判別し、判別できなければ response の Content-Type を使う。内容を判別できた asset では `local_path` の extension も同じ判別結果から決まるため両者は一致する。判別できない形式では extension が元の表示ファイル名や URL 由来になるため、一致は保証しない(`output-format.md`) |
+| `original_name` / `mimetype` / `size_bytes` | 元の表示ファイル名と metadata。`mimetype` / `size_bytes` は Slack の file metadata があればそれを使う。Slack の file metadata を使うのは `upload_original` と `attachment` だけで、`upload_thumb` には使わない(Slack の `mimetype` / `size` は original のものであるため。`original_name` は original の表示ファイル名を記録する)。Slack の file metadata が無ければ、`mimetype` は download 内容から判別し、判別できなければ response の Content-Type を使い、`size_bytes` は保存した byte 数を使う。内容を判別できた asset では `local_path` の extension も同じ判別結果から決まるため両者は一致する。判別できない形式では extension が元の表示ファイル名や URL 由来になるため、一致は保証しない(`output-format.md`) |
 | `status` | `saved` / `skipped_size` / `failed` |
 | `error` | 失敗理由(失敗時のみ) |
 
-`assets` の各要素は元 URL 単位で記録する。ファイル名は内容 hash ベースのため、内容が同じ複数の `source_url` が同一 `local_path` を指すことがある(決定経緯は `decision-log/0052-content-hash-asset-filenames.md`)。`--reuse-cache` は保存済み asset の `local_path` をそのまま再利用してファイルをコピーする。内容が同じ asset は再取得しても同じ内容 hash に解決されるため、この verbatim 再利用は内部整合を保つ。
+`assets` の各要素は元 URL 単位で記録する。ファイル名は内容 hash ベースのため、内容が同じ複数の `source_url` が同一 `local_path` を指すことがある(決定経緯は `decision-log/0052-content-hash-asset-filenames.md`)。`--reuse-cache` は保存済み asset の `local_path` をそのまま再利用してファイルをコピーする。内容が同じ asset は再取得しても同じ内容 hash に解決されるため、この verbatim 再利用は内部整合を保つ。Slack の file metadata が無い場合(`upload_thumb` は常にこれに当たる)の `mimetype` / `size_bytes` も、再利用元の manifest の値を引き継ぐ。このため、`upload_thumb` に original の値を記録していた版(Issue #208 の修正前)の cache を再利用すると、その値が残る。`--reuse-cache` を指定せずに export し直せば、保存した thumbnail の値になる。
 
 ### `slack_api_cache.json`
 
