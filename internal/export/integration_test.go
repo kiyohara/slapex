@@ -178,6 +178,80 @@ func TestRunIntegrationAssetExtensionFromContent(t *testing.T) {
 	}
 }
 
+// TestRunIntegrationThumbnailManifestFromContent: Slack's mimetype and size on
+// an image upload describe the original, so only the upload_original entry
+// records them. The upload_thumb entry takes its mimetype and size_bytes from
+// the thumbnail it saved, and they agree with the extension the content
+// decided, even when the original is a HEIC and the thumbnail a PNG
+// (Issue #208). Both entries keep the upload's file ID and display name.
+func TestRunIntegrationThumbnailManifestFromContent(t *testing.T) {
+	t.Parallel()
+
+	sc := heicThumbnailScenario()
+	got := runExportScenario(t, sc, integrationOptions(t, 10))
+	entries := readManifestEntries(t, got.OutputDir)
+
+	thumb, ok := findManifest(entries, func(e manifestEntryFull) bool { return e.Kind == "upload_thumb" })
+	thumbSize := int64(len(sc.Assets[heicThumbPath].Body))
+	if !ok || thumb.Status != "saved" || thumb.Mimetype != "image/png" || thumb.SizeBytes != thumbSize || filepath.Ext(thumb.LocalPath) != ".png" {
+		t.Fatalf("upload_thumb entry = %+v (ok=%v), want saved as image/png, %d bytes, with a .png path", thumb, ok, thumbSize)
+	}
+	info, err := os.Stat(filepath.Join(got.OutputDir, filepath.FromSlash(thumb.LocalPath)))
+	if err != nil {
+		t.Fatalf("thumbnail %q missing: %v", thumb.LocalPath, err)
+	}
+	if info.Size() != thumb.SizeBytes {
+		t.Fatalf("thumbnail %q is %d bytes on disk, manifest size_bytes = %d", thumb.LocalPath, info.Size(), thumb.SizeBytes)
+	}
+
+	// Unchanged: the original keeps Slack's file metadata, and its extension
+	// comes from the display name because the sniff cannot identify HEIC.
+	original, ok := findManifest(entries, func(e manifestEntryFull) bool { return e.Kind == "upload_original" })
+	if !ok || original.Status != "saved" || original.Mimetype != "image/heic" || original.SizeBytes != heicOriginalSize || filepath.Ext(original.LocalPath) != ".heic" {
+		t.Fatalf("upload_original entry = %+v (ok=%v), want saved with Slack's image/heic and %d bytes, with a .heic path", original, ok, heicOriginalSize)
+	}
+	for _, e := range []manifestEntryFull{thumb, original} {
+		if e.FileID != "F-HEIC" || e.OriginalName != "photo.heic" {
+			t.Fatalf("%s entry file_id / original_name = %q / %q, want F-HEIC / photo.heic", e.Kind, e.FileID, e.OriginalName)
+		}
+	}
+}
+
+// heicThumbPath is the thumbnail's fake-server path in heicThumbnailScenario,
+// and heicOriginalSize the size Slack declares for its original.
+const (
+	heicThumbPath    = "/files/photo-thumb-480.png"
+	heicOriginalSize = 4096
+)
+
+// heicThumbnailScenario has one image upload in the shape Issue #208
+// describes: a HEIC original, which the content sniff cannot identify, with a
+// PNG thumbnail. Slack's declared size is the original's; the fake original
+// body is shorter, so an entry shows which of the two sizes it recorded.
+func heicThumbnailScenario() exportScenario {
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message", TS: "1700000001.000000", User: "U01", Text: "Photo from the site visit",
+			Files: []slack.File{
+				{
+					ID:                 "F-HEIC",
+					Name:               "photo.heic",
+					Mimetype:           "image/heic",
+					Size:               heicOriginalSize,
+					URLPrivateDownload: "{{base}}/files/photo.heic",
+					Thumb480:           "{{base}}" + heicThumbPath,
+				},
+			},
+		},
+	}
+	sc.Assets = map[string]fakeAsset{
+		"/files/photo.heic": {ContentType: "image/heic", Body: "heic original"},
+		heicThumbPath:       {ContentType: "image/png", Body: "\x89PNG\r\n\x1a\nfake thumbnail"},
+	}
+	return sc
+}
+
 // --- emoji filters (--exclude-body-emoji / --exclude-reaction-emoji) ----------
 
 // TestRunIntegrationExcludeEmojiParentAndThread: marking the thread parent of

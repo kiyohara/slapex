@@ -378,6 +378,67 @@ func TestRunIntegrationReuseCacheOversizeNotCopied(t *testing.T) {
 	}
 }
 
+// --- case 8: upload_thumb metadata is carried over like local_path ----------
+
+// Since Issue #208 the caller passes no mimetype / size for a thumbnail, so on
+// reuse copyFromReuse fills the upload_thumb entry's mimetype and size_bytes
+// from the reused manifest, just as it keeps that entry's local_path. A current
+// cache therefore reproduces the fresh run's entry. A cache written before the
+// fix recorded the original's values on upload_thumb (simulated here by
+// rewriting them); it is still reused — the thumbnail is copied, not
+// downloaded — and its values stay until a run without --reuse-cache
+// (doc/design/cache.md).
+func TestRunIntegrationReuseCacheThumbnailMetadata(t *testing.T) {
+	t.Parallel()
+
+	thumbSize := int64(len(heicThumbnailScenario().Assets[heicThumbPath].Body))
+	for _, tc := range []struct {
+		name     string
+		mimetype string // upload_thumb values in the reused manifest, which run 2 keeps
+		size     int64
+		rewrite  bool // write them into the cache, as a build before the fix did
+	}{
+		{name: "current cache", mimetype: "image/png", size: thumbSize},
+		{name: "cache written before Issue #208", mimetype: "image/heic", size: heicOriginalSize, rewrite: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			thumbEntry := func(dir string) manifestEntryFull {
+				t.Helper()
+				e, ok := findManifest(readManifestEntries(t, dir), func(e manifestEntryFull) bool {
+					return e.Kind == "upload_thumb"
+				})
+				if !ok {
+					t.Fatalf("no upload_thumb entry in %s", dir)
+				}
+				return e
+			}
+			var reused manifestEntryFull
+			r := runReuseScenarioOpts(t, heicThumbnailScenario(), reuseOptions(t, true), reuseOptions(t, true),
+				func(t *testing.T, cacheDir string) {
+					if tc.rewrite {
+						rewriteJSON(t, filepath.Join(cacheDir, "assets_manifest.json"), func(m map[string]any) {
+							for _, a := range m["assets"].([]any) {
+								if e := a.(map[string]any); e["kind"] == "upload_thumb" {
+									e["mimetype"], e["size_bytes"] = tc.mimetype, tc.size
+								}
+							}
+						})
+					}
+					reused = thumbEntry(filepath.Dir(cacheDir))
+				})
+
+			if d := delta(r.before, r.after, heicThumbPath); d != 0 {
+				t.Fatalf("thumbnail download delta = %d, want 0 (copied from cache)", d)
+			}
+			if got := thumbEntry(r.dir2); got != reused || got.Mimetype != tc.mimetype || got.SizeBytes != tc.size {
+				t.Fatalf("run 2 upload_thumb entry = %+v, want the reused manifest's %+v (%s, %d bytes)", got, reused, tc.mimetype, tc.size)
+			}
+		})
+	}
+}
+
 // --- shared harness ----------------------------------------------------------
 
 // reuseRun holds the two output directories, the fake server request counts
