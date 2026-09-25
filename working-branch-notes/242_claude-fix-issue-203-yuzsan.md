@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fix-issue-203-yuzsan`(cloud session が指定。Issue の推奨ブランチ名は `fix-size-skip-html-note`)
-- PR: 未採番
+- PR: #242
 - 最終更新: 2026-09-25
 
 ## 目的
