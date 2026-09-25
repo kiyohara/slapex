@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-ffymtu`(cloud session が指定。Issue の推奨ブランチ名は `verify-out-of-scope-dispositions`)
-- PR: 未作成
+- PR: #256
 - 最終更新: 2026-09-25
 
 ## 目的
@@ -38,7 +38,7 @@ Issue #253(RV-02)。`review-pull-request` の `verify-comments` に、`address-c
 
 ## 次にやること
 
-- PR を作成し、note を採番する(P1)。
+- PR を作成し、note を採番する(P1)。(完了)
 
 ## 検証
 
