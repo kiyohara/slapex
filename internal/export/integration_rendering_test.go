@@ -289,6 +289,55 @@ func TestRunIntegrationUnfurlTextMention(t *testing.T) {
 	assertEndpointCounts(t, got.Server, map[string]int{"/api/users.info": 3})
 }
 
+// --- case 5c: a mention only in unrendered text costs no users.info call -----
+
+// TestRunIntegrationUnrenderedTextMention pins where the scan stops (Issue
+// #205): mentions are collected only from the texts messageView renders
+// through render.Mrkdwn. A system row renders its body but not its
+// attachments, and a tombstone or a bodiless unknown subtype renders neither,
+// so a user mentioned only there costs no users.info call.
+func TestRunIntegrationUnrenderedTextMention(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Users["U03"] = testUser("U03", "carol", "Carol Reviewer", "Carol", "")
+	sc.Messages = []slack.Message{
+		{
+			Type: "message", Subtype: "channel_topic", TS: "1700000561.000000", User: "U01",
+			Text: "set the channel topic: Launch with <@U03>",
+		},
+		{
+			Type: "message", Subtype: "pinned_item", TS: "1700000562.000000", User: "U01",
+			Text:        "<@U01> pinned a message to this channel.",
+			Attachments: []slack.Attachment{{Text: "Pinned note for <@U04>"}},
+		},
+		{
+			Type: "message", Subtype: "tombstone", TS: "1700000563.000000",
+			Text:        "Deleted note for <@U05>",
+			Attachments: []slack.Attachment{{Text: "Deleted attachment for <@U06>"}},
+		},
+		{
+			Type: "message", Subtype: "some_unknown_event", TS: "1700000564.000000",
+			Attachments: []slack.Attachment{{Text: "Unknown event for <@U07>"}},
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<span class="mention">@Alice</span> set the channel topic: Launch with <span class="mention">@Carol</span>`)
+	mustContain(t, body, `<span class="mention">@Alice</span> pinned a message to this channel.`)
+	mustContain(t, body, "(削除されたメッセージ)")
+	mustContain(t, body, "(未対応のメッセージ種別: some_unknown_event)")
+	for _, text := range []string{"Pinned note for", "Deleted note for", "Deleted attachment for", "Unknown event for"} {
+		mustNotContain(t, body, text)
+	}
+	mustNotContain(t, body, `class="unfurl"`)
+	// U01 posts and U03 is mentioned in a system row body. U04 to U07 appear
+	// only in texts that are not rendered, so none is looked up.
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/users.info": 2})
+}
+
 // --- case 6: edited message shows the quiet (edited) marker ------------------
 
 func TestRunIntegrationEditedMessage(t *testing.T) {
