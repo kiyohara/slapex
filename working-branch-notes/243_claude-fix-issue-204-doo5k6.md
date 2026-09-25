@@ -12,7 +12,7 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 
 ## 現在の状況
 
-- P1(実装と PR 作成)、P2(review)、P3(判断)を終え、P4(対応)の修正を push した。review cycle は `claude-code-3cd1f2a-20260925082344` で、指摘 5 件のうち 4 件を採用し、1 件をスコープ外とした。次は各指摘へ処置を返信し、CI の完了を確かめて再確認(P5)に進む。
+- P1(実装と PR 作成)から 1 周目の P5(再確認)までを終え、2 周目の P4(対応)の note を push した。review cycle は `claude-code-3cd1f2a-20260925082344`。指摘 5 件のうち 4 件を採用し、1 件をスコープ外とした。1 周目の P5 で inline 3 件と top-level 1 件が確認済みになり、top-level 1 件(PR description の 1 文)が未対応として残った。次は処置を返信し、CI の完了を確かめて 2 周目の P5 に進む。
 
 ## 決定事項
 
@@ -20,7 +20,7 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
   - `addFiles` で `mode` が `hidden_by_limit` のファイルを `tombstone` の次に扱い、ファイル名の位置に `(プランの制限により参照できないファイル)` を出す。`tombstone` の `(削除されたファイル)` と同じ形で、Note は付けない。Slack は id と mode 以外を伏せるため、表示できる名前が無い。
   - `addAttachmentFile` の `f.IsExternal || f.DownloadURL() == ""` を分けた。外部サービス連携の文言は `is_external` が true のときだけにし、それ以外で download URL が無いファイルは `(取得できないファイルのため保存対象外)` にした。名前が無ければ従来どおり file ID を出す。
   - `addImage` で、外部連携でなく thumbnail も download URL も無い画像を `addAttachmentFile` に渡し、同じ `取得できない` 表示にした。従来は取得を試みていないのに「画像の取得に失敗しました。」と出ていた。Issue の「download URL も無いその他の file」に当たり、#203 の原則(表示の分類を manifest の status に揃える)とも合う。副作用として、その画像の `size` が上限を超える場合に、従来は空の source URL で `skipped_size` を manifest に記録していたが、記録しなくなる。画像以外の添付ファイルは従来から URL 無しの判定が上限の判定より先で、thumbnail の無い画像も同じ扱いになる。thumbnail が有り download URL が無い画像は thumbnail を保存するため置換表示の対象外で、従来どおり上限を超えると空の source URL で `skipped_size` を記録する(下記の follow-up 候補)。
-- 文言は実装(`message_view.go`)の既存文言に揃えた。プラン制限は `(削除されたファイル)` と同じくファイル名の位置の括弧書きにし、URL 無しは `(外部サービス連携のファイルのため保存対象外)` と同じくファイル名の下の「〜のため保存対象外」にした。括弧書きは `html-rendering.md` の `(削除されたメッセージ)` と同じ形である。main の `html-rendering.md` にはファイルの置換表示の文言が無かった(review の指摘で訂正。当初は「`html-rendering.md` の既存表現に揃えた」と書いていた)。
+- 文言は実装(`message_view.go`)の既存文言に揃えた。プラン制限は `(削除されたファイル)` と同じくファイル名の位置の括弧書きにし、URL 無しは `(外部サービス連携のファイルのため保存対象外)` と同じくファイル名の下の「〜のため保存対象外」にした。括弧書きは `html-rendering.md` の `(削除されたメッセージ)` と同じ形である。main の `html-rendering.md` には、download しないファイル(削除済み、外部連携)の文言が無かった(review の指摘で訂正。当初は「`html-rendering.md` の既存表現に揃えた」と書いていた。保存できなかったファイルの文言は main にもある)。
 - 表の置き場所: Issue は「`html-rendering.md` の subtype / mode の表に追記する」とするが、同文書の subtype の表はメッセージの種別の表で、ファイルの mode の表は無い。ファイルの表示を扱う「画像と添付ファイルの表示」に、download しないファイルの表を足した。削除済みファイルと外部連携のファイルの表示もこれまで設計文書に無かったので、同じ表に載せた。file ID の注記は、`(取得できないファイルのため保存対象外)` と表示する画像にも広げた(review の指摘)。
 - `hidden_by_limit` の payload: `docs.slack.dev` と `api.slack.com` は cloud session の egress proxy に拒否された。検索結果に出た Slack の changelog「Wild West no more (for file limits, at least)」(2019-03)の要旨(制限を超えた古いファイルは情報を伏せた tombstone として返り、`"mode": "hidden_by_limit"` で識別する)と、公開 OSS の Issue(`sgratzl/slack_cleaner2` #42)にある実例 `{'id': ..., 'mode': 'hidden_by_limit'}` で、id と mode だけが返ることを確かめた。Slack の一次資料(changelog の本文)の直接の確認と、実 workspace の response は未検証。
 - `slack.File.Mode` のコメントに `hidden_by_limit` を足した(`internal/slack/api.go`)。
@@ -37,7 +37,8 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 
 - PR を draft で作り、note を採番し、`progress.md` の FU-03 の PR 欄を反映して push する(P1 の残り)。(完了)
 - CI の完了を確かめ、review(P2)を subagent に委譲する。(完了)
-- review の指摘 5 件へ処置を返信し、CI の完了を確かめて再確認(P5)を subagent に委譲する。
+- review の指摘 5 件へ処置を返信し、CI の完了を確かめて再確認(P5)を subagent に委譲する。(完了)
+- 2 周目: 未対応の top-level 1 件へ処置を返信し、CI の完了を確かめて再確認(P5)を subagent に委譲する。
 
 ## 検証
 
@@ -72,3 +73,5 @@ Issue #204(FU-03)。download URL の無い非 external な Slack upload(Free pla
 - 2026-09-25: PR #243 を draft で作成し、note を採番した(`4728965`)。`progress.md` の FU-03 の PR 欄を #243 にした(P1)。検証はすべて pass。出力生成系 3 skill のうち `update-sample-exports` だけを実行し、commit する差分は無かった。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
 - 2026-09-25: review(P2)を subagent に委譲した。review cycle `claude-code-3cd1f2a-20260925082344`、`Reviewed head` `3cd1f2a`。指摘は 5 件(inline 3 件、top-level 2 件)で、`[must]` と `[ask]` は無い。P3 で P4 に進んだ。
 - 2026-09-25: P4 で指摘 5 件をコードと実行で確かめた。採用 4 件(case 11b の fixture の `size`、`html-rendering.md` の file ID の注記、PR description の文言の由来、PR description の未検証事項)は `95a4c00` と PR description の更新で直し、1 件(thumbnail の有る画像の `skipped_size`)はスコープ外で follow-up 候補とした。出力生成系 3 skill はいずれも適用しない(test と開発者向け document だけの変更)。
+- 2026-09-25: 1 周目の P5 を P2 と同じ subagent に委譲した(`Reviewed head` `65e3110`)。inline 3 件は resolve 可、top-level は 1 件が確認済み、1 件が未対応だった。未対応は、PR description に足した「main の `html-rendering.md` にファイルの置換表示の文言は無い」が事実と違う点である(main には保存できなかったファイルの文言がある)。#244 の head `509fce7` との merge 結果でも vet と test が pass した。
+- 2026-09-25: 2 周目の P4 で、PR description の 1 文を「download しないファイル(削除済み、外部連携)の文言が無い」に直し、note の「決定事項」の同じ 1 文も揃えた。code の変更は無く、出力生成系 3 skill はいずれも適用しない。
