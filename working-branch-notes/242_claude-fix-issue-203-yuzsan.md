@@ -12,7 +12,7 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 
 ## 現在の状況
 
-- P1 を終えた。PR #242 を draft で作成し、note を採番し、`progress.md` の FU-02 行の PR 欄を #242 にした。次は最新 head の check runs の完了を確かめてから review(P2)。
+- P1〜P4 を終えた。review(P2)の指摘 2 件のうち `[nits]` を直し、`[fyi]` は follow-up 候補にした(処置は「決定事項」)。次は再確認(P5)。
 
 ## 決定事項
 
@@ -34,10 +34,13 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
   - `update-readme-preview-screenshots`: 適用しない。sample export の見た目が変わらない。
   - `update-readme-demo-gif`: 適用しない。CLI 出力と demo fixture の表示が変わらない。
 - `progress.md` は FU-02 の行(L52)だけを変えた。着手順の行(L47)は並行中に触らない。
+- review(P2)の指摘への処置:
+  - `[nits]`(`html-rendering.md` の size を省く規則が、thumbnail を表示できる画像の書式に合わない): 採用し修正した。その書式では `: <元の file size>` を省いてファイル名と上限を `, ` で区切ると書き分け、表の前置きを事前判定の行も含む「保存の対象だが保存できなかった」にした。`output-format.md` の同じ規則も、省くのが元の file size だけだと分かる書き方にそろえた。
+  - `[fyi]`(download 中の上限超過が Assets phase で `asset failed` の警告になる): 妥当だが本 PR ではスコープ外とし、follow-up 候補にした。Issue #203 の完了条件は phase / summary の件数で、件数は揃っている。警告行の文言は設計文書に規定が無く、事前判定の上限超過は警告を出さないため、上限超過の警告の出し方は `SkipTooLarge` の重複記録と合わせて決める方がよい。
 
 ## 次にやること
 
-- 最新 head の check runs がすべて success になったら、review(P2)を subagent で実行する。
+- 最新 head の check runs がすべて success になったら、再確認(P5)を P2 と同じ subagent で実行する。
 
 ## 検証
 
@@ -53,15 +56,21 @@ Issue #203(FU-02)。download 中にサイズ上限を超えた asset(Slack の `
 | `git diff --check` | 出力なし |
 | 新しい test が旧コードで失敗すること | `message_view.go` だけを main に戻すと、case 10c〜10e と case 7 の 4 件が失敗した。事前判定の既存 test(case 10a / 10b)は新旧どちらでも pass した |
 | `update-sample-exports`(`go run ./tools/gensample`、`TZ=Asia/Tokyo`) | 差分は相対日時だけ。commit しない |
+| 並行中の PR との merge(`git merge-tree`) | #241(`703ee60`)、#240(`ea268f2`、のちに `d0bca9f`)と、3 本をどの順に merge しても衝突しない。3 本を合わせた tree(#240 は `ea268f2`)で `go vet ./...`、`go build ./...`、`go test ./...` が pass |
+| P4 の修正(設計文書だけ) | `git diff --check` は出力なし。注記の例が `oversizeOriginalNote` / `oversizeFileNote` の出力と case 10c / 10d の assertion に一致する |
 
 ## リスク・ブロッカー
 
-- 並行実行中の #205、#207 とは触るファイルが重ならない見込み(並行評価の結論)。報告前に sibling PR の変更ファイルと突き合わせる。
+- 並行実行中の #205(PR #241)、#207(PR #240)とは、ファイル単位では重なる(#241 と `message_view.go`、`integration_rendering_test.go`、`progress.md`、#240 と `progress.md`)が、hunk が離れていて衝突しない(「検証」)。並行評価の「重ならない見込み」はファイル単位では外れた。報告前に最新 head で取り直す。
 - 既知の flaky test(`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp`)が CI で失敗した場合は、PR #238 のコメントを引いて PR に 1 回コメントする。
-- スコープ外で見つけたこと(follow-up 候補、未起票): `SkipTooLarge` は URL で重複を除かない。事前判定で上限を超えたファイルを 2 回描画すると(timeline と thread の両方に出る thread_broadcast など)、manifest に 2 件記録され、summary でも 2 件と数える(scratch test で確認)。Issue #203 は事前判定の manifest を変えないとしているため、本 PR では直さない。
+- スコープ外で見つけたこと(follow-up 候補、未起票):
+  - `SkipTooLarge` は URL で重複を除かない。事前判定で上限を超えたファイルを 2 回描画すると(timeline と thread の両方に出る thread_broadcast など)、manifest に 2 件記録され、summary でも 2 件と数える(scratch test で確認)。Issue #203 は事前判定の manifest を変えないとしているため、本 PR では直さない。
+  - download 中にサイズ上限を超えた asset は、Assets phase で `asset failed (<kind>): download exceeds size limit` の警告になり、直後の件数(`0 failed`)と分類が食い違う(既存挙動。review の `[fyi]`)。`Save` で status が `skipped_size` のときだけ文言を分ける小さな変更で済む。
 
 ## セッションログ
 
 - 2026-09-25: Issue #203 と並行評価のファイルを読んだ。依存欄は `-`。
 - 2026-09-25: `Assets.Status` と status の定数を足し、`addImage` / `addAttachmentFile` で上限超過と取得失敗の文言を分けた。test、設計文書、help、`progress.md` を更新し、Issue の「検証」を済ませた。
 - 2026-09-25: PR #242 を draft で作成し、note を採番した。`progress.md` の FU-02 の PR 欄を #242 にした(P1)。検証はすべて pass。出力生成系 3 skill のうち `update-sample-exports` だけを実行し、commit する差分は無かった。reviewer に user を指定する操作は、PR の author と同じため GitHub に拒否された(assignee の設定は成功)。
+- 2026-09-25: review(P2)を subagent で実行した。review cycle `claude-code-9205e14-20260925070726`、`Reviewed head` は `9205e14`。指摘 2 件(inline 2 件、top-level 0 件)。subagent は sibling PR の変更ファイル一覧を 1 回 `gh api`(read)で取った(MCP で足りる操作。書き込みは無い)。P3 で P4 へ進んだ。
+- 2026-09-25: P4。`[nits]` は採用し修正した(`4069986`)。`[fyi]` は妥当だが本 PR ではスコープ外とし、follow-up 候補にした。修正は設計文書だけで出力を変えないため、出力生成系 3 skill は再実行しない。
