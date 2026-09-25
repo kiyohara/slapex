@@ -36,7 +36,21 @@ thread replies は初期状態では折りたたみ、thread label をクリッ�
 
 ユーザーがアップロードした画像は、Slack file object の available な thumbnail のうち表示に適したものを保存し、HTML 上の inline image として使う。あわせて original 画像も保存し、inline image をクリックすると original を開けるようにする。
 
-original 画像の保存には `--max-attachment-size` を適用する。original がサイズ上限を超える場合、original は download せず、HTML では thumbnail 表示を残したうえで original がサイズ上限超過により保存されなかったことを示す。thumbnail も取得できない場合は、通常の添付ファイル表示または置換メッセージとして扱う。
+original 画像の保存には `--max-attachment-size` を適用する。original がサイズ上限を超える場合、original は保存せず、HTML では thumbnail 表示を残したうえで original がサイズ上限超過により保存されなかったことを示す。thumbnail も取得できない場合は、通常の添付ファイル表示または置換メッセージとして扱う。thumbnail を取得できず original を保存できた場合は、original を inline image として表示する。
+
+download を試みて保存できなかった画像と添付ファイルは、次の文言で表示する。表示の分類は `.cache/assets_manifest.json` の status と、Assets phase / 完了時の summary の件数(`skipped by size limit` / `failed`)に揃え、サイズ上限超過を取得失敗の文言で表示しない。
+
+| 対象 | 保存できなかった理由(manifest の status) | 表示 |
+|---|---|---|
+| thumbnail を表示できる画像 | original のサイズ上限超過(`skipped_size`) | thumbnail の下に `original はサイズ上限超過のため保存されませんでした。(<ファイル名>: <元の file size>, 上限 <size limit>)` |
+| thumbnail を表示できる画像 | original の取得失敗(`failed`) | thumbnail の下に `original の取得に失敗しました。` |
+| 画像以外の添付ファイル、thumbnail を表示できない画像 | サイズ上限超過(`skipped_size`) | ファイル名の下に `サイズオーバーのため保存されませんでした。(file ID: <Slack file ID>, <元の file size>, 上限 <size limit>)` |
+| 画像以外の添付ファイル | 取得失敗(`failed`) | ファイル名の下に `取得に失敗しました。` |
+| thumbnail を表示できない画像 | original の取得失敗(`failed`) | ファイル名の下に `画像の取得に失敗しました。` |
+
+- `<元の file size>` は、Slack の file object の `size` で上限超過を判定できた場合だけ表示する。download 中に上限を超えた場合(`output-format.md` の「添付ファイルのサイズ制限」)は実際の size が分からないため、`<元の file size>, ` を省く。例: `(photo.png, 上限 10MB)`、`(file ID: F0123456789, 上限 10MB)`。
+- `file ID: <Slack file ID>, ` は、file ID を取得できる場合だけ表示する。
+- 画像以外の添付ファイルにファイル名が無い場合は、ファイル名の位置に file ID を表示する。
 
 保存対象 asset とサイズ上限の方針は `output-format.md` を参照する。
 

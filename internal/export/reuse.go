@@ -100,7 +100,7 @@ func loadReuseCache(path string) (*reusableCache, error) {
 
 	saved := map[string]output.ManifestEntry{}
 	for _, e := range manifest.Assets {
-		if e.Status == "saved" && e.LocalPath != "" && e.SourceURL != "" {
+		if e.Status == output.StatusSaved && e.LocalPath != "" && e.SourceURL != "" {
 			saved[e.SourceURL] = e
 		}
 	}

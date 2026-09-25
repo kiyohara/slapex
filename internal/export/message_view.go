@@ -250,23 +250,39 @@ func (b *messageViewBuilder) addImage(v *render.MessageView, f *slack.File) {
 	if thumbURL != "" {
 		img.ThumbPath, _ = b.assets.Save(output.KindUploadThumb, thumbURL, meta)
 	}
+	// oversize marks an original the size limit kept out, and origSize is the
+	// size shown for it (see oversizeFileNote).
+	oversize, origSize := false, int64(0)
 	switch {
 	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindUploadOriginal, f.DownloadURL(), meta)
-		img.Note = fmt.Sprintf("original はサイズ上限超過のため保存されませんでした。(%s: %s, 上限 %s)",
-			f.Name, humanBytes(f.Size), humanBytes(b.maxAttachmentBytes))
+		oversize, origSize = true, f.Size
 	case f.DownloadURL() != "":
 		if rel, ok := b.assets.Save(output.KindUploadOriginal, f.DownloadURL(), meta); ok {
 			img.OriginalPath = rel
+		} else if b.assets.Status(f.DownloadURL()) == output.StatusSkippedSize {
+			// file.size was absent or understated, so the pre-check let the
+			// original through and the download hit the limit (Issue #203).
+			oversize = true
 		} else {
 			img.Note = "original の取得に失敗しました。"
 		}
+	}
+	if oversize {
+		img.Note = b.oversizeOriginalNote(f.Name, origSize)
 	}
 	if img.ThumbPath == "" && img.OriginalPath != "" {
 		img.ThumbPath = img.OriginalPath
 	}
 	if img.ThumbPath == "" {
-		v.FilesList = append(v.FilesList, render.FileView{Name: f.Name, Note: "画像の取得に失敗しました。"})
+		note := "画像の取得に失敗しました。"
+		if oversize {
+			// No thumbnail to keep the note under: show the image like an
+			// oversize attachment, so its size and the limit still show
+			// (html-rendering.md「画像と添付ファイルの表示」).
+			note = b.oversizeFileNote(f.ID, origSize)
+		}
+		v.FilesList = append(v.FilesList, render.FileView{Name: f.Name, Note: note})
 		return
 	}
 	v.Images = append(v.Images, img)
@@ -283,24 +299,47 @@ func (b *messageViewBuilder) addAttachmentFile(v *render.MessageView, f *slack.F
 		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "(外部サービス連携のファイルのため保存対象外)"})
 	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindAttachment, f.DownloadURL(), meta)
-		// 置換表示にはファイル名 / file ID / 元サイズ / 上限を含める
-		// (output-format.md「添付ファイルのサイズ制限」)。file ID は取得できる
-		// 場合のみ添える。
-		detail := fmt.Sprintf("%s, 上限 %s", humanBytes(f.Size), humanBytes(b.maxAttachmentBytes))
-		if f.ID != "" {
-			detail = fmt.Sprintf("file ID: %s, %s", f.ID, detail)
-		}
-		v.FilesList = append(v.FilesList, render.FileView{
-			Name: name,
-			Note: "サイズオーバーのため保存されませんでした。(" + detail + ")",
-		})
+		v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: b.oversizeFileNote(f.ID, f.Size)})
 	default:
 		if rel, ok := b.assets.Save(output.KindAttachment, f.DownloadURL(), meta); ok {
 			v.FilesList = append(v.FilesList, render.FileView{Name: name, Path: rel})
+		} else if b.assets.Status(f.DownloadURL()) == output.StatusSkippedSize {
+			// file.size was absent or understated, so the pre-check let the
+			// file through and the download hit the limit (Issue #203).
+			v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: b.oversizeFileNote(f.ID, 0)})
 		} else {
 			v.FilesList = append(v.FilesList, render.FileView{Name: name, Note: "取得に失敗しました。"})
 		}
 	}
+}
+
+// oversizeFileNote is the note shown in place of a file the size limit kept
+// out: the Slack file ID when there is one, the original size and the limit,
+// next to the file name in FileView.Name (output-format.md「添付ファイルの
+// サイズ制限」). size is Slack's file.size when the pre-check caught the file,
+// or 0 when the download itself hit the limit: file.size was absent or
+// understated there, so the real size is unknown and is left out.
+func (b *messageViewBuilder) oversizeFileNote(fileID string, size int64) string {
+	detail := "上限 " + humanBytes(b.maxAttachmentBytes)
+	if size > 0 {
+		detail = humanBytes(size) + ", " + detail
+	}
+	if fileID != "" {
+		detail = "file ID: " + fileID + ", " + detail
+	}
+	return "サイズオーバーのため保存されませんでした。(" + detail + ")"
+}
+
+// oversizeOriginalNote is the note under an image thumbnail whose original the
+// size limit kept out. size follows oversizeFileNote: 0 leaves the unknown
+// size out.
+func (b *messageViewBuilder) oversizeOriginalNote(name string, size int64) string {
+	if size > 0 {
+		return fmt.Sprintf("original はサイズ上限超過のため保存されませんでした。(%s: %s, 上限 %s)",
+			name, humanBytes(size), humanBytes(b.maxAttachmentBytes))
+	}
+	return fmt.Sprintf("original はサイズ上限超過のため保存されませんでした。(%s, 上限 %s)",
+		name, humanBytes(b.maxAttachmentBytes))
 }
 
 func (b *messageViewBuilder) addUnfurls(v *render.MessageView, m *slack.Message) {
