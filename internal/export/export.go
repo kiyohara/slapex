@@ -52,10 +52,12 @@ type Options struct {
 	PromptTTY            *os.File // controlling terminal for interactive prompts; nil when unavailable
 	ToolVersion          string
 	// Now overrides the export clock used for the footer "Exported" line, the
-	// --days range boundaries and the default output-root name. Zero means
-	// time.Now(). gensample sets it from its -time flag when a sample
-	// regeneration is pinned for reproducibility; normal runs and slapex --demo
-	// leave it zero.
+	// --days range boundaries, the default output-root name and the .cache/
+	// generated_at / executed_at timestamps. Zero means time.Now(). gensample
+	// sets it from its -time flag when a sample regeneration is pinned for
+	// reproducibility; normal runs and slapex --demo leave it zero. It does not
+	// affect the Done line's elapsed time, which Run measures on the real clock
+	// from its own start (Issue #207).
 	Now time.Time
 }
 
@@ -63,9 +65,12 @@ type Options struct {
 // holding index.html. Progress and diagnostics go through p; each stage is a
 // ui phase line (doc/design/usage-flow.md「処理対象の表示」).
 func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (string, error) {
+	// start is the real clock for the Done elapsed time; now is the export
+	// clock, which opts.Now may pin to another instant (see Options.Now).
+	start := time.Now()
 	now := opts.Now
 	if now.IsZero() {
-		now = time.Now()
+		now = start
 	}
 
 	p.StartPhase("Workspace", "checking token (auth.test) ...")
@@ -396,7 +401,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		abs = dir
 	}
 	p.EndPhase(ui.StatusSuccess, "Done", fmt.Sprintf("%s / %s", wsLine, chLine),
-		fmt.Sprintf("in %s", time.Since(now).Round(time.Second)))
+		fmt.Sprintf("in %s", time.Since(start).Round(time.Second)))
 	p.Plainf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
 	if label := excludedMessagesLabel(opts); label != "" {
 		p.Plainf("    %s: %d", label, excludedTotal)

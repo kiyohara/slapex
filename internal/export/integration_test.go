@@ -86,6 +86,50 @@ func TestRunIntegrationPhaseOrder(t *testing.T) {
 	}
 }
 
+// TestRunIntegrationDoneElapsedIgnoresPinnedClock: the Done line reports how
+// long the run took even when Options.Now pins the export clock, as gensample
+// -time does (Issue #207). Run used to count from the pinned instant, which
+// printed the years since a clock pinned in the past and a negative duration
+// for one pinned ahead of the real clock. The elapsed time must fit inside the
+// wall time measured around Run, and the footer must still show the pinned
+// clock.
+func TestRunIntegrationDoneElapsedIgnoresPinnedClock(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		now  time.Time
+	}{
+		{name: "past", now: time.Unix(1700000003, 0).Add(time.Hour)},
+		// The --days window then misses the 2023 fixture, which the Done line
+		// does not depend on.
+		{name: "future", now: time.Now().AddDate(0, 0, 1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := integrationOptions(t, 10)
+			opts.Now = tc.now
+			began := time.Now()
+			got := runExportScenario(t, happyPathScenario(), opts)
+			wall := time.Since(began).Round(time.Second)
+
+			var reported string
+			for _, line := range got.Logs {
+				if i := strings.LastIndex(line, " (in "); strings.HasPrefix(line, "OK: done: ") && i >= 0 {
+					reported = strings.TrimSuffix(line[i+len(" (in "):], ")")
+				}
+			}
+			elapsed, err := time.ParseDuration(reported)
+			if err != nil || elapsed < 0 || elapsed > wall {
+				t.Fatalf("done elapsed = %q, want a duration between 0s and %s (the wall time around Run)\nlogs:\n%s",
+					reported, wall, strings.Join(got.Logs, "\n"))
+			}
+			mustContain(t, readIndexHTML(t, got.OutputDir), tc.now.UTC().Format(time.RFC3339))
+		})
+	}
+}
+
 // TestRunIntegrationAssetExtensionFromContent covers the gravatar shape end to
 // end: an avatar URL whose path ends in .jpg but whose bytes are a PNG, because
 // gravatar redirects to the PNG default image. The saved file takes its
