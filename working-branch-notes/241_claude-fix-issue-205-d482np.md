@@ -12,7 +12,9 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 
 ## 現在の状況
 
-- P1〜P3 を終え、P4 で review(cycle `claude-code-703ee60-20260925070549`)の指摘 2 件に対応した。処置はどちらも「採用し修正した」である。
+- P1〜P6 を終えた。review cycle `claude-code-703ee60-20260925070549` の指摘 2 件は、どちらも「採用し修正した」とし、P5 の再確認で 2 件とも resolve 可(未対応 0 件)になった。
+- 再確認済みの head は `0a70591`(check runs 5 件が success)。PR #241 は draft のままで、残りは人間の手番だけである。
+- 並行する #240 は 2026-09-25 07:33(UTC)に merge され、main は `5b98232` になった。本 PR は main を取り込まなくても conflict しない(「リスク・ブロッカー」)。
 
 ## 決定事項
 
@@ -38,7 +40,7 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 
 ## 次にやること
 
-- 各 thread に処置を返信し、push した head の check runs の完了を確かめてから、P5 の再確認(`verify-comments`)を subagent へ委譲する。
+- 人間: PR #241 を ready for review にし、resolve 可とした 2 件の thread を GitHub の UI で resolve し、Codex のクロスレビューを経て merge する。
 
 ## 検証
 
@@ -65,7 +67,8 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 ## リスク・ブロッカー
 
 - 並行実行中の #203(PR #242)、#207(PR #240)とは、ファイル単位では重なる。並行評価の「重ならない見込み」は、ファイル単位では正しくなかった。#242 とは `internal/export/message_view.go`、`internal/export/integration_rendering_test.go`、`progress.md`、#240 とは `progress.md` が重なるが、hunk はどれも離れている。P2 の reviewer は、`703ee60` の時点で 3 PR の merge 順 6 通りのどれでも conflict しないことを一時 clone で確かめた。
-  - P4 の変更も、`message_view.go` では subtype の map の直後、`messageView` の switch、`addUnfurls` の中にあり、#242 が触る `addImage` から `addUnfurls` の直前までの範囲とは離れている。最新 head での再確認は P6 で行う。
+  - P4 の変更も、`message_view.go` では subtype の map の直後、`messageView` の switch、`addUnfurls` の中にあり、#242 が触る `addImage` から `addUnfurls` の直前までの範囲とは離れている。
+  - P6 で最新の head に対して確かめ直した。#240 を含む main(`5b98232`)に、本 PR(`0a70591`)と #242(`a6e6d0a`)をどちらの順で merge しても conflict は無く、最終の tree は同じだった。その tree で `go vet ./...`、`go build ./...`、`go test ./...` が pass し、`gofmt -l .` は出力なしだった(Docker Compose、一時 clone)。P5 の reviewer も同じ結果を報告した。
   - `progress.md` は FU-04 の行(L54)だけを変え、着手順の行(L47)は触らない。
 - 既知の flaky test(`internal/slack` の `TestCall429RetryAfterWaitsBeforeGivingUp`)が CI で失敗した場合は、PR #238 のコメントを引いて PR に 1 回コメントする。
 
@@ -76,3 +79,6 @@ Issue #205(FU-04)。`collectUserIDs` は投稿者、inviter、`m.Text` 内の me
 - 2026-09-25: PR #241 を draft で作成し、note を採番した。`progress.md` の FU-04 の PR 欄を #241 にした(P1)。検証はすべて pass。出力生成系 3 skill は適用しない(`update-sample-exports` は再生成して実質差分が無いことを確かめた)。
 - 2026-09-25: P2 の review を subagent へ委譲した。review cycle `claude-code-703ee60-20260925070549`、Reviewed head `703ee60`、指摘 2 件(inline 2、top-level 0)。P3 で P4 へ進めた。
 - 2026-09-25: P4。指摘 2 件の処置はどちらも「採用し修正した」(指摘 1 は `3fc75d1`、指摘 2 は `9b434b9`)。検証はすべて pass。出力生成系 3 skill の判断は変わらない(`update-sample-exports` を固定時刻で再実行し、無差分)。
+- 2026-09-25: P4 の push 後、各 thread に処置を返信し、head `0a70591` の check runs 5 件が success になった。
+- 2026-09-25: P5 の再確認を同じ subagent へ委譲した。resolve 可 2 件、未対応 0 件。完了要約は PR conversation comment の 1 本で、`Reviewed head` は `0a70591`。
+- 2026-09-25: P6 で終了した。#240 の merge 後の main と #242 に対する試し merge を確かめ直した。この更新は note だけの commit である。残りは人間の手番(ready for review への変更、2 件の thread の resolve、Codex のクロスレビュー、merge)。
