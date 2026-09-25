@@ -200,7 +200,7 @@ subagent を起動できない実行環境では、P2 と P5 の前で止まる�
 - P4 での個々の採否は `.agents/skills/review-pull-request/references/address-comments.md` の処置の分類に委ね、本 skill に分類を複製しない。全件を採用しない場合も、処置の返信は要る。
 - 指摘の正しさは推論で決めず、実物で確かめて判断する(同 reference の手順)。
 - P5 後は `.agents/skills/review-pull-request/references/verify-comments.md` の完了要約の未対応件数で決める。0 件なら P6、1 件以上なら P4 へ戻る。スコープ外など修正を伴わない処置でも、再確認で処置が妥当と確かめられた指摘は未対応に数えない(同 reference の「処置ごとの確認」)。
-- スコープ外の指摘は、処置を「妥当だが今回はスコープ外である」とし、follow-up Issue の候補として P4 で working branch note に残し、終了時の報告に挙げる。note に残すのは、P5 の再確認が follow-up の記録先を確かめるためである。起票はせず、止まらない。起票の可否はユーザーが終了後にまとめて判断する。
+- スコープ外の指摘は、処置を「妥当だが今回はスコープ外である」とし、follow-up Issue の候補として P4 で working branch note に残し(note の無い PR では PR description に残す)、終了時の報告に挙げる。候補を残すのは、P5 の再確認が follow-up の記録先を確かめるためである。起票はせず、止まらない。起票の可否はユーザーが終了後にまとめて判断する。
 - 処置が「判断に追加情報が必要である」になった指摘がある場合は止まる(「停止とエスカレーション」)。
 
 ## 他の review cycle の扱い
