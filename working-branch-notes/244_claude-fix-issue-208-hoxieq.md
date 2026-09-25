@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fix-issue-208-hoxieq`(cloud session が指定。Issue の推奨ブランチ名は `fix-thumb-manifest-meta`)
-- PR: (採番前)
+- PR: #244
 - 最終更新: 2026-09-25
 
 ## 目的
