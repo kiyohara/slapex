@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-qurpqc`(cloud session が指定)
-- PR:
+- PR: #248
 - 最終更新: 2026-09-25
 
 ## 目的
@@ -39,7 +39,7 @@
 
 ## 次にやること
 
-- PR を作成し、`number-working-branch-note` skill で本 note を採番する。
+- PR を作成し、`number-working-branch-note` skill で本 note を採番する。(完了)
 - 着手順の FU-12〜FU-14 の位置について、ユーザーの確認を待つ。
 - review と merge はユーザーが行う。
 
