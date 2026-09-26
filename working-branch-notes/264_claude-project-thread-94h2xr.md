@@ -53,7 +53,9 @@ client を直さない理由:
 
 - `internal/slack` で競合が assertion に効くのは、body の無い 429 に Retry-After を付ける 4 test である: `TestCall429HonoursRetryAfter`、`TestCall429RetryAfterWaitsBeforeGivingUp`、`TestDownloadRetryAfterWaitsBeforeGivingUp`、`TestDownloadRetries`。5xx と Retry-After の無い 429 は、競合が起きても次の待機が同じ backoff になるため assertion は変わらない。4 test とも `newTestClient` を通るため、本修正で揃って直る。4 test とも、CI か「試した条件と結果」の試行で、この形の失敗が出た。
 - body のある応答(200 の JSON など)は、body を読み終えてから接続を idle pool に戻すため、この競合は起きない。
-- `internal/export` の integration test も `slack.New` の client で `http.DefaultTransport` を使い、fake Slack server を並行して閉じる。body の無い 429 に Retry-After を付け、その待機の進捗表示を確かめる `TestRunIntegrationRateLimitRetryThenSuccess` は、同じ競合で失敗し得る(コードからの推定で、再現は試していない)。export package の test からは `Client` の Transport を差し替えられず、直すには slack package に client を注入する exported な option を足す必要がある。Issue の対象(`internal/slack` の test)から外れ、製品の API を変えるため、本 PR では扱わず follow-up 候補とする(「リスク・ブロッカー」)。
+- `internal/export` の integration test も `slack.New` の client で `http.DefaultTransport` を使い、fake Slack server を並行して閉じる。body の無い 429 に Retry-After を付け、その待機の進捗表示を確かめる `TestRunIntegrationRateLimitRetryThenSuccess` は、同じ競合で失敗し得る。当初はコードからの推定だったが、P2 の review が、競合を決定的に起こす注入(httptrace の `PutIdleConn` hook、つまり接続を idle pool に戻した後で応答を渡す前に、別の `httptest.Server` を閉じる使い捨て test)で、進捗表示の assertion が失敗することを確かめた。request 数と 1 秒以上の待機の assertion は `backoffWait(1)` でも通るため、失敗は進捗表示の assertion にだけ出る。
+  - 直し方は 2 通りある。本 PR と同じく client の Transport を fake server のものに差し替える案は、export package の test から `Client` の Transport に触れないため、slack package に client か Transport を注入する exported な option を要する。fake server の 429 の応答に `Connection: close` を付ける案は、client が接続を idle pool に戻さずに応答を渡すため(`readLoop` は `resp.Close` が真だと `alive` を偽にし、`tryPutIdleConn` を呼ばない)、製品の API を変えずに test の側だけで済む。ただし後者は、本 PR が slack の test で採らなかった案(「直し方」)と同じく、429 の後の接続の再利用の経路を test から外す。
+  - どちらを採るかは起票するときに決める。Issue の対象(`internal/slack` の test)から外れるため、本 PR では扱わず follow-up 候補とする(「リスク・ブロッカー」)。
 
 ### 試した条件と結果
 
@@ -120,7 +122,7 @@ client を直さない理由:
 ## リスク・ブロッカー
 
 - follow-up 候補(起票はユーザーが判断する)
-  - `internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess` が同じ競合で失敗し得る(「影響の範囲」)。slack package に `http.Client` か Transport を注入する option を足し、export の test harness が fake server の transport を渡す形で直せる。
+  - `internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess` が同じ競合で失敗し得る(「影響の範囲」。P2 の review が決定的な注入で確かめた)。export の test harness が fake server の transport を client に渡す形(slack package に exported な option を要する)か、fake server の 429 の応答に `Connection: close` を付ける形(test の側だけで済むが、429 の後の接続の再利用の経路を test から外す)で直せる。方針は起票するときに決める。
 - 本修正の効果は確率的な事象に対するもので、CI 上で再発しないことは merge 後の CI の結果で確かめるほかない。修正前に失敗が出た条件では、修正後に失敗は出なかった。`*WaitsBeforeGivingUp` の 2 test は診断の `c.Logf = t.Logf` を残すため、再発した場合は `lastErr` から原因を切り分けられる。
 
 ## セッションログ
