@@ -30,7 +30,7 @@ review cycle の skill(`drive-issue-to-reviewed-pr` と `review-pull-request`)�
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | done(PR merge後) | #188, #189, #190 | merge後は対応なし | - |
+| RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | done(PR merge後) | #188, #189, #190 | merge後は対応なし | [#262](https://github.com/kiyohara/slapex/pull/262) |
 | RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188 | 同型位置引数を集約 | - |
 | RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | FU-18の後、streamingとの差を保って共通化 | - |
 | RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
