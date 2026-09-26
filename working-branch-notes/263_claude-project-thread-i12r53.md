@@ -14,7 +14,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 
 - 依存(#191)の PR #262 が merge 済み(main `94ce913`)であることを確かめた。
 - 作業内容を 3 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
-- PR #263 作成済み。
+- PR #263 作成済み(draft)。note を採番し(`25eb8be`)、`progress.md` の FU-05 の PR 欄も反映した。
 
 ## 決定事項
 
@@ -74,7 +74,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - `progress.md` の FU-05 の行の状態を更新する。(完了)
 - draft PR を作成する。(完了)
 - PR 作成後に note を採番する。(完了)
-- `progress.md` の FU-05 の行の PR 欄に PR 番号を入れ、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の FU-05 の行の PR 欄に PR 番号を入れ、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 検証
@@ -110,3 +110,4 @@ Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より�
 
 - 2026-09-26: #191(PR #262)の merge 後、逐次処理の 7 件目として #206 を選んだ。前のスレッドの推しで、`progress.md` の推奨順も RF-03 の直後であり、依存の #191 は close 済み。branch は main `94ce913` から作られている。
 - 2026-09-26: 作業内容を 3 commit(characterization test、修正本体と文書の同期、親を除外済みの thread の取得の省略)で実施し、Issue の「検証」を実行した。
+- 2026-09-26: P1。PR #263 を draft で作成し、note を採番した(`25eb8be`)。`run-issue-task` から引き上げた項目は次のとおり。確認経路の項目(`number-working-branch-note` の書き換えた行)は note の 4 行と PR description の 1 行で、title は変えていない。note は `PR:` 欄の「未作成」を `#263` に、「現在の状況」の「PR 未作成。」を「PR #263 作成済み。」に(状況を説明する stale 表現)、「次にやること」の「draft PR を作成する。」と「PR 作成後に note を採番する。」の行末に「(完了)」を付けた(完了タスク行)。PR description は「概要」の note の path を採番後の名前に置き換えた。残された事項(触らずに残した行)は 0 件で、停止は無い。情報統制チェックで除外・修正した箇所は無い。この P1 の記録の commit で、`progress.md` の FU-05 の PR 欄に #263 を入れ、「現在の状況」を更新した。出力生成系 3 skill は呼ばなかった(各 skill の「いつ使うか」に当たらない。「決定事項」の「出力生成系 skill」)。検証の結果は「検証」のとおり。
