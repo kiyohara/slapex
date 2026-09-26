@@ -32,7 +32,7 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 | package / 入口 | 責務 | 直接依存する内部 package |
 |---|---|---|
 | [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
-| [internal/export](../../internal/export/export.go) | `Run` による workspace/channel 解決、対話選択、取得範囲・filter、history/replies、user/bot/emoji 解決、asset 保存、表示用データ組立、cache の組立・再利用・cleanup の判定 | datetime、emoji、output、render、slack、ui |
+| [internal/export](../../internal/export/export.go) | `Run` が順に呼ぶ工程(workspace/channel 解決と対話選択、取得範囲・filter 付きの history/replies 取得、user/bot/emoji 解決、asset 保存と表示用データ組立)、cache の組立・再利用・cleanup の判定 | datetime、emoji、output、render、slack、ui |
 | [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、method ごとの平準化、retry、認証送信先を制限した download | なし |
 | [internal/output](../../internal/output/output.go) | 出力 root・label、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し、`.cache/` の削除 | slack |
 | [internal/render](../../internal/render/html.go) | 表示用データ型、mrkdwn 変換、HTML template、埋込み CSS/logo の書き出し | なし |
@@ -42,6 +42,8 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 | [internal/demo](../../internal/demo/export.go) | 架空 scenario と local fake Slack server、通常の `export.Run` を使う demo/sample 共通 driver | export、slack、ui |
 
 通常実行は `cmd/slapex` が `slack.Client` と `ui.Printer` を用意して `export.Run` を呼ぶ。`--demo` は `demo.Export` を介して同じ工程を実行する。`export` が取得結果を `render` の表示用データへ変換し、asset の保存は `output` に委譲する。`emoji.list` の取得・cache 再利用は `export` と `slack` の責務であり、`emoji` 自体は API を呼ばない。
+
+`export.Run` は工程の順序と失敗時の処理だけを持ち、各工程は結果を値で次の工程へ渡す。Workspace・Channel(`resolveTarget`)、再利用する cache・出力先・取得範囲、Messages(`fetchMessages`。親の除外後の補充を含む history/replies の取得で、timeline・replies・打ち切りの有無・除外件数を返す)、Users(`resolveUsers`)、Emoji(`resolveCustomEmoji`)、Assets(avatar の保存、`buildTimeline`、`buildPage`、`writePage`。`endAssetsPhase` が asset の集計を返す)、cache の書き出しと cleanup(`writeCaches`、`output.RemoveCache`)、Done(`reportDone`)の順に進み、最初の error で止まる。
 
 cache の schema に沿った object の組立は `export`、JSON の書き出しと asset manifest entry は `output` に分かれる。再利用の読込・検証は [export/reuse.go](../../internal/export/reuse.go)、保存済み asset のコピーは `output` が担う。確認済みの仕様差は [cache.md](cache.md#確認済みの仕様と実装の差) を参照する。
 

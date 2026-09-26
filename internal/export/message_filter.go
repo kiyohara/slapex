@@ -1,6 +1,6 @@
 // Message filtering: the --exclude-body-emoji / --exclude-reaction-emoji
-// decisions and the excluded message / thread bookkeeping Run consults while
-// fetching (doc/design/cli-interface.md).
+// decisions and the excluded message / thread bookkeeping the Messages stage
+// consults while fetching (doc/design/cli-interface.md).
 
 package export
 
@@ -59,6 +59,19 @@ func (f *messageFilter) ExcludeThread(threadTS string) {
 	if threadTS != "" {
 		f.excludedThread[threadTS] = struct{}{}
 	}
+}
+
+// IncludeThread reports whether the thread rooted at threadTS stays in the
+// export once conversations.replies has returned its parent (nil when the
+// response had none). The thread is dropped when it is already excluded,
+// because an excluded copy of its parent was seen on the timeline, or when this
+// copy of the parent is excluded; the latter marks the thread excluded, so its
+// messages on the timeline go too.
+func (f *messageFilter) IncludeThread(threadTS string, parent *slack.Message) bool {
+	if parent != nil && !f.Include(parent) {
+		f.ExcludeThread(threadTS)
+	}
+	return !f.ThreadExcluded(threadTS)
 }
 
 func (f *messageFilter) ThreadExcluded(threadTS string) bool {

@@ -133,6 +133,48 @@ func logsContain(logs []string, substr string) bool {
 	return false
 }
 
+// assertMessagesPhaseLine checks the line that closes the Messages phase: its
+// status and count (prefix) and its meta (suffix). The fetch range label
+// between them follows the local timezone, so it is left out.
+func assertMessagesPhaseLine(t *testing.T, logs []string, prefix, suffix string) {
+	t.Helper()
+	for _, line := range logs {
+		if strings.HasPrefix(line, "OK: messages: ") || strings.HasPrefix(line, "WARN: messages: ") {
+			if !strings.HasPrefix(line, prefix) || !strings.HasSuffix(line, suffix) {
+				t.Fatalf("messages phase line = %q, want prefix %q and suffix %q", line, prefix, suffix)
+			}
+			return
+		}
+	}
+	t.Fatalf("no messages phase line\nlogs:\n%s", strings.Join(logs, "\n"))
+}
+
+// assertDoneSummary checks that the Done summary printed each of the given
+// detail lines verbatim.
+func assertDoneSummary(t *testing.T, logs []string, lines ...string) {
+	t.Helper()
+	for _, want := range lines {
+		if !slices.Contains(logs, want) {
+			t.Fatalf("done summary has no line %q\nlogs:\n%s", want, strings.Join(logs, "\n"))
+		}
+	}
+}
+
+// assertThreadProgress checks the counters the thread replies progress lines
+// showed, in order.
+func assertThreadProgress(t *testing.T, logs []string, want ...string) {
+	t.Helper()
+	var got []string
+	for _, line := range logs {
+		if _, count, ok := strings.Cut(line, "fetching thread replies ... "); ok {
+			got = append(got, count)
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("thread replies progress = %v, want %v\nlogs:\n%s", got, want, strings.Join(logs, "\n"))
+	}
+}
+
 func hasSleepAtLeast(sleeps []time.Duration, atLeast time.Duration) bool {
 	for _, d := range sleeps {
 		if d >= atLeast {
