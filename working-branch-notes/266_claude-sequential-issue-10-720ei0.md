@@ -15,7 +15,7 @@ Issue #249(FU-15)。事前判定(Slack の `file.size` が `--max-attachment-siz
 - 依存は無い。main `90d744b` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
 - PR #266 作成済み(draft)。note を採番し(`f2103a0`)、`progress.md` の FU-15 の PR 欄も反映した。
-- review cycle `claude-code-0149e53-20260926221050` の指摘 1 件(`[imo]`)に対応した(P4、`3aee054`)。再確認(P5)を P2 と同じ subagent に委譲する。
+- review cycle `claude-code-0149e53-20260926221050` の指摘 1 件(`[imo]`)に対応した(P4、`3aee054`)。再確認(P5)で修正確認済みになり、未対応は 0 件である。Claude の review cycle は完了し、残るのは人間の手番(「次にやること」)である。
 
 ## 決定事項
 
@@ -66,8 +66,11 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 - draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-15 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
-- 指摘 1 件に対応し、処置を返信する(P4)。
-- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
+- 指摘 1 件に対応し、処置を返信する(P4)。(完了)
+- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。(完了)
+- (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
+- (人間)resolve 可とした review thread 1 件(`[imo]`、結合 test の request の確認)を確かめて resolve する。
+- (人間)PR を merge する。
 
 ## 検証
 
@@ -96,3 +99,5 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 - 2026-09-26(P1): draft PR #266 を作成し、note を採番した(`f2103a0`)。`progress.md` の FU-15 の PR 欄に #266 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #266`(PR 欄の記入)、`- PR 未作成。` → `- PR #266 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-sequential-issue-10-720ei0.md` → `266_claude-sequential-issue-10-720ei0.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
 - 2026-09-26: P2 / P3。review cycle `claude-code-0149e53-20260926221050`、`Reviewed head` `0149e5354c365a8742b1d550a0eabce53e657f83`。指摘は 1 件(inline 1 / top-level 0)で、prefix の内訳は `[imo]` 1、`[must]`、`[ask]`、`[nits]`、`[fyi]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。依頼した観点(事前判定の後の `Save` を塞ぐ判断、`Save` が先に保存した URL の扱い、空の URL、`a.known` の他の経路への影響、test、出力生成系 skill、設計文書と decision log)はいずれも妥当とされた。`Save` が先に保存した URL の扱いは、表示と manifest の status が食い違う点を挙げたうえで許容とされた(「リスク・ブロッカー」)。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
 - 2026-09-26: P4。処置は 1 件で「採用し修正した」。`[imo]`(結合 test の「request されない」の確認が常に通る)は、fake server(`newFakeSlackServer`)が `sc.Assets` と `sc.AssetFaults` の path にだけ handler を登録し、`Count` がその handler でだけ増えることをコードで確かめ、scratch の copy で再現した。`SkipTooLarge` の先頭で URL を request する変異を入れると、登録前の test は通り、2 つの path を登録した test は `/files/big-archive.zip requested 2 times, want 0` で失敗した。2 つの path を登録した(`3aee054`)。head のコードで `go test ./internal/output ./internal/export`、`go test ./...`、`go vet ./...`、`gofmt -l .`、`git diff --check` を再実行し、問題なかった。PR description の「主な変更」の「両ファイルが request されないこと」は、修正後の test に合うため変えていない。スコープ外とした指摘は無く、follow-up 候補も無い。出力生成系 3 skill は、変更が test だけのため引き続き適用しない。
+- 2026-09-26: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `cdec76bbf85da0549d6d3ff04b1eee2fc27a7a3c`)。修正確認済み 1 件(inline 1 / top-level 0)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可は inline の 1 thread。subagent は、`SkipTooLarge` で URL を request させる変異で修正後の test が失敗し(修正前の test は通る)、`upload_original` だけを request させる変異でも失敗することから、2 つの登録がどちらも効いていることを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-26: P6。終了時の状態: PR #266 は draft で、P5 が確かめた head `cdec76b` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。残るのは人間の手番(「次にやること」)である。
