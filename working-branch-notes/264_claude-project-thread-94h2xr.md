@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-94h2xr`(cloud session が指定。Issue の推奨ブランチ名は `fix-flaky-429-retry-test`)
-- PR: 未作成
+- PR: #264
 - 最終更新: 2026-09-26
 
 ## 目的
@@ -15,7 +15,7 @@ Issue #254(FU-18)。`TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれ�
 - 依存は無い。main `3ff83c0` から作業した。
 - 作業内容 1(診断)を `cb5c145`、作業内容 3(修正)を `1d3e434` で commit した。原因は特定できた(「決定事項」の「原因」)。
 - 作業内容 2 の再現の試行(「試した条件と結果」)と、Issue の「検証」(「検証」)を実行した。修正後は、修正前に失敗が出た条件を含め、どの条件でも失敗しなかった。
-- PR 未作成。
+- PR #264 作成済み。
 
 ## 決定事項
 
@@ -102,7 +102,7 @@ client を直さない理由:
 
 ## 次にやること
 
-- draft PR を作成し、note を採番する。
+- draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-18 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。
 
