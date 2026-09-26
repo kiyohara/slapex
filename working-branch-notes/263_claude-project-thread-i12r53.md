@@ -16,6 +16,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - 作業内容を 3 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
 - PR #263 作成済み(draft)。note を採番し(`25eb8be`)、`progress.md` の FU-05 の PR 欄も反映した。
 - review cycle `claude-code-4664865-20260926090102` の指摘 3 件(`[imo]` 1、`[nits]` 2)に対応した(P4、`6d9054f` と PR description の編集)。再確認(P5)で 3 件とも修正確認済みになり、未対応は 0 件である。Claude の review cycle は完了し、残るのは人間の手番(「次にやること」)である。
+- 2026-09-26 10:40Z に、ユーザーが follow-up 候補を「記録のみ」とし(起票しない)、PR を Ready for review にした。Codex のクロスレビュー(cycle `codex-0a341e3-20260926104103`)の指摘 2 件(`[must]` 1、`[ask]` 1)に `address-comments` で対応した(`c3214c7`。「セッションログ」)。この 2 件の再確認は Codex か人間が行う。
 
 ## 決定事項
 
@@ -26,14 +27,16 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 1. `b9c8da5` 現状を固定する characterization test(基準のコードで通ることを確かめた)。Issue の不整合を実行で再現した: 判定のためだけに取得した thread の replies が Messages 行に数えられ(threads 1、replies 2。Done と metadata.json は 0)、その作成者が users.info で解決され、候補外の親と、その thread で filter に一致した reply が除外件数に数えられる。
 2. `410ce5a` 修正本体と設計文書の同期。
 3. `e6a49e8` 親を除外済みの thread の conversations.replies を省く(「親を除外済みの thread の取得」)。
+4. `c3214c7` thread の replies を取得時に絞り、除外する reply は ts だけを保持する(Codex の review の `[must]` への対応。「判定のための取得と表示のための取得を分ける」)。
 
 ### 判定のための取得と表示のための取得を分ける(commit 2)
 
-- thread の取得時点では、親が後の page で timeline に入るかが分からない(broadcast が page 1、親が page 2 に来る場合。`TestRunIntegrationThreadsAcrossHistoryPages` の paged thread)。そこで Messages 工程は、`conversations.replies` の結果を filter を通す前の replies と上限到達の有無(`fetchedThread`)として thread ごとに保持し、history の取得を終えてから、親が timeline にある thread だけを emoji filter で絞る(`timelineReplies`)。親が timeline に無い thread は親の判定にだけ使い、replies は保持・集計・解決・除外件数のいずれにも入らない。
-- 除外件数は `timelineReplies` の後に数える。判定だけの thread の replies は filter に通さないため、そこで filter に一致する reply も数えない。
+- thread の取得時点では、親が後の page で timeline に入るかが分からない(broadcast が page 1、親が page 2 に来る場合。`TestRunIntegrationThreadsAcrossHistoryPages` の paged thread)。そこで Messages 工程は、`conversations.replies` の結果を取得の直後に emoji filter で判定し、残す replies、除外する reply の ts、上限到達の有無(`fetchedThread`)として thread ごとに保持する。history の取得を終えてから、親が timeline にある thread だけが replies を残し、除外した reply を除外件数に数える(`timelineReplies`)。親が timeline に無い thread は親の判定にだけ使い、replies は表示・集計・解決・除外件数のいずれにも入らない。
+- 除外する reply は ts だけを保持するため、保持量は変更前(取得の直後に filter で絞った replies と、除外した reply の ts の集合)と変わらない。当初(`410ce5a`)は filter を通す前の replies を history の取得を終えるまで保持しており、Codex の review の `[must]` を受けて `c3214c7` で改めた。
+- 除外件数への計上は `timelineReplies` で、親が timeline にある thread の reply だけを数える(`messageFilter.ExcludeReply`)。判定だけの thread の replies も取得時に filter で判定するが、除外件数には数えない。
 - `messageFilter.IncludeThread` は、`conversations.replies` の親の copy が filter に一致すると thread を除外として記録するが、親を除外件数に数えない。判定を、除外として数えない `matches` に分けた。この copy が、timeline に入らない親について slapex が見る唯一の copy であり得るためである。timeline にある親は、conversations.history の predicate か、`dropExcludedThreads` が thread ごと外すときに数えられる(history の copy は通り、replies の copy が一致した場合)。
 - 件数は `fetchedMessages.counts()` の 1 か所から、Messages 行、metadata.json、Done の要約へ渡す。`replies` は親が timeline にある thread だけを持つため、`len(replies)` と `countReplies(replies)` がページに表示する threads と replies になる。`buildTimeline` は件数を返さなくなった。
-- `dropExcludedThreads` は保持中の replies に触れない。後の page で親が除外された thread(reaction が途中で付いた場合)の replies は、`timelineReplies` が `ThreadExcluded` で外す。
+- `dropExcludedThreads` は、除外した thread の保持中の replies をその page で捨てる(変更前と同じ。`c3214c7`)。後の page で親が除外された thread(reaction が途中で付いた場合)の replies は、表示にも除外件数にも入らない。
 
 ### 親を除外済みの thread の取得(commit 3)
 
@@ -57,7 +60,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 
 ### 文書
 
-- `doc/design/slack-api-usage.md`: timeline に残った親投稿の replies を history の取得後に絞ることと、filter 有効時の判定だけの取得(replies を表示・件数・解決・除外件数に含めない、`conversations.replies` でだけ見た親を除外件数に数えない、filter 無しでは親が timeline にある thread だけを取得する)を書いた。
+- `doc/design/slack-api-usage.md`: replies を取得の直後に絞って除外した message は timestamp だけを保持し、history の取得後に、親投稿が timeline に残った thread についてだけ除外件数に数えて解決へ渡すこと(`c3214c7` で改めた)と、filter 有効時の判定だけの取得(replies を表示・件数・解決・除外件数に含めない、`conversations.replies` でだけ見た親を除外件数に数えない、filter 無しでは親が timeline にある thread だけを取得する)を書いた。
 - `doc/design/cache.md`: `counts.excluded_messages` が、`conversations.replies` でだけ見た親とその thread の replies を数えないこと。
 - `doc/design/architecture.md`: `fetchMessages` が返す replies は親が timeline にある thread のものであり、Messages 行・metadata.json・Done の件数がこの結果から数えられること。
 - decision log は作らない。Issue が決めた方針の範囲の修正で、既存の仕様(slack-api-usage.md)の方針を変えていない。判定だけの取得の扱いを仕様に明記した。
@@ -79,9 +82,10 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 指摘 3 件に対応し、処置を返信する(P4)。(完了)
 - P4 の push の CI を確かめてから、再確認を P2 と同じ subagent に委譲する(P5)。(完了)
-- (人間)follow-up 候補(`client.History` の examined exclusions)を起票するかを、merge の前に決める(「リスク・ブロッカー」)。
-- (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
-- (人間)resolve 可とした review thread 2 件を確かめて resolve する。
+- (人間)follow-up 候補(`client.History` の examined exclusions)を起票するかを、merge の前に決める(「リスク・ブロッカー」)。(完了)
+- (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。(完了)
+- (人間)Codex の cycle で agent が対応した 2 thread の処置を、Codex か人間が再確認する。
+- (人間)resolve 可とした review thread 2 件を確かめて resolve する。再確認を終えた Codex の cycle の 2 thread も resolve する。
 - (人間)PR を merge する。
 
 ## 検証
@@ -97,6 +101,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - `--demo`: 基準と変更後の binary で、filter 無し、`--exclude-body-emoji=tada`、`--exclude-reaction-emoji=do_not_archive,eyes`、`--max-posts=3 --exclude-reaction-emoji=eyes` の 4 通りを実行した。stdout、stderr と出力 tree は、出力先の path と export 時刻を除いて一致した。demo の fixture には `thread_broadcast` が無いため、filter 無しの実行が変わらないことと、filter 有効時の既存の件数と表示が変わらないことの確認である。
 - `git diff --check`: 問題なし。
 - review への対応(P4、`6d9054f`)の後: `gofmt -l .` は出力なし、`go vet ./...` は成功、`go test ./...` は全 package ok、`git diff --check` は問題なし。足した reply を含む `TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の fixture を基準 `94ce913` に当てると、除外件数が 5 になって失敗する(変更を test が固定している)。production code の変更はコメントだけのため、固定 sample と `--demo` の比較はやり直していない。
+- Codex の review への対応(`c3214c7`)の後: `gofmt -l .` は出力なし、`go vet ./...` は成功、`go test ./...` は全 package ok、`go test -count=3 -shuffle=on ./internal/export` は ok、cross compile は成功、`git diff --check` は問題なし。足した unit test 2 件(`TestFetchThreadHoldsExcludedRepliesByTS`、`TestTimelineRepliesKeepsOnlyTimelineThreads`)は、除外する reply を残す replies に入れる変更と、除外した thread の replies を捨てない変更のそれぞれで失敗した(gitignore 済みの一時 copy で確かめた)。固定 sample は committed と直前の head `0a341e3` の生成結果の両方に無差分(ja / en とも 18 files)で、gensample の log も一致した。`--demo` の 4 通り(上と同じ)は、`0a341e3` の binary と stdout、stderr、出力 tree が一致した(`--keep-cache` で残した `.cache/` は、fake server の port、時刻、avatar の entry の順序だけが異なる)。
 - 実 token は使わず、test は架空の fixture と fake Slack server で確かめた。
 
 Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より古い broadcast と、親が `--max-posts` の外にある broadcast)は `TestRunIntegrationBroadcastParentOffTimeline` で確かめた。
@@ -110,9 +115,9 @@ Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より�
 
 ## リスク・ブロッカー
 
-- 判定だけの thread の replies は history の取得を終えるまで保持する。以前は取得時に filter で絞った replies を持っていた。保持量は取得した thread の replies(1 thread あたり最大 1,000 件)で、以前と同じ桁である。
-- follow-up 候補(起票はユーザーが判断する)
-  - `client.History` の「examined exclusions」: `--max-posts` の打ち切りの直後で除外された投稿(親に限らない)を除外件数に数える。表示されない候補外の投稿が件数に入る点は本 Issue と同種だが、`truncated` を正しく保つための意図的な挙動で、全投稿に当たる(「変えていないこと」)。数えないなら、History が打ち切り後の除外を呼び出し側へ区別して返す必要がある。打ち切りの直後にある親もこの挙動で数えられ、Issue の作業内容の「候補外の親を除外件数に数えない」はこの場合に残る。本 PR の `Closes #206` で Issue が閉じるため、起票するかは merge の前に決めるのがよい(P2 の review の指摘)。
+- 判定だけの thread の replies は、history の取得を終えるまで、filter で絞った replies と除外した reply の ts として保持する。変更前も取得の直後に filter で絞った replies と除外した reply の ts(除外件数の集合)を持っており、保持量は変わらない。当初の実装(`410ce5a`)は filter を通す前の replies を保持しており、replies の多くが除外される入力で保持量が増えるため、Codex の review の `[must]` を受けて `c3214c7` で改めた。
+- follow-up 候補(10:40Z のユーザーの判断で起票しない)
+  - `client.History` の「examined exclusions」: `--max-posts` の打ち切りの直後で除外された投稿(親に限らない)を除外件数に数える。表示されない候補外の投稿が件数に入る点は本 Issue と同種だが、`truncated` を正しく保つための意図的な挙動で、全投稿に当たる(「変えていないこと」)。数えないなら、History が打ち切り後の除外を呼び出し側へ区別して返す必要がある。打ち切りの直後にある親もこの挙動で数えられ、Issue の作業内容の「候補外の親を除外件数に数えない」はこの場合に残る。本 PR の `Closes #206` で Issue が閉じるため、起票するかは merge の前に決めるのがよい(P2 の review の指摘)。2026-09-26 10:40Z にユーザーが「記録のみ」を選んだ(起票せず、PR description の「補足」に判断とともに残す)。Codex の review の `[ask]` も同じ点の方針を尋ねたため、この判断で処置した。
 
 ## セッションログ
 
@@ -124,3 +129,5 @@ Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より�
 - 2026-09-26: P4。処置は 3 件とも「採用し修正した」。`[nits]`(`excluded` のコメント)は、数える範囲(history が判定した投稿と打ち切り後に判定した投稿、除外された thread の timeline の投稿、親が timeline にある thread の replies)に書き直した(`6d9054f`)。`[imo]`(表の 4 行目の test)は、`TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の race thread に reaction の付いた reply を足し、除外件数 4 のままで固定した(`6d9054f`。基準 `94ce913` に同じ fixture を当てると 5 で失敗することを確かめた)。`[nits]`(PR description の表)は、「挙動の変化」の表の 1 行目(mention 先の user、bot、avatar と assets の件数)、2 行目(打ち切り直後の親の examined exclusions)、5 行目(進捗の分母)と表の下の文を直し、「変えていないこと」「補足」に Issue の作業内容との関係を足した。この note の「挙動の変化」「変えていないこと」「リスク・ブロッカー」も揃えた。スコープ外とした指摘は無い。出力生成系 3 skill は、production code の変更がコメントだけのため、引き続き適用しない。検証: `gofmt -l .` は出力なし、`go vet ./...` は成功、`go test ./...` は全 package ok、`git diff --check` は問題なし。
 - 2026-09-26: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `c4a92a980d788c8d7f36eec749372a59661f5312`)。修正確認済み 3 件(inline 2 / top-level 1)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可は inline の 2 thread。subagent は基準 `94ce913` の test に `6d9054f` の fixture の変更を当てて除外件数 5 で失敗することと、head で `gofmt`、`go vet`、`go test -count=1 ./...`、`git diff --check` が通ることを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。指摘ではない参考として、PR description の「概要」とこの note の「目的」に、replies 自体が `.cache/` に入るように読める書き方(変更前からある文)が残ると挙げた。
 - 2026-09-26: P6。上記の参考を受けて、PR description の「概要」とこの note の「目的」を、replies は件数に入り、その作成者などの user と bot が解決されて `.cache/` に入る書き方に直した(P5 の後の、文言だけの変更)。この note だけの commit は P5 が確かめた head より後で、CI の確認点に含めない。終了時の状態: PR #263 は draft で、P5 が確かめた head `c4a92a9` の check runs は 5 件 success。残るのは人間の手番(「次にやること」)である。
+- 2026-09-26: ユーザーが 10:40Z に、follow-up 候補を決定カードで「記録のみ」とし(起票しない。PR description の「補足」に記録済み)、PR を Ready for review にした。
+- 2026-09-26: P4(他の Agent 種別の cycle)。Codex のクロスレビュー(cycle `codex-0a341e3-20260926104103`、`Reviewed head` `0a341e3cbf81774cc533ac9444acbbc1497c7b73`)の指摘 2 件(inline 2。`[must]` 1、`[ask]` 1)に `address-comments` で対応した。`[must]`(filter を通す前の replies を history の取得を終えるまで保持し、変更前より保持量が増える)は、変更前の実装と比べて確かめたうえで採用し、取得の直後に絞って除外する reply は ts だけを持ち、除外した thread の replies はその page で捨てる形に直した(`c3214c7`)。`[ask]`(打ち切りの直後にある親を除外件数に数える境界の扱い)は、10:40Z のユーザーの判断(記録のみ)に従い「妥当だが今回はスコープ外である」とした。follow-up 候補は既存の 1 件(examined exclusions)だけで、新しいものは無い。出力生成系 3 skill は引き続き適用しない(出力は変わらず、固定 sample と `--demo` が直前の head と一致した)。この 2 件は対象外の cycle のため、再確認は Codex か人間に返す。
