@@ -15,14 +15,14 @@
 
 新しい AI tool の採用、配置規約の変更、loading 機構の仕様変更などでルール体系自体に手を入れる場合は、上記方針に従いつつ「各 tool の loading 機構」の表と各 checklist を最新仕様に揃える(同じ PR で完結させる)。
 
-## 各 tool の loading 機構(2026-05 時点)
+## 各 tool の loading 機構(2026-09 時点)
 
 | Tool | Rule の自動ロード | Skill の自動ロード | MCP server 設定 | AGENTS.md 扱い |
 | --- | --- | --- | --- | --- |
-| Cursor | `.cursor/rules/*.{md,mdc}` を frontmatter に従ってロード | `.agents/skills/` を起動時に自動 discover | `.cursor/mcp.json`(project) / user 設定 | 公式に rules の代替として認識 |
+| Cursor | `.cursor/rules/*.mdc` を frontmatter に従ってロード。`.md` は `description` / `globs` / `alwaysApply` を指定する frontmatter が無いため無視される | `.agents/skills/` を起動時に自動 discover | `.cursor/mcp.json`(project) / user 設定 | 公式に rules の代替として認識 |
 | Codex | AGENTS.md(global / project 階層, 32 KiB 上限) | `.agents/skills/` を cwd -> repo root で走査し、name + description のみ system prompt に preload。SKILL.md 全文は使用時にロード | `~/.codex/config.toml`(user) / trusted project の `.codex/config.toml` | プロジェクトルートの AGENTS.md を読む |
 | Claude Code | `.claude/rules/*.md`(任意の `paths:` frontmatter で path scoping)+ CLAUDE.md(`@path` import で AGENTS.md を取り込み) | `.claude/skills/<name>/SKILL.md` を frontmatter に従ってロード | repo root の `.mcp.json`(project scope) / user 設定 | `CLAUDE.md` から `@AGENTS.md` で取り込む構成が公式推奨 |
-| GitHub Copilot Review | `.github/copilot-instructions.md`(repo 全体)と `.github/instructions/*.instructions.md`(`applyTo:` で path scoping)をレビュー時に読む。各 instruction file は先頭〜約 4,000 文字のみ反映 | なし | MCP は対象外 | AGENTS.md も他ファイルへのリンクも辿らない。効かせたい内容は instruction file 内に直接書く |
+| GitHub Copilot Review | `.github/copilot-instructions.md`(repo 全体)と `.github/instructions/*.instructions.md`(`applyTo:` で path scoping)をレビュー時に読む | なし | MCP は対象外 | GitHub.com の code review は AGENTS.md も読む(VS Code などの IDE の code review は読まない)。リンク先の正本まで辿る保証は無いため、効かせたい内容は instruction file 内に直接書く |
 
 帰結:
 
@@ -30,7 +30,7 @@
 - Codex は **AGENTS.md に書かれていない情報には自力で到達できない**(skill は除く: `.agents/skills/` は自動走査される)。新しい rule や正本を作ったら、Codex がそこへ辿り着けるよう **AGENTS.md からのリンクは必須** とする。
 - Claude Code は `.claude/rules/` と CLAUDE.md(`@AGENTS.md` 経由)の両方を読む。役割分担は後述の「正本と入口の整理」を参照。
 - Claude Code は tracked な `.claude/settings.json` の hooks も読む。cloud session の SessionStart hook の登録だけを置き、処理本体は tool 中立な `.agents/scripts/` に置く(「cloud session の実行環境 script」)。個人の設定は gitignored な `.claude/settings.local.json` に置く。
-- GitHub Copilot Review は AGENTS.md も他ファイルへのリンクも辿らず、各 instruction file の先頭〜約 4,000 文字しか読まない。よって repo 全体のレビュー方針は `.github/copilot-instructions.md` に、path 別の詳細レビュー観点は `.github/instructions/*.instructions.md`(`applyTo:`)に **直接** 書く。`doc/guidelines/` 正本へのリンクは人間 / 他 tool 向けポインタであり、Copilot がそれを読むことは当てにしない。Copilot 用に書く本文は本リポジトリ固有・高シグナルな要点に絞り、正本の全文複製を避ける。
+- GitHub Copilot Review は、GitHub.com の code review では AGENTS.md も読む。ただし、そこからリンクされた `doc/guidelines/` の正本まで辿る保証は無い。よって repo 全体のレビュー方針は `.github/copilot-instructions.md` に、path 別の詳細レビュー観点は `.github/instructions/*.instructions.md`(`applyTo:`)に **直接** 書く。`doc/guidelines/` 正本へのリンクは人間 / 他 tool 向けポインタであり、Copilot がそれを読むことは当てにしない。Copilot 用に書く本文は、分量ではなくシグナルの濃さで絞る。本リポジトリ固有・高シグナルな要点だけを書き、正本の全文複製を避ける。instruction file の文字数の上限は 2026-06-12 に撤廃された。
 
 ## 使い分け
 
@@ -64,7 +64,7 @@
 - Cursor / Claude Code の rule は、正本を読むための薄い shim とする。
 - Codex / AI agent の入口は `AGENTS.md` とし、ここにも詳細 checklist を複製しない。
 - 正本を変更した場合、入口の参照先や入口としての役割が壊れていないかだけ確認する。正本の本文変更に合わせて入口へ同じ内容を追記しない。
-- **例外: `.github/instructions/*.instructions.md`** は薄い shim ではなく、Copilot code review がリンクを辿れないため正本の要点を直接複製している。このため (1) 複製元の正本を実質的に変更したら、対応する instructions の同期要否も確認する、(2) 複製元の正本側に instructions への「同期メモ」を残し、どの正本がどの instructions に抜粋されているかを正本を読めば辿れるようにする。同期チェックは人手の判断に委ね、CI や同期スクリプトのような重い仕組みは入れない。
+- **例外: `.github/instructions/*.instructions.md`** は薄い shim ではなく、Copilot code review がリンク先の正本まで辿る保証が無いため、正本の要点を直接複製している。このため (1) 複製元の正本を実質的に変更したら、対応する instructions の同期要否も確認する、(2) 複製元の正本側に instructions への「同期メモ」を残し、どの正本がどの instructions に抜粋されているかを正本を読めば辿れるようにする。同期チェックは人手の判断に委ね、CI や同期スクリプトのような重い仕組みは入れない。
 - 入口に恒久ルールを書きたくなった場合は、まず正本に書き、入口には正本への誘導だけを置く。
 
 ## Agent skill 管理
@@ -162,7 +162,7 @@ CLAUDE.md
 - `.claude/rules/<rule-name>.md` は Claude Code 用入口。任意で `paths:` frontmatter を付けてスコープ限定できる。共通正本を参照する。
 - `AGENTS.md` は Codex / AI agent 共通 index。**Codex は AGENTS.md からしか rule 正本に到達できない** ため、すべての rule をここにリストすることを必須とする。
 - `CLAUDE.md` は Claude 用 shim。原則 `@AGENTS.md` の取り込みに留める。
-- `.github/copilot-instructions.md` は GitHub Copilot Review 用入口で、repo 全体のレビュー方針(目的 / prefix / 優先順位 / 指摘しない事項 / 再レビュー方針 / コメント不要条件)を置く。Copilot はリンクを辿らず先頭〜約 4,000 文字しか読まないため、path 別の詳細レビュー観点は `.github/instructions/*.instructions.md`(`applyTo:`)に直接書く。正本へのリンクは人間向けポインタとして併記し、Copilot 用の本文複製は本リポジトリ固有・高シグナルな要点に絞って最小化する。
+- `.github/copilot-instructions.md` は GitHub Copilot Review 用入口で、repo 全体のレビュー方針(目的 / prefix / 優先順位 / 指摘しない事項 / 再レビュー方針 / コメント不要条件)を置く。Copilot はリンク先の正本まで辿る保証が無いため、要点は Copilot 用ファイルに直接書き、path 別の詳細レビュー観点は `applyTo:` で対象 path を絞れる `.github/instructions/*.instructions.md` に書く。正本へのリンクは人間向けポインタとして併記し、Copilot 用の本文複製は本リポジトリ固有・高シグナルな要点に絞って最小化する。
 
 ### 入口 rule frontmatter の書き方
 
