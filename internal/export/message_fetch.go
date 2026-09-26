@@ -85,7 +85,7 @@ func fetchMessages(ctx context.Context, client *slack.Client, channelID string, 
 		latest = oldestMessageTS(batch)
 		timeline = append(timeline, batch...)
 
-		threadIDs := unfetchedThreadIDs(batch, fetched, filter.Enabled())
+		threadIDs := unfetchedThreadIDs(batch, fetched, filter)
 		threadTotal := len(fetched) + len(threadIDs)
 		for _, threadTS := range threadIDs {
 			fetched[threadTS] = struct{}{}

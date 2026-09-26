@@ -328,8 +328,10 @@ func TestRunIntegrationExcludeEmojiParentAndThread(t *testing.T) {
 // TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts: when
 // the newest thread parent is excluded, its thread_broadcast copy on the
 // timeline goes with it, and --max-posts 2 is refilled from the next history
-// page so two retained messages still render. Body and reaction marking share
-// the expectation, so both run as named subtests.
+// page so two retained messages still render. The thread is not fetched
+// through the broadcast, since conversations.replies is not called for an
+// excluded parent. Body and reaction marking share the expectation, so both run
+// as named subtests.
 func TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts(t *testing.T) {
 	t.Parallel()
 
@@ -398,7 +400,7 @@ func TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts(t *tes
 			}
 			assertEndpointCounts(t, got.Server, map[string]int{
 				"/api/conversations.history": 2,
-				"/api/conversations.replies": 1,
+				"/api/conversations.replies": 0,
 			})
 			assertExcludedMetadata(t, got.OutputDir, 2, 0, 0, 2, tc.bodyNames, tc.reactionNames)
 			assertCacheOmits(t, got.OutputDir, "private parent", "private broadcast")
@@ -439,13 +441,12 @@ func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
 // (Issue #191). It pins the thread bookkeeping that has to survive the pages:
 //
 //   - each thread is fetched once: the paged thread, whose broadcast arrives on
-//     page 1, is not fetched again when its parent arrives on page 2, and the
-//     hidden thread's second broadcast on page 1 adds no fetch;
+//     page 1, is not fetched again when its parent arrives on page 2;
 //   - the thread replies progress keeps counting across pages;
-//   - the hidden thread's parent is excluded, so both of its broadcasts go and
-//     page 2 refills the timeline;
+//   - the hidden thread's parent is excluded on page 1, so neither of its
+//     broadcasts fetches the thread, both go, and page 2 refills the timeline;
 //   - the excluded count stays unique although the hidden parent is examined on
-//     both pages and again through its thread;
+//     both pages;
 //   - the cut thread, fetched through its broadcast while its parent fell
 //     beyond --max-posts, is fetched only to judge that parent: the Messages
 //     line, the Done summary and metadata.json leave out its replies, and
@@ -522,10 +523,10 @@ func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 
 	assertEndpointCounts(t, got.Server, map[string]int{
 		"/api/conversations.history": 2,
-		"/api/conversations.replies": 4,
+		"/api/conversations.replies": 3,
 		"/api/users.info":            2,
 	})
-	assertThreadProgress(t, got.Logs, "1/3", "2/3", "3/3", "4/4")
+	assertThreadProgress(t, got.Logs, "1/2", "2/2", "3/3")
 	assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 4 fetched ",
 		" (threads 2, replies 3, excluded by body emoji: 4, truncated by --max-posts 4)")
 	assertDoneSummary(t, got.Logs, "  messages: 4 (threads: 2, replies: 3)", "    excluded by body emoji: 4")
@@ -591,13 +592,14 @@ func TestRunIntegrationThreadProgressCountsFetchedThreadsOnly(t *testing.T) {
 
 // TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread is a
 // characterization test for the Messages stage when a thread is excluded
-// after its replies were kept (Issue #191). A reaction added to the parent
-// between the conversations.replies call and a later history page is the
-// realistic cause: the broadcast on page 1 fetches the thread, whose parent
-// does not match yet, and the parent's history copy on page 2 carries the
-// reaction. The thread's kept replies and its broadcast then leave the
-// export, the excluded count takes each excluded message once, and page 3
-// refills the timeline.
+// after it was fetched (Issue #191). A reaction added to the parent between
+// the conversations.replies call and a later history page is the realistic
+// cause: the broadcast on page 1 fetches the thread, whose parent does not
+// match yet, and the parent's history copy on page 2 carries the reaction. The
+// thread's replies and its broadcast then leave the export, the excluded count
+// takes each excluded message once, and page 3 refills the timeline. The
+// hidden thread, whose parent is excluded on page 1, is not fetched through its
+// broadcast.
 func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T) {
 	t.Parallel()
 
@@ -636,7 +638,7 @@ func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T)
 
 	assertEndpointCounts(t, got.Server, map[string]int{
 		"/api/conversations.history": 3,
-		"/api/conversations.replies": 2,
+		"/api/conversations.replies": 1,
 	})
 	assertMessagesPhaseLine(t, got.Logs, "OK: messages: 3 fetched ",
 		" (threads 0, replies 0, excluded by reaction emoji: 4)")
