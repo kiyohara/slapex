@@ -19,7 +19,7 @@
 7. 対象タスクが `progress.md` の索引表にある場合は、該当行を更新する(状態を done にし、PR 列に番号を記入する。この PR が merge された時点で正になる内容でよい)。表に載らない単発 Issue は `progress.md` を更新しなくてよい。
 8. PR を作る(`doc/guidelines/pull-request-guidelines.md`)。description に `Closes #<Issue 番号>` を含める。
 9. PR 採番後、note を `<PR 番号>_<escaped-branch-name>.md` へ rename する(`number-working-branch-note` skill が使える場合は skill で行う)。
-10. PR の URL、検証結果の要約、未解決事項をユーザーに報告して終了する。merge はしない。
+10. PR の URL、検証結果の要約、未解決事項、被委譲 skill(step 9 の `number-working-branch-note` など)から引き上げた報告項目をユーザーに報告して終了する。引き上げる範囲は `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従う。merge はしない。
 
 ## 判断に迷ったとき
 

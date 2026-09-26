@@ -56,7 +56,7 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
    - `progress.md` に変更が生じなかった場合は、commit と PR を作らず、その旨を伝えて終了する。step 2 / step 3 の確認により 1 件も登録しない結末があり得るためである。
    - `main` へ直接 push しない。**専用ブランチを切り、独立した PR** として出す。他の作業 PR へ同梱しない。
    - **索引登録そのものには起点 Issue を作らない。PR に `Closes` を付けない。**「Issue を索引に登録するための Issue」は指示書として意味を持たないためである。
-   - `doc/guidelines/working-branch-notes-handling.md` に従い working branch note を作る。PR 採番後は `number-working-branch-note` skill で採番する。
+   - `doc/guidelines/working-branch-notes-handling.md` に従い working branch note を作る。PR 採番後は `number-working-branch-note` skill で採番する。採番 skill の報告は `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」と同じ扱いで、「終了報告」へ含める。
    - **PR 本文に、登録した Issue の一覧と、順序・依存・ブロッカーの根拠を書く。** 索引の行は最小情報に絞る方針のため、判断の根拠は PR 側に残す。
    - commit / push は `doc/guidelines/git-operation-guidelines.md`、PR title / description は `doc/guidelines/pull-request-guidelines.md` に従う。
    - **PR の merge は行わない。** レビューと merge 判断はユーザーが行う。
@@ -86,4 +86,5 @@ description: slapex の既存 GitHub Issue を `progress.md` の進行中タス�
 - 依存・順序・ブロッカー・並行可否の判断。
 - 変更した `progress.md` のセクション。
 - 作成した PR の URL。変更が無く PR を作らなかった場合はその旨。
+- `number-working-branch-note` から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従う)。PR を作らなかった場合は、採番 skill を呼ばなかった旨。
 - 登録しなかった Issue があれば、その理由。

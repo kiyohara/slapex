@@ -74,7 +74,7 @@ slapex の `progress.md` を整理して、横断的な作業状況ボードと�
 - `progress.md` に変更が生じなかった場合は、commit と PR を作らず、その旨を伝えて終了する。観点別チェックの結果、整理する箇所が無いという結末があり得るためである。
 - `main` へ直接 push しない。**専用ブランチを切り、独立した PR** として出す。他の作業 PR へ同梱しない。
 - **進捗整理そのものには起点 Issue を作らない。PR に `Closes` を付けない。** 進捗整理は個別 Issue の実装と分けて扱う運用作業だからである(`doc/guidelines/development-loop.md` の基本方針。先例: PR #167 / PR #178 の note)。
-- `doc/guidelines/working-branch-notes-handling.md` に従い working branch note を作り、`doc/guidelines/working-branch-notes-security.md` の情報統制チェックを通す。PR 採番後は `number-working-branch-note` skill で採番する。
+- `doc/guidelines/working-branch-notes-handling.md` に従い working branch note を作り、`doc/guidelines/working-branch-notes-security.md` の情報統制チェックを通す。PR 採番後は `number-working-branch-note` skill で採番する。採番 skill の報告は `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」と同じ扱いで、「終了時の報告」へ含める。
 - **PR 本文に、圧縮した完了フェーズと、参照をどこへどう残したかを書く。** 圧縮で `progress.md` から行ごとの詳細が消えるため、何を畳んで何を残す判断をしたかは PR 側に残す。
 - commit / push は `doc/guidelines/git-operation-guidelines.md`、PR title / description は `doc/guidelines/pull-request-guidelines.md` に従う。
 - **PR の merge は行わない。** レビューと merge 判断はユーザーが行う。
@@ -95,3 +95,10 @@ slapex の `progress.md` を整理して、横断的な作業状況ボードと�
 - 参照側ドキュメント(観点 5)の前提を壊していない(役割変更をしていないこと)。
 - 変更は status board として最小限で、検討経緯や引き継ぎメモを持ち込んでいない。
 - 整理した内容が専用ブランチの独立 PR になっている(`progress.md` に変更が無かった場合は、commit と PR を作らずに終えている)。
+
+## 終了時の報告
+
+ユーザーには次を報告する。
+
+- 作成した PR の URL。`progress.md` に変更が無く PR を作らなかった場合はその旨。
+- `number-working-branch-note` から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従う)。PR を作らなかった場合は、採番 skill を呼ばなかった旨。

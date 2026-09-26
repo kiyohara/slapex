@@ -2,8 +2,8 @@
 
 - 状態: decided
 - 作成日: 2026-09-24
-- 最終更新日: 2026-09-24
-- 関連: `.agents/skills/number-working-branch-note/SKILL.md`, `doc/guidelines/working-branch-notes-handling.md`, `doc/guidelines/git-operation-guidelines.md`, `.agents/skills/run-issue-task/SKILL.md`, `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md`, [0059-issue-review-cycle-orchestration.md](0059-issue-review-cycle-orchestration.md)
+- 最終更新日: 2026-09-26
+- 関連: `.agents/skills/number-working-branch-note/SKILL.md`, `doc/guidelines/working-branch-notes-handling.md`, `doc/guidelines/git-operation-guidelines.md`, `.agents/skills/run-issue-task/SKILL.md`, `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md`, `.agents/skills/release/SKILL.md`, `.agents/skills/maintain-progress/SKILL.md`, `.agents/skills/register-progress-issue/SKILL.md`, `doc/guidelines/issue-driven-task-execution.md`, [0059-issue-review-cycle-orchestration.md](0059-issue-review-cycle-orchestration.md)
 
 ## 背景
 
@@ -93,3 +93,50 @@ A と D を採用する。
 - 本 skill を呼ぶ skill を新たに追加する、または「終了時の報告」から 2 項目のいずれかを外すとき。可視化の前提が規定で担保されなくなるため、ゲートまたは別の安全弁の要否を再検討する。
 - 誤った書き換えが実運用で繰り返し起き、報告を読んで後から直す運用では収まらなくなったとき。
 - 完了タスク行の判定基準を広げる、または書き換え形式に行の削除や文意の再構成のような不可逆な操作を含めるとき。
+
+## 追記(2026-09-26): 上位 skill への報告の引き上げ
+
+Issue #230。「影響」に制約として記録した、上位 skill が採番の報告を自身の報告へ引き上げる規定の欠如を判断した(「後から見直す条件」の 1 つ目)。取り込み元は kiyohara/bizdate の Issue #55 / PR #59(同 repository の decision log 0020 の「追記: 上位 skill への報告の引き上げ」)である。
+
+候補:
+
+- A: 被委譲 skill が報告した項目のうち、ユーザーの確認を要するものを引き上げる一般規定を置き、上位 skill から参照する。
+- B: 採番 skill の「書き換えた行の一覧」などを、名指しで上位 skill の報告項目へ足す。
+- C: 引き上げの規定は置かず、PR diff を正規の可視化経路と位置づける。
+
+検討:
+
+- C は、本ログの決定(可視化は「終了時の報告」を正規の経路とし、PR diff を補助とする)と、「影響」の「報告を省いた実行は、この決定の前提を欠く」に反する。触らずに残した行、PR description と title の変更、出力生成系 skill の未確認事項は diff に現れない。
+- B は、採番 skill の項目だけを名指しすると、出力生成系 3 skill の記録を拾えない。拾おうとすると、上位 skill 4 本と被委譲 skill 4 本の組み合わせを個別に書くことになり、被委譲 skill の報告項目を変えるたびに上位側の追従が要る。
+- A は 1 箇所の規定で、後から増える被委譲 skill や報告(Issue #229 の中断の報告など)にも効く。ただし「ユーザーの確認を要するもの」を上位 skill が判断すると、要約で落とすかどうかが判断に依存する。そこで判定の根拠を被委譲 skill 側の記述に置き、報告項目を 3 種(確認経路の項目 / 残された事項 / それ以外)に分け、前 2 種は要約で落とさない。現時点の該当項目は表で名指しし、被委譲 skill の報告項目を変えるときに揃える対象にする。bizdate と同じ構成である。
+- 該当が 0 件の場合に項目ごと省くと、該当が無かったのか報告が落ちたのかを区別できない。被委譲 skill を呼ばなかった場合を 0 件と報告すると、書き換えが無かったと誤読される。どちらもその旨を報告する。
+- slapex の採番 skill は、「書き換えた行の一覧」と「触らずに残した行の一覧」の両方を確認経路と位置づけている(本ログで採った D)。後者は処理せずに残した事項でもあるため、未解決事項として届くよう、両方に当たる項目は残された事項として扱う。
+- 採番 skill の「情報統制チェックで除外・修正した箇所」は、Issue #230 の背景の表では確認を要する項目に挙がっていたが、同 skill が確認経路とも触らず報告する事項とも位置づけていないため、判定の根拠を被委譲 skill 側の記述に置く上記の方針どおり、それ以外として扱う(bizdate の表も挙げていない)。ただし採番は PR の作成の後に行うため、該当があればその値は採番の前に PR の head へ push されており、要約で埋もれるとユーザーの対処(credential の失効など)が遅れ得る。同 skill 側でこの項目を確認経路または残された事項と位置づけるかは、採番 skill の変更になるため follow-up の候補とした。
+- 規定の置き場所は、bizdate に合わせて `run-issue-task` の節とした(Issue #230 の未決事項 1 の仮決定)。後から bizdate の改善を取り込むときに対照しやすい。`release`、`maintain-progress`、`register-progress-issue` は Issue 駆動タスクではないが、同節を参照する形で足りる。`run-issue-task` は guideline を正本とするため、`doc/guidelines/issue-driven-task-execution.md` の step 10 にも報告項目として足し、両者を一致させる。
+- `release` は Step 6 で merge を待って止まる。最終報告だけに足すと、待つ間に session が切れて採番の報告が失われ得るため、Step 6 で止まる時点の報告に含める(同未決事項 4)。bizdate の `run-release`(bizdate PR #83)は、準備 PR の採番から引き上げた項目を「終了時の報告」の項目に置き、状態と再開条件を公開後確認 Issue に残す。slapex の `release` は再開の状態を残す場所を持たず、「終了時の報告」は検証の後の最終報告である。
+- `maintain-progress` には報告の節が無く、参照だけでは経路が閉じない。短い「終了時の報告」節を足す(同未決事項 3)。bizdate は「終了時の確認」への点検項目の追加で済ませている。
+- 出力生成系 3 skill は SKILL.md を変えず、PR description または note への記録を被委譲 skill の報告とみなす(同未決事項 2)。各 skill は記録する項目を確認経路と位置づけていないため、該当は残された事項(未確認事項と、途中で止めた場合の理由)だけになる。
+- `drive-issue-to-reviewed-pr`(0059)は本 Issue より先に入った。P1 の終了からフロー終了までに P2 以降が挟まり、P1 で受け取った報告が context から落ち得るため、引き上げた項目を note に残して P2 の委譲の前に push し、終了時の報告はそこから含める。PR の入口で P2 から始める場合の P1 の完了条件の確認にも、同じ項目を加える(0059 の 2026-09-24 の追記が予告したとおり。bizdate の Issue #82 / PR #88 と同じ)。別の session で採番して報告が手元に無い場合は、報告を後から復元できないため、その旨と採番の commit を note に残し、P1 の完了条件をこの記録で満たす。bizdate の同 skill はこの場合を確認の対象外とするだけで、P1 の完了条件には例外を置いていない。
+- 同 skill が委譲する `review-pull-request` のユーザーへの報告のうち、処理の停止、反復上限のエスカレーション、訂正できなかった metadata の誤りは、同 skill の「停止とエスカレーション」と「終了時の報告」で届いていた。「MCP write failure の安全手順」の `gh` への fallback の明示は、subagent に返させる出力にも終了時の報告にも無かった。subagent はユーザーへ直接明示できないため、P2 / P5 で fallback した場合に届かない。
+
+決定:
+
+- A を採り、現時点の該当項目を名指しで併記する。
+- `run-issue-task` に「被委譲 skill の報告の引き上げ」節を置き、step 10 と「終了条件」から参照する。対象は step 9 の `number-working-branch-note` と、step 5 で使った出力生成系 3 skill とする。現時点の該当は、`number-working-branch-note` の「書き換えた行の一覧」(確認経路の項目)と「触らずに残した行の一覧」(残された事項)、出力生成系 3 skill の「未確認事項」(残された事項)とし、途中で停止した場合の理由と未反映の変更も残された事項に含める。
+- `doc/guidelines/issue-driven-task-execution.md` の step 10 に、引き上げた報告項目を足して同節を参照する。
+- `release` は Step 5 から同節を参照し、Step 6 で止まる時点の報告に含める。「終了時の報告」には、報告済みであればその旨でよい項目を足す。
+- `maintain-progress` に「終了時の報告」節を足す。同節と `register-progress-issue` の「終了報告」に引き上げた項目を加え、採番の手順から同節を参照する。
+- `drive-issue-to-reviewed-pr` の P1 の完了条件、PR の入口での P1 の確認、「working branch note」、「終了時の報告」に、`run-issue-task` から引き上げた項目を加える。`review-pull-request` の報告も同じ 3 種で扱い、`gh` への fallback の明示を「返させる出力」と「終了時の報告」に加える。
+
+これにより、採番の報告は、`run-issue-task` の単独実行では step 9 → step 10、`drive-issue-to-reviewed-pr` では P1(step 9 → step 10)→ note の P1 の記録 → 終了時の報告、`release` では Step 5 → Step 6 で止まる時点の報告、`maintain-progress` と `register-progress-issue` では採番の手順 → 終了時の報告 / 終了報告の経路でユーザーへ届く。
+
+新しい方針の導入ではなく、本ログが「影響」で制約として記録した引き上げを規定で閉じる変更であるため、新規のログは作らず本ログへの追記とする(同未決事項 5)。
+
+影響:
+
+- 変えたのは `run-issue-task`、`release`、`maintain-progress`、`register-progress-issue`、`drive-issue-to-reviewed-pr` の SKILL.md と、`doc/guidelines/issue-driven-task-execution.md` である。`number-working-branch-note`、出力生成系 3 skill、`review-pull-request` は変えていない。
+- 「影響」に記録した、上位 skill が 2 項目を自身の報告へ引き上げる規定を持たないという制約は、この追記で閉じた。
+
+後から見直す条件:
+
+- 上位 skill の引き上げの規定を外す、または同節を参照しない上位 skill を足すとき。可視化の前提が規定で担保されなくなるため、ゲートまたは別の安全弁の要否を再検討する。

@@ -62,6 +62,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - P2 から始める場合は、P1 の完了条件を確かめる。
   - note が採番前(`doc/guidelines/working-branch-notes-handling.md` の「note の探し方」で `draft_` の note しか見つからない)なら、`number-working-branch-note` を実行する。
   - 関連 Issue が `progress.md` の索引にあり、対応行の PR 欄が反映されていなければ、`run-issue-task` の手順どおりに更新して push する。
+  - note の P1 の記録(「working branch note」の表)に、`run-issue-task` の報告から引き上げた項目が無ければ、追記して push する。この確認の中で `number-working-branch-note` を実行した場合は、`run-issue-task` の報告に代えて、その採番の報告から `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従って引き上げた項目を追記する。採番の報告が手元に無い場合(別の session で採番した場合など)は、報告を後から復元できないため、引き上げた項目に代えて、報告が手元に無い旨と採番の commit を追記して push する。この記録で P1 の完了条件の同じ項目を満たし、終了時の報告もこの記録から書く。
 - P5 から始める場合は、P4 の完了条件を確かめる。
   - その周の P4 の記録(「working branch note」の表)が note に無ければ、追記して push する。
   - 返信は再開位置の判定で確かめている。修正の push は、`address-comments` が対応済みの返信の前に確かめている。
@@ -92,7 +93,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 
 | フェーズ | 担当 | 委譲先 | 完了条件 |
 | --- | --- | --- | --- |
-| P1 実装と PR 作成 | orchestrator | `run-issue-task`(依存確認から note 採番まで) | PR が open で note を採番済み。索引にある Issue なら `progress.md` の PR 欄を反映して push 済み。最新 head の check runs がすべて完了し success |
+| P1 実装と PR 作成 | orchestrator | `run-issue-task`(依存確認から note 採番まで) | PR が open で note を採番済み。索引にある Issue なら `progress.md` の PR 欄を反映して push 済み。`run-issue-task` の報告から引き上げた項目(PR の入口で採番の報告が手元に無い場合は、その旨と採番の commit)を note に残して push 済み。最新 head の check runs がすべて完了し success |
 | P2 review | subagent | `review-pull-request` の `review` | 完了要約 1 本が投稿され、subagent が「返させる出力」を返した |
 | P3 判断 | orchestrator | なし | 指摘件数が 0 なら P6、1 件以上なら P4 へ進む |
 | P4 対応 | orchestrator | `review-pull-request` の `address-comments` | 各指摘へ処置を返信し、修正と note を push し、最新 head の check runs が完了した |
@@ -100,7 +101,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 | P5 後の判断 | orchestrator | なし | 未対応が 0 件なら P6、残れば P4 へ戻る(「反復の上限」に従う) |
 | P6 終了 | orchestrator | なし | 「終了時の報告」を返した |
 
-- P1 では、`run-issue-task` の最後の報告(PR の URL、検証結果、未解決事項)をユーザーへ返さず、本 skill の「終了時の報告」へ回す。
+- P1 では、`run-issue-task` の最後の報告(PR の URL、検証結果、未解決事項、被委譲 skill から引き上げた報告項目)をユーザーへ返さず、本 skill の「終了時の報告」へ回す。引き上げた項目は、P2 の委譲の前に note に残して push する(「working branch note」)。
 - `number-working-branch-note` は P1 の中で実行する。採番は commit と push を伴い head を動かすため、review を採番より後に始めることで、review 中に head が動かない。
 - `progress.md` の対応行は P1 で更新する。状態は PR 作成前に進め、PR 欄は採番後に `#<PR 番号>` へ更新する(`run-issue-task` の手順)。`number-working-branch-note` は `progress.md` を更新しないため、採番後の PR 欄の反映を P1 の完了条件に含める。索引に無い単発 Issue は更新しない。
 - 出力生成系 3 skill(`update-sample-exports`、`update-readme-preview-screenshots`、`update-readme-demo-gif`)の適用判断は、コードを変える担当(P1 と P4 の orchestrator)が行う。判断は各 skill の「いつ使うか」を正本とし、判断の結果と根拠を note と PR description に残す。実行順は `update-readme-preview-screenshots` の「事前確認」と `update-readme-demo-gif` の「README 用 media との境界」を正本とし、本 skill で再定義しない。cloud session で実行できない skill の扱いは `doc/guidelines/cloud-session-guidelines.md` に従う。
@@ -170,8 +171,9 @@ commit、push、作業ツリーのファイル変更、address-comments、thread
 | 再確認の結果 | P5 だけ。区分(`.agents/skills/review-pull-request/references/verify-comments.md` の「処置ごとの確認」)ごとの確認済み件数と resolve 可とした thread の URL の一覧、未対応件数 |
 | check runs | 確かめた check runs の状態 |
 | 未実施事項 | 実施しなかった検証とその理由 |
+| `gh` への fallback | `review-pull-request` の「MCP write failure の安全手順」で `gh` へ fallback した場合の、試した MCP tool、失敗内容、未反映確認の結果、実行した command。無ければ「なし」 |
 | 停止理由 | 途中で止まった場合の理由と、ユーザーへ中継すべき確認事項 |
-| 訂正できなかった誤り | 投稿の metadata の誤りを編集で直せなかった場合の対象 URL、誤っている箇所、正しい値(`review-pull-request` の「投稿前の確認と誤りの訂正」) |
+| 訂正できなかった誤り | 投稿の metadata の誤りを編集で直せなかった場合の対象 URL、誤っている箇所、正しい値(`review-pull-request` の「投稿前の確認と誤りの訂正」)。無ければ「なし」 |
 
 subagent の最終報告はユーザーへ表示されない。orchestrator が内容を確かめ、必要な部分を要約してユーザーへ伝える。
 
@@ -221,7 +223,7 @@ subagent を起動できない実行環境では、P2 と P5 の前で止まる�
 
 ## CI の確認点
 
-- P2 と P5 の前(委譲する直前。subagent が使えない環境では、P2 / P5 の前で止まる直前)に、最新 head の check runs がすべて完了し success であることを確かめる。未完了なら完了を待つ。通常の流れでは P1 の完了時(PR 作成、採番、`progress.md` 反映の push 後)と P4 の完了時に当たる。PR の入口から始めた場合も、この確認を通る。check runs と失敗 job の log の取得は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に従う。
+- P2 と P5 の前(委譲する直前。subagent が使えない環境では、P2 / P5 の前で止まる直前)に、最新 head の check runs がすべて完了し success であることを確かめる。未完了なら完了を待つ。通常の流れでは P1 の完了時(PR 作成、採番、`progress.md` 反映、引き上げた項目の note への記録の push 後)と P4 の完了時に当たる。PR の入口から始めた場合も、この確認を通る。check runs と失敗 job の log の取得は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」に従う。
 - 失敗した場合、差分に起因するなら修正して再 push し、完了を待ち直す。差分から説明できなければ止まる。
 - Issue の「検証」にある Docker Compose での検証は、PR 作成前の必須手順である。CI はその結果を GitHub 上の head で確かめる位置づけとする。CI は Compose での検証に無い job(`cross-compile` など)を含むため、Compose での検証の代わりにも、Compose での検証が CI の代わりにもならない。
 - P6 で note だけを push した場合、その head は確認点に含めない。終了時の報告に、その時点の check runs の状態をそのまま書く。
@@ -232,13 +234,14 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 
 | フェーズ | 残すこと |
 | --- | --- |
-| P1 | PR 番号、検証結果、出力生成系 skill の適用判断 |
+| P1 | PR 番号、検証結果、出力生成系 skill の適用判断、`run-issue-task` の報告から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」の確認経路の項目と残された事項。0 件、呼ばなかった、途中で停止した場合はその旨。PR の入口で採番の報告が手元に無い場合は、その旨と採番の commit) |
 | P2 / P3 | review cycle ID、`Reviewed head`、指摘件数(inline と top-level の内訳と、prefix ごとの内訳) |
 | P4 | 処置の内訳、スコープ外とした指摘の follow-up 候補、修正 commit、出力生成系 skill の再判断 |
 | P5 | 再確認の結果(区分ごとの確認済み件数と未対応件数) |
 | P6 | 終了時の状態 |
 
 - 追記は次の push にまとめてよい。ただし P2 / P5 の委譲中は push しない(「head SHA の受け渡し」)。
+- P1 の記録は、P2 の委譲の前に push する(「フェーズ」の表の P1 の完了条件)。P1 の終了からフロー終了までに P2 以降が挟まり、`run-issue-task` から引き上げた項目が context から落ち得るためである。
 - 「次にやること」は、終了時に人間の手番(thread の resolve、PR の merge、他の Agent 種別の cycle の再確認)だけが残る状態にする。
 - P6 の note の更新は、P5 が確かめた head より後の commit になる。note だけの commit とし、終了時の報告でそのことを示す。
 
@@ -279,15 +282,19 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 
 - PR の URL と state。
 - Issue の検証結果(P1)。
+- P1 で `run-issue-task` から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」)。note の P1 の記録から報告する。PR の入口から始めて採番の報告が手元に無かった場合は、その旨と採番の commit を書く。
 - review cycle ID ごとの指摘件数と、周ごとの処置の内訳。P2 の指摘件数には prefix ごとの内訳を添える。merge 前に直すべき指摘(`[must]`)があったかを読めるようにするためであり、P3 と P5 後の判断には使わない。
 - resolve 可とした thread(区分ごと)。resolve は人間が行う。
 - 未対応・未収束の指摘と、見解の相違点。
 - 再確認を人間に返すもの(他の Agent 種別の cycle や、対象 cycle 以外で対応した thread)。
 - 最新 head と check runs の状態。P6 で note だけを push した場合はその旨。
-- 出力生成系 skill の適用判断。
+- 出力生成系 skill の適用判断。P4 で使った場合は、その記録から「被委譲 skill の報告の引き上げ」と同じ扱いで引き上げた項目を含める。
+- `review-pull-request` の「MCP write failure の安全手順」による `gh` への fallback(P2 / P5 の subagent が返したものと、P4 で行ったもの)。無ければ「なし」。
 - 未検証事項。skill を追加・変更した場合は description による発火を含む。
 - follow-up Issue の候補。
-- 人間に残る作業(thread の resolve と PR の merge。metadata の誤りを訂正できなかった投稿があれば、その編集)。
+- 人間に残る作業(thread の resolve と PR の merge。metadata の誤りを訂正できなかった投稿があればその編集、無ければその旨)。
+
+被委譲 skill の報告は、`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」と同じ 3 種の扱いで上記へ含める。`review-pull-request` については、確認経路の項目に当たる `gh` への fallback の明示を上記の項目で届ける。残された事項に当たるもののうち、処理の停止と反復上限のエスカレーション(未収束の指摘、見解の相違点、推奨する次の対応)は「停止とエスカレーション」で止まる時点の報告で、訂正できなかった metadata の誤りは「人間に残る作業」で届ける。被委譲 skill の報告項目を変えるときは、この節と「返させる出力」を揃える。
 
 ## やらないこと
 

@@ -9,7 +9,7 @@ GitHub Issue を 1 件選び、Issue 駆動タスクとして実行するため�
 
 この skill は `doc/guidelines/issue-driven-task-execution.md` を正本として扱う。ここに書いた手順と guideline が食い違う場合は、guideline を優先する。
 
-Issue 着手から review と再確認までを一続きで回す場合、この skill は `drive-issue-to-reviewed-pr` skill の P1(実装と PR 作成)として呼ばれる。その場合、最後の報告(PR の URL、検証結果、未解決事項)はユーザーではなく呼び出し元へ返す。この skill 単独での利用も従来どおり続ける。
+Issue 着手から review と再確認までを一続きで回す場合、この skill は `drive-issue-to-reviewed-pr` skill の P1(実装と PR 作成)として呼ばれる。その場合、最後の報告(PR の URL、検証結果、未解決事項、被委譲 skill から引き上げた報告項目)はユーザーではなく呼び出し元へ返す。この skill 単独での利用も従来どおり続ける。
 
 ## 入力
 
@@ -63,7 +63,8 @@ Issue 着手から review と再確認までを一続きで回す場合、この
 9. PR 採番後、working branch note を `<PR 番号>_<escaped-branch-name>.md` へ rename する。
    - `number-working-branch-note` skill が使える場合は、その skill を使う。
    - rename 後に note 本文や PR description 内の note 参照があれば更新する。
-10. PR の URL、検証結果、未解決事項をユーザーへ報告する。
+10. PR の URL、検証結果、未解決事項、被委譲 skill から引き上げた報告項目をユーザーへ報告する。
+   - 引き上げる範囲は「被委譲 skill の報告の引き上げ」に従う。
 
 ## Issue 番号がない場合
 
@@ -76,10 +77,31 @@ Issue 着手から review と再確認までを一続きで回す場合、この
 4. 一意に決まる場合は、その Issue 番号と理由をユーザーにサジェストする。
 5. 複数候補が同等、依存状態が読み切れない、または候補が無い場合は、勝手に開始せず Issue 番号を指示するよう誘導する。
 
+## 被委譲 skill の報告の引き上げ
+
+本 skill が手順の中で別 skill を使う場合、その skill の報告は本 skill の報告の中で要約されるため、ユーザーへ届くかどうかは本 skill の報告項目で決まる。そこで被委譲 skill の報告項目を次の 3 種に分けて扱う。どれに当たるかは本 skill 側で改めて判断せず、被委譲 skill の記述を根拠にする。
+
+対象は、本 skill の手順の中で使った skill である。step 9 の `number-working-branch-note` と、step 5 で `doc/guidelines/development-command-guidelines.md` に従って使った出力生成系 3 skill(`update-sample-exports`、`update-readme-preview-screenshots`、`update-readme-demo-gif`)が当たる。被委譲 skill の報告には、終了時の報告のほか、被委譲 skill が PR description または working branch note へ記録するとした項目を含める。
+
+1. **確認経路の項目**: 被委譲 skill が、自身の処理をユーザーが確認する経路として報告に置いている項目(合意を待たずに行った変更の一覧など)。要約で落とさず、そのまま本 skill の報告へ含める。
+2. **残された事項**: 被委譲 skill が「触らず報告する」「止めて報告する」として、処理せずにユーザーへ残した事項。要約で落とさず、本 skill の未解決事項として報告する。被委譲 skill が途中で停止した場合は、停止した理由と、その時点で未反映の変更もここに含める。1 にも当たる項目(確認経路と位置づけられ、かつ処理せずに残した事項)は 2 として扱う。
+3. **それ以外**: 処理結果の記録(rename した名前、commit SHA など)。要約してよい。
+
+1 と 2 は、該当が 0 件の場合も 0 件であることを報告する。項目ごと省くと、該当が無かったのか報告が落ちたのかを区別できないためである。被委譲 skill を呼ばなかった場合(手動で rename した、別経路で済ませた、出力生成系 skill の「いつ使うか」に当たらなかったなど)は、0 件ではなく「呼ばなかった」と報告する。
+
+現時点の該当項目は次のとおり。被委譲 skill の報告項目を変えるときは、この表も揃える。
+
+| 被委譲 skill | 呼び出し元 | 1. 確認経路の項目 | 2. 残された事項 |
+| --- | --- | --- | --- |
+| `number-working-branch-note` | step 9 | 「書き換えた行の一覧」(note / PR description / title)。同 skill の「終了時の報告」が、合意を求めずに書き換える代わりの確認経路と位置づけている | 「触らずに残した行の一覧」。同 skill の「stale 表現の定型置換」、Step 5 / Step 10 と「やらないこと」が、触らず終了時に報告するとしている。途中で停止した場合(「適用範囲」の対象外、Step 3 の衝突、各ステップの失敗など)は、停止理由とその時点で未反映の変更 |
+| 出力生成系 3 skill | step 5 | なし。各 skill は記録する項目を確認経路と位置づけておらず、未確認事項以外の記録(実行 command と結果、差分の要点や有無、目視確認結果)は 3 に当たる | 各 skill の「生成後の確認」が PR description または note へ記録するとした「未確認事項」。途中で止めた場合(実 token や想定外の外部通信が要る場合、説明できない差分の原因を解消できない場合など)は、止めた理由とその時点で未反映の変更 |
+
+`number-working-branch-note` は `release`、`maintain-progress`、`register-progress-issue` からも呼ばれる。これらの skill も本節と同じ扱いで、自身の報告へ含める。`drive-issue-to-reviewed-pr` は、P1 で受け取った本 skill の報告を同じ扱いで自身の「終了時の報告」へ含め、自身が委譲する `review-pull-request` の報告も同じ 3 種で扱う。
+
 ## 終了条件
 
 - 依存未完了の場合: 未完了依存を報告して終了する。
-- 実装を進めた場合: PR 作成、note rename、検証結果記録、`progress.md` 更新まで終えて報告する。
+- 実装を進めた場合: PR 作成、note rename、検証結果記録、`progress.md` 更新まで終えて報告する。報告には「被委譲 skill の報告の引き上げ」の項目を含める。
 - merge は常にユーザーが行う。
 
 ## やらないこと
