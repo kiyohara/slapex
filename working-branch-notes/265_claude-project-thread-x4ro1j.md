@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-x4ro1j`(cloud session が指定。Issue の推奨ブランチ名は `fix-stale-tool-behavior-in-guidelines`)
-- PR: 未作成
+- PR: #265
 - 最終更新: 2026-09-26
 
 ## 目的
@@ -12,7 +12,7 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 
 ## 現在の状況
 
-- 作業内容 1〜4 を実施し、Issue の「検証」を実行した。PR 未作成。
+- 作業内容 1〜4 を実施し、Issue の「検証」を実行した。PR #265 作成済み。
 
 ## 決定事項
 
@@ -28,7 +28,7 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 
 ## 次にやること
 
-- draft PR を作成し、note を採番する。
+- draft PR を作成し、note を採番する。(完了)
 - review cycle(P2〜P5)。
 - ユーザー: Codex のクロスレビュー、Ready for review、merge。
 
