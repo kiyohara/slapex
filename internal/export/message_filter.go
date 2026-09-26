@@ -61,6 +61,15 @@ func (f *messageFilter) Exclude(message *slack.Message) {
 	}
 }
 
+// ExcludeReply counts the thread reply at ts as excluded. The Messages stage
+// judges a thread's replies with matches as it fetches them, keeps only the ts
+// of the excluded ones, and counts those here once the thread's parent is on
+// the timeline (timelineReplies). A reply is no thread parent, so unlike
+// Exclude this never excludes a thread.
+func (f *messageFilter) ExcludeReply(ts string) {
+	f.excluded[ts] = struct{}{}
+}
+
 func (f *messageFilter) ExcludeThread(threadTS string) {
 	if threadTS != "" {
 		f.excludedThread[threadTS] = struct{}{}

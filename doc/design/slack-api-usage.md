@@ -56,7 +56,7 @@ token type による主な違い:
 - `--days` では `oldest` に「実行基準時刻 − `--days` × 24 時間」、`latest` に実行基準時刻を指定し、`--date` と同様に client 側でも半開区間を守る。
 - 1 ページの要求件数は 200 件を上限とする。サーバー側がより小さいページ(例: 15 件)しか返さなくても、cursor 継続により動作が変わらない設計とする。
 - timeline 上で取得範囲と `--exclude-body-emoji` / `--exclude-reaction-emoji` の OR 条件を適用した後に残る親投稿件数が `--max-posts` に達するまで cursor を継続する。emoji filter で除外した投稿は数えない。`conversations.replies` だけに現れる thread replies は数えない(thread_broadcast は timeline に現れるため数える)。
-- timeline 親投稿を emoji filter で除外した場合、その親投稿の `conversations.replies` は呼ばない。timeline に残った親投稿の replies は、history の取得を終えた後に同じ message predicate で絞り、その後の user / emoji / asset 解決には残った message だけを渡す。`thread_broadcast` は timeline と thread の両方で同じ predicate を適用する。
+- timeline 親投稿を emoji filter で除外した場合、その親投稿の `conversations.replies` は呼ばない。取得した replies は取得後すぐ同じ message predicate で絞り、除外した message は timestamp だけを保持する。history の取得を終えた後、親投稿が timeline に残った thread についてだけ、除外した replies を除外件数に数え、残った message を user / emoji / asset 解決へ渡す。`thread_broadcast` は timeline と thread の両方で同じ predicate を適用する。
 - emoji filter を指定した場合は、timeline の `thread_broadcast` の親が timeline に入らないとき(取得範囲より古い、`--max-posts` の外にある)も、親を判定するためにその thread の `conversations.replies` を呼び、親が条件に一致すれば broadcast も除外する。この thread の replies は表示せず、thread と replies の件数、user / emoji / asset の解決、除外件数のいずれにも含めない。`conversations.replies` でだけ見た親も timeline の候補ではないため、除外件数に数えない。filter を指定しない場合、broadcast の thread は親が timeline にあるときだけ取得する。
 - `conversations.replies` も同様に pagination し、1 thread あたり合計 1000 件で打ち切る(`output-format.md`)。
 

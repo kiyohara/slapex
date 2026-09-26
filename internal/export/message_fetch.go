@@ -53,11 +53,13 @@ func (f fetchedMessages) counts() exportCounts {
 
 // fetchedThread is a thread's conversations.replies result that the Messages
 // stage holds until the pages are done and it knows whether the thread's
-// parent is on the timeline: the replies as fetched, before the emoji filters,
-// and whether they stopped at maxThreadReplies.
+// parent is on the timeline: the replies the emoji filters keep, the ts of the
+// ones they exclude, and whether the replies stopped at maxThreadReplies. An
+// excluded reply is held by its ts alone, since it is only ever counted.
 type fetchedThread struct {
-	replies   []slack.Message
-	truncated bool
+	kept       []slack.Message
+	excludedTS []string
+	truncated  bool
 }
 
 // fetchMessages runs the Messages phase. Each history page asks for the
@@ -100,7 +102,7 @@ func fetchMessages(ctx context.Context, client *slack.Client, channelID string, 
 				threads[threadTS] = thread
 			}
 		}
-		timeline = dropExcludedThreads(timeline, filter)
+		timeline = dropExcludedThreads(timeline, threads, filter)
 
 		if len(timeline) >= opts.MaxPosts {
 			truncated = more
@@ -125,9 +127,10 @@ func fetchMessages(ctx context.Context, client *slack.Client, channelID string, 
 }
 
 // fetchThread fetches one thread through conversations.replies and reports
-// whether it stays in the export (messageFilter.IncludeThread). It returns the
-// replies as fetched, before the emoji filters, which timelineReplies applies
-// once it knows the thread's parent is on the timeline.
+// whether it stays in the export (messageFilter.IncludeThread). It splits the
+// replies by the emoji filters right away, without counting the excluded ones:
+// timelineReplies counts them once it knows the thread's parent is on the
+// timeline.
 func fetchThread(ctx context.Context, client *slack.Client, channelID, threadTS string, filter *messageFilter) (fetchedThread, bool, error) {
 	parent, replies, truncated, err := client.Thread(ctx, channelID, threadTS, maxThreadReplies)
 	if err != nil {
@@ -136,35 +139,45 @@ func fetchThread(ctx context.Context, client *slack.Client, channelID, threadTS 
 	if !filter.IncludeThread(threadTS, parent) {
 		return fetchedThread{}, false, nil
 	}
-	return fetchedThread{replies: replies, truncated: truncated}, true, nil
+	thread := fetchedThread{truncated: truncated}
+	for i := range replies {
+		if filter.matches(&replies[i]) {
+			thread.excludedTS = append(thread.excludedTS, replies[i].TS)
+			continue
+		}
+		thread.kept = append(thread.kept, replies[i])
+	}
+	return thread, true, nil
 }
 
 // dropExcludedThreads removes from timeline the messages of excluded threads,
 // counting each as excluded: broadcasts, and a parent whose thread was
-// excluded through its conversations.replies copy. A thread can be excluded
-// after it was fetched: its broadcast fetched it on an earlier page, and its
-// parent's history copy arrives on this page carrying an excluded reaction
-// added in between. timelineReplies leaves out the replies held for it.
-func dropExcludedThreads(timeline []slack.Message, filter *messageFilter) []slack.Message {
+// excluded through its conversations.replies copy. It also forgets the replies
+// held for those threads, since a thread can be excluded after it was fetched:
+// its broadcast fetched it on an earlier page, and its parent's history copy
+// arrives on this page carrying an excluded reaction added in between.
+func dropExcludedThreads(timeline []slack.Message, threads map[string]fetchedThread, filter *messageFilter) []slack.Message {
 	kept := timeline[:0]
 	for i := range timeline {
-		if !filter.ThreadExcluded(messageThreadTS(&timeline[i])) {
+		threadTS := messageThreadTS(&timeline[i])
+		if !filter.ThreadExcluded(threadTS) {
 			kept = append(kept, timeline[i])
 			continue
 		}
 		filter.Exclude(&timeline[i])
+		delete(threads, threadTS)
 	}
 	return kept
 }
 
-// timelineReplies returns the replies of the threads whose parent is on the
-// timeline, filtered through the emoji filters and in ascending ts order, and
-// which of those threads stopped at maxThreadReplies. An excluded thread is
-// left out, and so is a thread whose replies were all excluded. So is a thread
-// fetched only to judge the parent of a broadcast, when that parent is older
-// than the fetch range or fell beyond --max-posts: its replies are neither
-// shown, counted nor resolved, and the ones the filters would exclude are not
-// counted as excluded (Issue #206).
+// timelineReplies returns the kept replies of the threads whose parent is on
+// the timeline, in ascending ts order, and which of those threads stopped at
+// maxThreadReplies, and it counts the replies the emoji filters excluded from
+// those threads. An excluded thread is left out, and so is a thread whose
+// replies were all excluded. So is a thread fetched only to judge the parent
+// of a broadcast, when that parent is older than the fetch range or fell
+// beyond --max-posts: its replies are neither shown, counted nor resolved, and
+// the ones the filters exclude are not counted as excluded (Issue #206).
 func timelineReplies(timeline []slack.Message, threads map[string]fetchedThread, filter *messageFilter) (map[string][]slack.Message, map[string]bool) {
 	replies := map[string][]slack.Message{}
 	repliesTruncated := map[string]bool{}
@@ -174,12 +187,10 @@ func timelineReplies(timeline []slack.Message, threads map[string]fetchedThread,
 		if !ok || filter.ThreadExcluded(threadTS) {
 			continue
 		}
-		var kept []slack.Message
-		for j := range thread.replies {
-			if filter.Include(&thread.replies[j]) {
-				kept = append(kept, thread.replies[j])
-			}
+		for _, ts := range thread.excludedTS {
+			filter.ExcludeReply(ts)
 		}
+		kept := thread.kept
 		if len(kept) == 0 {
 			continue
 		}
