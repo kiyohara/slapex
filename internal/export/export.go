@@ -125,8 +125,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	replyTotal := 0
 	historyLatest := fetchRange.latestTS()
 	truncated := false
-	threadFetches := map[string]bool{}
-	threadFetchIndex := 0
+	fetched := fetchedThreads{}
 	for len(messages) < opts.MaxPosts {
 		remaining := opts.MaxPosts - len(messages)
 		batch, more, err := client.History(ctx, ch.ID, fetchRange.oldestTS(), historyLatest, remaining, filter.Include,
@@ -143,22 +142,16 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		historyLatest = oldestMessageTS(batch)
 		messages = append(messages, batch...)
 
-		threadIDs := unfetchedThreadIDs(batch, threadFetches, filter.Enabled())
-		threadTotal := len(threadFetches) + len(threadIDs)
+		threadIDs := unfetchedThreadIDs(batch, fetched, filter.Enabled())
+		threadTotal := len(fetched) + len(threadIDs)
 		for _, threadTS := range threadIDs {
-			threadFetchIndex++
-			p.UpdatePhase(fmt.Sprintf("fetching thread replies ... %d/%d", threadFetchIndex, threadTotal))
+			fetched[threadTS] = struct{}{}
+			p.UpdatePhase(fmt.Sprintf("fetching thread replies ... %d/%d", len(fetched), threadTotal))
 			parent, r, trunc, err := client.Thread(ctx, ch.ID, threadTS, maxThreadReplies)
 			if err != nil {
 				return "", err
 			}
-			threadExcluded := filter.ThreadExcluded(threadTS)
-			if parent != nil && !filter.Include(parent) {
-				filter.ExcludeThread(threadTS)
-				threadExcluded = true
-			}
-			threadFetches[threadTS] = threadExcluded
-			if threadExcluded {
+			if !filter.IncludeThread(threadTS, parent) {
 				continue
 			}
 			var kept []slack.Message
@@ -185,7 +178,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 					delete(replies, threadTS)
 					delete(repliesTruncated, threadTS)
 				}
-				threadFetches[threadTS] = true
 				continue
 			}
 			keptTimeline = append(keptTimeline, messages[i])

@@ -11,7 +11,18 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-func unfetchedThreadIDs(messages []slack.Message, fetched map[string]bool, inspectBroadcasts bool) []string {
+// fetchedThreads is the set of threads whose replies Run has fetched through
+// conversations.replies, keyed by thread_ts. It only records the fetch: whether
+// a thread is excluded is the messageFilter's to say.
+type fetchedThreads map[string]struct{}
+
+// unfetchedThreadIDs returns the threads of messages whose replies still need
+// fetching, in message order: those of thread parents and, with
+// inspectBroadcasts, those of thread_broadcast copies too, so the emoji filters
+// can judge the thread of a broadcast whose parent is not among the fetched
+// messages. A thread in fetched is skipped, so a thread whose parent or
+// broadcast shows up again on a later history page is fetched only once.
+func unfetchedThreadIDs(messages []slack.Message, fetched fetchedThreads, inspectBroadcasts bool) []string {
 	seen := map[string]bool{}
 	var ids []string
 	for i := range messages {

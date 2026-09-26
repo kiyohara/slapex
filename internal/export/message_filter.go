@@ -61,6 +61,19 @@ func (f *messageFilter) ExcludeThread(threadTS string) {
 	}
 }
 
+// IncludeThread reports whether the thread rooted at threadTS stays in the
+// export once conversations.replies has returned its parent (nil when the
+// response had none). The thread is dropped when it is already excluded,
+// because an excluded copy of its parent was seen on the timeline, or when this
+// copy of the parent is excluded; the latter marks the thread excluded, so its
+// messages on the timeline go too.
+func (f *messageFilter) IncludeThread(threadTS string, parent *slack.Message) bool {
+	if parent != nil && !f.Include(parent) {
+		f.ExcludeThread(threadTS)
+	}
+	return !f.ThreadExcluded(threadTS)
+}
+
 func (f *messageFilter) ThreadExcluded(threadTS string) bool {
 	_, ok := f.excludedThread[threadTS]
 	return ok

@@ -160,6 +160,21 @@ func assertDoneSummary(t *testing.T, logs []string, lines ...string) {
 	}
 }
 
+// assertThreadProgress checks the counters the thread replies progress lines
+// showed, in order.
+func assertThreadProgress(t *testing.T, logs []string, want ...string) {
+	t.Helper()
+	var got []string
+	for _, line := range logs {
+		if _, count, ok := strings.Cut(line, "fetching thread replies ... "); ok {
+			got = append(got, count)
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("thread replies progress = %v, want %v\nlogs:\n%s", got, want, strings.Join(logs, "\n"))
+	}
+}
+
 func hasSleepAtLeast(sleeps []time.Duration, atLeast time.Duration) bool {
 	for _, d := range sleeps {
 		if d >= atLeast {

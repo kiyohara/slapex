@@ -527,15 +527,7 @@ func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 		"/api/conversations.replies": 4,
 		"/api/users.info":            3,
 	})
-	var progress []string
-	for _, line := range got.Logs {
-		if _, count, ok := strings.Cut(line, "fetching thread replies ... "); ok {
-			progress = append(progress, count)
-		}
-	}
-	if want := []string{"1/3", "2/3", "3/3", "4/4"}; !slices.Equal(progress, want) {
-		t.Fatalf("thread replies progress = %v, want %v\nlogs:\n%s", progress, want, strings.Join(got.Logs, "\n"))
-	}
+	assertThreadProgress(t, got.Logs, "1/3", "2/3", "3/3", "4/4")
 	assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 4 fetched ",
 		" (threads 3, replies 5, excluded by body emoji: 4, truncated by --max-posts 4)")
 	assertDoneSummary(t, got.Logs, "  messages: 4 (threads: 2, replies: 3)", "    excluded by body emoji: 4")
@@ -558,6 +550,44 @@ func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 		}
 	}
 	mustContain(t, body, `<div class="notice">取り扱える件数の上限に達しました。</div>`)
+}
+
+// TestRunIntegrationThreadProgressCountsFetchedThreadsOnly: the thread replies
+// progress counts the threads actually fetched. conversations.history does not
+// normally return a thread reply that was not broadcast, but when it does and
+// the reply's parent is excluded, the reply goes and its thread, never fetched,
+// must not inflate the total on a later page (Issue #191).
+func TestRunIntegrationThreadProgressCountsFetchedThreadsOnly(t *testing.T) {
+	t.Parallel()
+
+	const (
+		hiddenTS = "1700000003.000000"
+		laterTS  = "1700000002.000000"
+	)
+	laterParent := slack.Message{Type: "message", TS: laterTS, ThreadTS: laterTS, User: "U02", Text: "later parent", ReplyCount: 1}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1700000005.000000", ThreadTS: hiddenTS, User: "U01", Text: "reply without broadcast"},
+		{Type: "message", TS: "1700000004.000000", User: "U02", Text: "kept"},
+		{Type: "message", TS: hiddenTS, ThreadTS: hiddenTS, User: "U01", Text: "hidden parent :shushing_face:", ReplyCount: 1},
+		laterParent,
+		{Type: "message", TS: "1700000001.000000", User: "U01", Text: "beyond max posts"},
+	}
+	sc.Replies[laterTS] = []slack.Message{
+		laterParent,
+		{Type: "message", TS: "1700000002.100000", ThreadTS: laterTS, User: "U01", Text: "later reply"},
+	}
+	opts := integrationOptions(t, 2)
+	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+
+	got := runExportScenario(t, sc, opts)
+
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 2,
+		"/api/conversations.replies": 1,
+	})
+	assertThreadProgress(t, got.Logs, "1/1")
+	assertExcludedMetadata(t, got.OutputDir, 2, 1, 1, 2, []string{"shushing_face"}, nil)
 }
 
 // TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread is a
