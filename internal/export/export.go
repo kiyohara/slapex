@@ -119,13 +119,14 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
 	workspaceIcon := saveWorkspaceIcon(assets, target.teamInfo)
 	views := newMessageViewBuilder(assets, resolved, emojiResolver, opts.MaxAttachBytes)
-	items, counts := buildTimeline(views, fetched)
+	items := buildTimeline(views, fetched)
 	page := buildPage(target, workspaceIcon, items, fetched.truncated, fetchRange, opts, now)
 	if err := writePage(out.path, page); err != nil {
 		return "", err
 	}
 	assetTotals := endAssetsPhase(p, assets)
 
+	counts := fetched.counts()
 	if err := writeCaches(out.path, now, target.auth, target.channel, opts, fetchRange, out.wsLabel, out.chLabel,
 		counts.timeline, counts.threads, counts.replies, counts.excluded,
 		assetTotals.saved, assetTotals.skipped, assetTotals.failed,
@@ -220,9 +221,10 @@ func resolveCustomEmoji(ctx context.Context, client *slack.Client, reuse *reusab
 	return customEmoji, nil
 }
 
-// exportCounts are the message counts metadata.json and the Done summary
-// report. threads and replies count what the page shows: the timeline messages
-// shown with replies, and those replies.
+// exportCounts are the message counts the Messages line, metadata.json and the
+// Done summary report, all from fetchedMessages.counts. threads and replies
+// count what the page shows: the timeline messages shown with replies, and
+// those replies.
 type exportCounts struct {
 	timeline int
 	threads  int

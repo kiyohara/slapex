@@ -446,12 +446,10 @@ func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
 //     page 2 refills the timeline;
 //   - the excluded count stays unique although the hidden parent is examined on
 //     both pages and again through its thread;
-//   - the Messages line counts every fetched thread, including the cut thread,
-//     fetched through its broadcast while its parent fell beyond --max-posts.
-//     Its replies are neither rendered nor counted by the Done summary and
-//     metadata.json, yet their author is resolved. That pins current
-//     behaviour rather than endorsing it: Issue #206 tracks the mismatch and
-//     will change these expectations.
+//   - the cut thread, fetched through its broadcast while its parent fell
+//     beyond --max-posts, is fetched only to judge that parent: the Messages
+//     line, the Done summary and metadata.json leave out its replies, and
+//     their author is not resolved (Issue #206).
 func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 	t.Parallel()
 
@@ -514,7 +512,7 @@ func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 	}
 	sc.Replies[cutTS] = []slack.Message{
 		cutParent,
-		threadMessage("1700000005.100000", cutTS, "U03", "reply counted only on the Messages line"),
+		threadMessage("1700000005.100000", cutTS, "U03", "reply in the thread cut by max posts"),
 		cutBroadcast,
 	}
 	opts := integrationOptions(t, 4)
@@ -525,16 +523,17 @@ func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 	assertEndpointCounts(t, got.Server, map[string]int{
 		"/api/conversations.history": 2,
 		"/api/conversations.replies": 4,
-		"/api/users.info":            3,
+		"/api/users.info":            2,
 	})
 	assertThreadProgress(t, got.Logs, "1/3", "2/3", "3/3", "4/4")
 	assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 4 fetched ",
-		" (threads 3, replies 5, excluded by body emoji: 4, truncated by --max-posts 4)")
+		" (threads 2, replies 3, excluded by body emoji: 4, truncated by --max-posts 4)")
 	assertDoneSummary(t, got.Logs, "  messages: 4 (threads: 2, replies: 3)", "    excluded by body emoji: 4")
 	assertExcludedMetadata(t, got.OutputDir, 4, 2, 3, 4, []string{"shushing_face"}, nil)
+	assertCacheOmits(t, got.OutputDir, "U03")
 
 	body := readIndexHTML(t, got.OutputDir)
-	for _, excluded := range []string{"hidden parent", "hidden broadcast", "reply hidden", "beyond max posts", "reply counted only on the Messages line"} {
+	for _, excluded := range []string{"hidden parent", "hidden broadcast", "reply hidden", "beyond max posts", "reply in the thread cut by max posts"} {
 		mustNotContain(t, body, excluded)
 	}
 	for _, retained := range []string{"parent on the first page", "reply kept on the first page", "parent on the second page", "reply in the thread across pages"} {
@@ -654,21 +653,19 @@ func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T)
 	mustNotContain(t, body, `<div class="thread">`)
 }
 
-// TestRunIntegrationBroadcastParentOffTimeline is a characterization test for a
-// thread_broadcast on the timeline whose parent never reaches it (Issue #206):
-// the parent is older than the fetch range, or falls beyond --max-posts with
-// kept messages between it and the cut, so conversations.history never judges
-// it. Without a filter the broadcast is a plain timeline message and its thread
-// is not fetched. With a filter the thread is fetched so its parent can be
-// judged: a matching parent takes the broadcast with it and the next message
-// refills the timeline, and a kept parent leaves the broadcast alone, with the
-// thread's replies neither rendered nor counted by the Done summary and
-// metadata.json. The rest pins current behaviour rather than endorsing it: the
-// Messages line counts the fetched thread and its replies, their author is
-// resolved through users.info, and a matching parent, like a reply the filter
-// excludes in that thread, is counted as excluded although neither was ever
-// shown or a timeline candidate. Issue #206 tracks the mismatch and will change
-// these expectations.
+// TestRunIntegrationBroadcastParentOffTimeline: a thread_broadcast on the
+// timeline whose parent never reaches it, because the parent is older than the
+// fetch range or falls beyond --max-posts with kept messages between it and
+// the cut, so conversations.history never judges it (Issue #206). Without a
+// filter the broadcast is a plain timeline message and its thread is not
+// fetched. With a filter the thread is fetched only to judge the parent. A
+// matching parent takes the broadcast with it, the next message refills the
+// timeline, and only the broadcast is counted as excluded, since the parent was
+// never a timeline candidate. A kept parent leaves the broadcast alone, and
+// the thread's replies are neither shown, counted nor resolved, nor is the
+// reply the filter excludes there counted as excluded. The Messages line, the
+// Done summary, metadata.json, users.info and the page are then those of the
+// run without a filter.
 func TestRunIntegrationBroadcastParentOffTimeline(t *testing.T) {
 	t.Parallel()
 
@@ -717,10 +714,9 @@ func TestRunIntegrationBroadcastParentOffTimeline(t *testing.T) {
 					bodyNames:    []string{"shushing_face"},
 					history:      1,
 					replies:      1,
-					usersInfo:    3,
-					messagesMeta: " (threads 1, replies 2, excluded by body emoji: 1, truncated by --max-posts 3)",
-					done:         []string{"  messages: 3 (threads: 0, replies: 0)", "    excluded by body emoji: 1"},
-					excluded:     1,
+					usersInfo:    2,
+					messagesMeta: " (threads 0, replies 0, truncated by --max-posts 3)",
+					done:         []string{"  messages: 3 (threads: 0, replies: 0)", "    excluded by body emoji: 0"},
 					shown:        []string{"newest message", "broadcast on the timeline", "message below the broadcast"},
 					notShown:     []string{"message that refills the broadcast"},
 				},
@@ -731,9 +727,9 @@ func TestRunIntegrationBroadcastParentOffTimeline(t *testing.T) {
 					history:      2,
 					replies:      1,
 					usersInfo:    2,
-					messagesMeta: " (threads 0, replies 0, excluded by body emoji: 2, truncated by --max-posts 3)",
-					done:         []string{"  messages: 3 (threads: 0, replies: 0)", "    excluded by body emoji: 2"},
-					excluded:     2,
+					messagesMeta: " (threads 0, replies 0, excluded by body emoji: 1, truncated by --max-posts 3)",
+					done:         []string{"  messages: 3 (threads: 0, replies: 0)", "    excluded by body emoji: 1"},
+					excluded:     1,
 					shown:        []string{"newest message", "message below the broadcast", "message that refills the broadcast"},
 					notShown:     []string{"broadcast on the timeline"},
 				},
@@ -756,6 +752,7 @@ func TestRunIntegrationBroadcastParentOffTimeline(t *testing.T) {
 					assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 3 fetched ", tc.messagesMeta)
 					assertDoneSummary(t, got.Logs, tc.done...)
 					assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, tc.excluded, tc.bodyNames, nil)
+					assertCacheOmits(t, got.OutputDir, "U03", "reply only in the thread", "reply the filter excludes")
 
 					body := readIndexHTML(t, got.OutputDir)
 					for _, text := range tc.shown {

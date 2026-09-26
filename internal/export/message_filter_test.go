@@ -35,10 +35,12 @@ func TestMessageFilterMatchesNormalizedReactionName(t *testing.T) {
 
 // TestMessageFilterIncludeThread covers the thread decision taken once
 // conversations.replies has returned a thread's parent: the thread stays only
-// when neither that parent nor an earlier timeline copy of it is excluded, and
-// the parent is counted once however often it is examined. A parent copy
-// without reply_count is not recognised as a thread parent by Exclude, so
-// IncludeThread has to mark its thread itself.
+// when neither that parent nor an earlier timeline copy of it matches the
+// filters. Only a timeline copy counts the parent as excluded, since the
+// conversations.replies copy may be all slapex sees of a parent that is no
+// timeline candidate (Issue #206). IncludeThread marks the thread itself, so a
+// parent copy without reply_count, which Exclude would not recognise as a
+// thread parent, still excludes its thread.
 func TestMessageFilterIncludeThread(t *testing.T) {
 	const threadTS = "1700000001.000000"
 	parent := func(text string, replyCount int) *slack.Message {
@@ -53,8 +55,8 @@ func TestMessageFilterIncludeThread(t *testing.T) {
 	}{
 		{name: "kept parent", parent: parent("kept", 1), want: true},
 		{name: "no parent", parent: nil, want: true},
-		{name: "excluded parent", parent: parent("private :shushing_face:", 1), wantExcluded: 1},
-		{name: "excluded parent without reply_count", parent: parent("private :shushing_face:", 0), wantExcluded: 1},
+		{name: "excluded parent", parent: parent("private :shushing_face:", 1)},
+		{name: "excluded parent without reply_count", parent: parent("private :shushing_face:", 0)},
 		{name: "excluded before the fetch", excludedFirst: true, parent: parent("private :shushing_face:", 1), wantExcluded: 1},
 		{name: "excluded before the fetch, kept copy", excludedFirst: true, parent: parent("kept copy", 1), wantExcluded: 1},
 		{name: "excluded before the fetch, no parent", excludedFirst: true, parent: nil, wantExcluded: 1},
