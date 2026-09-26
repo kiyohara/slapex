@@ -74,7 +74,7 @@ Slack token、個人情報、顧客固有情報、出力 HTML に含まれる機
 
 実装言語、フレームワーク、テスト方針は Go / stdlib-first / Docker Compose 経由の Go test として確定している。対象 path 別の詳細レビュー観点は `.github/instructions/*.instructions.md` に置く。
 
-`.github/instructions/*.instructions.md` を追加する場合、各 instruction file は先頭から約 4,000 文字のみ反映される前提で、高シグナルな要点に絞る。
+`.github/instructions/*.instructions.md` を追加する場合は、高シグナルな要点に絞る。
 
 ## 最終指示
 
