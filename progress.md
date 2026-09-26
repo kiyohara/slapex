@@ -45,7 +45,7 @@ RF-03 → FU-05 → FU-13 → FU-14 → FU-18 → FU-15 → FU-16 → RF-06 → 
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| FU-05 | [#206](https://github.com/kiyohara/slapex/issues/206) filter 時の broadcast thread 件数不整合 | todo | #191 | RF-03 後に characterization test から着手 | - |
+| FU-05 | [#206](https://github.com/kiyohara/slapex/issues/206) filter 時の broadcast thread 件数不整合 | done(PR merge後) | #191 | merge後は対応なし | - |
 | FU-13 | [#246](https://github.com/kiyohara/slapex/issues/246) 外部連携画像の url_private を original として保存 | todo | PR #243, PR #244 | 実 payload を確認し、original を取得しない形にする | - |
 | FU-14 | [#247](https://github.com/kiyohara/slapex/issues/247) URL 無し画像の size 超過で空の source_url を記録 | todo | PR #243, PR #244 | FU-13 の後(同じ `addImage`) | - |
 | FU-18 | [#254](https://github.com/kiyohara/slapex/issues/254) 429 retry test がまれに失敗 | todo | - | 失敗理由を log に出し、原因を調べる | - |
