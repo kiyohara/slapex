@@ -62,7 +62,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - P2 から始める場合は、P1 の完了条件を確かめる。
   - note が採番前(`doc/guidelines/working-branch-notes-handling.md` の「note の探し方」で `draft_` の note しか見つからない)なら、`number-working-branch-note` を実行する。
   - 関連 Issue が `progress.md` の索引にあり、対応行の PR 欄が反映されていなければ、`run-issue-task` の手順どおりに更新して push する。
-  - note の P1 の記録(「working branch note」の表)に、`run-issue-task` の報告から引き上げた項目が無ければ、追記して push する。採番の報告が手元に無い場合(別の session で採番した場合など)は追記せず、終了時の報告でその旨と採番の commit を示す。
+  - note の P1 の記録(「working branch note」の表)に、`run-issue-task` の報告から引き上げた項目が無ければ、追記して push する。この確認の中で `number-working-branch-note` を実行した場合は、`run-issue-task` の報告に代えて、その採番の報告から `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従って引き上げた項目を追記する。採番の報告が手元に無い場合(別の session で採番した場合など)は追記せず、終了時の報告でその旨と採番の commit を示す。
 - P5 から始める場合は、P4 の完了条件を確かめる。
   - その周の P4 の記録(「working branch note」の表)が note に無ければ、追記して push する。
   - 返信は再開位置の判定で確かめている。修正の push は、`address-comments` が対応済みの返信の前に確かめている。
@@ -173,7 +173,7 @@ commit、push、作業ツリーのファイル変更、address-comments、thread
 | 未実施事項 | 実施しなかった検証とその理由 |
 | `gh` への fallback | `review-pull-request` の「MCP write failure の安全手順」で `gh` へ fallback した場合の、試した MCP tool、失敗内容、未反映確認の結果、実行した command。無ければ「なし」 |
 | 停止理由 | 途中で止まった場合の理由と、ユーザーへ中継すべき確認事項 |
-| 訂正できなかった誤り | 投稿の metadata の誤りを編集で直せなかった場合の対象 URL、誤っている箇所、正しい値(`review-pull-request` の「投稿前の確認と誤りの訂正」) |
+| 訂正できなかった誤り | 投稿の metadata の誤りを編集で直せなかった場合の対象 URL、誤っている箇所、正しい値(`review-pull-request` の「投稿前の確認と誤りの訂正」)。無ければ「なし」 |
 
 subagent の最終報告はユーザーへ表示されない。orchestrator が内容を確かめ、必要な部分を要約してユーザーへ伝える。
 
@@ -292,7 +292,7 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 - `review-pull-request` の「MCP write failure の安全手順」による `gh` への fallback(P2 / P5 の subagent が返したものと、P4 で行ったもの)。無ければ「なし」。
 - 未検証事項。skill を追加・変更した場合は description による発火を含む。
 - follow-up Issue の候補。
-- 人間に残る作業(thread の resolve と PR の merge。metadata の誤りを訂正できなかった投稿があれば、その編集)。
+- 人間に残る作業(thread の resolve と PR の merge。metadata の誤りを訂正できなかった投稿があればその編集、無ければその旨)。
 
 被委譲 skill の報告は、`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」と同じ 3 種の扱いで上記へ含める。`review-pull-request` については、確認経路の項目に当たる `gh` への fallback の明示を上記の項目で届ける。残された事項に当たるもののうち、処理の停止と反復上限のエスカレーション(未収束の指摘、見解の相違点、推奨する次の対応)は「停止とエスカレーション」で止まる時点の報告で、訂正できなかった metadata の誤りは「人間に残る作業」で届ける。被委譲 skill の報告項目を変えるときは、この節と「返させる出力」を揃える。
 
