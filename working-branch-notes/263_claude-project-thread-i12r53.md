@@ -15,6 +15,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - 依存(#191)の PR #262 が merge 済み(main `94ce913`)であることを確かめた。
 - 作業内容を 3 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
 - PR #263 作成済み(draft)。note を採番し(`25eb8be`)、`progress.md` の FU-05 の PR 欄も反映した。
+- review cycle `claude-code-4664865-20260926090102` の指摘 3 件(`[imo]` 1、`[nits]` 2)に対応した(P4、`6d9054f` と PR description の編集)。再確認(P5)を P2 と同じ subagent に委譲する。
 
 ## 決定事項
 
@@ -42,16 +43,16 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 
 ### 挙動の変化
 
-- filter 有効時、timeline に入らない親を持つ broadcast の thread の replies は、Messages 行の threads / replies、users.info と avatar の解決、`slack_api_cache.json` に入らない。Done の要約と metadata.json の threads / replies は以前から表示に合っており、変わらない。
-- その親が filter に一致すると、broadcast は以前どおり除外され補充されるが、除外件数に数えるのは broadcast だけになる(親を数えない)。その thread の replies で filter に一致するものも数えない。
-- 後の page で親が除外された thread の replies は、filter に一致しても除外件数に数えない。以前は取得時に数えていた。親を先に除外した通常の場合(replies を取得しない)と揃う。
+- filter 有効時、timeline に入らない親を持つ broadcast の thread の replies は、Messages 行の threads / replies、`.cache/` に入らず、その作成者、本文の mention 先の user、bot 投稿の bot を users.info / bots.info で解決しない。以前は解決した user と bot の avatar / app icon も保存し、Users 行、Assets 行、Done の要約の `assets:`、metadata.json の `assets_saved` に数えていた(P2 の subagent が probe で確かめた)。Done の要約と metadata.json の threads / replies は以前から表示に合っており、変わらない。
+- その親が filter に一致すると、broadcast は以前どおり除外され補充されるが、除外件数に数えるのは broadcast だけになる(親を数えない)。その thread の replies で filter に一致するものも数えない。ただし親が最後の `--max-posts` の打ち切りの直後にあり(間に残す投稿が無い)、history の copy も一致する場合は、`client.History` の examined exclusions が親を数える(変更の前後とも 2 件。「変えていないこと」)。
+- 後の page で親が除外された thread の replies は、filter に一致しても除外件数に数えない。以前は取得時に数えていた。親を先に除外した通常の場合(replies を取得しない)と揃う。`TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の reaction の付いた reply で固定した(基準のコードでは除外件数が 5 になる)。
 - 親を除外済みの thread は broadcast から取得しない(API 呼び出しと進捗の分母が減る)。
 - filter の無い実行は変わらない。固定 sample、gensample の log、`--demo` の出力が基準と一致した(「検証」)。
 
 ### 変えていないこと
 
 - 親を判定するための `conversations.replies` の呼び出しは残す。timeline に入らない親を判定する手段がほかに無いためである。filter の有無で API の呼び出し数は変わるが、完了条件の timeline / replies の集合と件数は変わらない。
-- `client.History` は `--max-posts` に達した後も、次に残す投稿が見つかるまで predicate を当てるため、打ち切りの直後で除外された投稿を除外件数に数える(同関数のコメントの「examined exclusions」。`TestHistoryAppliesPredicateBeforeMaxPosts`)。親に限らず全投稿に当たる既存の挙動で、broadcast の親 thread の取得経路の外にあるため、変えていない(「リスク・ブロッカー」)。
+- `client.History` は `--max-posts` に達した後も、次に残す投稿が見つかるまで predicate を当てるため、打ち切りの直後で除外された投稿を除外件数に数える(同関数のコメントの「examined exclusions」。`TestHistoryAppliesPredicateBeforeMaxPosts`)。親に限らず全投稿に当たる既存の挙動で、broadcast の親 thread の取得経路の外にあるため、変えていない(「リスク・ブロッカー」)。打ち切りの直後にある親(間に残す投稿が無い場合)もこの挙動で数えられるため、Issue の作業内容の「候補外の親を除外件数に数えない」は、この場合について残る(P2 の review の指摘)。
 - 範囲外の親を持つ broadcast の replies の表示(Issue のスコープ外)。
 
 ### 文書
@@ -75,7 +76,9 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - draft PR を作成する。(完了)
 - PR 作成後に note を採番する。(完了)
 - `progress.md` の FU-05 の行の PR 欄に PR 番号を入れ、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- 指摘 3 件に対応し、処置を返信する(P4)。(完了)
+- P4 の push の CI を確かめてから、再確認を P2 と同じ subagent に委譲する(P5)。
 
 ## 検証
 
@@ -89,6 +92,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - gensample の stderr の log(phase 行、進捗、summary): 一時 directory の path と経過時間を正規化して、基準と一致した。
 - `--demo`: 基準と変更後の binary で、filter 無し、`--exclude-body-emoji=tada`、`--exclude-reaction-emoji=do_not_archive,eyes`、`--max-posts=3 --exclude-reaction-emoji=eyes` の 4 通りを実行した。stdout、stderr と出力 tree は、出力先の path と export 時刻を除いて一致した。demo の fixture には `thread_broadcast` が無いため、filter 無しの実行が変わらないことと、filter 有効時の既存の件数と表示が変わらないことの確認である。
 - `git diff --check`: 問題なし。
+- review への対応(P4、`6d9054f`)の後: `gofmt -l .` は出力なし、`go vet ./...` は成功、`go test ./...` は全 package ok、`git diff --check` は問題なし。足した reply を含む `TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の fixture を基準 `94ce913` に当てると、除外件数が 5 になって失敗する(変更を test が固定している)。production code の変更はコメントだけのため、固定 sample と `--demo` の比較はやり直していない。
 - 実 token は使わず、test は架空の fixture と fake Slack server で確かめた。
 
 Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より古い broadcast と、親が `--max-posts` の外にある broadcast)は `TestRunIntegrationBroadcastParentOffTimeline` で確かめた。
@@ -104,10 +108,13 @@ Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より�
 
 - 判定だけの thread の replies は history の取得を終えるまで保持する。以前は取得時に filter で絞った replies を持っていた。保持量は取得した thread の replies(1 thread あたり最大 1,000 件)で、以前と同じ桁である。
 - follow-up 候補(起票はユーザーが判断する)
-  - `client.History` の「examined exclusions」: `--max-posts` の打ち切りの直後で除外された投稿(親に限らない)を除外件数に数える。表示されない候補外の投稿が件数に入る点は本 Issue と同種だが、`truncated` を正しく保つための意図的な挙動で、全投稿に当たる(「変えていないこと」)。数えないなら、History が打ち切り後の除外を呼び出し側へ区別して返す必要がある。
+  - `client.History` の「examined exclusions」: `--max-posts` の打ち切りの直後で除外された投稿(親に限らない)を除外件数に数える。表示されない候補外の投稿が件数に入る点は本 Issue と同種だが、`truncated` を正しく保つための意図的な挙動で、全投稿に当たる(「変えていないこと」)。数えないなら、History が打ち切り後の除外を呼び出し側へ区別して返す必要がある。打ち切りの直後にある親もこの挙動で数えられ、Issue の作業内容の「候補外の親を除外件数に数えない」はこの場合に残る。本 PR の `Closes #206` で Issue が閉じるため、起票するかは merge の前に決めるのがよい(P2 の review の指摘)。
 
 ## セッションログ
 
 - 2026-09-26: #191(PR #262)の merge 後、逐次処理の 7 件目として #206 を選んだ。前のスレッドの推しで、`progress.md` の推奨順も RF-03 の直後であり、依存の #191 は close 済み。branch は main `94ce913` から作られている。
 - 2026-09-26: 作業内容を 3 commit(characterization test、修正本体と文書の同期、親を除外済みの thread の取得の省略)で実施し、Issue の「検証」を実行した。
 - 2026-09-26: P1。PR #263 を draft で作成し、note を採番した(`25eb8be`)。`run-issue-task` から引き上げた項目は次のとおり。確認経路の項目(`number-working-branch-note` の書き換えた行)は note の 4 行と PR description の 1 行で、title は変えていない。note は `PR:` 欄の「未作成」を `#263` に、「現在の状況」の「PR 未作成。」を「PR #263 作成済み。」に(状況を説明する stale 表現)、「次にやること」の「draft PR を作成する。」と「PR 作成後に note を採番する。」の行末に「(完了)」を付けた(完了タスク行)。PR description は「概要」の note の path を採番後の名前に置き換えた。残された事項(触らずに残した行)は 0 件で、停止は無い。情報統制チェックで除外・修正した箇所は無い。この P1 の記録の commit で、`progress.md` の FU-05 の PR 欄に #263 を入れ、「現在の状況」を更新した。出力生成系 3 skill は呼ばなかった(各 skill の「いつ使うか」に当たらない。「決定事項」の「出力生成系 skill」)。検証の結果は「検証」のとおり。
+- 2026-09-26: #191 のスレッドから、ユーザーの判断(08:56Z)で PR #262 の follow-up 候補 1 が #206 の Issue コメントとして申し送られたと連絡があった。本 PR の `e6a49e8` で扱い済みである。
+- 2026-09-26: P2 / P3。review cycle `claude-code-4664865-20260926090102`、`Reviewed head` `466486593032799a083bab6c3f42780fdd1bee6f`。指摘は 3 件(inline 2 / top-level 1)で、prefix の内訳は `[must]` 0、`[ask]` 0、`[imo]` 1、`[nits]` 2。1 件以上のため P4 へ進んだ。subagent の報告では、`gh` への fallback(write)、停止、訂正できなかった誤りはいずれもなし。ただし投稿直前の head の確認で、PR の read を `gh api` で 1 回行い、`pull_request_read(get)` で取り直してから投稿した(#255 と同種の routing の逸脱)。subagent は検証の後片付けで、共有の scratchpad の `probe-*` と `gensample-*` を glob で消しており、orchestrator の gensample の log(検証の結果は記録済み)も消えた可能性がある。subagent が挙げた commit の trailer の model の表示名は、harness の attribution の指示と `doc/guidelines/pull-request-guidelines.md`(trailer を認める)に従ったもので、変えない。
+- 2026-09-26: P4。処置は 3 件とも「採用し修正した」。`[nits]`(`excluded` のコメント)は、数える範囲(history が判定した投稿と打ち切り後に判定した投稿、除外された thread の timeline の投稿、親が timeline にある thread の replies)に書き直した(`6d9054f`)。`[imo]`(表の 4 行目の test)は、`TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の race thread に reaction の付いた reply を足し、除外件数 4 のままで固定した(`6d9054f`。基準 `94ce913` に同じ fixture を当てると 5 で失敗することを確かめた)。`[nits]`(PR description の表)は、「挙動の変化」の表の 1 行目(mention 先の user、bot、avatar と assets の件数)、2 行目(打ち切り直後の親の examined exclusions)、5 行目(進捗の分母)と表の下の文を直し、「変えていないこと」「補足」に Issue の作業内容との関係を足した。この note の「挙動の変化」「変えていないこと」「リスク・ブロッカー」も揃えた。スコープ外とした指摘は無い。出力生成系 3 skill は、production code の変更がコメントだけのため、引き続き適用しない。検証: `gofmt -l .` は出力なし、`go vet ./...` は成功、`go test ./...` は全 package ok、`git diff --check` は問題なし。
