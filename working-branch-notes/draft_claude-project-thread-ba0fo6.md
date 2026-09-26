@@ -8,28 +8,114 @@
 
 Issue #191(RF-03)。`export.Run` の取得・解決・描画・出力完了を小さな工程に分け、Run を工程の順序と失敗時の処理として読める形にする。thread 取得の状態(`threadFetches`)を取得済み thread の集合として明確にし、除外判定を `messageFilter` に寄せる。出力、cache、phase の文言と順序、API 呼び出し数は変えない。
 
-本 Issue は `drive-issue-to-reviewed-pr` skill で、review と再確認を済ませた PR まで進める。ユーザーの指示(2026-09-25)で open Issue を 1 件ずつ直列に処理する流れの 6 件目で、Issue ごとに新しい thread で進める方式(2026-09-26)の最初の Issue である。後続の #194(cache 型の整理)と #206(FU-05)が本 Issue の結果型を前提にする(decision log 0056)。
+本 Issue は `drive-issue-to-reviewed-pr` skill で、review と再確認を済ませた PR まで進める。ユーザーの指示(2026-09-25)で open Issue を 1 件ずつ直列に処理する流れの 6 件目で、Issue ごとに新しい thread で進める方式(2026-09-26)の最初の Issue である。後続の #194(cache 入力の整理)と #206(FU-05)が本 Issue の結果型と thread 集合の整理を前提にする(decision log 0056)。
 
 ## 現在の状況
 
 - 依存(#188、#189、#190)の PR が merge 済みであることを確かめた。
-- 基準 commit(main `1d44567`)で、固定 sample の無差分と `go test ./...`、`go vet ./...` の成功を確かめた。
-- 現状を固定する characterization test を足している。
+- 作業内容を 4 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
+- PR は未作成。
 
 ## 決定事項
 
-- commit は次の順に分ける(Issue の作業内容「thread 集合化は工程抽出に先立つ別 commit」)。
-  1. 現状を固定する characterization test(基準 commit のコードで通ることを確かめる)。
-  2. thread 集合化と、除外判定の `messageFilter` への集約。
-  3. 取得ループの状態の簡素化(reply 件数を集計から導く、冗長な `truncated` の代入を除く)。
-  4. 工程の抽出。
+### commit の分け方
+
+Issue の作業内容「thread 集合化は工程抽出に先立つ別 commit として検証する」に従い、局所変更と工程抽出を分けた。各 commit で gofmt、`go vet ./...`、`go test ./internal/export ./internal/slack` を通した。thread 集合化と工程抽出の commit では固定 sample と gensample の log も基準と比べた。
+
+1. `538b6a1` 現状を固定する characterization test(基準のコードで通ることを確かめた)。
+2. `5b93bd3` thread 集合化と、thread の除外判定の `messageFilter.IncludeThread` への集約。
+3. `a3f5dde` 取得ループの状態の簡素化(返信数を保持した返信から数える、冗長な `truncated` の代入を除く)。
+4. `7a5e29f` 工程の抽出。
+
+### thread 集合化(commit 2)
+
+- `threadFetches`(`map[string]bool`)は、値に除外状態を書き込んでいたが、読むのはキーの有無だけで、除外状態は `messageFilter.excludedThread` も持っていた。取得済み thread の集合 `fetchedThreads`(`map[string]struct{}`)に置き換え、除外状態は filter だけが持つ。
+- 進捗の通し番号(`threadFetchIndex`)は集合の大きさから導く。
+- `conversations.replies` の親による thread の除外判定(5 行)を `messageFilter.IncludeThread` に移した。判定と副作用(親の除外の計上、thread の除外の記録)は同じである。reply_count の無い親の copy では `Exclude` が thread を記録しないため、`IncludeThread` が自分で記録する点を unit test で固定した。
+- 補充前の除外処理は、以前は取得していない thread も集合へ加えていた。Slack の標準の応答では、そこで加わる thread はすでに取得済みで、挙動は変わらない(broadcast は親より新しく、親より前か同じ page に来るため)。conversations.history が broadcast でない返信を返し、その親が同じ page で除外された場合だけ、未取得の thread が集合に入り、後の page の進捗の分母が 1 多くなっていた。集合を取得済みに限ったため、この場合の進捗は `1/2` で止まらず `1/1` になる。基準と変更後で同じ fixture を実行して確かめ、`TestRunIntegrationThreadProgressCountsFetchedThreadsOnly` で固定した。phase の文言と順序は変わらない。
+
+### 工程と入出力(commit 4)
+
+Run は工程の順序と error の返し方だけを持ち、各工程は結果を値で次へ渡す。大きな可変 context や interface は作らず、既存の concrete client と test harness をそのまま使った。
+
+| 工程(関数) | phase | 入力 | 出力 |
+|---|---|---|---|
+| `resolveTarget` | Workspace、Channel | client、opts(channel の keyword、対話可否) | `exportTarget`(auth.test、team.info、channel、workspace / channel の表示行) |
+| `resolveReuseCache`(既存) | なし(警告と案内の行) | `--reuse-cache` の path、team ID、channel ID | `*reusableCache`(使えなければ nil) |
+| `createOutputDir` | なし | 出力 root の指定、export clock、`exportTarget` | `outputDir`(channel directory と workspace / channel の label) |
+| `resolveFetchRange`(既存) | なし | opts、export clock | `messageFetchRange`([start, end)) |
+| `fetchMessages` | Messages | client、channel ID、`messageFetchRange`、opts(`--max-posts`、除外 emoji) | `fetchedMessages`(timeline、replies、replies の上限到達、`--max-posts` の打ち切り、除外件数) |
+| `resolveUsers` | Users | client、`fetchedMessages`、reuse cache | `resolvedUsers`(users、bots) |
+| `resolveCustomEmoji` | Emoji | client、reuse cache | custom emoji の map |
+| `saveWorkspaceIcon`、`newMessageViewBuilder`、`buildTimeline`、`buildPage`、`writePage`、`endAssetsPhase` | Assets | `exportTarget`、`fetchedMessages`、`resolvedUsers`、emoji resolver、`messageFetchRange`、opts、export clock | index.html と style.css と static asset、`exportCounts`(timeline、表示した threads と replies、除外件数) |
+| `writeCaches`(既存)、`output.RemoveCache` | なし | 上記の結果 | `.cache/` |
+| `reportDone` | Done | `exportTarget`、出力先、開始時刻、`exportCounts`、assets | 出力先の絶対 path |
+
+- `fetchMessages` は親の除外後の補充を含む取得を 1 工程にまとめる。thread 1 本の取得を `fetchThreadReplies`、除外された thread の timeline からの除去と保持済み返信の破棄を `dropExcludedThreads` に分けた。
+- bot の avatar は解決済みの bot ID の昇順で保存する。以前は `collectBotIDs` の昇順の ID を反復して解決済みのものだけを保存しており、同じ順になる。user の avatar は以前と同じく map の反復順である(「リスク・ブロッカー」)。
+- `writeCaches` の引数は #194(同型の位置引数の集約)の対象なので変えていない。`exportCounts` は #194 が cache 入力の型で再利用できる。
+- ファイルは工程ごとに分けた: `message_fetch.go`(Messages)、`users.go`(Users)、`page.go`(Assets)。Run、target、出力先、Emoji、Done は `export.go` に残した。
+- `maxThreadReplies` は `message_fetch.go` へ単独の `const` として移した。#211 の「`export.go` の 1 要素の `const` group」の項目を吸収した。#211 の他の項目(`containsLog`、`offsetString` と `formatUTCOffset`、取得範囲 mode の定数、`reuse.go` のコメント)は触っていない。
+- `doc/design/architecture.md` の export の行と、Run の工程の説明を揃えた(同文書の「構成変更を行う PR で該当箇所を同期する」)。
+
+### 最大関数行数と状態保持箇所(Issue の完了条件)
+
+- 最大関数行数(`internal/export` の production code。`func` の行から閉じ括弧の行まで)
+  - 変更前: `Run` 349 行が最大。次は `writeCaches` 73 行、`loadReuseCache` 63 行。
+  - 変更後: `writeCaches` 73 行が最大(#194 の対象で不変)。`Run` 68 行、`loadReuseCache` 63 行、`fetchMessages` 59 行。
+- 状態保持箇所
+  - `Run` の本体で宣言する局所変数(`err` と `_` を除き、go/ast で数えた): 55(全 scope で 79)→ 19(全 scope でも 19)。変更後の 19 は、どれも工程の結果を次の工程へ渡す値である。
+  - Messages 工程のループをまたいで更新する状態: 10 → 8。変更前は `messages`、`replies`、`repliesTruncated`、`replyTotal`、`historyLatest`、`truncated`、`threadFetches`、`threadFetchIndex` と filter の `excluded`、`excludedThread`。変更後は `timeline`、`replies`、`repliesTruncated`、`fetched`、`latest`、`truncated` と filter の 2 つ。
+  - 二重に持っていた状態を 3 組解消した: thread の除外(`threadFetches` の値と `excludedThread`)、取得数(`threadFetchIndex` と `threadFetches` の大きさ)、返信数(`replyTotal` と `replies`)。
+
+### その他
+
+- characterization test のうち `TestRunIntegrationThreadsAcrossHistoryPages` は、Messages 行の threads / replies が、親が `--max-posts` の外に落ちた thread(broadcast から取得)も数え、Done と metadata.json と食い違う現状を固定する。#206 が追跡している不整合であり、#206 の修正で期待値を更新する旨を test のコメントに書いた。
+- 出力生成系 3 skill は呼ばなかった。`internal/export/**` を変えたが、固定 sample(ja / en)が committed と基準の生成結果の両方に無差分で、表示変換は変わっていない(`update-sample-exports`、`update-readme-preview-screenshots` の「いつ使うか」に当たらない)。phase 名、summary、完了表示、警告も変わらず、gensample の log が基準と一致した(`update-readme-demo-gif` の「いつ使うか」に当たらない)。
+- decision log は作らない。0056 の計画の範囲の整理で、方針の変更は無い。
 
 ## 次にやること
 
-- characterization test を足し、基準のコードで通ることを確かめる。
+- `progress.md` の RF-03 の行を更新し、draft PR を作成して note を採番する。
+- 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push し、CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 検証
 
+2026-09-26、cloud session(project の thread)で、Docker Compose(`docker compose run --rm dev ...`)で実行した。
+
+- `gofmt -l .`: 出力なし。
+- `go vet ./...`: 成功。
+- `go test ./internal/export ./internal/slack`: ok。
+- `go test ./...`: 全 package ok。
+- cross compile(`GOOS` / `GOARCH` = darwin / linux × amd64 / arm64 の `go build ./cmd/slapex`): 成功。
+- 固定 sample の互換検証: committed の footer(`2026-07-04 16:32 (UTC+09:00) / 2026-07-04T07:32:41Z`)に合わせ、`TZ=Asia/Tokyo` と `go run ./tools/gensample -time 2026-07-04T16:32:41+09:00 -out <dir>` で生成した(`<dir>` は gitignore 済みの repo 直下の `slapex-*` directory)。基準 commit `1d44567`、thread 集合化の commit `5b93bd3`、工程抽出の commit `7a5e29f` の 3 つで、`diff -r doc/samples/{ja,en} <dir>/{ja,en}` と基準の生成結果との `diff -r` がすべて無差分だった(ja / en とも 18 files)。基準に既存の差分は無い。
+- gensample の stderr の log(phase 行、進捗、summary): 一時 directory の path と経過時間を正規化して、基準と `5b93bd3`、`7a5e29f` が一致した。
+- `git diff --check`: 各 commit で問題なし。
+- 実 token は使わず、test は架空の fixture と fake Slack server で確かめた。
+
+既存の test(Issue の「既存の親除外・補充・progress・time range・reuse テストを明示する」):
+
+- 親除外: `TestRunIntegrationExcludeEmojiParentAndThread`(body / reaction)、`TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts`
+- 補充: `TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts`、`TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts`、`TestRunIntegrationEmojiFiltersORReplyCustomAndMaxPosts`、`internal/slack` の `TestHistoryAppliesPredicateBeforeMaxPosts`、`TestHistoryDoesNotTruncateWhenOnlyExcludedMessagesRemain`
+- 除外件数の一意性: `TestMessageFilterCountsExcludedMessageOnce`、`TestMessageFilterMatchesNormalizedReactionName`、`TestRunIntegrationExcludeBodyEmojiHidesEmptyThread`
+- progress と phase: `TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded`、`TestRunIntegrationPhaseOrder`(#189 の phase 完了順)、`TestRunIntegrationDoneElapsedIgnoresPinnedClock`
+- time range と境界 [start, end): `TestRunIntegrationDateRange`、`TestRunIntegrationDateTimeRange`、`fetch_range_test.go` の 8 件、`internal/slack` の `TestHistoryRangeBoundariesAndMaxPosts`
+- reuse: `integration_reuse_test.go` の `TestRunIntegrationReuseCache*` 9 件、`TestResolveReuseCacheDir`
+- broadcast と thread、1,000 replies 上限、bot fallback: `TestRunIntegrationThreadBroadcast`、`TestRunIntegrationRepliesTruncated`、`internal/slack` の `TestRepliesPagination`、`TestRunIntegrationBotInfoFailureFallsBack`、`TestRunIntegrationBotAuthorResolution`
+- API 呼び出し数と HTML / cache: `TestRunIntegrationHappyPath` と reuse の各 test
+
+追加した test(新しい境界で欠けていたもの):
+
+- `TestRunIntegrationThreadsAcrossHistoryPages`: 2 page にまたがる取得で、thread を 1 度だけ取得すること、進捗が page をまたいで数え続けること(`1/3`〜`3/3`、`4/4`)、親の除外で broadcast 2 件が外れて補充されること、除外件数が一意であること、Messages 行、Done の要約、metadata.json の件数。
+- `TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread`: 返信を保持した thread の親が後の page で除外された場合(reaction が途中で付いた場合)に、保持済みの返信と broadcast が外れ、除外件数と補充が合うこと。
+- `TestRunIntegrationThreadProgressCountsFetchedThreadsOnly`: 進捗の分母が取得した thread だけを数えること(commit 2 の挙動。基準のコードでは `1/2` になり失敗する)。
+- `TestMessageFilterIncludeThread`: `IncludeThread` の判定と計上。
+
 ## リスク・ブロッカー
+
+- 挙動の変化は、conversations.history が broadcast でない返信を返す非標準の応答での進捗の分母だけである(「thread 集合化」)。
+- follow-up 候補(起票はユーザーが判断する)
+  - timeline 上で親がすでに除外された thread でも、同じ page の broadcast から `conversations.replies` を呼ぶ。結果は使われず、呼び出しを省ける(`TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts` が replies 1 回として固定している)。broadcast の親 thread の取得経路を見直す #206 で合わせて扱える。
+  - user の avatar を map の反復順で保存するため、`assets_manifest.json` の avatar の entry の順と download の順が実行ごとに変わる。cache の JSON を比べる #194 の検証に影響し得る。
 
 ## セッションログ

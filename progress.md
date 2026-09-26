@@ -30,7 +30,7 @@ review cycle の skill(`drive-issue-to-reviewed-pr` と `review-pull-request`)�
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | todo | #188, #189, #190 | 工程の入出力を整理 | - |
+| RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | done(PR merge後) | #188, #189, #190 | merge後は対応なし | - |
 | RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | todo | #188 | 同型位置引数を集約 | - |
 | RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | todo | #188 | FU-18の後、streamingとの差を保って共通化 | - |
 | RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
@@ -54,7 +54,7 @@ RF-03 → FU-05 → FU-13 → FU-14 → FU-18 → FU-15 → FU-16 → RF-06 → 
 | FU-08 | [#209](https://github.com/kiyohara/slapex/issues/209) label 付き mention の users.info | todo | - | 収集条件を描画側に揃える | - |
 | FU-17 | [#251](https://github.com/kiyohara/slapex/issues/251) 表示しない投稿者の users.info | todo | - | FU-08 の後(同じ `collectUserIDs`) | - |
 | FU-09 | [#210](https://github.com/kiyohara/slapex/issues/210) 取得境界の秒未満切り捨て | todo | - | 精度統一か入力拒否かを決めて実装 | - |
-| FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 / RF-06 で吸収可。残った項目だけ実施 | - |
+| FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 で 1 要素の `const` group を吸収済み。RF-06 で吸収可。残った項目だけ実施 | - |
 | FU-12 | [#245](https://github.com/kiyohara/slapex/issues/245) URL 無しファイルの設計文書の記述 | todo | PR #243 | `slack-api-usage.md` の記述を実装に揃える | - |
 
 ## 進行中タスク: review cycle の skill 改善
