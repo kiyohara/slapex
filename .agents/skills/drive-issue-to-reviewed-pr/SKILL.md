@@ -62,7 +62,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - P2 から始める場合は、P1 の完了条件を確かめる。
   - note が採番前(`doc/guidelines/working-branch-notes-handling.md` の「note の探し方」で `draft_` の note しか見つからない)なら、`number-working-branch-note` を実行する。
   - 関連 Issue が `progress.md` の索引にあり、対応行の PR 欄が反映されていなければ、`run-issue-task` の手順どおりに更新して push する。
-  - note の P1 の記録(「working branch note」の表)に、`run-issue-task` の報告から引き上げた項目が無ければ、追記して push する。この確認の中で `number-working-branch-note` を実行した場合は、`run-issue-task` の報告に代えて、その採番の報告から `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従って引き上げた項目を追記する。採番の報告が手元に無い場合(別の session で採番した場合など)は追記せず、終了時の報告でその旨と採番の commit を示す。
+  - note の P1 の記録(「working branch note」の表)に、`run-issue-task` の報告から引き上げた項目が無ければ、追記して push する。この確認の中で `number-working-branch-note` を実行した場合は、`run-issue-task` の報告に代えて、その採番の報告から `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」に従って引き上げた項目を追記する。採番の報告が手元に無い場合(別の session で採番した場合など)は、報告を後から復元できないため、引き上げた項目に代えて、報告が手元に無い旨と採番の commit を追記して push する。この記録で P1 の完了条件の同じ項目を満たし、終了時の報告もこの記録から書く。
 - P5 から始める場合は、P4 の完了条件を確かめる。
   - その周の P4 の記録(「working branch note」の表)が note に無ければ、追記して push する。
   - 返信は再開位置の判定で確かめている。修正の push は、`address-comments` が対応済みの返信の前に確かめている。
@@ -93,7 +93,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 
 | フェーズ | 担当 | 委譲先 | 完了条件 |
 | --- | --- | --- | --- |
-| P1 実装と PR 作成 | orchestrator | `run-issue-task`(依存確認から note 採番まで) | PR が open で note を採番済み。索引にある Issue なら `progress.md` の PR 欄を反映して push 済み。`run-issue-task` の報告から引き上げた項目を note に残して push 済み。最新 head の check runs がすべて完了し success |
+| P1 実装と PR 作成 | orchestrator | `run-issue-task`(依存確認から note 採番まで) | PR が open で note を採番済み。索引にある Issue なら `progress.md` の PR 欄を反映して push 済み。`run-issue-task` の報告から引き上げた項目(PR の入口で採番の報告が手元に無い場合は、その旨と採番の commit)を note に残して push 済み。最新 head の check runs がすべて完了し success |
 | P2 review | subagent | `review-pull-request` の `review` | 完了要約 1 本が投稿され、subagent が「返させる出力」を返した |
 | P3 判断 | orchestrator | なし | 指摘件数が 0 なら P6、1 件以上なら P4 へ進む |
 | P4 対応 | orchestrator | `review-pull-request` の `address-comments` | 各指摘へ処置を返信し、修正と note を push し、最新 head の check runs が完了した |
@@ -234,7 +234,7 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 
 | フェーズ | 残すこと |
 | --- | --- |
-| P1 | PR 番号、検証結果、出力生成系 skill の適用判断、`run-issue-task` の報告から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」の確認経路の項目と残された事項。0 件、呼ばなかった、途中で停止した場合はその旨) |
+| P1 | PR 番号、検証結果、出力生成系 skill の適用判断、`run-issue-task` の報告から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」の確認経路の項目と残された事項。0 件、呼ばなかった、途中で停止した場合はその旨。PR の入口で採番の報告が手元に無い場合は、その旨と採番の commit) |
 | P2 / P3 | review cycle ID、`Reviewed head`、指摘件数(inline と top-level の内訳と、prefix ごとの内訳) |
 | P4 | 処置の内訳、スコープ外とした指摘の follow-up 候補、修正 commit、出力生成系 skill の再判断 |
 | P5 | 再確認の結果(区分ごとの確認済み件数と未対応件数) |
