@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-ba0fo6`(cloud session が指定。Issue の推奨ブランチ名は `refactor-export-pipeline`)
-- PR: 未作成
+- PR: #262
 - 最終更新: 2026-09-26
 
 ## 目的
