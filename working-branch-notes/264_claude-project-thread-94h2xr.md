@@ -15,7 +15,8 @@ Issue #254(FU-18)。`TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれ�
 - 依存は無い。main `3ff83c0` から作業した。
 - 作業内容 1(診断)を `cb5c145`、作業内容 3(修正)を `1d3e434` で commit した。原因は特定できた(「決定事項」の「原因」)。
 - 作業内容 2 の再現の試行(「試した条件と結果」)と、Issue の「検証」(「検証」)を実行した。修正後は、修正前に失敗が出た条件を含め、どの条件でも失敗しなかった。
-- PR #264 作成済み(draft)。review(P2)の指摘 1 件に対応した(P4)。
+- PR #264 作成済み(draft)。note を採番し(`e3466b5`)、`progress.md` の FU-18 の PR 欄も反映した。
+- review cycle `claude-code-8b543f9-20260926122135` の指摘 1 件(`[imo]`)に対応した(P4、`82d4300` と PR description の編集)。再確認(P5)で修正確認済みになり、未対応は 0 件である。Claude の review cycle は完了し、残るのは人間の手番(「次にやること」)である。
 
 ## 決定事項
 
@@ -107,7 +108,12 @@ client を直さない理由:
 - draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-18 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
-- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
+- 指摘 1 件に対応し、処置を返信する(P4)。(完了)
+- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。(完了)
+- (人間)follow-up 候補(`internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess`)を起票するかを決める(「リスク・ブロッカー」)。
+- (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
+- (人間)resolve 可とした review thread 1 件(`[imo]`、note の follow-up 候補の直し方)を確かめて resolve する。
+- (人間)PR を merge する。
 
 ## 検証
 
@@ -134,3 +140,5 @@ client を直さない理由:
 - 2026-09-26(P1): draft PR #264 を作成し、note を採番した(`e3466b5`)。`progress.md` の FU-18 の PR 欄に #264 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「その他」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #264`(PR 欄の記入)、`- PR 未作成。` → `- PR #264 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-project-thread-94h2xr.md` → `264_claude-project-thread-94h2xr.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
 - 2026-09-26: P2 / P3。review cycle `claude-code-8b543f9-20260926122135`、`Reviewed head` `8b543f929054b7fbdeb7d46456417602fbb58b04`。指摘は 1 件(inline 1 / top-level 0)で、prefix の内訳は `[imo]` 1、`[must]`、`[ask]`、`[nits]`、`[fyi]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。subagent は、httptrace の `PutIdleConn` hook から別の `httptest.Server` を閉じる使い捨て test で競合を決定的に起こし、修正前の client では `AuthTest` / `Download` とも 50 回中 50 回が CI と同じ形で失敗し、修正後の `newTestClient` では 50 回中 0 回であることを確かめた。CI の Go 1.26.4 と dev container の Go 1.26.8 で `net/http/transport.go` と `net/http/httptest/server.go` が同一で、「原因」の行番号がどちらにも合うことも確かめた。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。subagent が挙げた commit の trailer の model の表示名は、harness の attribution の指示と `doc/guidelines/pull-request-guidelines.md`(trailer を認める)に従ったもので、変えない。
 - 2026-09-26: P4。処置は 1 件で「採用し修正した」。`[imo]`(follow-up 候補の直し方を、slack package の exported な option を要する形に限っていた)は、Go の source(`persistConn.readLoop` は `resp.Close` が真だと `alive` を偽にし、`tryPutIdleConn` を呼ばない)と、subagent の注入を scratch の copy で再実行した結果(export の fake server のままでは 5 回中 5 回失敗し、429 に `Connection: close` を付けると 5 回中 5 回成功)で確かめたうえで採用した。この note の「影響の範囲」と「リスク・ブロッカー」を、2 通りの直し方(fake server の transport を渡す形と、429 に `Connection: close` を付ける形)を挙げて方針は起票するときに決める書き方に直し、後者は本 PR で採らなかった案と同じく接続の再利用の経路を test から外すことを添えた(`82d4300`)。PR description の「補足」の follow-up 候補も同じ書き方に直した(push を伴わない修正)。スコープ外とした指摘は無く、follow-up 候補は既存の 1 件(export の test)のままである。出力生成系 3 skill は、変更が note と PR description だけのため、引き続き適用しない。コードは変えていないため Issue の「検証」は再実行せず、`git diff --check` が問題ないことを確かめた。
+- 2026-09-26: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `a97abd1ca51a31df4f89462411360c095770499d`)。修正確認済み 1 件(inline 1 / top-level 0)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可は inline の 1 thread。subagent は、P4 の再実行に使った scratch の copy 2 つの差分が `writeFault` の 429 に足した `Connection: close` の 1 行だけであることを確かめ、同じ注入を `-count=5` で再実行して、元の fake server は 5 回中 5 回失敗し、`Connection: close` を付けた方は 5 回中 5 回通ることを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-26: P6。終了時の状態: PR #264 は draft で、P5 が確かめた head `a97abd1` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。残るのは人間の手番(「次にやること」)である。
