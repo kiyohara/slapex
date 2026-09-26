@@ -654,6 +654,155 @@ func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T)
 	mustNotContain(t, body, `<div class="thread">`)
 }
 
+// TestRunIntegrationBroadcastParentOffTimeline is a characterization test for a
+// thread_broadcast on the timeline whose parent never reaches it (Issue #206):
+// the parent is older than the fetch range, or falls beyond --max-posts with
+// kept messages between it and the cut, so conversations.history never judges
+// it. Without a filter the broadcast is a plain timeline message and its thread
+// is not fetched. With a filter the thread is fetched so its parent can be
+// judged: a matching parent takes the broadcast with it and the next message
+// refills the timeline, and a kept parent leaves the broadcast alone, with the
+// thread's replies neither rendered nor counted by the Done summary and
+// metadata.json. The rest pins current behaviour rather than endorsing it: the
+// Messages line counts the fetched thread and its replies, their author is
+// resolved through users.info, and a matching parent, like a reply the filter
+// excludes in that thread, is counted as excluded although neither was ever
+// shown or a timeline candidate. Issue #206 tracks the mismatch and will change
+// these expectations.
+func TestRunIntegrationBroadcastParentOffTimeline(t *testing.T) {
+	t.Parallel()
+
+	for _, placement := range []struct {
+		name     string
+		parentTS string
+		replyTS  [2]string // the kept reply and the reply the filter excludes
+	}{
+		// Older than the one-day window the run fetches.
+		{name: "parent before the range", parentTS: "1699800000.000000", replyTS: [2]string{"1699800000.100000", "1699800000.200000"}},
+		// In the window, but two kept messages lie between the --max-posts cut
+		// and the parent, so neither the first page nor the refill after an
+		// excluded broadcast reaches it.
+		{name: "parent beyond max posts", parentTS: "1700000001.000000", replyTS: [2]string{"1700000001.100000", "1700000001.200000"}},
+	} {
+		t.Run(placement.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, tc := range []struct {
+				name         string
+				parentText   string
+				bodyNames    []string // --exclude-body-emoji
+				history      int      // conversations.history calls
+				replies      int      // conversations.replies calls
+				usersInfo    int      // users.info calls
+				messagesMeta string   // the Messages line after the fetch range label
+				done         []string // Done summary lines
+				excluded     int      // metadata.json excluded_messages
+				shown        []string
+				notShown     []string
+			}{
+				{
+					name:         "no filter",
+					parentText:   "root of the broadcast thread",
+					history:      1,
+					replies:      0,
+					usersInfo:    2,
+					messagesMeta: " (threads 0, replies 0, truncated by --max-posts 3)",
+					done:         []string{"  messages: 3 (threads: 0, replies: 0)"},
+					shown:        []string{"newest message", "broadcast on the timeline", "message below the broadcast"},
+					notShown:     []string{"message that refills the broadcast"},
+				},
+				{
+					name:         "filter keeps the parent",
+					parentText:   "root of the broadcast thread",
+					bodyNames:    []string{"shushing_face"},
+					history:      1,
+					replies:      1,
+					usersInfo:    3,
+					messagesMeta: " (threads 1, replies 2, excluded by body emoji: 1, truncated by --max-posts 3)",
+					done:         []string{"  messages: 3 (threads: 0, replies: 0)", "    excluded by body emoji: 1"},
+					excluded:     1,
+					shown:        []string{"newest message", "broadcast on the timeline", "message below the broadcast"},
+					notShown:     []string{"message that refills the broadcast"},
+				},
+				{
+					name:         "filter excludes the parent",
+					parentText:   "root of the broadcast thread :shushing_face:",
+					bodyNames:    []string{"shushing_face"},
+					history:      2,
+					replies:      1,
+					usersInfo:    2,
+					messagesMeta: " (threads 0, replies 0, excluded by body emoji: 2, truncated by --max-posts 3)",
+					done:         []string{"  messages: 3 (threads: 0, replies: 0)", "    excluded by body emoji: 2"},
+					excluded:     2,
+					shown:        []string{"newest message", "message below the broadcast", "message that refills the broadcast"},
+					notShown:     []string{"broadcast on the timeline"},
+				},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+
+					sc := offTimelineParentScenario(placement.parentTS, placement.replyTS, tc.parentText)
+					opts := integrationOptions(t, 3)
+					opts.Days = 1
+					opts.ExcludeBodyEmoji = tc.bodyNames
+
+					got := runExportScenario(t, sc, opts)
+
+					assertEndpointCounts(t, got.Server, map[string]int{
+						"/api/conversations.history": tc.history,
+						"/api/conversations.replies": tc.replies,
+						"/api/users.info":            tc.usersInfo,
+					})
+					assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 3 fetched ", tc.messagesMeta)
+					assertDoneSummary(t, got.Logs, tc.done...)
+					assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, tc.excluded, tc.bodyNames, nil)
+
+					body := readIndexHTML(t, got.OutputDir)
+					for _, text := range tc.shown {
+						if n := strings.Count(body, text); n != 1 {
+							t.Fatalf("index.html has %d of %q, want 1", n, text)
+						}
+					}
+					for _, text := range slices.Concat(tc.notShown, []string{"root of the broadcast thread", "reply only in the thread", "reply the filter excludes", "message beyond the refill"}) {
+						mustNotContain(t, body, text)
+					}
+					mustNotContain(t, body, `<div class="thread">`)
+				})
+			}
+		})
+	}
+}
+
+// offTimelineParentScenario is the fixture of
+// TestRunIntegrationBroadcastParentOffTimeline: five timeline messages whose
+// second is a broadcast of the thread rooted at parentTS, the parent itself
+// with parentText, and the thread's replies at replyTS: one by a user who
+// appears nowhere else, and one the body emoji filter excludes.
+func offTimelineParentScenario(parentTS string, replyTS [2]string, parentText string) exportScenario {
+	parent := slack.Message{Type: "message", TS: parentTS, ThreadTS: parentTS, User: "U01", Text: parentText, ReplyCount: 2}
+	broadcast := slack.Message{Type: "message", Subtype: "thread_broadcast", TS: "1700000005.000000", ThreadTS: parentTS, User: "U02", Text: "broadcast on the timeline"}
+
+	sc := baseScenario()
+	sc.Users["U03"] = testUser("U03", "carol", "Carol Example", "Carol", "")
+	// Newest first, as conversations.history returns them. The parent is last
+	// whether it is in the window or not.
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1700000006.000000", User: "U01", Text: "newest message"},
+		broadcast,
+		{Type: "message", TS: "1700000004.000000", User: "U01", Text: "message below the broadcast"},
+		{Type: "message", TS: "1700000003.000000", User: "U02", Text: "message that refills the broadcast"},
+		{Type: "message", TS: "1700000002.000000", User: "U01", Text: "message beyond the refill"},
+		parent,
+	}
+	sc.Replies[parentTS] = []slack.Message{
+		parent,
+		{Type: "message", TS: replyTS[0], ThreadTS: parentTS, User: "U03", Text: "reply only in the thread"},
+		{Type: "message", TS: replyTS[1], ThreadTS: parentTS, User: "U02", Text: "reply the filter excludes :shushing_face:"},
+		broadcast,
+	}
+	return sc
+}
+
 func TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts(t *testing.T) {
 	t.Parallel()
 
