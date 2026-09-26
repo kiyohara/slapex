@@ -199,6 +199,71 @@ func TestAssetsStatusTellsSizeSkipFromFailure(t *testing.T) {
 	}
 }
 
+// TestAssetsSkipTooLargeRecordsEachURLOnce covers a file the size limit keeps
+// out that is shown more than once: a thread_broadcast rendered in the
+// timeline and in its thread, or one file shared in several posts. The
+// manifest records assets per source URL (doc/design/cache.md), so, like a
+// repeated Save, a repeated SkipTooLarge records nothing new and Counts counts
+// the file once, whichever of the two met the URL first (Issue #249).
+func TestAssetsSkipTooLargeRecordsEachURLOnce(t *testing.T) {
+	t.Parallel()
+
+	dl := &fakeDownloader{
+		content: map[string]fakeDownload{
+			// Both are served, so a Save that downloaded either would save it.
+			"https://example.com/large": {body: "large", contentType: "application/zip"},
+			"https://example.com/saved": {body: "saved", contentType: "application/pdf"},
+		},
+	}
+	assets := NewAssets(context.Background(), dl, t.TempDir(), 10)
+
+	for range 3 {
+		assets.SkipTooLarge(KindAttachment, "https://example.com/large", AssetMeta{FileID: "F001", OriginalName: "large.zip", SizeBytes: 99})
+	}
+	// Shown again where Slack gave no size or a smaller one, the file reaches
+	// Save instead, which neither downloads nor records it again.
+	if rel, ok := assets.Save(KindAttachment, "https://example.com/large", AssetMeta{FileID: "F001"}); ok || rel != "" {
+		t.Fatalf("Save after SkipTooLarge returned rel=%q ok=%v, want empty false", rel, ok)
+	}
+	// A URL Save recorded first keeps that entry: SkipTooLarge neither adds
+	// another nor changes the status Status reports for it.
+	savedRel, ok := assets.Save(KindAttachment, "https://example.com/saved", AssetMeta{FileID: "F002"})
+	if !ok {
+		t.Fatalf("Save(saved) ok = false, want true")
+	}
+	assets.SkipTooLarge(KindAttachment, "https://example.com/saved", AssetMeta{FileID: "F002", SizeBytes: 99})
+
+	entries := assets.Entries()
+	if len(entries) != 2 {
+		t.Fatalf("entries = %+v, want one per source URL", entries)
+	}
+	large := findEntry(t, entries, "https://example.com/large")
+	if large.Kind != KindAttachment || large.Status != StatusSkippedSize || large.FileID != "F001" || large.SizeBytes != 99 {
+		t.Fatalf("large entry = %+v, want the skipped_size attachment F001 of 99 bytes", large)
+	}
+	assertEntry(t, entries, "https://example.com/saved", "saved", savedRel)
+	for srcURL, want := range map[string]string{
+		"https://example.com/large": StatusSkippedSize,
+		"https://example.com/saved": StatusSaved,
+	} {
+		if got := assets.Status(srcURL); got != want {
+			t.Fatalf("Status(%s) = %q, want %q", srcURL, got, want)
+		}
+	}
+	if saved, skipped, failed := assets.Counts(); saved != 1 || skipped != 1 || failed != 0 {
+		t.Fatalf("Counts() = saved:%d skipped:%d failed:%d, want saved:1 skipped:1 failed:0", saved, skipped, failed)
+	}
+
+	// An empty URL names no file, so it is never taken as already recorded:
+	// two files without one stay two entries. Whether such files are recorded
+	// at all is Issue #247's.
+	assets.SkipTooLarge(KindUploadOriginal, "", AssetMeta{FileID: "F003", SizeBytes: 99})
+	assets.SkipTooLarge(KindUploadOriginal, "", AssetMeta{FileID: "F004", SizeBytes: 99})
+	if got := len(assets.Entries()); got != 4 {
+		t.Fatalf("entries after two files without a URL = %d, want 4", got)
+	}
+}
+
 func TestAssetsSaveContentHashDeduplicatesByContent(t *testing.T) {
 	t.Parallel()
 

@@ -168,7 +168,19 @@ func (a *Assets) limitFor(kind string) int64 {
 }
 
 // SkipTooLarge records a file that was not downloaded due to the size limit.
+// Like Save, it records each source URL once, so a file shown again — a
+// thread_broadcast rendered on the timeline and in its thread, or one file in
+// several posts — is counted once (Issue #249). A later Save of the URL, where
+// Slack gave no size or a smaller one, reports it unavailable rather than
+// downloading and recording it again. An empty srcURL names no file and is
+// never taken as already recorded.
 func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
+	if srcURL != "" {
+		if _, seen := a.status[srcURL]; seen {
+			return
+		}
+		a.known[srcURL] = ""
+	}
 	a.status[srcURL] = StatusSkippedSize
 	a.entries = append(a.entries, ManifestEntry{
 		Kind: kind, SourceURL: srcURL, Status: StatusSkippedSize,
@@ -180,13 +192,14 @@ func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
 // Status returns the manifest status last recorded for srcURL (StatusSaved,
 // StatusSkippedSize or StatusFailed), or "" when nothing was recorded for it.
 // Save reports only ok, so a caller that got ok == false asks Status whether
-// the download stopped at the size limit or really failed (Issue #203). It is
-// looked up by URL rather than read off the last manifest entry, because a
-// repeated Save of a known URL records no new entry.
+// the size limit kept the asset out or the download really failed (Issue
+// #203). It is looked up by URL rather than read off the last manifest entry,
+// because a repeated Save of a known URL records no new entry.
 func (a *Assets) Status(srcURL string) string { return a.status[srcURL] }
 
-// Save downloads srcURL (unless already saved) and returns the path relative
-// to the output directory. ok is false when the asset is unavailable.
+// Save downloads srcURL (unless an earlier Save or SkipTooLarge already
+// handled it) and returns the path relative to the output directory. ok is
+// false when the asset is unavailable.
 func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok bool) {
 	if srcURL == "" {
 		return "", false

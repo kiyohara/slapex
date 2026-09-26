@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -807,6 +808,121 @@ func TestRunIntegrationOversizeImageWithoutThumbnail(t *testing.T) {
 	}
 	if !logsContain(got.Logs, "2 skipped by size limit, 1 failed") {
 		t.Fatalf("summary does not match the manifest: %v", got.Logs)
+	}
+}
+
+// --- case 10f: oversize files shown twice are recorded once ------------------
+
+// A thread_broadcast renders on the timeline and again in its thread, so the
+// pre-check meets each of its files twice. Both places show the size-limit
+// replacement, while the manifest keeps one entry per source URL (cache.md)
+// and the Assets line, the Done summary and metadata.json count each file
+// once, as they already did for the thumbnail Save downloaded (Issue #249).
+func TestRunIntegrationOversizeFilesInBroadcastRecordedOnce(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700001070.000000"
+	parent := slack.Message{Type: "message", TS: parentTS, ThreadTS: parentTS, User: "U01", Text: "Parent post", ReplyCount: 1}
+	broadcast := slack.Message{
+		Type:     "message",
+		Subtype:  "thread_broadcast",
+		TS:       "1700001071.000000",
+		ThreadTS: parentTS,
+		User:     "U02",
+		Text:     "Broadcast with big files",
+		Files: []slack.File{
+			{
+				ID:                 "F-BIGZIP",
+				Name:               "big-archive.zip",
+				Mimetype:           "application/zip",
+				Size:               5000,
+				URLPrivateDownload: "{{base}}/files/big-archive.zip",
+			},
+			{
+				ID:                 "F-BIGIMG",
+				Name:               "huge-photo.png",
+				Mimetype:           "image/png",
+				Size:               5000,
+				URLPrivateDownload: "{{base}}/files/huge-original.png",
+				Thumb360:           "{{base}}/files/huge-thumb.png",
+			},
+		},
+	}
+	sc := baseScenario()
+	sc.Messages = []slack.Message{parent, broadcast}
+	sc.Replies = map[string][]slack.Message{parentTS: {parent, broadcast}}
+	sc.Assets["/files/huge-thumb.png"] = pngAsset("huge-thumb")
+	opts := renderingOptions(t)
+	opts.MaxAttachBytes = 100
+
+	got := runExportScenario(t, sc, opts)
+	body := readIndexHTML(t, got.OutputDir)
+
+	// Each replacement shows once in the thread and once on the timeline,
+	// whose copy of the broadcast lands after the thread block (case 7).
+	threadStart := strings.Index(body, `<details class="thread-group">`)
+	if threadStart < 0 {
+		t.Fatalf("index.html has no thread group")
+	}
+	threadEnd := strings.Index(body[threadStart:], `</details>`)
+	if threadEnd < 0 {
+		t.Fatalf("index.html does not close the thread group")
+	}
+	threadEnd += threadStart
+	thread, timeline := body[threadStart:threadEnd], body[:threadStart]+body[threadEnd:]
+	for _, note := range []string{
+		`<span class="file-link unavailable">📄 big-archive.zip</span>` +
+			`<div class="asset-note">サイズオーバーのため保存されませんでした。(file ID: F-BIGZIP, 5000B, 上限 100B)</div>`,
+		`<div class="asset-note">original はサイズ上限超過のため保存されませんでした。(huge-photo.png: 5000B, 上限 100B)</div>`,
+	} {
+		if n := strings.Count(thread, note); n != 1 {
+			t.Fatalf("replacement %q shows %d times in the thread, want 1", note, n)
+		}
+		if n := strings.Count(timeline, note); n != 1 {
+			t.Fatalf("replacement %q shows %d times on the timeline, want 1", note, n)
+		}
+	}
+	// The pre-check kept both files out: neither was requested.
+	for _, path := range []string{"/files/big-archive.zip", "/files/huge-original.png"} {
+		if n := got.Server.Count(path); n != 0 {
+			t.Fatalf("%s requested %d times, want 0", path, n)
+		}
+	}
+
+	// One entry per source URL: the two size skips and the thumbnail.
+	entries := readManifestEntries(t, got.OutputDir)
+	if len(entries) != 3 {
+		t.Fatalf("manifest entries = %+v, want 3 (two size skips and the thumbnail)", entries)
+	}
+	for _, want := range []struct{ kind, fileID, status string }{
+		{"attachment", "F-BIGZIP", "skipped_size"},
+		{"upload_original", "F-BIGIMG", "skipped_size"},
+		{"upload_thumb", "F-BIGIMG", "saved"},
+	} {
+		if _, ok := findManifest(entries, func(e manifestEntryFull) bool {
+			return e.Kind == want.kind && e.FileID == want.fileID && e.Status == want.status
+		}); !ok {
+			t.Fatalf("manifest has no %s entry for %s with status %s: %+v", want.kind, want.fileID, want.status, entries)
+		}
+	}
+
+	// The Assets line and the Done summary print the same counts, so each is
+	// matched as a whole line.
+	const counts = "1 saved, 2 skipped by size limit, 0 failed"
+	if !slices.Contains(got.Logs, "WARN: assets: "+counts) {
+		t.Fatalf("assets phase line does not count each file once\nlogs:\n%s", strings.Join(got.Logs, "\n"))
+	}
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
+	var metadata struct {
+		Counts struct {
+			AssetsSaved   int `json:"assets_saved"`
+			AssetsSkipped int `json:"assets_skipped"`
+			AssetsFailed  int `json:"assets_failed"`
+		} `json:"counts"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/metadata.json"), &metadata)
+	if c := metadata.Counts; c.AssetsSaved != 1 || c.AssetsSkipped != 2 || c.AssetsFailed != 0 {
+		t.Fatalf("metadata.json asset counts = %+v, want 1 saved / 2 skipped / 0 failed", c)
 	}
 }
 
