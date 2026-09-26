@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-i12r53`(cloud session が指定。Issue の推奨ブランチ名は `fix-broadcast-thread-counts`)
-- PR: 未作成
+- PR: #263
 - 最終更新: 2026-09-26
 
 ## 目的
@@ -14,7 +14,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 
 - 依存(#191)の PR #262 が merge 済み(main `94ce913`)であることを確かめた。
 - 作業内容を 3 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
-- PR 未作成。
+- PR #263 作成済み。
 
 ## 決定事項
 
@@ -72,8 +72,8 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 ## 次にやること
 
 - `progress.md` の FU-05 の行の状態を更新する。(完了)
-- draft PR を作成する。
-- PR 作成後に note を採番する。
+- draft PR を作成する。(完了)
+- PR 作成後に note を採番する。(完了)
 - `progress.md` の FU-05 の行の PR 欄に PR 番号を入れ、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。
 
