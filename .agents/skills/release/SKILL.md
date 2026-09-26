@@ -104,12 +104,13 @@ grep -n "$(git describe --tags --abbrev=0)" README.md
 ### 5. PR 作成
 
 - 情報統制チェック(`doc/guidelines/working-branch-notes-security.md`)を通したうえで、`doc/guidelines/pull-request-guidelines.md` に従い PR を作成する(MCP 優先)。
-- `number-working-branch-note` skill で draft note を採番する。
+- `number-working-branch-note` skill で draft note を採番する。採番 skill の報告は `.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」と同じ扱いで、Step 6 で止まる時点の報告へ含める。
 - `git commit` / `git push` は `doc/guidelines/git-operation-guidelines.md` に従い、push はユーザー確認後に行う。
 
 ### 6. merge 待ち(ユーザー)
 
 - PR の merge は **ユーザーが行う**。ここで一旦停止し、merge を待つ。merge 前に tag を打たない。
+- 止まる時点で、PR の URL と、Step 5 の採番から引き上げた項目をユーザーへ報告する。「終了時の報告」まで持ち越さない。merge を待つ間に session が切れると、採番の報告が失われ得るためである。
 
 ### 7. tag 作成・push(merge 後 / ユーザー承認)
 
@@ -165,6 +166,7 @@ docker compose run --rm dev sh -c 'sha256sum --ignore-missing -c slapex_checksum
 
 - 決定したバージョンと、その根拠(直前 tag からの差分の要点)。
 - 作成した PR / tag / commit(分かれば SHA)。
+- リリース PR の採番から引き上げた項目(`.agents/skills/run-issue-task/SKILL.md` の「被委譲 skill の報告の引き上げ」)。Step 6 で止まる時点に報告済みであれば、その旨だけでよい。
 - 検証結果(Release assets / checksum / linux `--version` / Homebrew cask)。
 - ユーザー分担として残っている確認項目(macOS `--version`、`brew upgrade`)。
 - merge / tag push の状況(ユーザー承認の結果)。
