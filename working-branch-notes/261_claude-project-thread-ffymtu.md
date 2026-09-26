@@ -12,8 +12,8 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 
 ## 現在の状況
 
-- 作業内容 1〜9 を実施し、Issue の「検証」を実行した(自己適用を除く)。作業内容 9 は、#227 が完了済みのため、orchestrator への後付けに置き換えた。
-- PR #261 作成済み。
+- 作業内容 1〜9 を実施し、Issue の「検証」を実行した。作業内容 9 は、#227 が完了済みのため、orchestrator への後付けに置き換えた。
+- PR #261 作成済み。note を採番し、採番の報告から引き上げた項目を「セッションログ」の P1 に残した(P1)。
 
 ## 決定事項
 
@@ -59,7 +59,7 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。(完了)
-- 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push し、検証の自己適用の結果を記録する。
+- 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push し、検証の自己適用の結果を記録する。(完了)
 - P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。
 
 ## 検証
@@ -81,7 +81,7 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 
 - 出力生成系 3 skill の経路: `run-issue-task` の step 5 で使った場合、各 skill の「生成後の確認」が未確認事項を PR description / note に記録し、同節の表の行が 2 に名指しし、step 10 で報告する。`drive-issue-to-reviewed-pr` の P4 で使った場合は、「終了時の報告」の `:291` で含める。
 - `review-pull-request` の `gh` への fallback の明示: 「返させる出力」(`:174`)で subagent から受け、「終了時の報告」(`:292`)で報告する。
-- 自己適用: 採番の後に記録する。
+- 自己適用: 本 PR の P1 で、step 9 の採番の報告(書き換えた行 3 件と `PR:` 欄の記入、触らずに残した行 0 件)が、step 10 の報告として「セッションログ」の P1 の記録に残った。書き換えた行は note の差分(`9597b69`)と PR description の現在の内容で確かめ、報告と一致する。`drive-issue-to-reviewed-pr` の「終了時の報告」は、この記録から含める。
 - 変更行の repo 相対 path(14 件)と markdown link(2 件)は、スクリプトで実在を確かめた。切れは無い。
 - 文体: 変更行にですます調の混在は無い(`です` / `ます` などを grep した)。開発者向けの常体である。
 - `git diff --check`: 問題なし。
@@ -92,8 +92,10 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 
 - 引き上げの規定が実際の実行で落ちずに機能するかは、規定の記述を辿った確認に留まる。本 PR の P1(自己適用)が最初の実行例になる。`release`、`maintain-progress`、`register-progress-issue` の経路は、次にそれぞれを実行するまで確かめられない。
 - description による発火は、frontmatter を変えていないが、新しい session で確かめるまでは未検証である。
+- follow-up 候補: `update-sample-exports` の、相対日時 / Export information だけの差分を commit しなかった判断は、同 skill の記録項目に独立して無く、「生成差分の要点」(3)に含まれる範囲でしか届かない。この判断を独立した記録項目にし、確認経路と位置づけるかは、出力生成系 skill の SKILL.md の変更になるため本 Issue のスコープ外とした。起票はユーザーの判断による。
 
 ## セッションログ
 
 - 2026-09-26: #257(PR #260)の merge 後、逐次処理の 5 件目に #230 を選んだ。依存の #228(PR #238)は merge 済み、#227(PR #233)も merge 済み。branch を main `05d2d65` から作り直した。
 - 2026-09-26: bizdate main `18fe604` まで追従を確かめ、作業内容 2〜9 を実施した。Issue の「検証」を実行した(自己適用を除く)。
+- 2026-09-26: P1。PR #261 を draft で作成し、note を採番した(`9597b69`)。`run-issue-task` から引き上げた項目は次のとおり。確認経路の項目(`number-working-branch-note` の書き換えた行)は 3 件で、note の状況を説明する stale 表現 1 件(「現在の状況」の「PR 未作成。」→「PR #261 作成済み。」)、note の完了タスク行 1 件(「次にやること」の「PR を draft で作成し、note を採番する。」に「(完了)」)、PR description のファイル名参照の置換 1 件(「概要」の note の path)。ほかに note の `PR:` 欄に `#261` を記入した。title は変えていない。残された事項(触らずに残した行)は 0 件で、停止も無い。出力生成系 3 skill は呼ばなかった(各 skill の「いつ使うか」に当たらない)。検証の結果は上記のとおり。
