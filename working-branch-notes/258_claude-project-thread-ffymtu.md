@@ -12,7 +12,7 @@ Issue #255(RV-03)。cloud session で `review-pull-request` を実行する suba
 
 ## 現在の状況
 
-- 作業内容 1・2 を実施し、Issue の「検証」のうち、SKILL.md を読んで確かめる項目と、path・節名・文体・`git diff --check` を実行した。
+- 作業内容 1・2 を実施し、Issue の「検証」のうち、SKILL.md を読んで確かめる項目と、path・節名・文体・`git diff --check` を実行した。PR #258 を draft で作成し、note を採番して、`progress.md` の RV-03 の PR 欄を反映した(P1)。
 - P2 / P5 の subagent が使った GitHub tool の記録は、P2 / P5 の後に行う。
 
 ## 決定事項
@@ -26,11 +26,11 @@ Issue #255(RV-03)。cloud session で `review-pull-request` を実行する suba
   - cloud session の判定は `doc/guidelines/cloud-session-guidelines.md`(`CLAUDE_CODE_REMOTE=true`)に委ねた。
 - decision log は作らない。#255 には作成・追記の指示が無い。未決事項 1 の採否と理由は、Issue、本 note、PR description に残る。同じ表の #253(PR #256)も作っていない。
 - 出力生成系 3 skill(`update-sample-exports`、`update-readme-preview-screenshots`、`update-readme-demo-gif`)は適用しない。変更は `.agents/skills/`、`progress.md`、本 note だけで、各 skill の「いつ使うか」に当たらない。
-- `progress.md` は RV-03 の行を done(PR merge後)にした。
+- `progress.md` は RV-03 の行を done(PR merge後)にし、PR 欄に #258 を記入した。
 
 ## 次にやること
 
-- PR を作成し、note を採番して、`progress.md` の RV-03 の PR 欄を反映する(P1)。
+- PR を作成し、note を採番して、`progress.md` の RV-03 の PR 欄を反映する(P1)。(完了)
 - P2 の subagent に review を委譲する。P2 / P5 の subagent に使った GitHub tool を報告させ、「検証」に記録する(Issue の「検証」の 2 つ目)。
 
 ## 検証
@@ -72,3 +72,4 @@ P2 / P5 の後に記録する。
 ## セッションログ
 
 - 2026-09-26: #253(PR #256)の merge を確かめ、次の Issue に #255 を選んだ。作業内容 1・2 を実施し、Issue の「検証」を実行した。
+- 2026-09-26: PR #258 を作成し、note を採番して、`progress.md` の PR 欄を反映した(P1)。検証は上記のとおりで、出力生成系 3 skill は不適用。
