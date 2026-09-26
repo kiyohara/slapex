@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-ffymtu`(cloud session が指定。Issue の推奨ブランチ名は `verify-non-push-fixes`)
-- PR: 未作成
+- PR: #260
 - 最終更新: 2026-09-26
 
 ## 目的
@@ -37,7 +37,7 @@ Issue #257。`review-pull-request` の `address-comments` と `verify-comments` 
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。
+- PR を draft で作成し、note を採番する。(完了)
 - P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。
 
 ## 検証
