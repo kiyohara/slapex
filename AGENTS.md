@@ -49,7 +49,6 @@ index として利用し、これ自体を唯一の正本として扱わない�
 - **Claude Code**: `.claude/rules/*.md` を `paths:` frontmatter に従ってロードする。
 - **Codex app**: `AGENTS.md` から `doc/guidelines/` の正本へ移動して読む。
 - **GitHub Copilot Review**: `.github/copilot-instructions.md` をレビュー時に読む。GitHub.com の code review は `AGENTS.md` も読むが、リンク先の正本まで辿る保証は無いため、効かせたい要点は Copilot 用ファイル内に直接書く。
-  - `.github/instructions/*.instructions.md` を追加した場合も、分量ではなくシグナルの濃さで要点を絞る。
 
 ## AI Agent 向けルール
 

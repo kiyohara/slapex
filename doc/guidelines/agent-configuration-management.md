@@ -64,7 +64,7 @@
 - Cursor / Claude Code の rule は、正本を読むための薄い shim とする。
 - Codex / AI agent の入口は `AGENTS.md` とし、ここにも詳細 checklist を複製しない。
 - 正本を変更した場合、入口の参照先や入口としての役割が壊れていないかだけ確認する。正本の本文変更に合わせて入口へ同じ内容を追記しない。
-- **例外: `.github/instructions/*.instructions.md`** は薄い shim ではなく、Copilot code review がリンクを辿れないため正本の要点を直接複製している。このため (1) 複製元の正本を実質的に変更したら、対応する instructions の同期要否も確認する、(2) 複製元の正本側に instructions への「同期メモ」を残し、どの正本がどの instructions に抜粋されているかを正本を読めば辿れるようにする。同期チェックは人手の判断に委ね、CI や同期スクリプトのような重い仕組みは入れない。
+- **例外: `.github/instructions/*.instructions.md`** は薄い shim ではなく、Copilot code review がリンク先の正本まで辿る保証が無いため、正本の要点を直接複製している。このため (1) 複製元の正本を実質的に変更したら、対応する instructions の同期要否も確認する、(2) 複製元の正本側に instructions への「同期メモ」を残し、どの正本がどの instructions に抜粋されているかを正本を読めば辿れるようにする。同期チェックは人手の判断に委ね、CI や同期スクリプトのような重い仕組みは入れない。
 - 入口に恒久ルールを書きたくなった場合は、まず正本に書き、入口には正本への誘導だけを置く。
 
 ## Agent skill 管理
