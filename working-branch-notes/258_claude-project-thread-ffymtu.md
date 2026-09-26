@@ -12,8 +12,9 @@ Issue #255(RV-03)。cloud session で `review-pull-request` を実行する suba
 
 ## 現在の状況
 
-- 作業内容 1・2 を実施し、Issue の「検証」のうち、SKILL.md を読んで確かめる項目と、path・節名・文体・`git diff --check` を実行した。PR #258 を draft で作成し、note を採番して、`progress.md` の RV-03 の PR 欄を反映した(P1)。
-- P2 / P5 の subagent が使った GitHub tool の記録は、P2 / P5 の後に行う。
+- 作業内容 1・2 を実施し、Issue の「検証」を実行した。PR #258 を draft で作成し、note を採番して、`progress.md` の RV-03 の PR 欄を反映した(P1)。
+- review(P2)の review cycle `claude-code-fc8366d-20260926023143` は指摘 0 件で、P3 で P6 へ進んだ。対応(P4)と再確認(P5)は無い。
+- 残るのは人間の手番だけである(「次にやること」)。
 
 ## 決定事項
 
@@ -30,8 +31,7 @@ Issue #255(RV-03)。cloud session で `review-pull-request` を実行する suba
 
 ## 次にやること
 
-- PR を作成し、note を採番して、`progress.md` の RV-03 の PR 欄を反映する(P1)。(完了)
-- P2 の subagent に review を委譲する。P2 / P5 の subagent に使った GitHub tool を報告させ、「検証」に記録する(Issue の「検証」の 2 つ目)。
+- ユーザー: Codex のクロスレビュー、Ready for review、merge。Claude の review cycle は指摘 0 件で、resolve する thread は無い。
 
 ## 検証
 
@@ -62,14 +62,28 @@ Issue #255(RV-03)。cloud session で `review-pull-request` を実行する suba
 
 ### P2 / P5 の subagent が使った GitHub tool
 
-P2 / P5 の後に記録する。
+P2 の subagent の報告による。P5 は、P2 の指摘が 0 件で P4 が無いため行っていない。
+
+| 区分 | 使った tool |
+|---|---|
+| read | 組み込みの `pull_request_read`(`get`、`get_diff`、`get_files`、`get_review_comments`、`get_reviews`、`get_comments`、`get_check_runs`)と `issue_read`(`get`、`get_comments`) |
+| 投稿 | 組み込みの `add_issue_comment`(完了要約 1 本) |
+| `gh` | 使っていない(read、投稿、編集のいずれも) |
+| allowlist 外の組み込み tool | 使っていない |
+| `github-op-integrated` の起動失敗の表示 | 想定どおりとして扱い、診断、再接続の依頼、`gh` への fallback をしていない |
+
+PR #237 の P2 で見られた `gh api` の read は無かった。subagent は両 skill を Skill tool ではなく repo 相対 path で読んだ。
+
+P2 が検討して指摘にしなかった点: 冒頭の「`github-op-integrated` の記載を組み込みの GitHub tool に読み替える」は、字面だけなら allowlist の記載にも掛かると読める。guideline の同節も同じ書き方であり、allowlist 外の tool の扱いは同節と「投稿前の確認と誤りの訂正」に明記されているため、実害は無いと判断した。
 
 ## リスク・ブロッカー
 
 - 未検証: description による発火。
-- 本 PR の P2 / P5 は、変更後の brief の形(`実行環境:` の行を含む)で委譲する。subagent が組み込みの GitHub tool だけを使っても、それが SKILL.md の記述によるのか brief の行によるのかは切り分けられない。
+- 本 PR の P2 は、変更後の brief の形(`実行環境:` の行を含む)で委譲した。subagent は組み込みの GitHub tool だけを使ったが、それが SKILL.md の記述によるのか brief の行によるのかは切り分けられない。brief の行が無い場合(`drive-issue-to-reviewed-pr` を経由せず、cloud session の subagent が `review-pull-request` を実行する場合)の振る舞いは確かめていない。
 
 ## セッションログ
 
 - 2026-09-26: #253(PR #256)の merge を確かめ、次の Issue に #255 を選んだ。作業内容 1・2 を実施し、Issue の「検証」を実行した。
 - 2026-09-26: PR #258 を作成し、note を採番して、`progress.md` の PR 欄を反映した(P1)。検証は上記のとおりで、出力生成系 3 skill は不適用。
+- 2026-09-26: P2 の前に head `fc8366d` の check runs 5 件が success であることを確かめ、subagent に review を委譲した。review cycle `claude-code-fc8366d-20260926023143`、`Reviewed head` `fc8366d`、指摘 0 件(inline 0、top-level 0)。P3 で P6 へ進んだ。subagent は GitHub 操作に組み込み tool だけを使った。
+- 2026-09-26: P6 で終了時の状態を記録した(note だけの commit)。PR は draft のまま、人間の手番を待つ。
