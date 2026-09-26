@@ -37,10 +37,17 @@ func (r *sleepRecorder) recorded() []time.Duration {
 	return append([]time.Duration(nil), r.waits...)
 }
 
-// newTestClient points a Client at srv and disables real sleeping.
+// newTestClient points a Client at srv and disables real sleeping. The client
+// uses srv's own transport instead of http.DefaultTransport, whose idle
+// connections every httptest.Server.Close closes. net/http returns a
+// connection to the idle pool just before handing over a response without a
+// body (a 429 or 5xx here), so a parallel test's Close landing in between
+// turns that response into a "connection broken" error, and a 429 is then
+// retried with backoff instead of its Retry-After (Issue #254).
 func newTestClient(srv *httptest.Server) (*Client, *sleepRecorder) {
 	rec := &sleepRecorder{}
 	c := New(testToken, WithBaseURL(srv.URL+"/api/"), WithSleeper(rec.sleep))
+	c.httpClient.Transport = srv.Client().Transport
 	return c, rec
 }
 
