@@ -12,7 +12,9 @@ Issue #257。`review-pull-request` の `address-comments` と `verify-comments` 
 
 ## 現在の状況
 
-- 作業内容 1〜4 を実施し、Issue の「検証」を実行した(P1 の途中)。
+- 作業内容 1〜4 を実施し、Issue の「検証」を実行した。PR #260 を draft で作成し、note を採番した(P1)。
+- review(P2)の review cycle `claude-code-b3619c1-20260926041810` は指摘 4 件で、P3 で P4 へ進んだ。P4 で 4 件とも採用して直し、各指摘へ処置を返信する。
+- 次は、P4 の最新 head の check runs を確かめてからの再確認(P5)である。
 
 ## 決定事項
 
@@ -22,13 +24,14 @@ Issue #257。`review-pull-request` の `address-comments` と `verify-comments` 
   - 反映を確かめられない編集(write の失敗など)は対応済みとして扱わないとし、失敗時の扱いは `SKILL.md`「MCP write failure の安全手順」を参照した。
 - 作業内容 2 / 未決事項 1: 仮決定のとおり、push を伴わない修正の返信には、修正 commit / head SHA の代わりに、編集した対象(PR description など)と箇所(節名など)を書く。手順 8 の返信の項目の「修正 commit / head SHA」を「修正の所在」にまとめ、2 種ごとに書く内容と、両方を含む修正では両方を書くことを定めた。理由(`verify-comments` が確かめる対象を返信から特定できるようにする)も書いた。
 - 手順 10 に、top-level の指摘など inline thread の無い指摘への処置を PR conversation comment で返す場合も、手順 8 の返信と同じ内容(修正の所在を含む)を書くことを加えた。Issue の作業内容には無い追加である。Issue の背景の 2 例(PR #256、PR #243)はどちらも top-level の指摘を PR description の編集で直しており、手順 8 は inline comment への返信だけを定めるため、手順 8 だけを直すとこの 2 例に規定が届かない。
-- 作業内容 3 / 未決事項 2: `verify-comments.md` の「処置ごとの確認」の「採用し修正した」の行を「修正が GitHub 上に反映済みで(下記)」とし、表の下に 2 種ごとの反映の確かめ方を箇条で足した。push を伴わない修正は、返信が示す対象と箇所が、再確認の時点の GitHub 上の内容で直っていることを確かめる。時点は仮決定のとおりで、編集には版を固定する SHA が無いという理由も書いた。返信が編集した対象を示さず、確かめる対象を特定できない場合は未対応とした。
-  - 同じ行の、指摘の解消と新たな問題の有無を確かめる材料に「GitHub 上で編集した対象の現在の内容」を加えた。材料が差分、実装、関連 test / document、検証だけだと、PR description の編集だけで直した指摘について、解消を確かめる材料が表に無いと読めるためである。
+  - 手順 11 の read-back に、手順 10 のコメントを投稿した場合は `pull_request_read(get_comments)` でも取り直すことを加えた(P4)。欠落は本 PR の前からあるが、手順 10 のコメントが top-level の指摘への処置を運ぶようになり、二重投稿と未反映の確認をそこへ届かせるためである。
+- 作業内容 3 / 未決事項 2: `verify-comments.md` の「処置ごとの確認」の「採用し修正した」の行を「修正が GitHub 上に反映済みで(下記)」とし、表の下に 2 種ごとの反映の確かめ方を箇条で足した。push を伴わない修正は、返信が示す対象と箇所が、再確認の時点の GitHub 上の内容で直っていることを確かめる。時点は仮決定のとおりで、編集には版を固定する SHA が無いという理由も書いた。返信が編集した対象または箇所を示さない場合は、指摘の文脈などから補わず、確かめる対象を特定できないものとして未対応とした。PR の title のように対象の全体が箇所に当たる場合は、対象を示せば箇所も示したものとする(P4 で改めた。P1 の「対象を示さず、確かめる対象を特定できない場合」は、2 つの条件と読むと文脈から対象を補う verifier が出得て、箇所を示さない返信の規定も無かった)。`address-comments.md` の手順 8 にも、PR の title の場合は対象だけでよいことを添えた。
+  - 同じ行の、指摘の解消と新たな問題の有無を確かめる材料に「GitHub 上で編集した対象の現在の内容」を加えた。材料が差分、実装、関連 test / document、検証だけだと、PR description の編集だけで直した指摘について、解消を確かめる材料が表に無いと読めるためである。Step 3 の材料の列挙にも同じ材料を加え、表と揃えた(P4)。
   - Step 5 の「未 push」を「修正が未反映(「処置ごとの確認」の「採用し修正した」)」に改めた。push を伴わない修正の未反映も未対応に含まれることを、表と揃えて読めるようにした。
 - 作業内容 4: 修正が両方を含む場合、`address-comments` は両方を確かめ、返信に両方の所在を書く。`verify-comments` は両方が成り立つときだけ反映済みとする。
 - 変えなかったもの:
   - `review-pull-request` の `SKILL.md`。read 系 tool の選び方は参照先の guideline が定めており、skill の tool 表への追記は要らない。
-  - `drive-issue-to-reviewed-pr` の「再開する場合」の「修正の push は、`address-comments` が対応済みの返信の前に確かめている」。push を伴う修正について引き続き正しい。push を伴わない修正も、変更後の手順 7 で返信の前に確かめるため、P5 から再開するときに別の確認は要らない。
+  - `drive-issue-to-reviewed-pr` の「PR から始める場合」の、P5 から始める場合の項にある「修正の push は、`address-comments` が対応済みの返信の前に確かめている」。push を伴う修正について引き続き正しい。push を伴わない修正も、変更後の手順 7 で返信の前に確かめるため、P5 から再開するときに別の確認は要らない。
   - 同 skill の「working branch note」の表の P4 の記録項目(修正 commit)。push を伴わない修正の所在は返信(手順 8 / 10)に残り、`verify-comments` はそれを読む。note の記録項目の見直しは本 Issue の範囲(`references/` の 2 ファイル)の外とした。
   - 同 skill の再開位置の判定(Issue のスコープ外)。
 - decision log は作らない。修正を GitHub 上で確かめてから返信し、Review 担当が再確認するという既存の方針を、push を伴わない修正へ当てはめる規定の追加であり、方針の変更や選択肢の比較を伴う判断ではないためである。未決事項 1 / 2 は Issue の仮決定のとおりにした。
@@ -38,13 +41,14 @@ Issue #257。`review-pull-request` の `address-comments` と `verify-comments` 
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。(完了)
-- P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。
+- P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。(完了)
+- P4 の最新 head の check runs がすべて success になったら、P2 の subagent に再確認(P5)を委譲する。
 
 ## 検証
 
 2026-09-26、cloud session(project の thread)で実行。
 
-Issue の「検証」の 4 状態と、返信が編集した対象を示さない場合について、変更後の `address-comments.md` と `verify-comments.md` を読み、返信の条件と再確認の結果が一意に決まることを確かめた。
+Issue の「検証」の 4 状態と、返信が編集した対象または箇所を示さない場合について、変更後の `address-comments.md` と `verify-comments.md` を読み、返信の条件と再確認の結果が一意に決まることを確かめた。
 
 | 状態 | `address-comments`: 「対応済み」と返信してよい条件と返信の内容 | `verify-comments`: 再確認の結果 |
 |---|---|---|
@@ -52,14 +56,17 @@ Issue の「検証」の 4 状態と、返信が編集した対象を示さな�
 | 修正が commit と PR description の編集の両方 | 修正 commit が head branch へ push 済みで head SHA から確認でき、かつ PR description を取り直して反映を確かめたとき(手順 7 の「両方を確かめる」)。返信に修正 commit / head SHA と、編集した対象と箇所の両方を書く | 両方が成り立つときだけ反映済みとし、指摘が解消し新たな問題が無ければ修正確認済み。どちらかが成り立たなければ未対応 |
 | PR description の編集が GitHub 上に反映されていない(編集の失敗など) | 対応済みと返信しない(手順 7 の「反映を確かめられない編集を対応済みとして扱わない」)。`SKILL.md`「MCP write failure の安全手順」に従い、反映を確かめてから再試行するか、ユーザーに報告する | 誤って対応済みと返信された場合も、返信が示す箇所が直っていないため反映済みにならず、未対応(Step 5 の「修正が未反映」) |
 | 修正が commit だけ(従来どおり) | 修正 commit が head branch へ push 済みで head SHA から確認できるとき(手順 7。従来の規定と同じ)。返信に修正 commit / head SHA を書く | 修正が head に push 済みで、指摘が解消し新たな問題が無ければ修正確認済み。未 push なら未対応(従来と同じ) |
-| (補足)返信が編集した対象を示さない | 手順 8 に反する返信である | 確かめる対象を特定できないため未対応 |
+| (補足)返信が編集した対象または箇所を示さない | 手順 8 に反する返信である。PR の title のように対象の全体が箇所に当たる場合は、対象だけでよい | 指摘の文脈などから補わず、確かめる対象を特定できないものとして未対応 |
+
+(補足)の行は、P1 の文言からは一意に導けなかった(P2 の `[imo]` の指摘)。P4 で本文を改め、上の表は P4 の後の文言で読んだ結果である。
 
 | 項目 | 結果 |
 |---|---|
 | repo 相対 path(`doc/guidelines/github-mcp-guidelines.md`、`doc/guidelines/git-operation-guidelines.md`、`references/address-comments.md`) | 存在する |
 | 参照先の節名(`SKILL.md`「MCP write failure の安全手順」、guideline の「操作別の第一選択」、`verify-comments.md` の「処置ごとの確認」、`address-comments.md` の手順 8) | すべて存在する |
 | 文体(追加行の `(です\|ます)。` と「ください」) | 該当なし |
-| `git diff --check` | 問題なし |
+| `git diff --check` | 問題なし(P1、P4) |
+| P4 の修正の文体と参照先(追加行の `(です\|ます)。` と「ください」、節名「PR から始める場合」) | 文体は該当なし。節名は `drive-issue-to-reviewed-pr` にある |
 | push を前提にする他の記述(`git grep -n "push" -- .agents/skills/review-pull-request`、`drive-issue-to-reviewed-pr` の SKILL.md) | `review-pull-request` の `SKILL.md` は、修正の commit / push の方法と、review 対象に未 push の変更を混ぜない規定だけで、本 Issue と関係しない。`drive-issue-to-reviewed-pr` は「決定事項」の「変えなかったもの」の 2 箇所である |
 | Go の test | Go のコードを変えないため、ローカルでは実行しない。CI の check runs で確かめる |
 | description による発火 | 未検証。frontmatter は変えていない。新しい session を開始して確かめる |
@@ -67,8 +74,12 @@ Issue の「検証」の 4 状態と、返信が編集した対象を示さな�
 ## リスク・ブロッカー
 
 - 未検証: description による発火。
-- 変更後の規定は、push を伴わない修正を含む実際の review cycle ではまだ通していない。
+- 変更後の規定を、push を伴わない修正を含む review cycle で通すのは本 PR の P4 / P5 が初めてである。`[nits]` の節名の指摘は、note の commit と PR description の編集の両方で直した。
+- P2 の subagent は、PR #256 のコメントの取得などの read を 3 回 `gh api` で行い、cloud session の tool routing からの逸脱として自ら報告した。副作用の無い read で、投稿の直前の head の確認は `pull_request_read(get)` でやり直している。#255(PR #258)の後も起きたため、終了時の報告に記録する。
 
 ## セッションログ
 
 - 2026-09-26: #252(PR #259)の merge を確かめ、次の Issue に #257 を選んだ。作業内容 1〜4 を実施し、Issue の「検証」を実行した。
+- 2026-09-26: PR #260 を draft で作成し、note を採番した(`b3619c1`)。採番で書き換えたのは note の `PR:` 欄、「次にやること」の 1 行(`(完了)` を付けた)、PR description の note 参照で、触らずに残した行は無い。P1 の head `b3619c1` の check runs 5 件は success。検証と出力生成系 3 skill の判断は上記のとおりで、`progress.md` は更新しない。
+- 2026-09-26: P2 を subagent に委譲した。review cycle `claude-code-b3619c1-20260926041810`、`Reviewed head` `b3619c1`、指摘 4 件(inline 4、top-level 0。prefix ごとでは `[imo]` 1、`[nits]` 3 で、`[must]` / `[ask]` / `[fyi]` / prefix 無しは 0)。P3 で P4 へ進んだ。
+- 2026-09-26: P4 で 4 件とも「採用し修正した」とした。`[imo]`(対象または箇所を示さない返信)、`[nits]`(Step 3 の材料)、`[nits]`(手順 11 の read-back)は修正 commit `333e234`。`[nits]`(節名「再開する場合」)は本 note の commit と PR description の「レビューしてほしい点」の編集(push を伴わない修正)で直した。スコープ外とした指摘は無く、follow-up 候補も無い。変更は同じ 2 ファイルと本 note だけで、出力生成系 3 skill を適用しない判断は変わらない。
