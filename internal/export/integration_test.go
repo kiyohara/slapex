@@ -598,7 +598,10 @@ func TestRunIntegrationThreadProgressCountsFetchedThreadsOnly(t *testing.T) {
 // match yet, and the parent's history copy on page 2 carries the reaction. The
 // thread's replies and its broadcast then leave the export, the excluded count
 // takes each excluded message once, and page 3 refills the timeline. The
-// hidden thread, whose parent is excluded on page 1, is not fetched through its
+// thread's reply that carries the reaction is not counted as excluded: the
+// replies of an excluded thread never go through the filters (Issue #206),
+// just as they are never fetched when the parent is excluded first. The hidden
+// thread, whose parent is excluded on page 1, is not fetched through its
 // broadcast.
 func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T) {
 	t.Parallel()
@@ -610,7 +613,7 @@ func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T)
 	speakNoEvil := []slack.Reaction{{Name: "speak_no_evil", Count: 1}}
 	hiddenParent := slack.Message{Type: "message", TS: hiddenTS, ThreadTS: hiddenTS, User: "U01", Text: "hidden parent", ReplyCount: 1, Reactions: speakNoEvil}
 	hiddenBroadcast := slack.Message{Type: "message", Subtype: "thread_broadcast", TS: "1700000008.000000", ThreadTS: hiddenTS, User: "U02", Text: "hidden broadcast"}
-	raceParent := slack.Message{Type: "message", TS: raceTS, ThreadTS: raceTS, User: "U01", Text: "race parent", ReplyCount: 2}
+	raceParent := slack.Message{Type: "message", TS: raceTS, ThreadTS: raceTS, User: "U01", Text: "race parent", ReplyCount: 3}
 	raceBroadcast := slack.Message{Type: "message", Subtype: "thread_broadcast", TS: "1700000007.000000", ThreadTS: raceTS, User: "U02", Text: "race broadcast"}
 	raceParentLater := raceParent
 	raceParentLater.Reactions = speakNoEvil
@@ -629,6 +632,7 @@ func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T)
 	sc.Replies[raceTS] = []slack.Message{
 		raceParent,
 		{Type: "message", TS: "1700000003.100000", ThreadTS: raceTS, User: "U02", Text: "race reply"},
+		{Type: "message", TS: "1700000003.200000", ThreadTS: raceTS, User: "U02", Text: "race reply the filter excludes", Reactions: speakNoEvil},
 		raceBroadcast,
 	}
 	opts := integrationOptions(t, 3)

@@ -32,8 +32,10 @@ type fetchedMessages struct {
 	// truncated reports that --max-posts cut the timeline while older messages
 	// remained in the range.
 	truncated bool
-	// excluded counts the distinct messages the emoji filters excluded from the
-	// timeline and from the threads in replies.
+	// excluded counts the distinct messages the emoji filters excluded: those
+	// conversations.history judged, including the ones it examined past the
+	// --max-posts cut (slack.Client.History), the timeline messages of excluded
+	// threads, and the replies of the threads whose parent is on the timeline.
 	excluded int
 }
 
