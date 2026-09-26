@@ -6,7 +6,7 @@
 
 ## 目的
 
-Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `thread_broadcast` の親が timeline に入らない(取得範囲より古い、`--max-posts` の外にある)場合でも、親の除外判定のために取得した thread の replies が Messages 行の件数、users.info と avatar の解決、`slack_api_cache.json` に入り、Done の要約と `metadata.json` の件数と食い違う。親が filter に一致すると、候補外の親が除外件数に数えられる。これを直し、filter の有無で同じ取得範囲の timeline / replies の集合と件数が変わらない(除外されるべき投稿を除く)ようにする。
+Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `thread_broadcast` の親が timeline に入らない(取得範囲より古い、`--max-posts` の外にある)場合でも、親の除外判定のために取得した thread の replies が Messages 行の件数に入って Done の要約と `metadata.json` の件数と食い違い、その作成者などの user と bot も users.info / bots.info で解決されて `slack_api_cache.json` に入り、avatar も保存される。親が filter に一致すると、候補外の親が除外件数に数えられる。これを直し、filter の有無で同じ取得範囲の timeline / replies の集合と件数が変わらない(除外されるべき投稿を除く)ようにする。
 
 本 Issue は `drive-issue-to-reviewed-pr` skill で、review と再確認を済ませた PR まで進める。ユーザーの指示(2026-09-25)で open Issue を 1 件ずつ直列に処理する流れの 7 件目で、Issue ごとに新しい thread で進める方式(2026-09-26)の 2 件目である。
 
@@ -15,7 +15,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - 依存(#191)の PR #262 が merge 済み(main `94ce913`)であることを確かめた。
 - 作業内容を 3 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
 - PR #263 作成済み(draft)。note を採番し(`25eb8be`)、`progress.md` の FU-05 の PR 欄も反映した。
-- review cycle `claude-code-4664865-20260926090102` の指摘 3 件(`[imo]` 1、`[nits]` 2)に対応した(P4、`6d9054f` と PR description の編集)。再確認(P5)を P2 と同じ subagent に委譲する。
+- review cycle `claude-code-4664865-20260926090102` の指摘 3 件(`[imo]` 1、`[nits]` 2)に対応した(P4、`6d9054f` と PR description の編集)。再確認(P5)で 3 件とも修正確認済みになり、未対応は 0 件である。Claude の review cycle は完了し、残るのは人間の手番(「次にやること」)である。
 
 ## 決定事項
 
@@ -78,7 +78,11 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - `progress.md` の FU-05 の行の PR 欄に PR 番号を入れ、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 指摘 3 件に対応し、処置を返信する(P4)。(完了)
-- P4 の push の CI を確かめてから、再確認を P2 と同じ subagent に委譲する(P5)。
+- P4 の push の CI を確かめてから、再確認を P2 と同じ subagent に委譲する(P5)。(完了)
+- (人間)follow-up 候補(`client.History` の examined exclusions)を起票するかを、merge の前に決める(「リスク・ブロッカー」)。
+- (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
+- (人間)resolve 可とした review thread 2 件を確かめて resolve する。
+- (人間)PR を merge する。
 
 ## 検証
 
@@ -118,3 +122,5 @@ Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より�
 - 2026-09-26: #191 のスレッドから、ユーザーの判断(08:56Z)で PR #262 の follow-up 候補 1 が #206 の Issue コメントとして申し送られたと連絡があった。本 PR の `e6a49e8` で扱い済みである。
 - 2026-09-26: P2 / P3。review cycle `claude-code-4664865-20260926090102`、`Reviewed head` `466486593032799a083bab6c3f42780fdd1bee6f`。指摘は 3 件(inline 2 / top-level 1)で、prefix の内訳は `[must]` 0、`[ask]` 0、`[imo]` 1、`[nits]` 2。1 件以上のため P4 へ進んだ。subagent の報告では、`gh` への fallback(write)、停止、訂正できなかった誤りはいずれもなし。ただし投稿直前の head の確認で、PR の read を `gh api` で 1 回行い、`pull_request_read(get)` で取り直してから投稿した(#255 と同種の routing の逸脱)。subagent は検証の後片付けで、共有の scratchpad の `probe-*` と `gensample-*` を glob で消しており、orchestrator の gensample の log(検証の結果は記録済み)も消えた可能性がある。subagent が挙げた commit の trailer の model の表示名は、harness の attribution の指示と `doc/guidelines/pull-request-guidelines.md`(trailer を認める)に従ったもので、変えない。
 - 2026-09-26: P4。処置は 3 件とも「採用し修正した」。`[nits]`(`excluded` のコメント)は、数える範囲(history が判定した投稿と打ち切り後に判定した投稿、除外された thread の timeline の投稿、親が timeline にある thread の replies)に書き直した(`6d9054f`)。`[imo]`(表の 4 行目の test)は、`TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の race thread に reaction の付いた reply を足し、除外件数 4 のままで固定した(`6d9054f`。基準 `94ce913` に同じ fixture を当てると 5 で失敗することを確かめた)。`[nits]`(PR description の表)は、「挙動の変化」の表の 1 行目(mention 先の user、bot、avatar と assets の件数)、2 行目(打ち切り直後の親の examined exclusions)、5 行目(進捗の分母)と表の下の文を直し、「変えていないこと」「補足」に Issue の作業内容との関係を足した。この note の「挙動の変化」「変えていないこと」「リスク・ブロッカー」も揃えた。スコープ外とした指摘は無い。出力生成系 3 skill は、production code の変更がコメントだけのため、引き続き適用しない。検証: `gofmt -l .` は出力なし、`go vet ./...` は成功、`go test ./...` は全 package ok、`git diff --check` は問題なし。
+- 2026-09-26: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `c4a92a980d788c8d7f36eec749372a59661f5312`)。修正確認済み 3 件(inline 2 / top-level 1)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可は inline の 2 thread。subagent は基準 `94ce913` の test に `6d9054f` の fixture の変更を当てて除外件数 5 で失敗することと、head で `gofmt`、`go vet`、`go test -count=1 ./...`、`git diff --check` が通ることを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。指摘ではない参考として、PR description の「概要」とこの note の「目的」に、replies 自体が `.cache/` に入るように読める書き方(変更前からある文)が残ると挙げた。
+- 2026-09-26: P6。上記の参考を受けて、PR description の「概要」とこの note の「目的」を、replies は件数に入り、その作成者などの user と bot が解決されて `.cache/` に入る書き方に直した(P5 の後の、文言だけの変更)。この note だけの commit は P5 が確かめた head より後で、CI の確認点に含めない。終了時の状態: PR #263 は draft で、P5 が確かめた head `c4a92a9` の check runs は 5 件 success。残るのは人間の手番(「次にやること」)である。
