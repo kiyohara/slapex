@@ -14,7 +14,7 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 
 - 作業内容 1〜4 を実施し、Issue の「検証」を実行した。PR #265 作成済み。
 - PR #265 を draft で作成し、note を採番した(P1)。`progress.md` は索引に無い単発 Issue のため更新しない。
-- review cycle `claude-code-bd5f05b-20260926135509` の review(P2)で指摘 2 件(`[imo]` 1、`[nits]` 1)を受け、2 件とも採用して直した(P4)。再確認(P5)を待つ。
+- review cycle `claude-code-bd5f05b-20260926135509` の review(P2)で指摘 2 件(`[imo]` 1、`[nits]` 1)を受け、2 件とも採用して直した(P4)。再確認(P5)で修正確認済み 2 件、未対応 0 件になり、review cycle は完了した。人間の手番(thread の resolve、Codex のクロスレビュー、Ready for review、merge)だけが残る。
 
 ## 決定事項
 
@@ -32,8 +32,8 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 
 - draft PR を作成し、note を採番する。(完了)
 - review(P2)と指摘への対応(P4)。(完了)
-- 再確認(P5)。
-- ユーザー: Codex のクロスレビュー、Ready for review、merge。
+- 再確認(P5)。(完了)
+- ユーザー: resolve 可の thread 2 件の resolve、Codex のクロスレビュー、Ready for review、merge。
 
 ## 検証
 
@@ -64,3 +64,5 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 - 2026-09-26: PR #265 を draft で作成し、note を採番した(`509f2c3`)(P1)。検証は上記のとおりで、出力生成系 3 skill は不適用。`progress.md` は索引に無い単発 Issue のため更新しない。採番の報告から引き上げた項目は次のとおり。書き換えた行(確認経路の項目)は note の 3 行と PR description の 1 行である。note は `PR:` 欄の「未作成」を `#265` に、「現在の状況」の「PR 未作成。」を「PR #265 作成済み。」に直し、「次にやること」の「draft PR を作成し、note を採番する。」に「(完了)」を付けた。PR description は note の path を採番後の名前に置き換えた。title は変えていない。触らずに残した行(残された事項)は 0 件で、採番は止まっていない。
 - 2026-09-26: review(P2)を別の context の subagent に委ねた。review cycle は `claude-code-bd5f05b-20260926135509`、`Reviewed head` は `bd5f05b1e7ccc53614f1d7ee4ec0b524b560f1e4`。指摘は 2 件(inline 2 件、top-level 0 件)で、prefix の内訳は `[imo]` 1 件、`[nits]` 1 件(prefix の無い指摘は 0 件)。P3 で P4 へ進んだ。
 - 2026-09-26: 指摘に対応した(P4)。処置は 2 件とも「採用し修正した」。`[imo]`(`AGENTS.md` の文字数の子項目を削る): 上限の撤廃後に残る内容は正本の帰結と同じ文で、同 guideline の「ルールをシンプルに保つ」と「正本と入口の整理」に照らして削った。`.github/instructions/` を足す agent は `AGENTS.md` の AI Agent 向けルールと rule の入口(`.claude/rules/` の `paths:`、`.cursor/rules/` の `description`)から正本に届き、Copilot は `.github/copilot-instructions.md` で同じ趣旨を読むことを確かめた。`[nits]`(正本の「正本と入口の整理」の例外の項の「リンクを辿れない」): 「リンク先の正本まで辿る保証が無い」に揃えた。修正 commit は `b061c81`。PR description の「主な変更」「レビューしてほしい点」「検証」を合わせて直した。スコープ外とした指摘は無く、follow-up の候補は無い。出力生成系 3 skill は、変更が文書だけのため引き続き適用しない。
+- 2026-09-26: 再確認(P5)を P2 と同じ subagent に委ねた。`Reviewed head` は `6e9aa8d13532712450a309ca18ff0da76efc4233`(check runs 5 件 success)。修正確認済み 2 件、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可の thread は 2 件(`AGENTS.md` の子項目と正本の例外の項)。完了要約は PR conversation comment 1 本。`gh` への fallback は P2、P4、P5 のいずれも無い。
+- 2026-09-26: 終了(P6)。この更新は note だけの commit で、P5 が確かめた head `6e9aa8d` より後になる。merge 前に直すべき指摘(`[must]`)は無く、follow-up の候補も無い。人間に残る作業は thread 2 件の resolve と PR の merge で、metadata の誤りを訂正できなかった投稿は無い。
