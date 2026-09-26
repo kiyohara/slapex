@@ -127,6 +127,7 @@ PR の state と head SHA、既存の review と comment を取得し、canonica
 - **skill は名前ではなく repo 相対 path で渡す。** subagent の skill 一覧に載っている保証は無く、同じ session で追加・変更した skill では特に保証が無い。brief には「この path を読んでから始めること」と明示する。
 - **可視 metadata の値と書き方は brief で指示しない。** subagent は `review-pull-request` の「可視 metadata の canonical フォーマット」と「`Model` の確認手段」に従い、`Agent` と `Model` を自分で確かめて書く。brief に `Model` の値を書いたり、`unknown` にする、置き場所を変えるなど skill と異なる書き方を指示したりしない。review cycle ID と head SHA は上表のとおり渡すが、subagent は投稿前に同 skill の「投稿前の確認と誤りの訂正」で確かめ直す。
 - orchestrator が従う上位の指示(harness の system prompt など)が model の識別子の記載範囲を定めている場合は、その内容を brief に事実として添える。subagent の投稿は orchestrator の session の出力でもあり、subagent の実行環境に同じ指示が載っているとは限らないためである。値や書き方の指示としてではなく、subagent が同 skill の `Model` の項に当てはめる実行環境の情報として渡す。
+- orchestrator が cloud session(Claude Code on the web。判定は `doc/guidelines/cloud-session-guidelines.md`)で実行している場合は、その事実と、GitHub 操作の tool routing に `doc/guidelines/github-mcp-guidelines.md` の「cloud session(Claude Code on the web)」が当たることを、brief に事実として添える。`review-pull-request` も同節を tool routing の正本に挙げるが、subagent が参照先の節まで読むとは限らないためである。上記の実行環境の指示と同じく、使う tool の指示としてではなく、subagent が同節を当てはめる実行環境の情報として渡す。
 - subagent は受け取った head SHA を前提にせず、自身で PR head を取り直す(`review-pull-request` の「対象 PR の特定と review source」)。期待する head SHA と異なる場合は投稿せず、その旨を停止理由として返す。orchestrator がそれを想定外の変化として扱うためである(「head SHA の受け渡し」)。
 - subagent はユーザーへ直接問えない。`review-pull-request` が「ユーザーに確認する」「処理を停止してユーザーへ報告する」とする場面に当たった場合は、処理を止めて確認事項を停止理由として返す。brief にこの扱いを明記する。
 
@@ -147,6 +148,7 @@ working branch note: <repo 相対 path | なし>
 特に確かめてほしい点: <観点>
 
 実行環境の指示: <orchestrator が従う上位の指示のうち、model の識別子の記載範囲を定めるもの。無ければこの行を省く>
+実行環境: <cloud session で実行している場合は、その事実と、GitHub 操作の tool routing に doc/guidelines/github-mcp-guidelines.md の「cloud session(Claude Code on the web)」が当たること。cloud session でなければこの行を省く>
 
 可視 metadata(Agent / Model を含む)は SKILL.md の規定どおり自分で確かめて書くこと。
 commit、push、作業ツリーのファイル変更、address-comments、thread の resolve、APPROVE / REQUEST_CHANGES、Issue の起票はしないこと。

@@ -12,7 +12,7 @@ slapex の PR review を、project guideline に沿った github-op-integrated M
 
 `drive-issue-to-reviewed-pr` skill から呼ばれる場合、`review` と `verify-comments` は subagent が、`address-comments` は呼び出し元の orchestrator が実行する。本 skill の手順は変わらず、単独での利用も従来どおり続ける。
 
-tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP 優先・`gh` fallback」「汎用 skill / plugin と競合する場合」「操作別の第一選択」とする。汎用 skill、plugin、user-level skill(例: `gh-address-comments`)が GitHub app や `gh` を第一選択としていても、slapex では本 skill と project guideline の tool routing を優先する。
+tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP 優先・`gh` fallback」「cloud session(Claude Code on the web)」「汎用 skill / plugin と競合する場合」「操作別の第一選択」とする。cloud session では同 guideline の「cloud session(Claude Code on the web)」に従い、`github-op-integrated` が起動しないことを理由に `gh` へ fallback せず、本 skill の `github-op-integrated` の記載を組み込みの GitHub tool に読み替える。汎用 skill、plugin、user-level skill(例: `gh-address-comments`)が GitHub app や `gh` を第一選択としていても、slapex では本 skill と project guideline の tool routing を優先する。
 
 ## 入力
 
@@ -26,7 +26,7 @@ tool routing の正本は `doc/guidelines/github-mcp-guidelines.md` の「MCP �
 処理を始める前に、必要な範囲で次を読む。
 
 - `AGENTS.md`
-- `doc/guidelines/github-mcp-guidelines.md` — 優先規則と操作別の第一選択の正本。
+- `doc/guidelines/github-mcp-guidelines.md` — 優先規則と操作別の第一選択の正本。cloud session では「cloud session(Claude Code on the web)」も読む。
 - `doc/guidelines/github-cli-guidelines.md` — `gh` fallback のルール。
 - `doc/guidelines/git-operation-guidelines.md` — 修正の commit / push を伴う場合。
 - `doc/guidelines/pull-request-guidelines.md`
