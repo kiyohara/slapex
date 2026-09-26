@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-ffymtu`(cloud session が指定。Issue の推奨ブランチ名は `align-orchestrator-with-review-prefixes`)
-- PR: 未作成
+- PR: #259
 - 最終更新: 2026-09-26
 
 ## 目的
