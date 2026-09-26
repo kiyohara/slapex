@@ -14,7 +14,8 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 
 - 作業内容 1〜9 を実施し、Issue の「検証」を実行した。作業内容 9 は、#227 が完了済みのため、orchestrator への後付けに置き換えた。
 - PR #261 作成済み。note を採番し、採番の報告から引き上げた項目を「セッションログ」の P1 に残した(P1)。
-- P2 の review の指摘 5 件を検討し、修正と記録を push した(P4)。4 件を採用して修正し、1 件は #229 と合わせて判断する事項として follow-up 候補に残した。各指摘へ処置を返信した後、P5 の再確認に進む。
+- P2 の review の指摘 5 件を検討し、修正と記録を push して、各指摘へ処置を返信した(P4)。4 件を採用して修正し、1 件は #229 と合わせて判断する事項として follow-up 候補に残した。
+- P5 の再確認で、5 件とも resolve 可になり、未対応は 0 件だった。review cycle は完了した(P6)。残りは人間の手番だけである(「次にやること」)。
 
 ## 決定事項
 
@@ -63,8 +64,11 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - PR を draft で作成し、note を採番する。(完了)
 - 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push し、検証の自己適用の結果を記録する。(完了)
 - P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。(完了)
-- P4 の修正と記録を push した後、各指摘へ処置を返信し、最新 head の check runs を確かめてから、P5 の再確認を同じ subagent に委譲する。
-- P5 の結果を記録し、終了時の報告を返す(P6)。
+- P4 の修正と記録を push した後、各指摘へ処置を返信し、最新 head の check runs を確かめてから、P5 の再確認を同じ subagent に委譲する。(完了)
+- P5 の結果を記録し、終了時の報告を返す(P6)。(完了)
+- (人間)resolve 可マーカーの付いた 5 thread を確かめて resolve する。スコープ外として確認済みの 1 件は、resolve の前に follow-up の記録先(「リスク・ブロッカー」)を確かめる。
+- (人間)PR を Ready for review にし、Codex のクロスレビューを経て merge する。
+- (人間)「リスク・ブロッカー」の follow-up 候補 3 件と還元候補 1 件の起票を判断する。
 
 ## 検証
 
@@ -108,3 +112,5 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - 2026-09-26: P1。PR #261 を draft で作成し、note を採番した(`9597b69`)。`run-issue-task` から引き上げた項目は次のとおり。確認経路の項目(`number-working-branch-note` の書き換えた行)は 3 件で、note の状況を説明する stale 表現 1 件(「現在の状況」の「PR 未作成。」→「PR #261 作成済み。」)、note の完了タスク行 1 件(「次にやること」の「PR を draft で作成し、note を採番する。」に「(完了)」)、PR description のファイル名参照の置換 1 件(「概要」の note の path)。ほかに note の `PR:` 欄に `#261` を記入した。title は変えていない。残された事項(触らずに残した行)は 0 件で、停止も無い。出力生成系 3 skill は呼ばなかった(各 skill の「いつ使うか」に当たらない)。検証の結果は上記のとおり。
 - 2026-09-26: P2 / P3。review cycle `claude-code-d23bf9d-20260926050906`、`Reviewed head` `d23bf9dfc488e10a74d2205e15ad952cf143b4af`。指摘は 5 件(inline 5 / top-level 0)で、prefix の内訳は `[must]` 0、`[ask]` 0、`[imo]` 2、`[nits]` 2、`[fyi]` 1。1 件以上のため P4 へ進んだ。subagent の報告では、`gh` への fallback、停止、訂正できなかった誤りはいずれもなし。
 - 2026-09-26: P4。処置は、採用し修正した 4 件と、妥当だが今回はスコープ外である 1 件。採用した 4 件は、`run-issue-task` の 2 の定義への「要約で落とさず」の明記、情報統制チェックの項目を 3 とした理由の 0062 への追記と follow-up 候補の記録、「返させる出力」の「訂正できなかった誤り」と「人間に残る作業」への該当なしの報告、PR の入口の確認で自身が採番した場合の引き上げ元の明記である。スコープ外の 1 件は、`gh` への fallback の明示が subagent では事後の報告になる件で、#229 と合わせて判断する follow-up 候補とした(「リスク・ブロッカー」)。修正 commit は `81a731e`。PR description の「レビューしてほしい点」と「補足」も更新した。出力生成系 3 skill は、変更が skill、decision log、note だけのため、引き続き適用しない。なお、read を 2 回 `gh api` で行った(返信の書式を確かめるための PR #260 の返信の取得と、PR #261 の description の長さの確認)。どちらも組み込みの `pull_request_read` で足りる操作だった。
+- 2026-09-26: P5。同じ subagent が review cycle `claude-code-d23bf9d-20260926050906` を head `bc64e5754e0db81a9fd15239d0f8b9bf781bcba0` で再確認した。修正確認済み 4 件、スコープ外として確認済み 1 件、対応不要として確認済み 0 件で、未対応は 0 件(完了要約は PR conversation comment 1 本)。5 thread とも resolve 可のマーカーが付いた。subagent の報告では、`gh` への fallback、停止、訂正できなかった誤りはいずれもなし。P2 の指摘の「1 つ上の箇条」が誤り(正しくは 2 つ上)だったことは、P4 の返信と P5 の返信の両方に残っている。
+- 2026-09-26: P6。終了時の状態: PR #261 は draft のまま open。P5 で確かめた head `bc64e57` の check runs は 5 件すべて success。本記録は note だけの commit で、P5 が確かめた head より後になる。人間に残る作業は、5 thread の resolve、Ready for review と Codex のクロスレビュー、merge、follow-up 候補の起票の判断である。metadata の誤りを訂正できなかった投稿は無い。
