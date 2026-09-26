@@ -15,7 +15,7 @@ Issue #191(RF-03)。`export.Run` の取得・解決・描画・出力完了を�
 - 依存(#188、#189、#190)の PR が merge 済みであることを確かめた。
 - 作業内容を 4 commit で実施し、Issue の「検証」をすべて実行した(「検証」)。
 - PR #262 を draft で作成し、note を採番した(`30fdc68`)。`progress.md` の RF-03 の PR 欄も反映した。
-- review cycle `claude-code-cec2436-20260926072903` の指摘 2 件(`[imo]` 1、`[nits]` 1)に対応した(P4)。再確認(P5)を待っている。
+- review cycle `claude-code-cec2436-20260926072903` の指摘 2 件(`[imo]` 1、`[nits]` 1)に対応し(P4)、再確認(P5)で 2 件とも修正確認済み(resolve 可)、未対応 0 件になった。残りは人間の手番である(「次にやること」)。
 
 ## 決定事項
 
@@ -82,7 +82,8 @@ Run は工程の順序と error の返し方だけを持ち、各工程は結果
 - `progress.md` の RF-03 の行を更新し、draft PR を作成して note を採番する。(完了)
 - 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
-- P4 の push の CI を確かめてから、再確認を P2 と同じ subagent に委譲する(P5)。
+- P4 の push の CI を確かめてから、再確認を P2 と同じ subagent に委譲する(P5)。(完了)
+- 人間の手番: Codex のクロスレビュー、Ready for review、2 件の review thread(`[imo]`、`[nits]`)の resolve、PR の merge。follow-up 候補(「リスク・ブロッカー」)の起票の判断。
 
 ## 検証
 
@@ -123,6 +124,7 @@ Run は工程の順序と error の返し方だけを持ち、各工程は結果
 - follow-up 候補(起票はユーザーが判断する)
   - timeline 上で親がすでに除外された thread でも、同じ page の broadcast から `conversations.replies` を呼ぶ。結果は使われず、呼び出しを省ける(`TestRunIntegrationExcludeEmojiParentDropsBroadcastAndRefillsMaxPosts` が replies 1 回として固定している)。broadcast の親 thread の取得経路を見直す #206 で合わせて扱える。
   - user の avatar を map の反復順で保存するため、`assets_manifest.json` の avatar の entry の順と download の順が実行ごとに変わる。cache の JSON を比べる #194 の検証に影響し得る。
+  - Assets 行の WARN の判定と saved / skipped / failed の並びを、Assets 行に限って確かめる test が無い(基準でも同じ)。`logsContain` は Done の要約の `assets:` の行でも一致するため、片方の行の件数の並びを入れ替えても、WARN の判定を変えても test は通る(P5 の subagent の報告)。Messages 行の `assertMessagesPhaseLine` と同じ形の helper で確かめられる。本 PR は表示を変えておらず、固定 sample と `--demo` の出力の比較で確かめた。
 
 ## セッションログ
 
@@ -131,4 +133,6 @@ Run は工程の順序と error の返し方だけを持ち、各工程は結果
 - 2026-09-26: P1。PR #262 を draft で作成し、note を採番した(`30fdc68`)。`run-issue-task` から引き上げた項目は次のとおり。確認経路の項目(`number-working-branch-note` の書き換えた行)は 1 件で、PR description のファイル名参照の置換(「概要」の note の path)である。ほかに note の `PR:` 欄の「未作成」を `#262` にした。状況を説明する stale 表現と完了タスク行の書き換えは 0 件で、title は変えていない。残された事項(触らずに残した行)は 2 件で、停止は無い。note の「現在の状況」の「PR は未作成。」(定型の `PR 未作成` に当てはまらない)と、「次にやること」の「`progress.md` の RF-03 の行を更新し、draft PR を作成して note を採番する。」(複合行。`progress.md` の PR 欄の反映が未完了だった)である。2 件とも、この P1 の記録の commit で、`progress.md` の PR 欄の反映と合わせて更新した。情報統制チェックで除外・修正した箇所は無い。出力生成系 3 skill は呼ばなかった(各 skill の「いつ使うか」に当たらない。「決定事項」の「その他」)。検証の結果は「検証」のとおり。
 - 2026-09-26: P1 の記録の後、`doc/design/architecture.md` の Run の工程の段落に、再利用する cache の解決が抜けていたため足した。review(P2)の委譲の前である。
 - 2026-09-26: P2 / P3。review cycle `claude-code-cec2436-20260926072903`、`Reviewed head` `cec2436b0350a447e8c50f5cefb5f529610193b2`。指摘は 2 件(inline 2 / top-level 0)で、prefix の内訳は `[must]` 0、`[ask]` 0、`[imo]` 1、`[nits]` 1。1 件以上のため P4 へ進んだ。subagent の報告では、`gh` への fallback、停止、訂正できなかった誤りはいずれもなし。
-- 2026-09-26: P4。処置は 2 件とも「採用し修正した」。`[imo]`(Assets 工程の asset の集計)は、`endAssetsPhase` が `assetCounts` を返し、Run が `writeCaches` と `reportDone` へ渡す形にした(`a89f36f`)。phase の開始は Run に残した(「工程と入出力」)。`[nits]`(変更前の局所変数 55)は、go/types で数え直し、note と PR description の値と数え方を改めた(関数本体の scope で 52 → 17、入れ子を含めて 79 → 17)。note はこの commit で更新し、PR description は「概要」「主な変更」「工程と入出力」「最大関数行数と状態保持箇所」「検証」を編集した。出力生成系 3 skill は、固定 sample と gensample の log が基準と一致したため、引き続き適用しない。
+- 2026-09-26: P4。処置は 2 件とも「採用し修正した」。`[imo]`(Assets 工程の asset の集計)は、`endAssetsPhase` が `assetCounts` を返し、Run が `writeCaches` と `reportDone` へ渡す形にした(`a89f36f`)。phase の開始は Run に残した(「工程と入出力」)。`[nits]`(変更前の局所変数 55)は、go/types で数え直し、note と PR description の値と数え方を改めた(関数本体の scope で 52 → 17、入れ子を含めて 79 → 17)。note はこの commit で更新し、PR description は「概要」「主な変更」「工程と入出力」「最大関数行数と状態保持箇所」「レビューしてほしい点」「検証」を編集した。出力生成系 3 skill は、固定 sample と gensample の log が基準と一致したため、引き続き適用しない。
+- 2026-09-26: P5。再確認(verify-comments)を P2 と同じ subagent に委譲した(`Reviewed head` `93e501d`)。修正確認済み 2 件(2 thread とも resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。subagent は基準と head の binary で `--demo` を 9 通り比べて出力の一致を確かめ、reused の表示を落とす変異が reuse の結合 test で失敗することも確かめた。完了要約の補足の指摘で、P4 の記録の PR description の編集箇所に抜けていた「レビューしてほしい点」を補った。既存の test の穴(Assets 行の WARN の判定と件数の並び)の報告を follow-up 候補に加えた(「リスク・ブロッカー」)。subagent の報告では、`gh` への fallback、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-26: P6。終了時の状態: PR #262 は draft で、P5 が確かめた head `93e501d` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit である。PR description の「補足」に、3 件目の follow-up 候補と review cycle の結果を足した。残りは人間の手番(「次にやること」)。
