@@ -124,11 +124,11 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	if err := writePage(out.path, page); err != nil {
 		return "", err
 	}
-	endAssetsPhase(p, assets)
+	assetTotals := endAssetsPhase(p, assets)
 
-	saved, skipped, failed := assets.Counts()
 	if err := writeCaches(out.path, now, target.auth, target.channel, opts, fetchRange, out.wsLabel, out.chLabel,
-		counts.timeline, counts.threads, counts.replies, counts.excluded, saved, skipped, failed,
+		counts.timeline, counts.threads, counts.replies, counts.excluded,
+		assetTotals.saved, assetTotals.skipped, assetTotals.failed,
 		resolved.users, resolved.bots, customEmoji, assets); err != nil {
 		return "", err
 	}
@@ -137,7 +137,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			return "", err
 		}
 	}
-	return reportDone(p, target, out.path, start, counts, assets, excludedMessagesLabel(opts)), nil
+	return reportDone(p, target, out.path, start, counts, assetTotals, excludedMessagesLabel(opts)), nil
 }
 
 // exportTarget is the result of the Workspace and Channel stages: the token's
@@ -232,10 +232,10 @@ type exportCounts struct {
 
 // reportDone runs the Done phase: the exported workspace and channel with the
 // run's elapsed time on the real clock since start, then the summary of the
-// counts, the assets and the output directory. It returns dir as an absolute
-// path, or dir itself when that fails. excludedLabel names the emoji filters
-// in use and is "" without one.
-func reportDone(p *ui.Printer, target exportTarget, dir string, start time.Time, counts exportCounts, assets *output.Assets, excludedLabel string) string {
+// message counts, the asset totals the Assets line reported and the output
+// directory. It returns dir as an absolute path, or dir itself when that
+// fails. excludedLabel names the emoji filters in use and is "" without one.
+func reportDone(p *ui.Printer, target exportTarget, dir string, start time.Time, counts exportCounts, assetTotals assetCounts, excludedLabel string) string {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		abs = dir
@@ -246,10 +246,9 @@ func reportDone(p *ui.Printer, target exportTarget, dir string, start time.Time,
 	if excludedLabel != "" {
 		p.Plainf("    %s: %d", excludedLabel, counts.excluded)
 	}
-	saved, skipped, failed := assets.Counts()
-	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
-	if n := assets.Reused(); n > 0 {
-		p.Plainf("    (of which %d reused from cache, no download)", n)
+	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", assetTotals.saved, assetTotals.skipped, assetTotals.failed)
+	if assetTotals.reused > 0 {
+		p.Plainf("    (of which %d reused from cache, no download)", assetTotals.reused)
 	}
 	p.Plainf("  output: %s", abs)
 	return abs

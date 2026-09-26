@@ -132,20 +132,32 @@ func writePage(dir string, page *render.PageData) error {
 	return render.WriteStaticAssets(dir)
 }
 
+// assetCounts are the asset totals of the Assets stage, which the Assets line,
+// metadata.json and the Done summary report.
+type assetCounts struct {
+	saved   int
+	skipped int
+	failed  int
+	reused  int // of saved, those taken from the reuse cache instead of downloaded
+}
+
 // endAssetsPhase ends the Assets phase with the saved / skipped / failed
 // totals, as a warning when an asset was skipped or failed, and how many
-// assets came from the reuse cache.
-func endAssetsPhase(p *ui.Printer, assets *output.Assets) {
-	saved, skipped, failed := assets.Counts()
+// assets came from the reuse cache. It returns those totals.
+func endAssetsPhase(p *ui.Printer, assets *output.Assets) assetCounts {
+	var totals assetCounts
+	totals.saved, totals.skipped, totals.failed = assets.Counts()
+	totals.reused = assets.Reused()
 	status := ui.StatusSuccess
-	if skipped > 0 || failed > 0 {
+	if totals.skipped > 0 || totals.failed > 0 {
 		status = ui.StatusWarn
 	}
 	meta := ""
-	if n := assets.Reused(); n > 0 {
-		meta = fmt.Sprintf("%d reused from cache, no download", n)
+	if totals.reused > 0 {
+		meta = fmt.Sprintf("%d reused from cache, no download", totals.reused)
 	}
-	p.EndPhase(status, "Assets", fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", saved, skipped, failed), meta)
+	p.EndPhase(status, "Assets", fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", totals.saved, totals.skipped, totals.failed), meta)
+	return totals
 }
 
 func workspaceIconURL(teamInfo *slack.TeamInfo) string {
