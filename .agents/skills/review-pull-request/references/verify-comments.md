@@ -4,7 +4,7 @@
 
 1. `pull_request_read(get_review_comments / get_reviews / get_comments)` で元の review comment と実装担当 Agent の返信を、可視 metadata から元 review 時点の head SHA(`Reviewed head`)を、`pull_request_read(get)` で現在の head SHA を、`pull_request_read(get_diff / get_files)` で修正差分を、`pull_request_read(get_check_runs)` で check runs を取得する。
 2. 現在の Agent が元の Review 担当 Agent / review cycle と一致することを可視 metadata で確認する。GitHub username の一致だけを根拠にしない。一致しない場合は `SKILL.md`「verify-comments の担当一致」に従い、ユーザーの明示指示が無ければ処理を停止する。
-3. 各指摘について、返信内容だけで判断せず、現在の PR diff、実装、関連 test / document、実行した検証を確認して対応結果の妥当性を再評価する。確かめることと結果の区分は、返信が示す処置に応じて下記「処置ごとの確認」に従う。再検証には `SKILL.md`「組み込み / 汎用 review capability の再利用」に従い、利用可能な review capability を活用してよい。
+3. 各指摘について、返信内容だけで判断せず、現在の PR diff、実装、関連 test / document、GitHub 上で編集した対象の現在の内容、実行した検証を確認して対応結果の妥当性を再評価する。確かめることと結果の区分は、返信が示す処置に応じて下記「処置ごとの確認」に従う。再検証には `SKILL.md`「組み込み / 汎用 review capability の再利用」に従い、利用可能な review capability を活用してよい。
 4. 妥当と判断した inline thread には、`add_reply_to_pull_request_comment` で確認済み返信を残す。返信本文の先頭行は、「処置ごとの確認」の区分に対応する `SKILL.md`「Review event と resolve の制約」の resolve 可マーカー(修正確認済みなら `**修正確認済み(resolve 可)**`)とし、その thread 固有の確認結果を短く続ける。スコープ外として確認済みの返信には、確かめた follow-up の記録先を書く。共通の head SHA、check runs、件数、canonical metadata は返信ごとに繰り返さず、Step 7 の完了要約へ集約する。マーカーを付けてよいのは、現在の Agent が Review 担当として作成した review cycle の inline thread に限る。
 5. 対応が不十分、修正が未反映(「処置ごとの確認」の「採用し修正した」)、検証不足、処置の根拠が成り立たない、または新たな問題がある場合は、その thread 固有の理由と必要な追加対応だけを簡潔に返信し、thread は unresolved のまま残す。この返信には resolve 可マーカーを付けない。スコープ外とした指摘を本 PR で直すべきと判断した場合と、follow-up の記録先が見つからない場合は、処置の根拠が成り立たないものとして扱う。
 6. top-level comment の指摘など inline thread が無い指摘も、「処置ごとの確認」に従って区分を決め、確認結果を Step 7 の完了要約へ含める。マーカーは付けない。同じ結果を個別の PR conversation comment と完了要約へ重複投稿しない。
@@ -31,7 +31,7 @@
 
 - 「採用し修正した」の反映は、返信が示す修正の所在(`references/address-comments.md` の手順 8)の種類ごとに次で確かめる。修正が両方を含む場合は、両方が成り立つときだけ反映済みとする。
   - push を伴う修正: 修正が対象 PR の head に push 済みであること。
-  - push を伴わない修正(PR description、PR の title、Issue の本文など、GitHub 上の編集で直す修正): 返信が示す対象と箇所が、再確認の時点の GitHub 上の内容で直っていること。内容は read 系 tool(PR description と title は `pull_request_read(get)`、それ以外は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」の tool)で取得する。編集には版を固定する SHA が無いため、再確認の時点の内容で確かめる。返信が編集した対象を示さず、確かめる対象を特定できない場合は、反映を確かめられないものとして未対応とする。
+  - push を伴わない修正(PR description、PR の title、Issue の本文など、GitHub 上の編集で直す修正): 返信が示す対象と箇所が、再確認の時点の GitHub 上の内容で直っていること。内容は read 系 tool(PR description と title は `pull_request_read(get)`、それ以外は `doc/guidelines/github-mcp-guidelines.md` の「操作別の第一選択」の tool)で取得する。編集には版を固定する SHA が無いため、再確認の時点の内容で確かめる。返信が編集した対象または箇所を示さない場合は、指摘の文脈などから補わず、確かめる対象を特定できないものとして未対応とする。PR の title のように対象の全体が箇所に当たる場合は、対象を示せば箇所も示したものとする。
 - 確かめたことが成り立たない指摘と、処置の返信が無い指摘は、未対応とする(Step 5)。
 - 未対応以外の 3 区分は、inline thread では resolve 可とし、区分に対応するマーカーを付ける。未対応件数には数えない。
 - 対応不要として確認済みは、修正を伴わない処置のうち、スコープ外と「判断に追加情報が必要である」を除く処置について、根拠が成り立つと確かめた指摘を指す。スコープ外として確認済みも本 PR で修正しない点は同じだが、resolve の前に follow-up の記録先を確かめる thread だと読めるよう、区分を分ける。
