@@ -14,7 +14,7 @@ Issue #254(FU-18)。`TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれ�
 
 - 依存は無い。main `3ff83c0` から作業した。
 - 作業内容 1(診断)を `cb5c145`、作業内容 3(修正)を `1d3e434` で commit した。原因は特定できた(「決定事項」の「原因」)。
-- 作業内容 2 の再現の試行のうち、増幅した条件は済んだ(「試した条件と結果」)。増幅しない条件の試行と、Issue の「検証」を実行している。
+- 作業内容 2 の再現の試行(「試した条件と結果」)と、Issue の「検証」(「検証」)を実行した。修正後は、修正前に失敗が出た条件を含め、どの条件でも失敗しなかった。
 - PR 未作成。
 
 ## 決定事項
@@ -31,7 +31,7 @@ test の client が `http.DefaultTransport` を共有し、並行して走る別
 
 CI の失敗(run 36007902809、Go 1.26.4)はこの形に合う。request 数 6 と待機 6 回の assertion が通り、待機 1 回だけが `8.33s`(`backoffWait(4)`)だった。`withRetry` の attempt 3(0 始まりで、4 回目の request)の応答が error になり、attempt 4 の前に backoff が入ったことになる。request 数が減らないことは、server が attempt 3 の request を受けていたことを示す。行番号は Go 1.26.4 の source で確かめた。dev container の Go 1.26.8 でも該当する関数(`readLoop`、`persistConn.roundTrip`、`CloseIdleConnections`)は同一である。
 
-以前の調査(PR #238 のコメント)が「他の httptest server を並行して作っては閉じ続ける」条件で 3,000 回再現しなかったのは、競合の窓が応答の受け渡しの直前の数命令と狭く、1 回の実行あたりの発生確率が低いためと考える。増幅した条件でも、1 回の実行あたり 2.3 万〜8 万分の 1 程度だった(「試した条件と結果」)。
+以前の調査(PR #238 のコメント)が「他の httptest server を並行して作っては閉じ続ける」条件で 3,000 回再現しなかったのは、競合の窓が応答の受け渡しの直前の数命令と狭く、1 回の実行あたりの発生確率が低いためと考える。増幅した条件でも、1 回の実行あたり 2.3 万〜8 万分の 1 程度だった。一方、増幅しない条件でも、`-race` と CPU の負荷の下では修正前に再現した(「試した条件と結果」)。
 
 ### 直し方
 
@@ -51,7 +51,7 @@ client を直さない理由:
 
 ### 影響の範囲
 
-- `internal/slack` で競合が assertion に効くのは、body の無い 429 に Retry-After を付ける 4 test である: `TestCall429HonoursRetryAfter`、`TestCall429RetryAfterWaitsBeforeGivingUp`、`TestDownloadRetryAfterWaitsBeforeGivingUp`、`TestDownloadRetries`。5xx と Retry-After の無い 429 は、競合が起きても次の待機が同じ backoff になるため assertion は変わらない。4 test とも `newTestClient` を通るため、本修正で揃って直る。
+- `internal/slack` で競合が assertion に効くのは、body の無い 429 に Retry-After を付ける 4 test である: `TestCall429HonoursRetryAfter`、`TestCall429RetryAfterWaitsBeforeGivingUp`、`TestDownloadRetryAfterWaitsBeforeGivingUp`、`TestDownloadRetries`。5xx と Retry-After の無い 429 は、競合が起きても次の待機が同じ backoff になるため assertion は変わらない。4 test とも `newTestClient` を通るため、本修正で揃って直る。4 test とも、CI か「試した条件と結果」の試行で、この形の失敗が出た。
 - body のある応答(200 の JSON など)は、body を読み終えてから接続を idle pool に戻すため、この競合は起きない。
 - `internal/export` の integration test も `slack.New` の client で `http.DefaultTransport` を使い、fake Slack server を並行して閉じる。body の無い 429 に Retry-After を付け、その待機の進捗表示を確かめる `TestRunIntegrationRateLimitRetryThenSuccess` は、同じ競合で失敗し得る(コードからの推定で、再現は試していない)。export package の test からは `Client` の Transport を差し替えられず、直すには slack package に client を注入する exported な option を足す必要がある。Issue の対象(`internal/slack` の test)から外れ、製品の API を変えるため、本 PR では扱わず follow-up 候補とする(「リスク・ブロッカー」)。
 
@@ -78,7 +78,21 @@ client を直さない理由:
 
 **増幅しない条件**(Issue の作業内容 2 の条件)。repository の test をそのまま実行した(stress test は含めない)。
 
-(作成中)
+| 条件 | 回数 | 修正前 | 修正後 |
+| --- | --- | --- | --- |
+| `go test -count=500 ./internal/slack` を 4 回 | package 2,000 回 | 失敗 0 | 失敗 0 |
+| `go test -cpu=1,2,4 -count=200 ./internal/slack` | GOMAXPROCS 1 / 2 / 4 で各 200 回 | 失敗 0 | 失敗 0 |
+| `go test -race -count=200 ./internal/slack`(`CGO_ENABLED=1`) | package 200 回 | 2 件失敗 | 失敗 0 |
+| `go test -count=100 ./...` | 全 package 100 回 | 失敗 0 | 失敗 0 |
+| CPU 負荷 + `go test -count=500 ./internal/slack` を 4 回 | package 2,000 回 | 3 件失敗 | 失敗 0 |
+| CPU 負荷 + `go test -count=50 ./...` | 全 package 50 回 | 失敗 0 | 失敗 0 |
+
+- `-race` の 2 件: `TestDownloadRetryAfterWaitsBeforeGivingUp` は、診断の出力で `lastErr` が `... transport connection broken: http: CloseIdleConnections called` で、`wait[2]` が 4 秒台(`backoffWait(3)`)だった。`TestCall429HonoursRetryAfter` は、Retry-After 3 秒の待機が 1.86 秒だった。
+- CPU 負荷の 3 件: `TestCall429HonoursRetryAfter` が 2 件(1.50 秒と 1.31 秒)、`TestDownloadRetries` が 1 件(Retry-After 7 秒の待機が 1.33 秒)。
+- Retry-After の待機が 1 秒台になった 4 件は、`backoffWait(1)` に当たる。どちらの test も診断を入れておらず `lastErr` は出ていないが、1 回目の 429 の応答が error になった形で、「影響の範囲」で挙げた test と合う(形からの推定)。
+- CPU 負荷の下での頻度(package 2,000 回で 3 件)は、CI の頻度(run 518 件で 1 件)と同じ桁である。CI の `go test ./...` は、他の package の test binary と並行して走り CPU を取り合う点で、この条件に近いと考える(推定)。以前の調査の `-race` 30 回で再現しなかったことも、この試行の頻度(200 回で 2 件)と矛盾しない。
+- CPU の負荷は、host で busy loop を CPU 数と同じ 4 本回して作った。CPU の制限は `-cpu=1`(GOMAXPROCS=1)で代えた。
+- 1 回の `go test` は、loopback の ephemeral port(28,232 個)を使い切らない回数に分け、間に TIME_WAIT の socket が減るのを待った。package 1 回で TIME_WAIT の socket が約 30 個(`./...` では約 180 個)残り、使い切ると `httptest.NewServer` が listen に失敗する。最初の試行は `-count=2000` をまとめて実行してこの失敗が混ざったため、分け直した(表は分け直した結果)。
 
 ### その他
 
@@ -88,21 +102,29 @@ client を直さない理由:
 
 ## 次にやること
 
-- `progress.md` の FU-18 の行を更新し、draft PR を作成して note を採番する。
-- 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- draft PR を作成し、note を採番する。
+- `progress.md` の FU-18 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 検証
 
-(作成中)
+2026-09-26、cloud session(project の thread)で、Docker Compose(`docker compose run --rm dev ...`)で実行した。対象は `00c6feb`(コードは `1d3e434` と同じ)。
+
+- `go test ./internal/slack`: ok。
+- `go test ./...`: 全 package ok。
+- `go vet ./...`: 成功。`gofmt -l .`: 出力なし。
+- `git diff --check`(main `3ff83c0` との差分): 問題なし。
+- 作業内容 2 の試行: 「試した条件と結果」の表のとおり。修正後は、修正前に失敗が出た条件(増幅した 4 条件、`-race`、CPU の負荷)を含め、どの条件でも失敗しなかった。
+- 実 token は使わず、test は架空の fixture と `httptest` の server で確かめた。
 
 ## リスク・ブロッカー
 
 - follow-up 候補(起票はユーザーが判断する)
   - `internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess` が同じ競合で失敗し得る(「影響の範囲」)。slack package に `http.Client` か Transport を注入する option を足し、export の test harness が fake server の transport を渡す形で直せる。
-- 本修正の効果は確率的な事象に対するもので、CI 上で再発しないことは merge 後の CI の結果で確かめるほかない。修正後も診断の `c.Logf = t.Logf` が残るため、再発した場合は `lastErr` から原因を切り分けられる。
+- 本修正の効果は確率的な事象に対するもので、CI 上で再発しないことは merge 後の CI の結果で確かめるほかない。修正前に失敗が出た条件では、修正後に失敗は出なかった。`*WaitsBeforeGivingUp` の 2 test は診断の `c.Logf = t.Logf` を残すため、再発した場合は `lastErr` から原因を切り分けられる。
 
 ## セッションログ
 
 - 2026-09-26: #206(PR #263)の merge 後、逐次処理の 8 件目として #254 を選び、Issue ごとに新しい thread で進める方式で始めた。依存は無い。branch は main `3ff83c0` から作った。
 - 2026-09-26: 作業内容 1 の診断を入れ、増幅した条件(`http.DefaultTransport.CloseIdleConnections` を呼び続ける)で再現し、`lastErr` から原因を特定した。作業内容 3 の修正を入れ、修正前後で再現の条件を比べた。
+- 2026-09-26: 増幅しない条件で修正前後を比べ(修正前は `-race` と CPU の負荷の下で 5 件失敗、修正後は 0 件)、Issue の「検証」を実行した。
