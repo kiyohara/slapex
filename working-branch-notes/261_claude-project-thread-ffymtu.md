@@ -15,7 +15,8 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - 作業内容 1〜9 を実施し、Issue の「検証」を実行した。作業内容 9 は、#227 が完了済みのため、orchestrator への後付けに置き換えた。
 - PR #261 作成済み。note を採番し、採番の報告から引き上げた項目を「セッションログ」の P1 に残した(P1)。
 - P2 の review の指摘 5 件を検討し、修正と記録を push して、各指摘へ処置を返信した(P4)。4 件を採用して修正し、1 件は #229 と合わせて判断する事項として follow-up 候補に残した。
-- P5 の再確認で、5 件とも resolve 可になり、未対応は 0 件だった。review cycle は完了した(P6)。残りは人間の手番だけである(「次にやること」)。
+- P5 の再確認で、5 件とも resolve 可になり、未対応は 0 件だった。review cycle は完了した(P6)。
+- ユーザーが PR を Ready for review にし、Codex のクロスレビューで `[must]` 1 件が付いた。採用して修正し、返信した。再確認は Codex か人間が行う。
 
 ## 決定事項
 
@@ -35,7 +36,7 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - 作業内容 7 / 未決事項 2: 出力生成系 3 skill と `review-pull-request` の SKILL.md は変えていない。前者は、PR description / note への記録を一般規定上の被委譲 skill の報告として扱う。後者は、委譲する側の `drive-issue-to-reviewed-pr` で扱った(作業内容 9)。
 - 作業内容 8 / 未決事項 5・6: #228 が作った decision log 0062 に「追記(2026-09-26): 上位 skill への報告の引き上げ」を足し、index の 0062 の行を更新した。案 A / B / C の比較、bizdate の Issue #55 / PR #59 との対応、slapex 固有の判断(`release` の時点、`maintain-progress` の節、両方に当たる項目の扱い、orchestrator への後付け)を残した。#228 とは統合していない(#228 は PR #238 で merge 済み)。
 - 作業内容 9: #227 は完了済み(PR #233)のため、申し送りのコメントは残さず、Issue の依存・順序の記述(「#227 を先に行う場合は、本 Issue で orchestrator に参照を後付けする」)に従って、本 PR で `drive-issue-to-reviewed-pr` に後付けした。
-  - P1 の完了条件、PR の入口で P2 から始める場合の P1 の確認、「working branch note」の P1 の記録、「CI の確認点」の P1 の完了時の説明、「終了時の報告」に、`run-issue-task` から引き上げた項目を加えた。P1 の記録は P2 の委譲の前に push する(bizdate と同じ)。PR の入口の確認は、0059 の 2026-09-24 の追記の予告(「足す項目は、PR の入口での P1 の確認にも加える」)に沿い、bizdate PR #88 の「引き上げた項目の記録」の行に当たる。採番の報告が手元に無い場合は追記せず、終了時の報告でその旨と採番の commit を示す。PR の入口の確認の中で自身が採番した場合は、その採番の報告から引き上げる(P4 で明記した)。
+  - P1 の完了条件、PR の入口で P2 から始める場合の P1 の確認、「working branch note」の P1 の記録、「CI の確認点」の P1 の完了時の説明、「終了時の報告」に、`run-issue-task` から引き上げた項目を加えた。P1 の記録は P2 の委譲の前に push する(bizdate と同じ)。PR の入口の確認は、0059 の 2026-09-24 の追記の予告(「足す項目は、PR の入口での P1 の確認にも加える」)に沿い、bizdate PR #88 の「引き上げた項目の記録」の行に当たる。採番の報告が手元に無い場合は、報告を後から復元できないため、その旨と採番の commit を note の P1 の記録に残して push し、この記録で P1 の完了条件を満たす(当初は「追記せず、終了時の報告で示す」としたが、P1 の完了条件と食い違うという Codex の指摘を受けて揃えた)。PR の入口の確認の中で自身が採番した場合は、その採番の報告から引き上げる(P4 で明記した)。
   - `review-pull-request` のユーザーへの報告のうち、処理の停止、反復上限のエスカレーション、訂正できなかった metadata の誤りは、既存の「停止とエスカレーション」と「終了時の報告」で届く。「MCP write failure の安全手順」の `gh` への fallback の明示だけが、「返させる出力」にも「終了時の報告」にも無かった。subagent はユーザーへ直接明示できないため、両方に加えた。
   - P4 で、「返させる出力」の「訂正できなかった誤り」の行と「終了時の報告」の「人間に残る作業」に、該当が無い場合の報告を足した(残された事項の 0 件の報告)。`gh` への fallback の行は、subagent の場合は fallback の後の報告になる。これは #229 と合わせて判断する(「リスク・ブロッカー」)。
   - P4 で使った出力生成系 skill の記録も、同じ扱いで「終了時の報告」へ含めると定めた。
@@ -67,7 +68,8 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - P4 の修正と記録を push した後、各指摘へ処置を返信し、最新 head の check runs を確かめてから、P5 の再確認を同じ subagent に委譲する。(完了)
 - P5 の結果を記録し、終了時の報告を返す(P6)。(完了)
 - (人間)resolve 可マーカーの付いた 5 thread を確かめて resolve する。スコープ外として確認済みの 1 件は、resolve の前に follow-up の記録先(「リスク・ブロッカー」)を確かめる。
-- (人間)PR を Ready for review にし、Codex のクロスレビューを経て merge する。
+- (人間)PR を Ready for review にし、Codex のクロスレビューを経て merge する。(Ready と Codex のクロスレビューは完了)
+- (Codex か人間)Codex の cycle の指摘 1 件への対応を再確認し、resolve する。
 - (人間)「リスク・ブロッカー」の follow-up 候補 3 件と還元候補 1 件の起票を判断する。
 
 ## 検証
@@ -103,7 +105,7 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - follow-up 候補: `update-sample-exports` の、相対日時 / Export information だけの差分を commit しなかった判断は、同 skill の記録項目に独立して無く、「生成差分の要点」(3)に含まれる範囲でしか届かない。この判断を独立した記録項目にし、確認経路と位置づけるかは、出力生成系 skill の SKILL.md の変更になるため本 Issue のスコープ外とした。起票はユーザーの判断による。
 - follow-up 候補(P4、`run-issue-task` の表への `[imo]` の指摘): 採番 skill の「情報統制チェックで除外・修正した箇所」は 3 に当たり、要約してよく 0 件の報告も要らない。採番は PR の作成の後に行うため、該当があれば値は採番の前に push 済みで、ユーザーの対処(credential の失効など)が要り得る。同 skill 側でこの項目を確認経路または残された事項と位置づけるかは、`number-working-branch-note` の SKILL.md の変更になるため本 Issue のスコープ外とした(理由は 0062 の追記)。起票はユーザーの判断による。
 - follow-up 候補(P4、「返させる出力」の `gh` への fallback の行への `[fyi]` の指摘): subagent は、この行で fallback の後に報告することしかできない。`review-pull-request` の「MCP write failure の安全手順」の手順 4 と `doc/guidelines/github-mcp-guidelines.md` の切断時の手順は、fallback の前にユーザーへ明示することを求める。local の環境では、`op plugin run -- gh` の承認が説明の無いままユーザーに出得る。subagent が write の fallback の前に止まり、呼び出し元へ返すべきかは、#229 の「ユーザーに直接問えない実行主体」と合わせて判断する。cloud session では write の `gh` fallback をしないため、この行は常に「なし」になる。#229 への申し送りはユーザーの判断による。
-- 取り込み元への還元候補(P4): bizdate の `run-issue-task` の同節も、2(残された事項)の定義に「要約で落とさず」が無い。bizdate の decision log 0020 は前 2 種を要約で落とさないとしている。slapex は P4 で明記した。bizdate への起票はユーザーの判断による。
+- 取り込み元への還元候補(P4): bizdate の `run-issue-task` の同節も、2(残された事項)の定義に「要約で落とさず」が無い。bizdate の decision log 0020 は前 2 種を要約で落とさないとしている。slapex は P4 で明記した。また、bizdate の `drive-issue-to-reviewed-pr` も、`--from-pr` で採番の報告が手元に無い場合を確認の対象外とするだけで、P1 の完了条件に例外を置いていない(Codex の指摘と同じ食い違い)。bizdate への起票はユーザーの判断による。
 
 ## セッションログ
 
@@ -114,3 +116,4 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 - 2026-09-26: P4。処置は、採用し修正した 4 件と、妥当だが今回はスコープ外である 1 件。採用した 4 件は、`run-issue-task` の 2 の定義への「要約で落とさず」の明記、情報統制チェックの項目を 3 とした理由の 0062 への追記と follow-up 候補の記録、「返させる出力」の「訂正できなかった誤り」と「人間に残る作業」への該当なしの報告、PR の入口の確認で自身が採番した場合の引き上げ元の明記である。スコープ外の 1 件は、`gh` への fallback の明示が subagent では事後の報告になる件で、#229 と合わせて判断する follow-up 候補とした(「リスク・ブロッカー」)。修正 commit は `81a731e`。PR description の「レビューしてほしい点」と「補足」も更新した。出力生成系 3 skill は、変更が skill、decision log、note だけのため、引き続き適用しない。なお、read を 2 回 `gh api` で行った(返信の書式を確かめるための PR #260 の返信の取得と、PR #261 の description の長さの確認)。どちらも組み込みの `pull_request_read` で足りる操作だった。
 - 2026-09-26: P5。同じ subagent が review cycle `claude-code-d23bf9d-20260926050906` を head `bc64e5754e0db81a9fd15239d0f8b9bf781bcba0` で再確認した。修正確認済み 4 件、スコープ外として確認済み 1 件、対応不要として確認済み 0 件で、未対応は 0 件(完了要約は PR conversation comment 1 本)。5 thread とも resolve 可のマーカーが付いた。subagent の報告では、`gh` への fallback、停止、訂正できなかった誤りはいずれもなし。P2 の指摘の「1 つ上の箇条」が誤り(正しくは 2 つ上)だったことは、P4 の返信と P5 の返信の両方に残っている。
 - 2026-09-26: P6。終了時の状態: PR #261 は draft のまま open。P5 で確かめた head `bc64e57` の check runs は 5 件すべて success。本記録は note だけの commit で、P5 が確かめた head より後になる。人間に残る作業は、5 thread の resolve、Ready for review と Codex のクロスレビュー、merge、follow-up 候補の起票の判断である。metadata の誤りを訂正できなかった投稿は無い。
+- 2026-09-26: Codex のクロスレビュー。ユーザーが 06:06Z に Ready for review にした。Codex の cycle `codex-7e2e1f4-20260926060919`(`Reviewed head` `7e2e1f4`)は `[must]` 1 件で、PR の入口で採番の報告が手元に無い場合の「追記せず」が、P1 の完了条件(引き上げた項目を note に残して push 済み)と食い違う、という指摘だった。採用し、その旨と採番の commit を note の P1 の記録に残してこの記録で完了条件を満たす形に揃えた(`e6a96d4`。「PR から始める場合」の箇条、フェーズの表の P1 の完了条件、「working branch note」の P1 の行、decision log 0062 の追記)。02:05Z のユーザーの指示に従い、address-comments で返信した。Claude の cycle は再確認を済ませており、Codex の cycle の再確認は Codex か人間が行う。
