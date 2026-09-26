@@ -15,6 +15,7 @@ Issue #249(FU-15)。事前判定(Slack の `file.size` が `--max-attachment-siz
 - 依存は無い。main `90d744b` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
 - PR #266 作成済み(draft)。note を採番し(`f2103a0`)、`progress.md` の FU-15 の PR 欄も反映した。
+- review cycle `claude-code-0149e53-20260926221050` の指摘 1 件(`[imo]`)に対応した(P4、`3aee054`)。再確認(P5)を P2 と同じ subagent に委譲する。
 
 ## 決定事項
 
@@ -50,7 +51,7 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 ### test
 
 - 単体 test `TestAssetsSkipTooLargeRecordsEachURLOnce`(`internal/output/output_test.go`): 同じ URL の `SkipTooLarge` 3 回と、その後の `Save` で entry が 1 件のままで download もしないこと、`Save` が先に保存した URL への `SkipTooLarge` が entry も status も変えないこと、`Counts`、空の URL の 2 件が 2 件のまま残ることを確かめる。
-- 結合 test `TestRunIntegrationOversizeFilesInBroadcastRecordedOnce`(`internal/export/integration_rendering_test.go`): サイズ上限を超える添付ファイルと original 画像(thumbnail は上限以下)を持つ thread_broadcast で、thread と timeline の両方に置換表示が 1 回ずつ出ること、どちらのファイルも request されないこと、manifest の entry が 3 件(上限超過 2 件と thumbnail 1 件)であること、Assets phase の行、完了時の summary、`metadata.json` の件数が `1 saved, 2 skipped by size limit, 0 failed` であることを確かめる。
+- 結合 test `TestRunIntegrationOversizeFilesInBroadcastRecordedOnce`(`internal/export/integration_rendering_test.go`): サイズ上限を超える添付ファイルと original 画像(thumbnail は上限以下)を持つ thread_broadcast で、thread と timeline の両方に置換表示が 1 回ずつ出ること、どちらのファイルも request されないこと、manifest の entry が 3 件(上限超過 2 件と thumbnail 1 件)であること、Assets phase の行、完了時の summary、`metadata.json` の件数が `1 saved, 2 skipped by size limit, 0 failed` であることを確かめる。fake server は登録した path の request だけを数えるため、2 つの original の path も登録する(P2 の指摘。登録しないと、request されても確認が通る)。
 - Assets phase の行と完了時の summary の行は、それぞれ行全体で照合した。#250 のコメント(PR #262 の再確認からの申し送り)が挙げるとおり、既存の test の `logsContain` はどちらの行にも一致し、片方の行だけ件数が誤っていても通るためである。Assets 行を確かめる helper の追加は、同コメントのとおり #250 の着手時の判断に残す。
 
 ### 出力生成系 skill
@@ -64,7 +65,9 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 
 - draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-15 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- 指摘 1 件に対応し、処置を返信する(P4)。
+- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
 
 ## 検証
 
@@ -84,10 +87,12 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 
 ## リスク・ブロッカー
 
-- 同じ URL に payload ごとに異なる `size` が付く場合(実際の Slack で起きるかは未確認)、修正後は最初の描画の結果が URL の記録になる。事前判定が先なら後の描画でも download しない。`Save` が先に保存したなら、後の描画の事前判定は置換表示だけを出し、件数は `saved` の 1 件になる。どちらも manifest は 1 件である。
+- 同じ URL に payload ごとに異なる `size` が付く場合(実際の Slack で起きるかは未確認)、修正後は最初の描画の結果が URL の記録になる。事前判定が先なら後の描画でも download しない。`Save` が先に保存したなら、後の描画の事前判定は置換表示だけを出し、件数は `saved` の 1 件になる。どちらも manifest は 1 件である。後者では、その箇所の置換表示(サイズ上限超過)と manifest の status(`saved`)が食い違い、`doc/design/html-rendering.md` の「画像と添付ファイルの表示」が表示の分類を manifest の status と件数に揃えるとしていることから外れる。Issue の完了条件(置換表示はこれまでどおり)と 1 URL 1 件を両立する選択で、P2 の review も同じ理由で許容とした。
 
 ## セッションログ
 
 - 2026-09-26: #215(PR #265)の merge 後、逐次処理の 10 件目として #249 を選び、Issue ごとに新しい thread で進める方式で始めた。docs.slack.dev と api.slack.com は 403 のままで、FU-13(#246)は着手できなかった。依存は無い。branch は main `90d744b` から作った。
 - 2026-09-26: base で不具合を再現し(summary が `4 skipped`、manifest が 5 件)、単体 test と結合 test を先に書いて失敗を確かめた。`SkipTooLarge` を URL 単位で 1 件にし、事前判定の後の `Save` で 2 件目が入る経路も塞いだ。Issue の「検証」を実行した。
 - 2026-09-26(P1): draft PR #266 を作成し、note を採番した(`f2103a0`)。`progress.md` の FU-15 の PR 欄に #266 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #266`(PR 欄の記入)、`- PR 未作成。` → `- PR #266 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-sequential-issue-10-720ei0.md` → `266_claude-sequential-issue-10-720ei0.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
+- 2026-09-26: P2 / P3。review cycle `claude-code-0149e53-20260926221050`、`Reviewed head` `0149e5354c365a8742b1d550a0eabce53e657f83`。指摘は 1 件(inline 1 / top-level 0)で、prefix の内訳は `[imo]` 1、`[must]`、`[ask]`、`[nits]`、`[fyi]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。依頼した観点(事前判定の後の `Save` を塞ぐ判断、`Save` が先に保存した URL の扱い、空の URL、`a.known` の他の経路への影響、test、出力生成系 skill、設計文書と decision log)はいずれも妥当とされた。`Save` が先に保存した URL の扱いは、表示と manifest の status が食い違う点を挙げたうえで許容とされた(「リスク・ブロッカー」)。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-26: P4。処置は 1 件で「採用し修正した」。`[imo]`(結合 test の「request されない」の確認が常に通る)は、fake server(`newFakeSlackServer`)が `sc.Assets` と `sc.AssetFaults` の path にだけ handler を登録し、`Count` がその handler でだけ増えることをコードで確かめ、scratch の copy で再現した。`SkipTooLarge` の先頭で URL を request する変異を入れると、登録前の test は通り、2 つの path を登録した test は `/files/big-archive.zip requested 2 times, want 0` で失敗した。2 つの path を登録した(`3aee054`)。head のコードで `go test ./internal/output ./internal/export`、`go test ./...`、`go vet ./...`、`gofmt -l .`、`git diff --check` を再実行し、問題なかった。PR description の「主な変更」の「両ファイルが request されないこと」は、修正後の test に合うため変えていない。スコープ外とした指摘は無く、follow-up 候補も無い。出力生成系 3 skill は、変更が test だけのため引き続き適用しない。
