@@ -103,7 +103,7 @@ client を直さない理由:
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- `progress.md` の FU-18 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の FU-18 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 検証
@@ -128,3 +128,4 @@ client を直さない理由:
 - 2026-09-26: #206(PR #263)の merge 後、逐次処理の 8 件目として #254 を選び、Issue ごとに新しい thread で進める方式で始めた。依存は無い。branch は main `3ff83c0` から作った。
 - 2026-09-26: 作業内容 1 の診断を入れ、増幅した条件(`http.DefaultTransport.CloseIdleConnections` を呼び続ける)で再現し、`lastErr` から原因を特定した。作業内容 3 の修正を入れ、修正前後で再現の条件を比べた。
 - 2026-09-26: 増幅しない条件で修正前後を比べ(修正前は `-race` と CPU の負荷の下で 5 件失敗、修正後は 0 件)、Issue の「検証」を実行した。
+- 2026-09-26(P1): draft PR #264 を作成し、note を採番した(`e3466b5`)。`progress.md` の FU-18 の PR 欄に #264 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「その他」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #264`(PR 欄の記入)、`- PR 未作成。` → `- PR #264 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-project-thread-94h2xr.md` → `264_claude-project-thread-94h2xr.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
