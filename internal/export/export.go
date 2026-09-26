@@ -8,20 +8,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/kiyohara/slapex/internal/emoji"
 	"github.com/kiyohara/slapex/internal/output"
-	"github.com/kiyohara/slapex/internal/render"
 	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
-)
-
-const (
-	maxThreadReplies = 1000 // per-thread reply cap (doc/design/output-format.md)
 )
 
 // UsageError maps to exit code 2: the target could not be determined from
@@ -63,7 +57,20 @@ type Options struct {
 
 // Run performs the export and returns the absolute path of the directory
 // holding index.html. Progress and diagnostics go through p; each stage is a
-// ui phase line (doc/design/usage-flow.md「処理対象の表示」).
+// ui phase line (doc/design/usage-flow.md「処理対象の表示」). The stages run in
+// this order, and the first error ends the run:
+//
+//   - resolveTarget (Workspace, Channel phases): the token's workspace and the
+//     channel to export;
+//   - resolveReuseCache, createOutputDir, resolveFetchRange: the --reuse-cache
+//     cache, the channel's output directory and the [start, end) range;
+//   - fetchMessages (Messages): the timeline and thread replies the emoji
+//     filters and --max-posts leave;
+//   - resolveUsers (Users) and resolveCustomEmoji (Emoji): the users, bots and
+//     custom emoji the messages show;
+//   - the Assets phase: the workspace icon and avatars, the timeline view with
+//     the assets it shows, and index.html;
+//   - writeCaches and the .cache/ cleanup, then reportDone (Done).
 func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (string, error) {
 	// start is the real clock for the Done elapsed time; now is the export
 	// clock, which opts.Now may pin to another instant (see Options.Now).
@@ -73,10 +80,85 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		now = start
 	}
 
+	target, err := resolveTarget(ctx, client, opts, p)
+	if err != nil {
+		return "", err
+	}
+	var reuse *reusableCache
+	if opts.ReuseCache != "" {
+		reuse = resolveReuseCache(opts.ReuseCache, target.auth.TeamID, target.channel.ID, p)
+	}
+	out, err := createOutputDir(opts.OutputDir, now, target)
+	if err != nil {
+		return "", err
+	}
+	fetchRange, err := resolveFetchRange(opts, now)
+	if err != nil {
+		return "", err
+	}
+
+	fetched, err := fetchMessages(ctx, client, target.channel.ID, fetchRange, opts, p)
+	if err != nil {
+		return "", err
+	}
+	resolved := resolveUsers(ctx, client, fetched, reuse, p)
+	customEmoji, err := resolveCustomEmoji(ctx, client, reuse, p)
+	if err != nil {
+		return "", err
+	}
+	emojiResolver, err := emoji.NewResolver(customEmoji)
+	if err != nil {
+		return "", fmt.Errorf("load embedded emoji table: %w", err)
+	}
+
+	assets := output.NewAssets(ctx, client, out.path, opts.MaxAttachBytes)
+	assets.Logf = p.Warnf
+	if reuse != nil {
+		assets.SetReuseSource(reuse.reuseSource())
+	}
+	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
+	workspaceIcon := saveWorkspaceIcon(assets, target.teamInfo)
+	views := newMessageViewBuilder(assets, resolved, emojiResolver, opts.MaxAttachBytes)
+	items, counts := buildTimeline(views, fetched)
+	page := buildPage(target, workspaceIcon, items, fetched.truncated, fetchRange, opts, now)
+	if err := writePage(out.path, page); err != nil {
+		return "", err
+	}
+	endAssetsPhase(p, assets)
+
+	saved, skipped, failed := assets.Counts()
+	if err := writeCaches(out.path, now, target.auth, target.channel, opts, fetchRange, out.wsLabel, out.chLabel,
+		counts.timeline, counts.threads, counts.replies, counts.excluded, saved, skipped, failed,
+		resolved.users, resolved.bots, customEmoji, assets); err != nil {
+		return "", err
+	}
+	if !opts.KeepCache {
+		if err := output.RemoveCache(out.path); err != nil {
+			return "", err
+		}
+	}
+	return reportDone(p, target, out.path, start, counts, assets, excludedMessagesLabel(opts)), nil
+}
+
+// exportTarget is the result of the Workspace and Channel stages: the token's
+// workspace, the channel to export, and the lines that describe them in the
+// phase lines, the footer and the Done summary.
+type exportTarget struct {
+	auth     *slack.AuthTest
+	teamInfo *slack.TeamInfo // as team.info returned it; only the header icon uses it
+	channel  slack.Channel
+	wsLine   string
+	chLine   string
+}
+
+// resolveTarget runs the Workspace and Channel phases: auth.test checks the
+// token, team.info supplies the workspace icon (a failure only costs the icon),
+// and the channel comes from the channel list by keyword or selection.
+func resolveTarget(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (exportTarget, error) {
 	p.StartPhase("Workspace", "checking token (auth.test) ...")
 	auth, err := client.AuthTest(ctx)
 	if err != nil {
-		return "", err
+		return exportTarget{}, err
 	}
 	teamInfo, err := client.TeamInfo(ctx)
 	if err != nil {
@@ -88,315 +170,89 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	p.StartPhase("Channel", "listing channels ...")
 	channels, err := client.ListChannels(ctx)
 	if err != nil {
-		return "", err
+		return exportTarget{}, err
 	}
 	ch, err := chooseChannel(channels, opts, wsLine, p)
 	if err != nil {
-		return "", err
+		return exportTarget{}, err
 	}
-	chLine := channelLine(ch)
 	p.EndPhase(ui.StatusSuccess, "Channel", "#"+ch.Name, channelMeta(ch))
+	return exportTarget{auth: auth, teamInfo: teamInfo, channel: ch, wsLine: wsLine, chLine: channelLine(ch)}, nil
+}
 
-	var reuse *reusableCache
-	if opts.ReuseCache != "" {
-		reuse = resolveReuseCache(opts.ReuseCache, auth.TeamID, ch.ID, p)
-	}
+// outputDir is the channel directory one run writes into, with the workspace
+// and channel labels that name it (doc/design/output-format.md).
+type outputDir struct {
+	path    string
+	wsLabel string
+	chLabel string
+}
 
-	root, err := output.Root(opts.OutputDir, now)
+// createOutputDir creates the channel directory under the output root, which
+// output.Root names from outputRoot and now.
+func createOutputDir(outputRoot string, now time.Time, target exportTarget) (outputDir, error) {
+	root, err := output.Root(outputRoot, now)
 	if err != nil {
-		return "", fmt.Errorf("create output root: %w", err)
+		return outputDir{}, fmt.Errorf("create output root: %w", err)
 	}
-	wsLabel := output.WorkspaceLabel(auth.URL, auth.Team, auth.TeamID)
-	chLabel := output.ChannelLabel(ch.Name, ch.ID)
-	dir := filepath.Join(root, wsLabel, chLabel)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create output directory: %w", err)
+	wsLabel := output.WorkspaceLabel(target.auth.URL, target.auth.Team, target.auth.TeamID)
+	chLabel := output.ChannelLabel(target.channel.Name, target.channel.ID)
+	path := filepath.Join(root, wsLabel, chLabel)
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return outputDir{}, fmt.Errorf("create output directory: %w", err)
 	}
+	return outputDir{path: path, wsLabel: wsLabel, chLabel: chLabel}, nil
+}
 
-	fetchRange, err := resolveFetchRange(opts, now)
-	if err != nil {
-		return "", err
-	}
-	filter := newMessageFilter(opts.ExcludeBodyEmoji, opts.ExcludeReactionEmoji)
-	p.StartPhase("Messages", fmt.Sprintf("fetching %s (--max-posts %d) ...", fetchRange.progressLabel(), opts.MaxPosts))
-	var messages []slack.Message
-	replies := map[string][]slack.Message{}
-	repliesTruncated := map[string]bool{}
-	historyLatest := fetchRange.latestTS()
-	truncated := false
-	fetched := fetchedThreads{}
-	for len(messages) < opts.MaxPosts {
-		remaining := opts.MaxPosts - len(messages)
-		batch, more, err := client.History(ctx, ch.ID, fetchRange.oldestTS(), historyLatest, remaining, filter.Include,
-			func(n int) {
-				p.UpdatePhase(fmt.Sprintf("fetching %s ... %d fetched", fetchRange.progressLabel(), len(messages)+n))
-			})
-		if err != nil {
-			return "", err
-		}
-		if len(batch) == 0 {
-			break
-		}
-		historyLatest = oldestMessageTS(batch)
-		messages = append(messages, batch...)
-
-		threadIDs := unfetchedThreadIDs(batch, fetched, filter.Enabled())
-		threadTotal := len(fetched) + len(threadIDs)
-		for _, threadTS := range threadIDs {
-			fetched[threadTS] = struct{}{}
-			p.UpdatePhase(fmt.Sprintf("fetching thread replies ... %d/%d", len(fetched), threadTotal))
-			parent, r, trunc, err := client.Thread(ctx, ch.ID, threadTS, maxThreadReplies)
-			if err != nil {
-				return "", err
-			}
-			if !filter.IncludeThread(threadTS, parent) {
-				continue
-			}
-			var kept []slack.Message
-			for i := range r {
-				if filter.Include(&r[i]) {
-					kept = append(kept, r[i])
-				}
-			}
-			sort.Slice(kept, func(i, j int) bool { return tsLess(kept[i].TS, kept[j].TS) })
-			if len(kept) > 0 {
-				replies[threadTS] = kept
-				repliesTruncated[threadTS] = trunc
-			}
-		}
-
-		keptTimeline := messages[:0]
-		for i := range messages {
-			threadTS := messageThreadTS(&messages[i])
-			if filter.ThreadExcluded(threadTS) {
-				filter.Exclude(&messages[i])
-				delete(replies, threadTS)
-				delete(repliesTruncated, threadTS)
-				continue
-			}
-			keptTimeline = append(keptTimeline, messages[i])
-		}
-		messages = keptTimeline
-
-		if len(messages) >= opts.MaxPosts {
-			truncated = more
-			break
-		}
-		if !more {
-			break
-		}
-	}
-	sort.Slice(messages, func(i, j int) bool { return tsLess(messages[i].TS, messages[j].TS) })
-	excludedTotal := filter.ExcludedCount()
-	messagesStatus := ui.StatusSuccess
-	messagesMeta := fmt.Sprintf("threads %d, replies %d", len(replies), countReplies(replies))
-	if label := excludedMessagesLabel(opts); excludedTotal > 0 && label != "" {
-		messagesMeta += fmt.Sprintf(", %s: %d", label, excludedTotal)
-	}
-	if truncated {
-		messagesStatus = ui.StatusWarn
-		messagesMeta += fmt.Sprintf(", truncated by --max-posts %d", opts.MaxPosts)
-	}
-	p.EndPhase(messagesStatus, "Messages", fmt.Sprintf("%d fetched %s", len(messages), fetchRange.progressLabel()), messagesMeta)
-
-	userIDs := collectUserIDs(messages, replies)
-	botIDs := collectBotIDs(messages, replies)
-	p.StartPhase("Users", fmt.Sprintf("resolving %s ...", resolveTargetsLabel(len(userIDs), len(botIDs))))
-	users := map[string]*slack.User{}
-	reusedUsers := 0
-	for _, id := range userIDs {
-		if reuse != nil {
-			if cu, ok := reuse.users[id]; ok {
-				users[id] = cu.toUser(id)
-				reusedUsers++
-				continue
-			}
-		}
-		u, err := client.UserInfo(ctx, id)
-		if err != nil {
-			p.Warnf("could not resolve user %s: %s", id, err)
-			continue
-		}
-		users[id] = u
-	}
-	// A bot message that carries only bot_id has no user to resolve; bots.info
-	// supplies the app name and icon instead (decision log 0054). A failure is
-	// warned about and skipped, like an unresolvable user, so the export still
-	// completes with the bot_id and the initial fallback.
-	bots := map[string]*slack.Bot{}
-	reusedBots := 0
-	for _, id := range botIDs {
-		if reuse != nil {
-			if cb, ok := reuse.bots[id]; ok {
-				bots[id] = cb.toBot(id)
-				reusedBots++
-				continue
-			}
-		}
-		bot, err := client.BotInfo(ctx, id)
-		if err != nil {
-			p.Warnf("could not resolve bot %s: %s", id, err)
-			continue
-		}
-		bots[id] = bot
-	}
-	p.EndPhase(ui.StatusSuccess, "Users", resolvedTargetsLabel(len(users), len(bots)),
-		reusedTargetsMeta(reusedUsers, reusedBots))
-
-	var customEmoji map[string]string
+// resolveCustomEmoji runs the Emoji phase: the workspace's custom emoji from
+// emoji.list, or from the reuse cache without the call.
+func resolveCustomEmoji(ctx context.Context, client *slack.Client, reuse *reusableCache, p *ui.Printer) (map[string]string, error) {
 	if reuse != nil {
-		customEmoji = reuse.emoji
-		p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(customEmoji)), "from cache, emoji.list skipped")
-	} else {
-		p.StartPhase("Emoji", "fetching custom emoji list ...")
-		customEmoji, err = client.EmojiList(ctx)
-		if err != nil {
-			return "", err
-		}
-		p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(customEmoji)), "")
+		p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(reuse.emoji)), "from cache, emoji.list skipped")
+		return reuse.emoji, nil
 	}
-	emojiResolver, err := emoji.NewResolver(customEmoji)
+	p.StartPhase("Emoji", "fetching custom emoji list ...")
+	customEmoji, err := client.EmojiList(ctx)
 	if err != nil {
-		return "", fmt.Errorf("load embedded emoji table: %w", err)
+		return nil, err
 	}
+	p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(customEmoji)), "")
+	return customEmoji, nil
+}
 
-	assets := output.NewAssets(ctx, client, dir, opts.MaxAttachBytes)
-	assets.Logf = p.Warnf
-	if reuse != nil {
-		assets.SetReuseSource(reuse.reuseSource())
-	}
+// exportCounts are the message counts metadata.json and the Done summary
+// report. threads and replies count what the page shows: the timeline messages
+// shown with replies, and those replies.
+type exportCounts struct {
+	timeline int
+	threads  int
+	replies  int
+	excluded int
+}
 
-	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
-	workspaceIconPath := ""
-	if rel, ok := assets.Save(output.KindWorkspaceIcon, workspaceIconURL(teamInfo), output.AssetMeta{}); ok {
-		workspaceIconPath = rel
-	}
-	avatars := map[string]string{}
-	for id, u := range users {
-		if rel, ok := assets.Save(output.KindAvatar, avatarURL(u), output.AssetMeta{}); ok {
-			avatars[id] = rel
-		}
-	}
-	// App icons are saved as ordinary avatars (output.KindAvatar), so they land
-	// in assets/avatars/ next to the human ones and stay public downloads with
-	// no Authorization header (doc/guidelines/credential-scope-guidelines.md).
-	botAvatars := map[string]string{}
-	for _, id := range botIDs {
-		bot, ok := bots[id]
-		if !ok {
-			continue
-		}
-		if rel, ok := assets.Save(output.KindAvatar, bot.Icons.URL(), output.AssetMeta{}); ok {
-			botAvatars[id] = rel
-		}
-	}
-
-	viewBuilder := &messageViewBuilder{
-		users:              users,
-		avatars:            avatars,
-		bots:               bots,
-		botAvatars:         botAvatars,
-		emoji:              emojiResolver,
-		assets:             assets,
-		maxAttachmentBytes: opts.MaxAttachBytes,
-	}
-	var items []render.TimelineItem
-	lastDate := ""
-	threadCount := 0
-	replyCount := 0
-	for _, m := range messages {
-		date := tsTime(m.TS).Format("2006-01-02")
-		if date != lastDate {
-			items = append(items, render.TimelineItem{IsDateDivider: true, Date: date})
-			lastDate = date
-		}
-		view := viewBuilder.messageView(&m)
-		if rs, ok := replies[m.TS]; ok {
-			threadCount++
-			for i := range rs {
-				view.Replies = append(view.Replies, viewBuilder.messageView(&rs[i]))
-			}
-			view.ThreadParticipants, view.ThreadExtraParticipants = threadParticipants(view.Replies)
-			replyCount += len(rs)
-			view.RepliesTruncated = repliesTruncated[m.TS]
-		}
-		items = append(items, render.TimelineItem{Message: view})
-	}
-
-	_, tzOffset := now.Zone()
-	page := &render.PageData{
-		WorkspaceName:     auth.Team,
-		WorkspaceIconPath: workspaceIconPath,
-		WorkspaceHref:     auth.URL,
-		ChannelName:       ch.Name,
-		ChannelHref:       channelURL(auth.URL, ch.ID),
-		WorkspaceLine:     wsLine,
-		ChannelLine:       chLine,
-		ExportedLine: fmt.Sprintf("%s (UTC%s) / %s",
-			now.Format("2006-01-02 15:04"), offsetString(tzOffset), now.UTC().Format(time.RFC3339)),
-		RangeLine:   fetchRange.footerRangeLabel(),
-		OptionsLine: fetchRange.footerOptionsLabel(opts),
-		ToolLine:    fmt.Sprintf("slapex %s", opts.ToolVersion),
-		Items:       items,
-		Truncated:   truncated,
-	}
-
-	htmlFile, err := os.Create(filepath.Join(dir, "index.html"))
-	if err != nil {
-		return "", err
-	}
-	if err := render.WriteHTML(htmlFile, page); err != nil {
-		htmlFile.Close()
-		return "", fmt.Errorf("render index.html: %w", err)
-	}
-	if err := htmlFile.Close(); err != nil {
-		return "", err
-	}
-	if err := render.WriteStyleCSS(dir); err != nil {
-		return "", err
-	}
-	if err := render.WriteStaticAssets(dir); err != nil {
-		return "", err
-	}
-
-	saved, skipped, failed := assets.Counts()
-	assetsStatus := ui.StatusSuccess
-	if skipped > 0 || failed > 0 {
-		assetsStatus = ui.StatusWarn
-	}
-	assetsMeta := ""
-	if n := assets.Reused(); n > 0 {
-		assetsMeta = fmt.Sprintf("%d reused from cache, no download", n)
-	}
-	p.EndPhase(assetsStatus, "Assets",
-		fmt.Sprintf("%d saved, %d skipped by size limit, %d failed", saved, skipped, failed), assetsMeta)
-
-	if err := writeCaches(dir, now, auth, ch, opts, fetchRange, wsLabel, chLabel,
-		len(messages), threadCount, replyCount, excludedTotal, saved, skipped, failed, users, bots, customEmoji, assets); err != nil {
-		return "", err
-	}
-	if !opts.KeepCache {
-		if err := output.RemoveCache(dir); err != nil {
-			return "", err
-		}
-	}
-
+// reportDone runs the Done phase: the exported workspace and channel with the
+// run's elapsed time on the real clock since start, then the summary of the
+// counts, the assets and the output directory. It returns dir as an absolute
+// path, or dir itself when that fails. excludedLabel names the emoji filters
+// in use and is "" without one.
+func reportDone(p *ui.Printer, target exportTarget, dir string, start time.Time, counts exportCounts, assets *output.Assets, excludedLabel string) string {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		abs = dir
 	}
-	p.EndPhase(ui.StatusSuccess, "Done", fmt.Sprintf("%s / %s", wsLine, chLine),
+	p.EndPhase(ui.StatusSuccess, "Done", fmt.Sprintf("%s / %s", target.wsLine, target.chLine),
 		fmt.Sprintf("in %s", time.Since(start).Round(time.Second)))
-	p.Plainf("  messages: %d (threads: %d, replies: %d)", len(messages), threadCount, replyCount)
-	if label := excludedMessagesLabel(opts); label != "" {
-		p.Plainf("    %s: %d", label, excludedTotal)
+	p.Plainf("  messages: %d (threads: %d, replies: %d)", counts.timeline, counts.threads, counts.replies)
+	if excludedLabel != "" {
+		p.Plainf("    %s: %d", excludedLabel, counts.excluded)
 	}
+	saved, skipped, failed := assets.Counts()
 	p.Plainf("  assets: %d saved, %d skipped by size limit, %d failed", saved, skipped, failed)
 	if n := assets.Reused(); n > 0 {
 		p.Plainf("    (of which %d reused from cache, no download)", n)
 	}
 	p.Plainf("  output: %s", abs)
-	return abs, nil
+	return abs
 }
 
 func excludedMessagesLabel(opts Options) string {
@@ -412,42 +268,6 @@ func excludedMessagesLabel(opts Options) string {
 	}
 }
 
-// resolveTargetsLabel / resolvedTargetsLabel / reusedTargetsMeta render the Users
-// phase counts. Bots only appear once the channel actually has bot posts to
-// resolve, so a channel without them keeps the original wording.
-func resolveTargetsLabel(users, bots int) string {
-	if bots == 0 {
-		return fmt.Sprintf("%d users", users)
-	}
-	return fmt.Sprintf("%d users, %s", users, botCountLabel(bots))
-}
-
-func resolvedTargetsLabel(users, bots int) string {
-	if bots == 0 {
-		return fmt.Sprintf("%d resolved", users)
-	}
-	return fmt.Sprintf("%d users, %s resolved", users, botCountLabel(bots))
-}
-
-func reusedTargetsMeta(users, bots int) string {
-	switch {
-	case users > 0 && bots > 0:
-		return fmt.Sprintf("%d from cache, users.info / bots.info skipped", users+bots)
-	case users > 0:
-		return fmt.Sprintf("%d from cache, users.info skipped", users)
-	case bots > 0:
-		return fmt.Sprintf("%d from cache, bots.info skipped", bots)
-	}
-	return ""
-}
-
-func botCountLabel(n int) string {
-	if n == 1 {
-		return "1 bot"
-	}
-	return fmt.Sprintf("%d bots", n)
-}
-
 // avatarURL is the avatar image URL slapex saves for a user: the 72px image,
 // falling back to the 48px image. Persisting this effective URL (rather than
 // image_72 alone) lets --reuse-cache reproduce the same avatar source_url, so a
@@ -457,26 +277,6 @@ func avatarURL(u *slack.User) string {
 		return u.Profile.Image72
 	}
 	return u.Profile.Image48
-}
-
-func workspaceIconURL(teamInfo *slack.TeamInfo) string {
-	if teamInfo == nil || teamInfo.Icon.ImageDefault {
-		return ""
-	}
-	for _, u := range []string{
-		teamInfo.Icon.Image68,
-		teamInfo.Icon.Image88,
-		teamInfo.Icon.Image102,
-		teamInfo.Icon.Image132,
-		teamInfo.Icon.Image230,
-		teamInfo.Icon.Image44,
-		teamInfo.Icon.Image34,
-	} {
-		if u != "" {
-			return u
-		}
-	}
-	return ""
 }
 
 // --- small helpers -----------------------------------------------------------

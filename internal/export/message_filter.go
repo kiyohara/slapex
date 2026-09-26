@@ -1,6 +1,6 @@
 // Message filtering: the --exclude-body-emoji / --exclude-reaction-emoji
-// decisions and the excluded message / thread bookkeeping Run consults while
-// fetching (doc/design/cli-interface.md).
+// decisions and the excluded message / thread bookkeeping the Messages stage
+// consults while fetching (doc/design/cli-interface.md).
 
 package export
 

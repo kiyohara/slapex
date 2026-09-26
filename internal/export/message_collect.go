@@ -1,6 +1,7 @@
-// Message collection helpers: which threads still need conversations.replies,
-// which user / bot IDs need resolving, and the oldest timestamp of a history
-// batch (doc/design/slack-api-usage.md).
+// Message collection helpers: the threads already fetched and those that still
+// need conversations.replies, which user / bot IDs need resolving, the oldest
+// timestamp of a history batch and the number of kept replies
+// (doc/design/slack-api-usage.md).
 
 package export
 
@@ -11,9 +12,9 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
-// fetchedThreads is the set of threads whose replies Run has fetched through
-// conversations.replies, keyed by thread_ts. It only records the fetch: whether
-// a thread is excluded is the messageFilter's to say.
+// fetchedThreads is the set of threads whose replies the Messages stage has
+// fetched through conversations.replies, keyed by thread_ts. It only records
+// the fetch: whether a thread is excluded is the messageFilter's to say.
 type fetchedThreads map[string]struct{}
 
 // unfetchedThreadIDs returns the threads of messages whose replies still need
