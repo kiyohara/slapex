@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/project-thread-ffymtu`(cloud session が指定。Issue の推奨ブランチ名は `lift-delegated-skill-reports`)
-- PR: 未作成
+- PR: #261
 - 最終更新: 2026-09-26
 
 ## 目的
@@ -13,7 +13,7 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 ## 現在の状況
 
 - 作業内容 1〜9 を実施し、Issue の「検証」を実行した(自己適用を除く)。作業内容 9 は、#227 が完了済みのため、orchestrator への後付けに置き換えた。
-- PR 未作成。
+- PR #261 作成済み。
 
 ## 決定事項
 
@@ -58,7 +58,7 @@ Issue #230。被委譲 skill(`number-working-branch-note` と出力生成系 3 s
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。
+- PR を draft で作成し、note を採番する。(完了)
 - 採番の報告から引き上げた項目を「セッションログ」の P1 に残して push し、検証の自己適用の結果を記録する。
 - P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。
 
