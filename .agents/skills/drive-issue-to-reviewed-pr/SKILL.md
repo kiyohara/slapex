@@ -166,7 +166,7 @@ commit、push、作業ツリーのファイル変更、address-comments、thread
 | review cycle ID | P2 は新しく作った ID、P5 は対象 cycle の ID |
 | Reviewed head | 投稿の時点で確かめた full head SHA |
 | 完了要約の URL | 投稿した review body または PR conversation comment の URL |
-| 指摘件数 | 総数と、inline と top-level の内訳。P2 では指摘ごとに対象 path と thread の URL を 1 行で添える |
+| 指摘件数 | 総数と、inline と top-level の内訳。P2 では prefix ごとの内訳(prefix の無い指摘があればその件数も)を加え、指摘ごとに prefix、対象 path と thread の URL を 1 行で添える |
 | 再確認の結果 | P5 だけ。区分(`.agents/skills/review-pull-request/references/verify-comments.md` の「処置ごとの確認」)ごとの確認済み件数と resolve 可とした thread の URL の一覧、未対応件数 |
 | check runs | 確かめた check runs の状態 |
 | 未実施事項 | 実施しなかった検証とその理由 |
@@ -198,7 +198,7 @@ subagent を起動できない実行環境では、P2 と P5 の前で止まる�
 
 ## 判断基準
 
-- P3 は P2 の出力の指摘件数(inline と top-level の合計)で決める。0 件なら P6、1 件以上なら P4 へ進む。重要度の表記(prefix や優先度のラベル)は判断に使わない。review ごとに表記が揃わないためである。
+- P3 は P2 の出力の指摘件数(inline と top-level の合計)で決める。0 件なら P6、1 件以上なら P4 へ進む。指摘の prefix(`review-pull-request` の「コメント言語と文体」)は判断に使わず、`[must]` / `[ask]` が 0 件の場合も P4 を通す。P4 は各指摘へ処置を返信する(「フェーズ」の表)ため、`[imo]` / `[nits]` / `[fyi]` の指摘にも採否と理由が残り、P5 で確かめられる。
 - P4 での個々の採否は `.agents/skills/review-pull-request/references/address-comments.md` の処置の分類に委ね、本 skill に分類を複製しない。全件を採用しない場合も、処置の返信は要る。
 - 指摘の正しさは推論で決めず、実物で確かめて判断する(同 reference の手順)。
 - P5 後は `.agents/skills/review-pull-request/references/verify-comments.md` の完了要約の未対応件数で決める。0 件なら P6、1 件以上なら P4 へ戻る。スコープ外など修正を伴わない処置でも、再確認で処置が妥当と確かめられた指摘は未対応に数えない(同 reference の「処置ごとの確認」)。
@@ -233,7 +233,7 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 | フェーズ | 残すこと |
 | --- | --- |
 | P1 | PR 番号、検証結果、出力生成系 skill の適用判断 |
-| P2 / P3 | review cycle ID、`Reviewed head`、指摘件数(inline と top-level の内訳) |
+| P2 / P3 | review cycle ID、`Reviewed head`、指摘件数(inline と top-level の内訳と、prefix ごとの内訳) |
 | P4 | 処置の内訳、スコープ外とした指摘の follow-up 候補、修正 commit、出力生成系 skill の再判断 |
 | P5 | 再確認の結果(区分ごとの確認済み件数と未対応件数) |
 | P6 | 終了時の状態 |
@@ -279,7 +279,7 @@ P1 で `run-issue-task` が作る note に、各フェーズの終わりでセ�
 
 - PR の URL と state。
 - Issue の検証結果(P1)。
-- review cycle ID ごとの指摘件数と、周ごとの処置の内訳。
+- review cycle ID ごとの指摘件数と、周ごとの処置の内訳。P2 の指摘件数には prefix ごとの内訳を添える。merge 前に直すべき指摘(`[must]`)があったかを読めるようにするためであり、P3 と P5 後の判断には使わない。
 - resolve 可とした thread(区分ごと)。resolve は人間が行う。
 - 未対応・未収束の指摘と、見解の相違点。
 - 再確認を人間に返すもの(他の Agent 種別の cycle や、対象 cycle 以外で対応した thread)。

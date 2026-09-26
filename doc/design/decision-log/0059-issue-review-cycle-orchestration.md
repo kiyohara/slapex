@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-09-24
-- 最終更新日: 2026-09-24
+- 最終更新日: 2026-09-26
 - 関連: `doc/guidelines/development-loop.md`, `doc/guidelines/issue-driven-task-execution.md`, `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md`, `.agents/skills/run-issue-task/SKILL.md`, `.agents/skills/review-pull-request/SKILL.md`, [0037-issue-driven-task-execution.md](0037-issue-driven-task-execution.md), [0058-cloud-session-environment.md](0058-cloud-session-environment.md), [0061-review-metadata-in-cloud-session.md](0061-review-metadata-in-cloud-session.md)
 
 ## 背景
@@ -137,3 +137,29 @@ check runs の確認の置き方として、次の 2 案を比べた。
 - `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md` の「入力と入口」「PR から始める場合」「CI の確認点」を変えた。「フェーズ」の表の完了条件は変えていない。
 - Issue #230 は P1 の完了条件に項目を足す。足す項目は、PR の入口での P1 の確認にも加える。
 - bizdate への反映は bizdate の Issue #82 で扱う。
+
+## 追記(2026-09-26): review の prefix の統一後の判断基準
+
+Issue #252。本ログは J2(重要度の表記で分岐する)を、review ごとに表記が揃わないことを理由に退けた(背景の「指摘の重要度の表記は review ごとに異なっていた」、検討内容の「判断基準」、理由の「判断を件数に置けば、review ごとに揃わない重要度の表記に左右されない」)。その後、PR #235(Issue #216)で、`review-pull-request` の `review` モードの指摘に `.github/copilot-instructions.md` の prefix(`[must]` / `[ask]` / `[imo]` / `[nits]` / `[fyi]`)を付けることになった。P2 の subagent はこの skill で review するため、P3 の入力(P2 の出力)の表記は揃い、この理由は成り立たなくなった。PR #235 は、件数で判断する結論は変わらないとして本ログと `drive-issue-to-reviewed-pr` の文言を変えず、follow-up とした。
+
+表記が揃った前提で、P3 の分岐を次の 2 案で比べ直した。
+
+- J1: 指摘件数(0 件か 1 件以上か)で分岐する(現行)。
+- J2': `[must]` / `[ask]` が 0 件なら P4 を飛ばし、P6 へ進む。
+
+検討:
+
+- J2' では、`[imo]` / `[nits]` / `[fyi]` だけの cycle が P4 を通らず、それらの指摘に処置の返信が残らない。P4 はこれらの指摘も含めて各指摘へ処置を返信し、採否を `address-comments` の処置の分類で決める。P4 を飛ばすと、採るべき指摘(正しい `[nits]` など)を拾えず、採らなかった理由も残らない。P5 で処置を確かめることもできない。
+- prefix は reviewer の判断である。`drive-issue-to-reviewed-pr` は subagent の出力をそのまま採用せず、各指摘の採否を orchestrator が実物で確かめてから決める(同 skill の「位置づけ」)。J2' では、orchestrator が指摘を確かめるかどうかが reviewer の重要度の判断で決まる。
+- J1 の費用は、`[must]` / `[ask]` の無い cycle でも P4 と P5 を 1 周回すことである。本ログの影響にある token の消費と同じく、指摘の質と記録を取る判断とする。
+
+決定:
+
+- J1 を維持する。本ログの検討内容の「判断基準」で J2 を退けた理由(表記が揃わない)と、理由の「判断を件数に置けば、review ごとに揃わない重要度の表記に左右されない」は、上の検討に置き換える。決定の「判断は指摘件数と、`verify-comments` の完了要約の未対応件数で行う(J1)。重要度の表記は使わない。」は変えない。
+- P2 の「返させる出力」の指摘件数に、prefix ごとの内訳を加える(Issue #252 の未決事項 2 の仮決定)。note の P2 / P3 の記録と、終了時の報告の review cycle ID ごとの指摘件数にも添える。merge 前に直すべき指摘(`[must]`)があったかをユーザーが読めるようにするためであり、P3 と P5 後の分岐には使わない。
+
+影響:
+
+- `.agents/skills/drive-issue-to-reviewed-pr/SKILL.md` の「返させる出力」「判断基準」「working branch note」「終了時の報告」を変えた。P3 と P5 後の分岐は変えていない。
+- `index.md` の 0059 の行(判断は指摘件数で行い、重要度の表記に依存しない)は、決定が変わらないため変えない。
+- bizdate の同じ skill には反映していない(Issue #252 のスコープ外)。
