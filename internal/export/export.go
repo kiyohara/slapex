@@ -122,7 +122,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	var messages []slack.Message
 	replies := map[string][]slack.Message{}
 	repliesTruncated := map[string]bool{}
-	replyTotal := 0
 	historyLatest := fetchRange.latestTS()
 	truncated := false
 	fetched := fetchedThreads{}
@@ -136,7 +135,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			return "", err
 		}
 		if len(batch) == 0 {
-			truncated = false
 			break
 		}
 		historyLatest = oldestMessageTS(batch)
@@ -165,7 +163,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 				replies[threadTS] = kept
 				repliesTruncated[threadTS] = trunc
 			}
-			replyTotal += len(kept)
 		}
 
 		keptTimeline := messages[:0]
@@ -173,11 +170,8 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			threadTS := messageThreadTS(&messages[i])
 			if filter.ThreadExcluded(threadTS) {
 				filter.Exclude(&messages[i])
-				if keptReplies, ok := replies[threadTS]; ok {
-					replyTotal -= len(keptReplies)
-					delete(replies, threadTS)
-					delete(repliesTruncated, threadTS)
-				}
+				delete(replies, threadTS)
+				delete(repliesTruncated, threadTS)
 				continue
 			}
 			keptTimeline = append(keptTimeline, messages[i])
@@ -189,14 +183,13 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 			break
 		}
 		if !more {
-			truncated = false
 			break
 		}
 	}
 	sort.Slice(messages, func(i, j int) bool { return tsLess(messages[i].TS, messages[j].TS) })
 	excludedTotal := filter.ExcludedCount()
 	messagesStatus := ui.StatusSuccess
-	messagesMeta := fmt.Sprintf("threads %d, replies %d", len(replies), replyTotal)
+	messagesMeta := fmt.Sprintf("threads %d, replies %d", len(replies), countReplies(replies))
 	if label := excludedMessagesLabel(opts); excludedTotal > 0 && label != "" {
 		messagesMeta += fmt.Sprintf(", %s: %d", label, excludedTotal)
 	}

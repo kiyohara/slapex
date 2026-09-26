@@ -42,6 +42,15 @@ func unfetchedThreadIDs(messages []slack.Message, fetched fetchedThreads, inspec
 	return ids
 }
 
+// countReplies returns the number of replies kept across all threads.
+func countReplies(replies map[string][]slack.Message) int {
+	n := 0
+	for _, rs := range replies {
+		n += len(rs)
+	}
+	return n
+}
+
 func messageThreadTS(message *slack.Message) string {
 	if message == nil {
 		return ""
