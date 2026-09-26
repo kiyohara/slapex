@@ -14,14 +14,15 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 
 - 作業内容 1〜4 を実施し、Issue の「検証」を実行した。PR #265 作成済み。
 - PR #265 を draft で作成し、note を採番した(P1)。`progress.md` は索引に無い単発 Issue のため更新しない。
+- review cycle `claude-code-bd5f05b-20260926135509` の review(P2)で指摘 2 件(`[imo]` 1、`[nits]` 1)を受け、2 件とも採用して直した(P4)。再確認(P5)を待つ。
 
 ## 決定事項
 
 - 項目 1(Cursor): `agent-configuration-management.md` の表と `AGENTS.md` の `*.{md,mdc}` を `*.mdc` にした。`.md` が無視される理由(`description` / `globs` / `alwaysApply` を指定する frontmatter が無い)は、正本の表にだけ 1 文で添えた。`AGENTS.md` は index のため理由を複製しない。
-- 項目 2(Copilot と AGENTS.md): 表の AGENTS.md 欄を「GitHub.com の code review は AGENTS.md も読む(VS Code などの IDE の code review は読まない)」と環境で分けた。帰結の箇条書き、「AI 向け rule 管理」の `.github/copilot-instructions.md` の項、`AGENTS.md` の Copilot の項は、「リンク先の正本まで辿る保証は無い」を理由に、要点を Copilot 用ファイルに直接書く結論を維持した(Issue の「結論は変えなくてよい」)。表現は bizdate の対応(bizdate PR #2 以降の同じ正本)に揃えた。
+- 項目 2(Copilot と AGENTS.md): 表の AGENTS.md 欄を「GitHub.com の code review は AGENTS.md も読む(VS Code などの IDE の code review は読まない)」と環境で分けた。帰結の箇条書き、「AI 向け rule 管理」の `.github/copilot-instructions.md` の項、`AGENTS.md` の Copilot の項は、「リンク先の正本まで辿る保証は無い」を理由に、要点を Copilot 用ファイルに直接書く結論を維持した(Issue の「結論は変えなくてよい」)。表現は bizdate の対応(bizdate PR #2 以降の同じ正本)に揃えた。「正本と入口の整理」の例外の項に残っていた「リンクを辿れない」も、P4 で同じ書き方に揃えた(review の `[nits]`。Issue の検証の grep は「辿らない」だけを探すため掛からなかった。bizdate のこの項は「辿れない」のまま)。
 - 項目 3(文字数の上限): 上限を前提とした記述を落とし、「分量ではなくシグナルの濃さで絞る」趣旨にした。帰結の箇条書きにだけ、上限が 2026-06-12 に撤廃された事実を 1 文残した。古い知識で上限を書き戻す事故を防ぐためである。「AI 向け rule 管理」の項では、path 別の観点を `.github/instructions/*.instructions.md` に置く理由を、文字数から `applyTo:` で対象 path を絞れることに改めた。
 - 項目 4(署名の実行経路): `git-operation-guidelines.md` の「1Password 連携が必要な操作」に「署名の実行経路」の小節を足し、切り分けを `git config --get gpg.ssh.program` から始める形にして、1Password の signer を使う場合と標準の ssh-keygen を使う場合の 2 経路に分けた。前者では `ssh-add -l` を根拠に判断しないことと、`SSH_AUTH_SOCK` を上書きする必要が無いことを書いた。後者には、`~/.ssh/config` の `IdentityAgent` が `ssh-keygen -Y sign` に効かないことを 1 文添えた(bizdate の対応と同じ)。3 つの経路をまとめていた段落(旧 L24)は、SSH remote と署名の経路を分けて書き直した。失敗時に制約のない実行環境で再実行する方針は変えていない(方針の見直しは #229 の担当)。
-- Issue の対象行に無い一致の扱い: 検証の grep で、Issue の対象行のほかに `AGENTS.md` の 2 行(Copilot の項とその下の文字数の項)と `.github/copilot-instructions.md` の 1 行(文字数の上限を前提とする文)が見つかった。`AGENTS.md` は項目 2 と 3 と同じ誤りのため直した。`.github/copilot-instructions.md` は、Issue がスコープ外に「内容変更(文字数制限が無くなっただけで、現在の内容を増やす必要は無い)」を挙げている。理由の書き方から、スコープ外は内容を増やすことを指すと読み、同じ誤りの訂正に当たる前提の句だけを削った(内容は増やしていない)。
+- Issue の対象行に無い一致の扱い: 検証の grep で、Issue の対象行のほかに `AGENTS.md` の 2 行(Copilot の項とその下の文字数の項)と `.github/copilot-instructions.md` の 1 行(文字数の上限を前提とする文)が見つかった。`AGENTS.md` は項目 2 と 3 と同じ誤りのため直した。文字数の子項目は、当初は「分量ではなくシグナルの濃さで絞る」に書き換えたが、上限を前提とする内容だけで、書き換えると正本の帰結と同じ文を入口に複製することになるため、P4 で削った(review の `[imo]`)。`.github/copilot-instructions.md` は、Issue がスコープ外に「内容変更(文字数制限が無くなっただけで、現在の内容を増やす必要は無い)」を挙げている。理由の書き方から、スコープ外は内容を増やすことを指すと読み、同じ誤りの訂正に当たる前提の句だけを削った(内容は増やしていない)。
 - decision log 0022 の本文(「リンク先正本を辿らない」)と `working-branch-notes/1_setup_discussion_base__agent-review.md` は、当時の記録のため変えない(`doc/guidelines/decision-log-guidelines.md`、`doc/guidelines/working-branch-notes-handling.md`)。
 - decision log: 方針(要点を instruction file に直接書く、署名の失敗時は制約のない実行環境で再実行する)を変えず、事実の記述を直すだけのため、記録しない。
 - `progress.md`: 本 Issue は索引に無い単発 Issue のため更新しない。
@@ -30,7 +31,8 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- review cycle(P2〜P5)。
+- review(P2)と指摘への対応(P4)。(完了)
+- 再確認(P5)。
 - ユーザー: Codex のクロスレビュー、Ready for review、merge。
 
 ## 検証
@@ -40,6 +42,7 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 | 項目 | 結果 |
 |---|---|
 | `git ls-files \| xargs rg -n "4,000 文字\|\{md,mdc\}\|辿らない"`(Issue の検証) | 本 note を除き 2 件。decision log 0022 の L44(当時の記録で、リンク先を辿らないという結論は Issue も維持する)と、`working-branch-notes/1_setup_discussion_base__agent-review.md` の L76(PR #1 の当時の記録)である。取りこぼしではない |
+| 表記の揺れ(`git ls-files \| xargs rg -n "リンクを辿れ"`) | P4 の後、本 note を除いて 0 件 |
 | 「各 tool の loading 機構」の時点表記 | `2026-09 時点` に更新した。Issue の一次資料の確認(2026-09-06)と同じ月である |
 | 一次資料の記述との照合(4 件) | Issue に記載された一次資料の記述と一致する。項目 1 は Cursor Rules の引用、項目 2 は対応表の「Code review × GitHub.com = Yes、IDE は No」、項目 3 は 2026-06-12 の changelog の引用、項目 4 は 1Password の Git commit signing の `gpg.ssh.program` の説明(Issue の要約)と照合した |
 | 一次資料そのものの取得 | 未実施。cursor.com、docs.github.com、github.blog、1Password の文書はいずれも environment の network 設定で接続できなかった。項目 1 と 3 は、Web 検索の結果の要約が Issue の引用と同じ文面を返した(補助的な確認) |
@@ -59,3 +62,5 @@ Issue #215。guideline の記述のうち、外部仕様の変化で実態と合
 
 - 2026-09-26: #254(PR #264)の merge を確かめ、次の Issue を選んだ。第一候補の #246 は、Slack API の文書に接続できず前提を確かめられないため後に回し、#215 に着手した。bizdate の対応(署名の切り分けと文字数の上限を直した commit と、現行の同じ正本)を読み取り専用の clone で参照した。作業内容 1〜4 を実施し、Issue の「検証」を実行した。
 - 2026-09-26: PR #265 を draft で作成し、note を採番した(`509f2c3`)(P1)。検証は上記のとおりで、出力生成系 3 skill は不適用。`progress.md` は索引に無い単発 Issue のため更新しない。採番の報告から引き上げた項目は次のとおり。書き換えた行(確認経路の項目)は note の 3 行と PR description の 1 行である。note は `PR:` 欄の「未作成」を `#265` に、「現在の状況」の「PR 未作成。」を「PR #265 作成済み。」に直し、「次にやること」の「draft PR を作成し、note を採番する。」に「(完了)」を付けた。PR description は note の path を採番後の名前に置き換えた。title は変えていない。触らずに残した行(残された事項)は 0 件で、採番は止まっていない。
+- 2026-09-26: review(P2)を別の context の subagent に委ねた。review cycle は `claude-code-bd5f05b-20260926135509`、`Reviewed head` は `bd5f05b1e7ccc53614f1d7ee4ec0b524b560f1e4`。指摘は 2 件(inline 2 件、top-level 0 件)で、prefix の内訳は `[imo]` 1 件、`[nits]` 1 件(prefix の無い指摘は 0 件)。P3 で P4 へ進んだ。
+- 2026-09-26: 指摘に対応した(P4)。処置は 2 件とも「採用し修正した」。`[imo]`(`AGENTS.md` の文字数の子項目を削る): 上限の撤廃後に残る内容は正本の帰結と同じ文で、同 guideline の「ルールをシンプルに保つ」と「正本と入口の整理」に照らして削った。`.github/instructions/` を足す agent は `AGENTS.md` の AI Agent 向けルールと rule の入口(`.claude/rules/` の `paths:`、`.cursor/rules/` の `description`)から正本に届き、Copilot は `.github/copilot-instructions.md` で同じ趣旨を読むことを確かめた。`[nits]`(正本の「正本と入口の整理」の例外の項の「リンクを辿れない」): 「リンク先の正本まで辿る保証が無い」に揃えた。修正 commit は `b061c81`。PR description の「主な変更」「レビューしてほしい点」「検証」を合わせて直した。スコープ外とした指摘は無く、follow-up の候補は無い。出力生成系 3 skill は、変更が文書だけのため引き続き適用しない。
