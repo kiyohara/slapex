@@ -18,23 +18,26 @@ import (
 type fetchedThreads map[string]struct{}
 
 // unfetchedThreadIDs returns the threads of messages whose replies still need
-// fetching, in message order: those of thread parents and, with
-// inspectBroadcasts, those of thread_broadcast copies too, so the emoji filters
-// can judge the thread of a broadcast whose parent is not among the fetched
-// messages. A thread in fetched is skipped, so a thread whose parent or
-// broadcast shows up again on a later history page is fetched only once.
-func unfetchedThreadIDs(messages []slack.Message, fetched fetchedThreads, inspectBroadcasts bool) []string {
+// fetching, in message order: those of thread parents and, with a filter
+// enabled, those of thread_broadcast copies too, so the filter can judge the
+// thread of a broadcast whose parent is not among the fetched messages. A
+// thread in fetched is skipped, so a thread whose parent or broadcast shows up
+// again on a later history page is fetched only once. A thread the filter has
+// already excluded is skipped too: conversations.history excluded its parent,
+// typically on the page that brought its broadcast, and conversations.replies
+// is not called for an excluded parent (doc/design/slack-api-usage.md).
+func unfetchedThreadIDs(messages []slack.Message, fetched fetchedThreads, filter *messageFilter) []string {
 	seen := map[string]bool{}
 	var ids []string
 	for i := range messages {
 		threadTS := messageThreadTS(&messages[i])
-		if threadTS == "" || seen[threadTS] {
+		if threadTS == "" || seen[threadTS] || filter.ThreadExcluded(threadTS) {
 			continue
 		}
 		if _, ok := fetched[threadTS]; ok {
 			continue
 		}
-		if !messages[i].IsThreadParent() && (!inspectBroadcasts || messages[i].Subtype != "thread_broadcast") {
+		if !messages[i].IsThreadParent() && (!filter.Enabled() || messages[i].Subtype != "thread_broadcast") {
 			continue
 		}
 		seen[threadTS] = true

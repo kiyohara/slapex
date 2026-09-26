@@ -62,11 +62,9 @@ func newMessageViewBuilder(assets *output.Assets, resolved resolvedUsers, emojiR
 // buildTimeline turns the fetched messages into the page's timeline: a date
 // divider whenever the local date changes, and each thread's replies under its
 // parent. Rendering a message saves the files, images and custom emoji it
-// shows. It returns the items and the counts metadata.json and the Done summary
-// report, whose threads and replies are the ones the timeline shows.
-func buildTimeline(views *messageViewBuilder, fetched fetchedMessages) ([]render.TimelineItem, exportCounts) {
+// shows.
+func buildTimeline(views *messageViewBuilder, fetched fetchedMessages) []render.TimelineItem {
 	var items []render.TimelineItem
-	counts := exportCounts{timeline: len(fetched.timeline), excluded: fetched.excluded}
 	lastDate := ""
 	for _, m := range fetched.timeline {
 		date := tsTime(m.TS).Format("2006-01-02")
@@ -76,17 +74,15 @@ func buildTimeline(views *messageViewBuilder, fetched fetchedMessages) ([]render
 		}
 		view := views.messageView(&m)
 		if rs, ok := fetched.replies[m.TS]; ok {
-			counts.threads++
 			for i := range rs {
 				view.Replies = append(view.Replies, views.messageView(&rs[i]))
 			}
 			view.ThreadParticipants, view.ThreadExtraParticipants = threadParticipants(view.Replies)
-			counts.replies += len(rs)
 			view.RepliesTruncated = fetched.repliesTruncated[m.TS]
 		}
 		items = append(items, render.TimelineItem{Message: view})
 	}
-	return items, counts
+	return items
 }
 
 // buildPage assembles the page: the header naming the workspace and channel,

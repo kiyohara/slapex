@@ -43,7 +43,7 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 
 通常実行は `cmd/slapex` が `slack.Client` と `ui.Printer` を用意して `export.Run` を呼ぶ。`--demo` は `demo.Export` を介して同じ工程を実行する。`export` が取得結果を `render` の表示用データへ変換し、asset の保存は `output` に委譲する。`emoji.list` の取得・cache 再利用は `export` と `slack` の責務であり、`emoji` 自体は API を呼ばない。
 
-`export.Run` は工程の順序と失敗時の処理だけを持ち、各工程は結果を値で次の工程へ渡す。Workspace・Channel(`resolveTarget`)、再利用する cache・出力先・取得範囲、Messages(`fetchMessages`。親の除外後の補充を含む history/replies の取得で、timeline・replies・打ち切りの有無・除外件数を返す)、Users(`resolveUsers`)、Emoji(`resolveCustomEmoji`)、Assets(avatar の保存、`buildTimeline`、`buildPage`、`writePage`。`endAssetsPhase` が asset の集計を返す)、cache の書き出しと cleanup(`writeCaches`、`output.RemoveCache`)、Done(`reportDone`)の順に進み、最初の error で止まる。
+`export.Run` は工程の順序と失敗時の処理だけを持ち、各工程は結果を値で次の工程へ渡す。Workspace・Channel(`resolveTarget`)、再利用する cache・出力先・取得範囲、Messages(`fetchMessages`。親の除外後の補充を含む history/replies の取得で、timeline・親が timeline にある thread の replies・打ち切りの有無・除外件数を返す。Messages 行・metadata.json・Done の件数はこの結果から数える)、Users(`resolveUsers`)、Emoji(`resolveCustomEmoji`)、Assets(avatar の保存、`buildTimeline`、`buildPage`、`writePage`。`endAssetsPhase` が asset の集計を返す)、cache の書き出しと cleanup(`writeCaches`、`output.RemoveCache`)、Done(`reportDone`)の順に進み、最初の error で止まる。
 
 cache の schema に沿った object の組立は `export`、JSON の書き出しと asset manifest entry は `output` に分かれる。再利用の読込・検証は [export/reuse.go](../../internal/export/reuse.go)、保存済み asset のコピーは `output` が担う。確認済みの仕様差は [cache.md](cache.md#確認済みの仕様と実装の差) を参照する。
 
