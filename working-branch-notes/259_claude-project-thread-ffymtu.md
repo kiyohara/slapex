@@ -12,7 +12,7 @@ Issue #252(RV-01)。`drive-issue-to-reviewed-pr` の「判断基準」の P3 の
 
 ## 現在の状況
 
-- 作業内容 1〜3 を実施し、Issue の「検証」を実行した(P1 の途中)。
+- 作業内容 1〜3 を実施し、Issue の「検証」を実行した。PR #259 を draft で作成し、note を採番して、`progress.md` の RV-01 の PR 欄を反映した(P1)。
 
 ## 決定事項
 
@@ -25,12 +25,11 @@ Issue #252(RV-01)。`drive-issue-to-reviewed-pr` の「判断基準」の P3 の
 - decision log: 0059 に追記した(作業内容 3)。前提が変わった点(背景、検討内容の「判断基準」、理由)と、J1 を維持する理由(処置の返信と P5 の確認、orchestrator が採否を実物で確かめる原則、費用)を記録し、元の理由を追記の検討に置き換えると書いた。元の本文は書き換えていない(`doc/guidelines/decision-log-guidelines.md` の「禁止事項」)。最終更新日を 2026-09-26 にした。
 - `doc/design/decision-log/index.md` の 0059 の行は変えない。「判断は指摘件数で行い、重要度の表記に依存しない」は決定として変わらない。
 - 出力生成系 3 skill(`update-sample-exports`、`update-readme-preview-screenshots`、`update-readme-demo-gif`)は適用しない。変更は `.agents/skills/`、`doc/design/decision-log/`、`progress.md`、本 note だけで、各 skill の「いつ使うか」に当たらない。
-- `progress.md` の RV-01 の行を done(PR merge後)にした。PR 欄は採番後に記入する。
+- `progress.md` の RV-01 の行を done(PR merge後)にし、採番後に PR 欄へ #259 を記入した。
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番して、`progress.md` の PR 欄を反映する(P1)。
-- P2 の review を subagent に委譲する。
+- P1 の最新 head の check runs がすべて success になったら、P2 の review を subagent に委譲する。
 
 ## 検証
 
@@ -55,3 +54,4 @@ Issue #252(RV-01)。`drive-issue-to-reviewed-pr` の「判断基準」の P3 の
 ## セッションログ
 
 - 2026-09-26: #255(PR #258)の merge を確かめ、次の Issue に #252 を選んだ。作業内容 1〜3 を実施し、Issue の「検証」を実行した。
+- 2026-09-26: PR #259 を draft で作成し、note を採番して(`3953d85`)、`progress.md` の PR 欄を反映した(P1)。検証は上記のとおりで、出力生成系 3 skill は不適用。採番で書き換えたのは note の `PR:` 欄と PR description の note 参照だけで、触らずに残したのは note の「次にやること」の複合行 1 行(`progress.md` の反映を含むため。本 commit で書き直した)。
