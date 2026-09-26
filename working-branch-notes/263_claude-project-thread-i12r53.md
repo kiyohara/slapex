@@ -43,7 +43,7 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 
 ### 挙動の変化
 
-- filter 有効時、timeline に入らない親を持つ broadcast の thread の replies は、Messages 行の threads / replies、`.cache/` に入らず、その作成者、本文の mention 先の user、bot 投稿の bot を users.info / bots.info で解決しない。以前は解決した user と bot の avatar / app icon も保存し、Users 行、Assets 行、Done の要約の `assets:`、metadata.json の `assets_saved` に数えていた(P2 の subagent が probe で確かめた)。Done の要約と metadata.json の threads / replies は以前から表示に合っており、変わらない。
+- filter 有効時、timeline に入らない親を持つ broadcast の thread の replies は、Messages 行の threads / replies に入らず、その作成者、本文の mention 先の user、bot 投稿の bot を users.info / bots.info で解決しない(`slack_api_cache.json` にも入らない)。以前は解決した user と bot の avatar / app icon も保存して `assets_manifest.json` に記録し、Users 行、Assets 行、Done の要約の `assets:`、metadata.json の `assets_saved` に数えていた(P2 の subagent が probe で確かめた)。Done の要約と metadata.json の threads / replies は以前から表示に合っており、変わらない。
 - その親が filter に一致すると、broadcast は以前どおり除外され補充されるが、除外件数に数えるのは broadcast だけになる(親を数えない)。その thread の replies で filter に一致するものも数えない。ただし親が最後の `--max-posts` の打ち切りの直後にあり(間に残す投稿が無い)、history の copy も一致する場合は、`client.History` の examined exclusions が親を数える(変更の前後とも 2 件。「変えていないこと」)。
 - 後の page で親が除外された thread の replies は、filter に一致しても除外件数に数えない。以前は取得時に数えていた。親を先に除外した通常の場合(replies を取得しない)と揃う。`TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread` の reaction の付いた reply で固定した(基準のコードでは除外件数が 5 になる)。
 - 親を除外済みの thread は broadcast から取得しない(API 呼び出しと進捗の分母が減る)。
