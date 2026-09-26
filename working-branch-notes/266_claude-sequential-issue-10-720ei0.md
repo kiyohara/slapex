@@ -14,7 +14,7 @@ Issue #249(FU-15)。事前判定(Slack の `file.size` が `--max-attachment-siz
 
 - 依存は無い。main `90d744b` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #266 作成済み。
+- PR #266 作成済み(draft)。note を採番し(`f2103a0`)、`progress.md` の FU-15 の PR 欄も反映した。
 
 ## 決定事項
 
@@ -63,7 +63,7 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- `progress.md` の FU-15 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の FU-15 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 検証
@@ -90,3 +90,4 @@ main `90d744b` の tree を scratch に copy し、使い捨ての test(reposito
 
 - 2026-09-26: #215(PR #265)の merge 後、逐次処理の 10 件目として #249 を選び、Issue ごとに新しい thread で進める方式で始めた。docs.slack.dev と api.slack.com は 403 のままで、FU-13(#246)は着手できなかった。依存は無い。branch は main `90d744b` から作った。
 - 2026-09-26: base で不具合を再現し(summary が `4 skipped`、manifest が 5 件)、単体 test と結合 test を先に書いて失敗を確かめた。`SkipTooLarge` を URL 単位で 1 件にし、事前判定の後の `Save` で 2 件目が入る経路も塞いだ。Issue の「検証」を実行した。
+- 2026-09-26(P1): draft PR #266 を作成し、note を採番した(`f2103a0`)。`progress.md` の FU-15 の PR 欄に #266 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #266`(PR 欄の記入)、`- PR 未作成。` → `- PR #266 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-sequential-issue-10-720ei0.md` → `266_claude-sequential-issue-10-720ei0.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
