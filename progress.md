@@ -65,7 +65,7 @@ PR #233、PR #235、PR #237、PR #242 の作業で見つかった、`drive-issue
 |---|---|---|---|---|---|
 | RV-02 | [#253](https://github.com/kiyohara/slapex/issues/253) スコープ外とした指摘の再確認 | done(PR merge後) | - | merge後は対応なし | [#256](https://github.com/kiyohara/slapex/pull/256) |
 | RV-03 | [#255](https://github.com/kiyohara/slapex/issues/255) cloud session の subagent の tool 選択 | done(PR merge後) | - | merge後は対応なし | [#258](https://github.com/kiyohara/slapex/pull/258) |
-| RV-01 | [#252](https://github.com/kiyohara/slapex/issues/252) review の prefix の統一への追従 | todo | - | 判断基準の理由と decision log 0059 を直す | - |
+| RV-01 | [#252](https://github.com/kiyohara/slapex/issues/252) review の prefix の統一への追従 | done(PR merge後) | - | merge後は対応なし | - |
 
 ## リリース履歴
 
