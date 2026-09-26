@@ -176,7 +176,11 @@ metadata を含む投稿の前に、次を確かめる。
 - GitHub 上の操作 account は単一であるため、本 skill は `APPROVE` と `REQUEST_CHANGES` を自動実行しない。GitHub 側が self-review を拒否するかどうかに依存しない、本 skill の禁止事項とする。
 - PR review の投稿は `COMMENT` event に限定する。
 - 本 skill は inline thread の resolve を自動実行しない。MCP tool は `resolve_thread` を提供し、`gh api graphql` でも GraphQL mutation `resolveReviewThread` を送信できるため、これは MCP tool や `gh` command の機能制約ではない。fine-grained PAT では `Pull requests` permission に加えて `Contents: Read and Write` を要求するが(公式 documentation に記載は無く、community で確認されている挙動)、本プロジェクトは `Contents: write` を付与しない方針であるため、resolve は人間が GitHub UI で行う。
-- `verify-comments` で対応結果を妥当と確認した inline thread への返信は、本文の先頭行を `**修正確認済み(resolve 可)**` とする。これを resolve 可マーカーの canonical 形式とし、人間はこのマーカーの付いた thread を目視確認して手動で resolve する。マーカーは resolve 相当と確認できた返信だけに付け、未解決・対応不十分の返信には付けない。
+- `verify-comments` で対応結果を妥当と確認した inline thread への返信は、本文の先頭行を、再確認の区分(`references/verify-comments.md` の「処置ごとの確認」)に対応する次の resolve 可マーカーとする。これらを resolve 可マーカーの canonical 形式とし、人間はマーカーの付いた thread を目視確認して手動で resolve する。
+  - 修正確認済み: `**修正確認済み(resolve 可)**`
+  - スコープ外として確認済み: `**スコープ外として確認済み(resolve 可)**`。人間は resolve の前に、返信にある follow-up の記録先を確かめる。
+  - 対応不要として確認済み: `**対応不要として確認済み(resolve 可)**`
+- マーカーは resolve 相当と確認できた返信だけに付け、未解決・対応不十分の返信には付けない。修正を伴わない処置を確かめた返信に `**修正確認済み(resolve 可)**` を付けない。
 - resolve 可マーカーを付けてよいのは、現在の Agent が Review 担当として作成した review cycle に属する inline thread に限る。人間、他の Agent、または他の review cycle が作成した thread には付けない。
 - `unresolve_thread`、review の dismiss、PR の merge、reviewer request の変更は本 skill から自動実行しない。
 - `pull_request_review_write` は tool 単位では `APPROVE` / `REQUEST_CHANGES` / pending review / `resolve_thread` 操作も提供する。allowlist に含まれることを実行の許可根拠とせず、本節の method / event 制約に従う。
