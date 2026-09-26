@@ -700,6 +700,7 @@ func TestCall429RetryAfterWaitsBeforeGivingUp(t *testing.T) {
 	defer srv.Close()
 
 	c, rec := newTestClient(srv)
+	c.Logf = t.Logf // on failure, shows why an attempt fell back to backoff
 	_, err := c.AuthTest(context.Background())
 	if err == nil {
 		t.Fatal("AuthTest succeeded, want error after retries are exhausted")
@@ -729,6 +730,7 @@ func TestDownloadRetryAfterWaitsBeforeGivingUp(t *testing.T) {
 	defer srv.Close()
 
 	c, rec := newTestClient(srv)
+	c.Logf = t.Logf // on failure, shows why an attempt fell back to backoff
 	var buf bytes.Buffer
 	_, _, err := c.Download(context.Background(), srv.URL+"/files/orig.png", 0, &buf)
 	if err == nil {
