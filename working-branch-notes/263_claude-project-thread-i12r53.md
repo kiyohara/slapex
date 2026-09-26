@@ -85,7 +85,8 @@ Issue #206(FU-05)。emoji 除外 filter が有効なとき、timeline の `threa
 - (人間)follow-up 候補(`client.History` の examined exclusions)を起票するかを、merge の前に決める(「リスク・ブロッカー」)。(完了)
 - (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。(完了)
 - (人間)Codex の cycle で agent が対応した 2 thread の処置を、Codex か人間が再確認する。
-- (人間)resolve 可とした review thread 2 件を確かめて resolve する。再確認を終えた Codex の cycle の 2 thread も resolve する。
+- (人間)resolve 可とした review thread 2 件を確かめて resolve する。(完了)
+- (人間)再確認を終えた Codex の cycle の 2 thread を resolve する。
 - (人間)PR を merge する。
 
 ## 検証
@@ -130,4 +131,4 @@ Issue の「検証」の 2 case(filter 有効時の、親が取得範囲より�
 - 2026-09-26: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `c4a92a980d788c8d7f36eec749372a59661f5312`)。修正確認済み 3 件(inline 2 / top-level 1)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可は inline の 2 thread。subagent は基準 `94ce913` の test に `6d9054f` の fixture の変更を当てて除外件数 5 で失敗することと、head で `gofmt`、`go vet`、`go test -count=1 ./...`、`git diff --check` が通ることを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。指摘ではない参考として、PR description の「概要」とこの note の「目的」に、replies 自体が `.cache/` に入るように読める書き方(変更前からある文)が残ると挙げた。
 - 2026-09-26: P6。上記の参考を受けて、PR description の「概要」とこの note の「目的」を、replies は件数に入り、その作成者などの user と bot が解決されて `.cache/` に入る書き方に直した(P5 の後の、文言だけの変更)。この note だけの commit は P5 が確かめた head より後で、CI の確認点に含めない。終了時の状態: PR #263 は draft で、P5 が確かめた head `c4a92a9` の check runs は 5 件 success。残るのは人間の手番(「次にやること」)である。
 - 2026-09-26: ユーザーが 10:40Z に、follow-up 候補を決定カードで「記録のみ」とし(起票しない。PR description の「補足」に記録済み)、PR を Ready for review にした。
-- 2026-09-26: P4(他の Agent 種別の cycle)。Codex のクロスレビュー(cycle `codex-0a341e3-20260926104103`、`Reviewed head` `0a341e3cbf81774cc533ac9444acbbc1497c7b73`)の指摘 2 件(inline 2。`[must]` 1、`[ask]` 1)に `address-comments` で対応した。`[must]`(filter を通す前の replies を history の取得を終えるまで保持し、変更前より保持量が増える)は、変更前の実装と比べて確かめたうえで採用し、取得の直後に絞って除外する reply は ts だけを持ち、除外した thread の replies はその page で捨てる形に直した(`c3214c7`)。`[ask]`(打ち切りの直後にある親を除外件数に数える境界の扱い)は、10:40Z のユーザーの判断(記録のみ)に従い「妥当だが今回はスコープ外である」とした。follow-up 候補は既存の 1 件(examined exclusions)だけで、新しいものは無い。出力生成系 3 skill は引き続き適用しない(出力は変わらず、固定 sample と `--demo` が直前の head と一致した)。この 2 件は対象外の cycle のため、再確認は Codex か人間に返す。
+- 2026-09-26: P4(他の Agent 種別の cycle)。Codex のクロスレビュー(cycle `codex-0a341e3-20260926104103`、`Reviewed head` `0a341e3cbf81774cc533ac9444acbbc1497c7b73`)の指摘 2 件(inline 2。`[must]` 1、`[ask]` 1)に `address-comments` で対応した。`[must]`(filter を通す前の replies を history の取得を終えるまで保持し、変更前より保持量が増える)は、変更前の実装と比べて確かめたうえで採用し、取得の直後に絞って除外する reply は ts だけを持ち、除外した thread の replies はその page で捨てる形に直した(`c3214c7`)。`[ask]`(打ち切りの直後にある親を除外件数に数える境界の扱い)は、10:40Z のユーザーの判断(記録のみ)に従い「妥当だが今回はスコープ外である」とした。follow-up 候補は既存の 1 件(examined exclusions)だけで、新しいものは無い。出力生成系 3 skill は引き続き適用しない(出力は変わらず、固定 sample と `--demo` が直前の head と一致した)。この 2 件は対象外の cycle のため、再確認は Codex か人間に返す。Claude の cycle の resolve 可の 2 thread は、この時点でユーザーが resolve 済みだった。
