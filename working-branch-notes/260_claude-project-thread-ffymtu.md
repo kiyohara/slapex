@@ -13,8 +13,9 @@ Issue #257。`review-pull-request` の `address-comments` と `verify-comments` 
 ## 現在の状況
 
 - 作業内容 1〜4 を実施し、Issue の「検証」を実行した。PR #260 を draft で作成し、note を採番した(P1)。
-- review(P2)の review cycle `claude-code-b3619c1-20260926041810` は指摘 4 件で、P3 で P4 へ進んだ。P4 で 4 件とも採用して直し、各指摘へ処置を返信する。
-- 次は、P4 の最新 head の check runs を確かめてからの再確認(P5)である。
+- review(P2)の review cycle `claude-code-b3619c1-20260926041810` は指摘 4 件で、P3 で P4 へ進んだ。P4 で 4 件とも採用して直し、各指摘へ処置を返信した。
+- 再確認(P5)は 4 件とも修正確認済みで、未対応は 0 件だった。review cycle は完了扱いである。
+- 残るのは人間の手番だけである(「次にやること」)。
 
 ## 決定事項
 
@@ -42,7 +43,8 @@ Issue #257。`review-pull-request` の `address-comments` と `verify-comments` 
 
 - PR を draft で作成し、note を採番する。(完了)
 - P2 の前に最新 head の check runs がすべて success であることを確かめ、review を subagent に委譲する。(完了)
-- P4 の最新 head の check runs がすべて success になったら、P2 の subagent に再確認(P5)を委譲する。
+- P4 の最新 head の check runs がすべて success になったら、P2 の subagent に再確認(P5)を委譲する。(完了)
+- ユーザー: Codex のクロスレビュー、Ready for review、merge。Claude の review cycle の inline thread 4 件は、resolve 可のマーカー付きで確認済みの返信があり、resolve は人間が GitHub UI で行う。
 
 ## 検証
 
@@ -74,8 +76,8 @@ Issue の「検証」の 4 状態と、返信が編集した対象または箇�
 ## リスク・ブロッカー
 
 - 未検証: description による発火。
-- 変更後の規定を、push を伴わない修正を含む review cycle で通すのは本 PR の P4 / P5 が初めてである。`[nits]` の節名の指摘は、note の commit と PR description の編集の両方で直した。
-- P2 の subagent は、PR #256 のコメントの取得などの read を 3 回 `gh api` で行い、cloud session の tool routing からの逸脱として自ら報告した。副作用の無い read で、投稿の直前の head の確認は `pull_request_read(get)` でやり直している。#255(PR #258)の後も起きたため、終了時の報告に記録する。
+- 変更後の規定を、push を伴わない修正を含む review cycle で初めて通した。`[nits]` の節名の指摘は、note の commit と PR description の編集の両方で直し、P5 は両方の反映を確かめて修正確認済みとした。PR の title や Issue の本文の編集で直す指摘は、まだ通していない。
+- P2 の subagent は、PR #256 のコメントの取得などの read を 3 回 `gh api` で行い、cloud session の tool routing からの逸脱として自ら報告した。副作用の無い read で、投稿の直前の head の確認は `pull_request_read(get)` でやり直している。#255(PR #258)の後も起きたため、終了時の報告に記録する。P5 では同じ subagent が `gh` を使わなかった。
 
 ## セッションログ
 
@@ -83,3 +85,5 @@ Issue の「検証」の 4 状態と、返信が編集した対象または箇�
 - 2026-09-26: PR #260 を draft で作成し、note を採番した(`b3619c1`)。採番で書き換えたのは note の `PR:` 欄、「次にやること」の 1 行(`(完了)` を付けた)、PR description の note 参照で、触らずに残した行は無い。P1 の head `b3619c1` の check runs 5 件は success。検証と出力生成系 3 skill の判断は上記のとおりで、`progress.md` は更新しない。
 - 2026-09-26: P2 を subagent に委譲した。review cycle `claude-code-b3619c1-20260926041810`、`Reviewed head` `b3619c1`、指摘 4 件(inline 4、top-level 0。prefix ごとでは `[imo]` 1、`[nits]` 3 で、`[must]` / `[ask]` / `[fyi]` / prefix 無しは 0)。P3 で P4 へ進んだ。
 - 2026-09-26: P4 で 4 件とも「採用し修正した」とした。`[imo]`(対象または箇所を示さない返信)、`[nits]`(Step 3 の材料)、`[nits]`(手順 11 の read-back)は修正 commit `333e234`。`[nits]`(節名「再開する場合」)は本 note の commit と PR description の「レビューしてほしい点」の編集(push を伴わない修正)で直した。スコープ外とした指摘は無く、follow-up 候補も無い。変更は同じ 2 ファイルと本 note だけで、出力生成系 3 skill を適用しない判断は変わらない。
+- 2026-09-26: P4 の head `b9dacea` の check runs 5 件が success であることを確かめ、P2 の subagent に再確認(P5)を委譲した。再確認の結果は、修正確認済み 4 件(inline 4 件、resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。P6 へ進んだ。
+- 2026-09-26: P6 で終了時の状態を記録した(note だけの commit)。PR は draft のまま、人間の手番を待つ。
