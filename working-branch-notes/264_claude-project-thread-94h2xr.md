@@ -17,6 +17,7 @@ Issue #254(FU-18)。`TestCall429RetryAfterWaitsBeforeGivingUp` が CI でまれ�
 - 作業内容 2 の再現の試行(「試した条件と結果」)と、Issue の「検証」(「検証」)を実行した。修正後は、修正前に失敗が出た条件を含め、どの条件でも失敗しなかった。
 - PR #264 作成済み(draft)。note を採番し(`e3466b5`)、`progress.md` の FU-18 の PR 欄も反映した。
 - review cycle `claude-code-8b543f9-20260926122135` の指摘 1 件(`[imo]`)に対応した(P4、`82d4300` と PR description の編集)。再確認(P5)で修正確認済みになり、未対応は 0 件である。Claude の review cycle は完了し、残るのは人間の手番(「次にやること」)である。
+- follow-up 候補(`internal/export` の test)は、2026-09-26 13:29Z のユーザーの判断で、#192(RF-04)に Issue コメントで申し送った。起票はしない。
 
 ## 決定事項
 
@@ -56,7 +57,7 @@ client を直さない理由:
 - body のある応答(200 の JSON など)は、body を読み終えてから接続を idle pool に戻すため、この競合は起きない。
 - `internal/export` の integration test も `slack.New` の client で `http.DefaultTransport` を使い、fake Slack server を並行して閉じる。body の無い 429 に Retry-After を付け、その待機の進捗表示を確かめる `TestRunIntegrationRateLimitRetryThenSuccess` は、同じ競合で失敗し得る。当初はコードからの推定だったが、P2 の review が、競合を決定的に起こす注入(httptrace の `PutIdleConn` hook、つまり接続を idle pool に戻した後で応答を渡す前に、別の `httptest.Server` を閉じる使い捨て test)で、進捗表示の assertion が失敗することを確かめた。request 数と 1 秒以上の待機の assertion は `backoffWait(1)` でも通るため、失敗は進捗表示の assertion にだけ出る。
   - 直し方は 2 通りある。本 PR と同じく client の Transport を fake server のものに差し替える案は、export package の test から `Client` の Transport に触れないため、slack package に client か Transport を注入する exported な option を要する。fake server の 429 の応答に `Connection: close` を付ける案は、client が接続を idle pool に戻さずに応答を渡すため(`readLoop` は `resp.Close` が真だと `alive` を偽にし、`tryPutIdleConn` を呼ばない)、製品の API を変えずに test の側だけで済む。ただし後者は、本 PR が slack の test で採らなかった案(「直し方」)と同じく、429 の後の接続の再利用の経路を test から外す。
-  - どちらを採るかは起票するときに決める。Issue の対象(`internal/slack` の test)から外れるため、本 PR では扱わず follow-up 候補とする(「リスク・ブロッカー」)。
+  - Issue の対象(`internal/slack` の test)から外れるため、本 PR では扱わず follow-up 候補とした。ユーザーの判断で #192(RF-04)に申し送り、どちらを採るかは #192 の着手時に決める(「リスク・ブロッカー」)。
 
 ### 試した条件と結果
 
@@ -110,7 +111,7 @@ client を直さない理由:
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 指摘 1 件に対応し、処置を返信する(P4)。(完了)
 - 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。(完了)
-- (人間)follow-up 候補(`internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess`)を起票するかを決める(「リスク・ブロッカー」)。
+- (人間)follow-up 候補(`internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess`)を起票するかを決める(「リスク・ブロッカー」)。(完了。#192 に申し送った)
 - (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
 - (人間)resolve 可とした review thread 1 件(`[imo]`、note の follow-up 候補の直し方)を確かめて resolve する。
 - (人間)PR を merge する。
@@ -128,8 +129,8 @@ client を直さない理由:
 
 ## リスク・ブロッカー
 
-- follow-up 候補(起票はユーザーが判断する)
-  - `internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess` が同じ競合で失敗し得る(「影響の範囲」。P2 の review が決定的な注入で確かめた)。export の test harness が fake server の transport を client に渡す形(slack package に exported な option を要する)か、fake server の 429 の応答に `Connection: close` を付ける形(test の側だけで済むが、429 の後の接続の再利用の経路を test から外す)で直せる。方針は起票するときに決める。
+- follow-up 候補(2026-09-26 13:29Z のユーザーの判断で #192 に申し送った。https://github.com/kiyohara/slapex/issues/192#issuecomment-5846668545)
+  - `internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess` が同じ競合で失敗し得る(「影響の範囲」。P2 の review が決定的な注入で確かめた)。export の test harness が fake server の transport を client に渡す形(slack package に exported な option を要する)か、fake server の 429 の応答に `Connection: close` を付ける形(test の側だけで済むが、429 の後の接続の再利用の経路を test から外す)で直せる。#192 は検証に `go test ./internal/export` を含み、完了条件にログ文言の維持を含むため、#192 の着手時に検証の前に直す。方針はそのときに決める。
 - 本修正の効果は確率的な事象に対するもので、CI 上で再発しないことは merge 後の CI の結果で確かめるほかない。修正前に失敗が出た条件では、修正後に失敗は出なかった。`*WaitsBeforeGivingUp` の 2 test は診断の `c.Logf = t.Logf` を残すため、再発した場合は `lastErr` から原因を切り分けられる。
 
 ## セッションログ
@@ -142,3 +143,4 @@ client を直さない理由:
 - 2026-09-26: P4。処置は 1 件で「採用し修正した」。`[imo]`(follow-up 候補の直し方を、slack package の exported な option を要する形に限っていた)は、Go の source(`persistConn.readLoop` は `resp.Close` が真だと `alive` を偽にし、`tryPutIdleConn` を呼ばない)と、subagent の注入を scratch の copy で再実行した結果(export の fake server のままでは 5 回中 5 回失敗し、429 に `Connection: close` を付けると 5 回中 5 回成功)で確かめたうえで採用した。この note の「影響の範囲」と「リスク・ブロッカー」を、2 通りの直し方(fake server の transport を渡す形と、429 に `Connection: close` を付ける形)を挙げて方針は起票するときに決める書き方に直し、後者は本 PR で採らなかった案と同じく接続の再利用の経路を test から外すことを添えた(`82d4300`)。PR description の「補足」の follow-up 候補も同じ書き方に直した(push を伴わない修正)。スコープ外とした指摘は無く、follow-up 候補は既存の 1 件(export の test)のままである。出力生成系 3 skill は、変更が note と PR description だけのため、引き続き適用しない。コードは変えていないため Issue の「検証」は再実行せず、`git diff --check` が問題ないことを確かめた。
 - 2026-09-26: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `a97abd1ca51a31df4f89462411360c095770499d`)。修正確認済み 1 件(inline 1 / top-level 0)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可は inline の 1 thread。subagent は、P4 の再実行に使った scratch の copy 2 つの差分が `writeFault` の 429 に足した `Connection: close` の 1 行だけであることを確かめ、同じ注入を `-count=5` で再実行して、元の fake server は 5 回中 5 回失敗し、`Connection: close` を付けた方は 5 回中 5 回通ることを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
 - 2026-09-26: P6。終了時の状態: PR #264 は draft で、P5 が確かめた head `a97abd1` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。残るのは人間の手番(「次にやること」)である。
+- 2026-09-26: ユーザーが 13:29Z に、follow-up 候補(`internal/export` の `TestRunIntegrationRateLimitRetryThenSuccess`)を決定カードで「#192 に申し送る」とした。#192 に Issue コメントで申し送った(https://github.com/kiyohara/slapex/issues/192#issuecomment-5846668545)。RF-04 の着手時に、共通化の検証の前に直す。起票はしない。この note の「現在の状況」「影響の範囲」「リスク・ブロッカー」「次にやること」と、PR description の「補足」を、この判断に合わせた。
