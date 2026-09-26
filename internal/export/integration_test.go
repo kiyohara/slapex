@@ -434,6 +434,196 @@ func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
 	}
 }
 
+// TestRunIntegrationThreadsAcrossHistoryPages is a characterization test for
+// the Messages stage when refilling --max-posts takes a second history page
+// (Issue #191). It pins the thread bookkeeping that has to survive the pages:
+//
+//   - each thread is fetched once: the paged thread, whose broadcast arrives on
+//     page 1, is not fetched again when its parent arrives on page 2, and the
+//     hidden thread's second broadcast on page 1 adds no fetch;
+//   - the thread replies progress keeps counting across pages;
+//   - the hidden thread's parent is excluded, so both of its broadcasts go and
+//     page 2 refills the timeline;
+//   - the excluded count stays unique although the hidden parent is examined on
+//     both pages and again through its thread;
+//   - the Messages line counts every fetched thread, including the cut thread,
+//     fetched through its broadcast while its parent fell beyond --max-posts.
+//     Its replies are neither rendered nor counted by the Done summary and
+//     metadata.json, yet their author is resolved. That pins current
+//     behaviour rather than endorsing it: Issue #206 tracks the mismatch and
+//     will change these expectations.
+func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
+	t.Parallel()
+
+	const (
+		hiddenTS = "1700000009.000000" // parent excluded by the body emoji
+		firstTS  = "1700000010.000000" // parent on page 1
+		pagedTS  = "1700000007.000000" // broadcast on page 1, parent on page 2
+		cutTS    = "1700000005.000000" // broadcast on page 2, parent beyond --max-posts
+	)
+	threadMessage := func(ts, threadTS, user, text string) slack.Message {
+		m := slack.Message{Type: "message", TS: ts, ThreadTS: threadTS, User: user, Text: text}
+		if ts == threadTS {
+			m.ReplyCount = 2
+		}
+		return m
+	}
+	broadcast := func(ts, threadTS, user, text string) slack.Message {
+		m := threadMessage(ts, threadTS, user, text)
+		m.Subtype = "thread_broadcast"
+		return m
+	}
+	hiddenParent := threadMessage(hiddenTS, hiddenTS, "U01", "hidden parent :shushing_face:")
+	hiddenFirst := broadcast("1700000013.000000", hiddenTS, "U02", "first hidden broadcast")
+	hiddenSecond := broadcast("1700000011.000000", hiddenTS, "U02", "second hidden broadcast")
+	firstParent := threadMessage(firstTS, firstTS, "U01", "parent on the first page")
+	pagedParent := threadMessage(pagedTS, pagedTS, "U02", "parent on the second page")
+	pagedBroadcast := broadcast("1700000012.000000", pagedTS, "U01", "broadcast ahead of its parent page")
+	cutParent := threadMessage(cutTS, cutTS, "U01", "parent beyond max posts")
+	cutBroadcast := broadcast("1700000008.000000", cutTS, "U02", "broadcast of a thread cut by max posts")
+
+	sc := baseScenario()
+	sc.Users["U03"] = testUser("U03", "carol", "Carol Example", "Carol", "")
+	// Newest first, as conversations.history returns them.
+	sc.Messages = []slack.Message{
+		hiddenFirst,
+		pagedBroadcast,
+		hiddenSecond,
+		firstParent,
+		hiddenParent,
+		cutBroadcast,
+		pagedParent,
+		{Type: "message", TS: "1700000006.000000", User: "U01", Text: "first message beyond max posts"},
+		cutParent,
+	}
+	sc.Replies[hiddenTS] = []slack.Message{
+		hiddenParent,
+		threadMessage("1700000009.100000", hiddenTS, "U01", "reply hidden with its parent"),
+		hiddenSecond,
+		hiddenFirst,
+	}
+	sc.Replies[firstTS] = []slack.Message{
+		firstParent,
+		threadMessage("1700000010.100000", firstTS, "U02", "reply kept on the first page"),
+		threadMessage("1700000010.200000", firstTS, "U02", "reply hidden by the filter :shushing_face:"),
+	}
+	sc.Replies[pagedTS] = []slack.Message{
+		pagedParent,
+		threadMessage("1700000007.100000", pagedTS, "U01", "reply in the thread across pages"),
+		pagedBroadcast,
+	}
+	sc.Replies[cutTS] = []slack.Message{
+		cutParent,
+		threadMessage("1700000005.100000", cutTS, "U03", "reply counted only on the Messages line"),
+		cutBroadcast,
+	}
+	opts := integrationOptions(t, 4)
+	opts.ExcludeBodyEmoji = []string{"shushing_face"}
+
+	got := runExportScenario(t, sc, opts)
+
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 2,
+		"/api/conversations.replies": 4,
+		"/api/users.info":            3,
+	})
+	var progress []string
+	for _, line := range got.Logs {
+		if _, count, ok := strings.Cut(line, "fetching thread replies ... "); ok {
+			progress = append(progress, count)
+		}
+	}
+	if want := []string{"1/3", "2/3", "3/3", "4/4"}; !slices.Equal(progress, want) {
+		t.Fatalf("thread replies progress = %v, want %v\nlogs:\n%s", progress, want, strings.Join(got.Logs, "\n"))
+	}
+	assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 4 fetched ",
+		" (threads 3, replies 5, excluded by body emoji: 4, truncated by --max-posts 4)")
+	assertDoneSummary(t, got.Logs, "  messages: 4 (threads: 2, replies: 3)", "    excluded by body emoji: 4")
+	assertExcludedMetadata(t, got.OutputDir, 4, 2, 3, 4, []string{"shushing_face"}, nil)
+
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"hidden parent", "hidden broadcast", "reply hidden", "beyond max posts", "reply counted only on the Messages line"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"parent on the first page", "reply kept on the first page", "parent on the second page", "reply in the thread across pages"} {
+		mustContain(t, body, retained)
+	}
+	for marker, want := range map[string]int{
+		`<div class="thread">`:                   2,
+		"broadcast ahead of its parent page":     2, // timeline and thread
+		"broadcast of a thread cut by max posts": 1, // timeline only
+	} {
+		if n := strings.Count(body, marker); n != want {
+			t.Fatalf("index.html has %d of %q, want %d", n, marker, want)
+		}
+	}
+	mustContain(t, body, `<div class="notice">取り扱える件数の上限に達しました。</div>`)
+}
+
+// TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread is a
+// characterization test for the Messages stage when a thread is excluded
+// after its replies were kept (Issue #191). A reaction added to the parent
+// between the conversations.replies call and a later history page is the
+// realistic cause: the broadcast on page 1 fetches the thread, whose parent
+// does not match yet, and the parent's history copy on page 2 carries the
+// reaction. The thread's kept replies and its broadcast then leave the
+// export, the excluded count takes each excluded message once, and page 3
+// refills the timeline.
+func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T) {
+	t.Parallel()
+
+	const (
+		hiddenTS = "1700000006.000000" // parent excluded on page 1
+		raceTS   = "1700000003.000000" // parent excluded on page 2
+	)
+	speakNoEvil := []slack.Reaction{{Name: "speak_no_evil", Count: 1}}
+	hiddenParent := slack.Message{Type: "message", TS: hiddenTS, ThreadTS: hiddenTS, User: "U01", Text: "hidden parent", ReplyCount: 1, Reactions: speakNoEvil}
+	hiddenBroadcast := slack.Message{Type: "message", Subtype: "thread_broadcast", TS: "1700000008.000000", ThreadTS: hiddenTS, User: "U02", Text: "hidden broadcast"}
+	raceParent := slack.Message{Type: "message", TS: raceTS, ThreadTS: raceTS, User: "U01", Text: "race parent", ReplyCount: 2}
+	raceBroadcast := slack.Message{Type: "message", Subtype: "thread_broadcast", TS: "1700000007.000000", ThreadTS: raceTS, User: "U02", Text: "race broadcast"}
+	raceParentLater := raceParent
+	raceParentLater.Reactions = speakNoEvil
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		hiddenBroadcast,
+		raceBroadcast,
+		hiddenParent,
+		{Type: "message", TS: "1700000005.000000", User: "U01", Text: "kept five"},
+		{Type: "message", TS: "1700000004.000000", User: "U02", Text: "kept four"},
+		raceParentLater,
+		{Type: "message", TS: "1700000001.000000", User: "U01", Text: "kept one"},
+	}
+	sc.Replies[hiddenTS] = []slack.Message{hiddenParent, hiddenBroadcast}
+	sc.Replies[raceTS] = []slack.Message{
+		raceParent,
+		{Type: "message", TS: "1700000003.100000", ThreadTS: raceTS, User: "U02", Text: "race reply"},
+		raceBroadcast,
+	}
+	opts := integrationOptions(t, 3)
+	opts.ExcludeReactionEmoji = []string{"speak_no_evil"}
+
+	got := runExportScenario(t, sc, opts)
+
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 3,
+		"/api/conversations.replies": 2,
+	})
+	assertMessagesPhaseLine(t, got.Logs, "OK: messages: 3 fetched ",
+		" (threads 0, replies 0, excluded by reaction emoji: 4)")
+	assertDoneSummary(t, got.Logs, "  messages: 3 (threads: 0, replies: 0)", "    excluded by reaction emoji: 4")
+	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 4, nil, []string{"speak_no_evil"})
+
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"hidden parent", "hidden broadcast", "race parent", "race broadcast", "race reply"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"kept five", "kept four", "kept one"} {
+		mustContain(t, body, retained)
+	}
+	mustNotContain(t, body, `<div class="thread">`)
+}
+
 func TestRunIntegrationExcludeBodyEmojiReplyAndMaxPosts(t *testing.T) {
 	t.Parallel()
 
