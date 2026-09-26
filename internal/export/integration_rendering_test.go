@@ -852,6 +852,10 @@ func TestRunIntegrationOversizeFilesInBroadcastRecordedOnce(t *testing.T) {
 	sc.Messages = []slack.Message{parent, broadcast}
 	sc.Replies = map[string][]slack.Message{parentTS: {parent, broadcast}}
 	sc.Assets["/files/huge-thumb.png"] = pngAsset("huge-thumb")
+	// Served, but must not be requested: the fake server counts requests only
+	// for the paths it serves.
+	sc.Assets["/files/big-archive.zip"] = fakeAsset{ContentType: "application/zip", Body: "big-archive"}
+	sc.Assets["/files/huge-original.png"] = pngAsset("huge-original")
 	opts := renderingOptions(t)
 	opts.MaxAttachBytes = 100
 
