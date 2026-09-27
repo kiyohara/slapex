@@ -14,7 +14,7 @@ Issue #246(FU-13)。thumbnail のある外部サービス連携の画像(file ob
 
 - 依存(PR #243、PR #244)は merge 済み。main `d1632ca` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #268 作成済み。review cycle の P2 の指摘 2 件に対応した(P4)。再確認(P5)はまだである。
+- PR #268 作成済み。review cycle(P2〜P5)を終え、未対応は 0 件。この記録の push の後、CI を確かめて agent が Ready for review にする(2026-09-27 06:33Z のユーザーの指示)。残るのは人間の手番(「次にやること」)である。
 
 ## 決定事項
 
@@ -75,10 +75,13 @@ Issue の未確認の前提のうち、`url_private` が外部サービスの UR
 - draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-13 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。(完了)
-- 指摘 2 件に対応する(P4)。(完了。処置の返信は、P4 の記録の push 後に投稿する)
-- 処置の返信の後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
-- review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
+- 指摘 2 件に対応し、処置を返信する(P4)。(完了)
+- 処置の返信の後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。(完了)
+- review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。(agent がこの記録の push の後に行う)
 - (人間)follow-up 候補(#245 への申し送り)をどう扱うかを決める(「リスク・ブロッカー」)。
+- (人間)Codex のクロスレビュー。指摘があれば agent が `address-comments` で対応する。
+- (人間)resolve 可とした review thread 2 件(`[nits]` 前文と項の食い違い、`[fyi]` #245 への申し送り)を確かめて resolve する。
+- (人間)PR を merge する。
 
 ## 検証
 
@@ -107,3 +110,5 @@ Issue の未確認の前提のうち、`url_private` が外部サービスの UR
 - 2026-09-27(P1): draft PR #268 を作成し、note を採番した(`b1f8f34`)。`progress.md` の FU-13 の PR 欄に #268 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #268`(PR 欄の記入)、`- PR 未作成。` → `- PR #268 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-serial-issue-12-4llnzb.md` → `268_claude-serial-issue-12-4llnzb.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
 - 2026-09-27: P2 / P3。review cycle `claude-code-c070855-20260927065412`、`Reviewed head` `c070855f9aeef6e7002ee8d76e108dc4ddbe0054`。指摘は 2 件(inline 2 / top-level 0)で、prefix の内訳は `[nits]` 1、`[fyi]` 1、`[must]`、`[ask]`、`[imo]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。依頼した 8 観点(`case f.IsExternal:` の位置と分岐、thumbnail の host と token の送信先、注記の文言と設計文書、decision log を 0017 への追記にした判断、case 11c、出力生成系 skill、#245 / #247 との境界、PR description と note と `progress.md`)は、前文の 1 文(`[nits]`)を除いて妥当とされた。subagent は scratch の copy で test を再実行し、修正前のコードで case 11c が失敗することと、変異 4 種(PR description の 2 種と、thumbnail を thumbnail 自身へ link する、thumbnail の無い外部サービス連携の画像の分岐を消す)で case 11c が失敗することを確かめた。完了要約の `Model` は、上位の指示が review のコメントを対象から外すと確認できなかったため `unknown` とされた(PR #267 と同じ)。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
 - 2026-09-27: P4。処置は `[nits]` 1 件が「採用し修正した」、`[fyi]` 1 件が「妥当だが今回はスコープ外である」。`[nits]`(前文の「上の表の取得失敗やサイズ上限超過の文言では表示しない」が、外部サービス連携の画像の thumbnail の取得失敗で `画像の取得に失敗しました。` を出す項と字面上食い違う)は、下の表の各行の分岐(`addFiles`、`addAttachmentFile`、`addImage`)がファイル本体を download もサイズ上限の判定もしないことを確かめたうえで、前文の 2 文目をファイル本体に限る書き方にし、thumbnail のある外部サービス連携の画像の thumbnail の取得失敗を述べる 1 文を足した(`9096dfd`)。同じ文を持つ文書は他に無い。PR description の「主な変更」の `html-rendering.md` の項を直す(push を伴わない修正)。`[fyi]`(#245 の作業内容が、外部サービス連携のファイルを download URL を持たない側に置く)は、#245 の本文で作業内容の文面を確かめ、本 PR の後の thumbnail の保存と食い違うことを確かめたうえで、#245 のスコープのためスコープ外とし、follow-up 候補に残した(「リスク・ブロッカー」)。変更は設計文書だけで、`git diff --check` は問題なかった。出力生成系 3 skill は、変更が設計文書だけのため引き続き適用しない。処置の返信は、この記録の push 後に投稿する。
+- 2026-09-27: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `553e031b04ded7f4f7be5293ab731665eba7f414`)。修正確認済み 1 件(`[nits]`)、スコープ外として確認済み 1 件(`[fyi]`。記録先は「リスク・ブロッカー」の follow-up 候補)、対応不要として確認済み 0 件、未対応 0 件(inline 2 / top-level 0)。resolve 可は inline の 2 thread(`[nits]` の thread は修正で行が変わり、outdated と表示される)。subagent は、前文の「ファイル本体は download もサイズ上限の判定もしない」が下の表の全行に当てはまることを分岐ごとに確かめ、base `d1632ca` のコードに case 11c の fixture を通して、修正前も `upload_thumb` を記録していたこと(`[fyi]` への返信の記述)を確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-27: P6。終了時の状態: PR #268 は draft で、P5 が確かめた head `553e031` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。この記録の push の後、CI を確かめて Ready for review にする(06:33Z のユーザーの指示)。残るのは人間の手番(「次にやること」)である。
