@@ -129,8 +129,9 @@ func scenario(lang string) (*demo.Scenario, error) {
 
 // buildSample runs the shared demo export driver against sc and replaces
 // out/<lang>/ with the generated index.html + style.css + assets/. It goes
-// through demo.Export so sample generation and `slapex --demo` share the exact
-// same fixture-serving wiring. now is the export clock (footer timestamp), kept
+// through demo.Export, which runs demo.Run, the driver `slapex --demo` also
+// uses, so sample generation and `slapex --demo` share the exact same
+// fixture-serving wiring. now is the export clock (footer timestamp), kept
 // equal to the fixture clock so the footer and message dates agree.
 func buildSample(sc *demo.Scenario, now time.Time, out string) error {
 	tmp, err := os.MkdirTemp("", "gensample-")

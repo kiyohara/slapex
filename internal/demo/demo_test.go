@@ -15,8 +15,8 @@ import (
 	"github.com/kiyohara/slapex/internal/ui"
 )
 
-// TestScenariosRenderEndToEnd runs both bundled fixtures through the shared
-// Export driver, the same path slapex --demo and gensample take. It guards
+// TestScenariosRenderEndToEnd runs both bundled fixtures through Export, and
+// so through Run, the driver slapex --demo and gensample share. It guards
 // that the fixtures stay renderable and that no {{base}} placeholder leaks
 // into the output.
 func TestScenariosRenderEndToEnd(t *testing.T) {
