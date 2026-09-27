@@ -486,6 +486,7 @@ func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, o
 	client := slack.New(integrationTestToken,
 		slack.WithBaseURL(fake.URL()+"/api/"),
 		slack.WithSleeper(func(context.Context, time.Duration) error { return nil }),
+		slack.WithTransport(fake.Transport()),
 	)
 
 	assets := assetPaths(sc)

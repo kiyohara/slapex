@@ -86,6 +86,7 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (export
 			mu.Unlock()
 			return nil
 		}),
+		slack.WithTransport(fake.Transport()),
 	)
 	client.Logf = printer.Noticef
 

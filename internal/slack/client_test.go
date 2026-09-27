@@ -46,8 +46,8 @@ func (r *sleepRecorder) recorded() []time.Duration {
 // retried with backoff instead of its Retry-After (Issue #254).
 func newTestClient(srv *httptest.Server) (*Client, *sleepRecorder) {
 	rec := &sleepRecorder{}
-	c := New(testToken, WithBaseURL(srv.URL+"/api/"), WithSleeper(rec.sleep))
-	c.httpClient.Transport = srv.Client().Transport
+	c := New(testToken, WithBaseURL(srv.URL+"/api/"), WithSleeper(rec.sleep),
+		WithTransport(srv.Client().Transport))
 	return c, rec
 }
 
@@ -68,6 +68,29 @@ func TestNewDefaults(t *testing.T) {
 	}
 	if c.sleep == nil {
 		t.Error("sleep is nil, want real sleep by default")
+	}
+}
+
+func TestWithTransportKeepsTimeout(t *testing.T) {
+	t.Parallel()
+
+	calls := 0
+	c := New(testToken, WithTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(authTestOK)),
+			Request:    req,
+		}, nil
+	})))
+	if _, err := c.AuthTest(context.Background()); err != nil {
+		t.Fatalf("AuthTest: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("transport calls = %d, want 1", calls)
+	}
+	if want := New(testToken).httpClient.Timeout; c.httpClient.Timeout != want {
+		t.Errorf("Timeout = %v, want the default %v", c.httpClient.Timeout, want)
 	}
 }
 
