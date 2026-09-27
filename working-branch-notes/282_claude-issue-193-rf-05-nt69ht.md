@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/issue-193-rf-05-nt69ht`(cloud session が指定。Issue の推奨ブランチ名は `refactor-cli-option-mapping`)
-- PR: 未作成
+- PR: #282
 - 最終更新: 2026-09-27
 
 ## 目的
@@ -16,7 +16,7 @@ Issue #193(RF-05)。`cmd/slapex/main.go` は、option の parse と検証、Slac
 
 - 依存(#188)は merge 済み(RF-00 / PR #197)。main `375e8f3`(PR #281 の merge)から作業した。
 - ファイルの分割(`0e6ae69`)、characterization test(`60f80eb`)、option の変換の集約(`9ef307f`)、`parseCLIArgs` の分割(`a8a2e73`)、設計文書の同期(`db851b4`)を実装し、Issue の「検証」を実行した(「検証」)。
-- PR 未作成。
+- PR #282 作成済み。
 
 ## 決定事項
 
@@ -136,7 +136,7 @@ Issue は、demo 固有の channel、fake client、`NoInteractive`、pacing の�
 
 ## 次にやること
 
-- draft PR を作成し、note を採番する。
+- draft PR を作成し、note を採番する。(完了)
 - `progress.md` の RF-05 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。
 
