@@ -53,7 +53,8 @@ func runExportScenario(t *testing.T, sc exportScenario, opts Options) exportRunR
 //
 // When opts.Now is zero, the export clock is pinned to one hour after the
 // newest fixture message so a --days window always covers the fixture.
-func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (exportRunResult, []time.Duration, error) {
+// clientOpts are added to the Slack client's options (the HTTP trace case).
+func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options, clientOpts ...slack.Option) (exportRunResult, []time.Duration, error) {
 	t.Helper()
 	if opts.Now.IsZero() && len(sc.Messages) > 0 {
 		latest := tsTime(sc.Messages[0].TS)
@@ -78,8 +79,8 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (export
 		logs = append(logs, line)
 		mu.Unlock()
 	})
-	client := slack.New(integrationTestToken,
-		slack.WithBaseURL(fake.URL()+"/api/"),
+	client := slack.New(integrationTestToken, append([]slack.Option{
+		slack.WithBaseURL(fake.URL() + "/api/"),
 		slack.WithSleeper(func(_ context.Context, d time.Duration) error {
 			mu.Lock()
 			sleeps = append(sleeps, d)
@@ -87,7 +88,7 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options) (export
 			return nil
 		}),
 		slack.WithTransport(fake.Transport()),
-	)
+	}, clientOpts...)...)
 	client.Logf = printer.Noticef
 
 	outDir, err := Run(context.Background(), client, opts, printer)

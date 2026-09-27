@@ -93,6 +93,17 @@ func (f *fakeSlackServer) Count(path string) int {
 	return f.counts[path]
 }
 
+// Total is the number of requests the server recorded, on every path.
+func (f *fakeSlackServer) Total() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	total := 0
+	for _, n := range f.counts {
+		total += n
+	}
+	return total
+}
+
 func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

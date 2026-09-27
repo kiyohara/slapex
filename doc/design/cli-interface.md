@@ -6,7 +6,7 @@
 
 本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md`、`decision-log/0046-api-base-url-override.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md`、`decision-log/0046-api-base-url-override.md`、`decision-log/0063-http-trace-and-asset-benchmark.md` を参照する。
 
 ## コマンド形式
 
@@ -26,6 +26,14 @@ slapex [channel] [options]
 token を CLI option や引数として受け取る経路は提供しない。プロセス一覧や shell history への漏えいを避けるため、受け渡しは環境変数だけにする。
 
 このほかに内部用途の環境変数として `SLAPEX_API_BASE_URL` がある。非空のときだけ Slack Web API の接続先 base URL を差し替える(未設定時は `https://slack.com/api/` のまま)。デモ録画・ローカル fixture 実行(`tools/gensample -serve` / `tools/demo/`)のためのもので、利用者向けドキュメントや `--help` には載せない。接続先の上書きは token の送信先が変わることを意味するため、変更時は `doc/guidelines/credential-scope-guidelines.md` の checklist(positive / negative test)に従う(`decision-log/0046-api-base-url-override.md`)。
+
+内部用途の環境変数として、`SLAPEX_HTTP_TRACE` もある。空白以外の値のときだけ、export が送る HTTP request(Slack Web API の呼び出しと asset の download。retry の各試行と redirect の各段を含む)を 1 件 1 行の JSON Lines で、値の path のファイルに書く(HTTP trace)。所要時間の内訳を測るためのもので、利用者向けドキュメントや `--help` には載せない(Issue #273、`decision-log/0063-http-trace-and-asset-benchmark.md`)。
+
+- 記録するのは、開始時刻、種別(Web API の method 名、または asset の kind)、scheme と host、URL の hash、試行と redirect の番号、HTTP version、status、失敗の種類、DNS・接続・TLS・接続の取得(再利用の有無)・最初の byte・完了の各時点、受信 bytes、pacing と retry の待機時間である。
+- URL そのもの(path と query)、header(Authorization を含む)、token、body、error の本文は記録しない。URL の hash は実行ごとの乱数を鍵にした HMAC で、同じ trace の中で同じ URL を見分けることにだけ使え、既知の URL とは照合できない。host は記録するため、trace ファイル自体は第三者 host の名前を含む。共有には、host 名を出さない `tools/tracereport` の集計を使う。
+- ファイルは所有者だけが読み書きできる権限(`0600`)で作り、既にあれば中身を置き換える。ファイルを作れない場合は、Slack に接続する前に exit code `4` で終了する。書き込みに失敗しても export は続け、終了時に trace が不完全である旨を stderr に警告する。exit code は export の結果のままとする。
+- 未設定、空、空白だけのときは trace を書かず、出力(stdout、stderr、HTML、assets、cache)も挙動も変えない。
+- `--demo` は in-process の fixture とだけ通信するため、trace の対象にしない。
 
 `SLACK_TOKEN` が未設定の場合、controlling terminal (`/dev/tty`) を開けて `--no-interactive` が指定されていないときに限り、token を対話入力するプロンプトを `/dev/tty` に表示する。入力は echo せず、値はそのプロセス内でだけ使い、設定ファイル・cache・log・HTML 出力には保存しない。これは secret manager をまだ用意していない個人評価・PoC 利用者が、token を shell history に残さず一時的に渡すための導線である(`decision-log/0044-interactive-token-prompt.md`)。この対話入力は token を CLI option / 引数で受け取る経路ではなく、環境変数以外の保存経路も追加しない。controlling terminal が無い環境(CI・pipe 実行など)や `--no-interactive` 指定時は、対話入力を行わず、従来どおり未設定エラー(exit code `3`)と案内を表示して終了する。
 
