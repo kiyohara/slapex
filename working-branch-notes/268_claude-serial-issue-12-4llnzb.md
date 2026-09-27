@@ -73,7 +73,7 @@ Issue の未確認の前提のうち、`url_private` が外部サービスの UR
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- `progress.md` の FU-13 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の FU-13 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
 - review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
 
@@ -99,3 +99,4 @@ Issue の未確認の前提のうち、`url_private` が外部サービスの UR
 
 - 2026-09-27: #250(PR #267)の merge 後、逐次処理の 12 件目として #246 を選んだ。docs.slack.dev(200)と api.slack.com(docs.slack.dev への 302)に接続できることを確かめた。依存(PR #243、PR #244)は merge 済み。branch は main `d1632ca` にある。
 - 2026-09-27: Slack の API 文書で payload を確かめた。test を先に書き、修正前のコードで失敗することを確かめてから、`addImage` を直し、`html-rendering.md` と decision log 0017 を更新した(`86e1062`)。Issue の「検証」を実行した。
+- 2026-09-27(P1): draft PR #268 を作成し、note を採番した(`b1f8f34`)。`progress.md` の FU-13 の PR 欄に #268 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #268`(PR 欄の記入)、`- PR 未作成。` → `- PR #268 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-serial-issue-12-4llnzb.md` → `268_claude-serial-issue-12-4llnzb.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
