@@ -31,9 +31,9 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 
 | package / 入口 | 責務 | 直接依存する内部 package |
 |---|---|---|
-| [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
+| [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、HTTP trace のファイル(`SLAPEX_HTTP_TRACE`)、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
 | [internal/export](../../internal/export/export.go) | `Run` が順に呼ぶ工程(workspace/channel 解決と対話選択、取得範囲・filter 付きの history/replies 取得、user/bot/emoji 解決、asset 保存と表示用データ組立)、cache の組立・再利用・cleanup の判定 | datetime、emoji、output、render、slack、ui |
-| [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、method ごとの平準化、retry、認証送信先を制限した download | なし |
+| [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、method ごとの平準化、retry、認証送信先を制限した download、request ごとの HTTP trace([trace.go](../../internal/slack/trace.go)) | なし |
 | [internal/output](../../internal/output/output.go) | 出力 root・label、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し、`.cache/` の削除 | slack |
 | [internal/render](../../internal/render/html.go) | 表示用データ型、mrkdwn 変換、HTML template、埋込み CSS/logo の書き出し | なし |
 | [internal/emoji](../../internal/emoji/emoji.go) | 埋込み標準絵文字・渡された custom emoji map の解決、alias/skin tone 処理、除外名の正規化・照合 | なし |
@@ -47,7 +47,7 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 
 cache の schema に沿った object の組立は `export`、JSON の書き出しと asset manifest entry は `output` に分かれる。`export` の組立([export/cache.go](../../internal/export/cache.go))は `Run` の各工程の結果をそのまま受け取る。ただし Messages の結果からは件数(`exportCounts`)だけを受け取り、メッセージ本文は受け取らない(cache はメッセージ本文を保持しない)。`slack_api_cache.json` の user / bot の entry の型と、書き出しと再利用の両方向の変換も同じファイルに置く。再利用の読込・検証は [export/reuse.go](../../internal/export/reuse.go)、保存済み asset のコピーは `output` が担う。確認済みの仕様差は [cache.md](cache.md#確認済みの仕様と実装の差) を参照する。
 
-生成用入口は [tools/genemoji](../../tools/genemoji/main.go)(標準絵文字データ)、[tools/gensample](../../tools/gensample/main.go)(`demo` / `ui` を使う ja/en sample export)、[tools/genscreenshot](../../tools/genscreenshot/main.go)(同梱 sample の screenshot)、[tools/demo](../../tools/demo/record.sh)(terminal demo GIF)に置く。
+生成用入口は [tools/genemoji](../../tools/genemoji/main.go)(標準絵文字データ)、[tools/gensample](../../tools/gensample/main.go)(`demo` / `ui` を使う ja/en sample export)、[tools/genscreenshot](../../tools/genscreenshot/main.go)(同梱 sample の screenshot)、[tools/demo](../../tools/demo/record.sh)(terminal demo GIF)に置く。所要時間の計測用の開発 tool は、[tools/tracereport](../../tools/tracereport/main.go)(HTTP trace の集計)と [tools/assetbench](../../tools/assetbench/main.go)(fake origin に対する asset 取得方式の benchmark)に置く([計測の方針](decision-log/0063-http-trace-and-asset-benchmark.md))。
 
 将来の構成変更は [段階的リファクタリングの方針](decision-log/0056-incremental-refactoring-plan.md) と各 Issue で扱う。上表はその計画を先取りせず、構成変更を行う PR で該当箇所を同期する。
 
