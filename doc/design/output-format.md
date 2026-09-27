@@ -70,7 +70,7 @@ HTML footer の `Range` は、取得対象の境界を RFC3339 絶対時刻で�
 
 利用者が出力内容を把握しやすいように、ファイル名は内容 hash ベースとしつつ、保存先は asset 種別ごとの分類ディレクトリに分ける。同一内容・同一 extension の asset は同一 kind ディレクトリ内で同じファイルへ集約され、複数の元 URL が同じローカル path を指すことがある(manifest は元 URL 単位で記録する)。
 
-URL preview 画像、URL preview service icon、workspace icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像、service icon、workspace icon を表示しない。
+URL preview 画像、URL preview service icon、workspace icon は第三者 host 由来の public asset URL になり得るため、`--max-attachment-size` とは別に 1 件あたり 5MiB の guard limit を設ける。上限を超える場合は保存せず、`.cache/assets_manifest.json` に `skipped_size` として記録し、HTML では該当する preview 画像、service icon、workspace icon を表示しない。guard limit は download 中に判定するため、上限を超えた asset には「添付ファイルのサイズ制限」の download 中の上限超過と同じ文言の警告行を出す。
 
 ## 添付ファイルのサイズ制限
 
@@ -91,6 +91,14 @@ option:
 ```
 
 置換表示には、可能であればファイル名、Slack file ID、元の file size、設定された size limit を含める。download 中に上限を超えた場合は元の file size が分からないため、元の file size だけを省く。サイズ上限超過を、取得失敗(manifest の `failed`)の文言で表示しない。`.cache/assets_manifest.json` には、保存した添付ファイルだけでなく、サイズ上限超過で保存しなかった添付ファイルの状態も記録する。
+
+警告行(`cli-interface.md` の「出力制御」の `!` / `WARN:` の行)は、download 中に上限を超えた場合だけ、1 ファイルにつき 1 行出す。Slack の `size` が無い、または実際より小さいという想定外の状態を知らせるためである。文言は次のとおりサイズ上限超過と読めるものにし、取得失敗の警告行(`asset failed (<kind>): <理由>`)の文言で示さない。`<kind>` は manifest の `kind` である。
+
+```text
+asset skipped by size limit (<kind>): <理由>
+```
+
+事前判定で上限を超えた場合は、警告行を出さない。`--max-attachment-size` の指定どおりの結果であり、件数は Assets phase と完了時の summary に出るためである。上限を小さくした実行で、警告行が大量に並ぶことも避ける。
 
 ## 出力イメージ
 
