@@ -299,10 +299,16 @@ func (b *messageViewBuilder) addImage(v *render.MessageView, f *slack.File) {
 		// Slack: downloading them would save whatever page the service returns
 		// (Issue #246). Only the thumbnail is kept, so it opens nothing.
 		img.Note = "(外部サービス連携の画像のため original は保存対象外)"
+	case f.DownloadURL() == "":
+		// Slack gave a thumbnail but no URL for the original: with nothing to
+		// fetch, the size limit has nothing to keep out either, so the image
+		// reads the same at any size (Issue #247). Only the thumbnail is kept,
+		// so it opens nothing.
+		img.Note = "(original は取得できないため保存対象外)"
 	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindUploadOriginal, f.DownloadURL(), meta)
 		oversize, origSize = true, f.Size
-	case f.DownloadURL() != "":
+	default:
 		if rel, ok := b.assets.Save(output.KindUploadOriginal, f.DownloadURL(), meta); ok {
 			img.OriginalPath = rel
 		} else if b.assets.Status(f.DownloadURL()) == output.StatusSkippedSize {

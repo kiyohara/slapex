@@ -177,15 +177,17 @@ func (a *Assets) limitFor(kind string) int64 {
 // thread_broadcast rendered on the timeline and in its thread, or one file in
 // several posts — is counted once (Issue #249). A later Save of the URL, where
 // Slack gave no size or a smaller one, reports it unavailable rather than
-// downloading and recording it again. An empty srcURL names no file and is
-// never taken as already recorded.
+// downloading and recording it again. Like Save, it records nothing for an
+// empty srcURL: a file with no URL has nothing to download, so nothing for the
+// size limit to keep out (Issue #247).
 func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
-	if srcURL != "" {
-		if _, seen := a.status[srcURL]; seen {
-			return
-		}
-		a.known[srcURL] = ""
+	if srcURL == "" {
+		return
 	}
+	if _, seen := a.status[srcURL]; seen {
+		return
+	}
+	a.known[srcURL] = ""
 	a.status[srcURL] = StatusSkippedSize
 	a.entries = append(a.entries, ManifestEntry{
 		Kind: kind, SourceURL: srcURL, Status: StatusSkippedSize,

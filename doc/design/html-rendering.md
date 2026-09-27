@@ -52,7 +52,7 @@ original 画像の保存には `--max-attachment-size` を適用する。origina
 - `file ID: <Slack file ID>, ` は、file ID を取得できる場合だけ表示する。
 - 画像以外の添付ファイルと、下の表で `(取得できないファイルのため保存対象外)` と表示する画像にファイル名が無い場合は、ファイル名の位置に file ID を表示する。
 
-次のファイルは、ファイル本体(画像では original)を download せず、Slack の file object の状態に応じた文言で表示する。ファイル本体は download もサイズ上限の判定もしないため、上の表の取得失敗やサイズ上限超過の文言では表示しない。ただし、thumbnail のある外部サービス連携の画像は thumbnail だけを download し、thumbnail を取得できなかった場合は `画像の取得に失敗しました。` と表示する。
+次のファイルは、ファイル本体(画像では original)を download せず、Slack の file object の状態に応じた文言で表示する。ファイル本体は download もサイズ上限の判定もしないため、上の表の取得失敗やサイズ上限超過の文言では表示しない。ただし、対象が thumbnail のある画像のときは thumbnail だけを download し、thumbnail を取得できなかった場合は `画像の取得に失敗しました。` と表示する。
 
 | 対象 | file object の状態 | 表示 |
 |---|---|---|
@@ -62,10 +62,12 @@ original 画像の保存には `--max-attachment-size` を適用する。origina
 | thumbnail のある画像 | `is_external` が true(外部サービス連携) | thumbnail の下に `(外部サービス連携の画像のため original は保存対象外)` |
 | thumbnail の無い画像 | `is_external` が true(外部サービス連携) | ファイル名の下に `(外部サービス連携の画像のため保存対象外)` |
 | 画像以外の添付ファイル、thumbnail の無い画像 | 上記以外で download URL(`url_private_download` / `url_private`)が無い | ファイル名の下に `(取得できないファイルのため保存対象外)` |
+| thumbnail のある画像 | 上記以外で download URL が無い | thumbnail の下に `(original は取得できないため保存対象外)` |
 
 - `hidden_by_limit` のファイルは、Slack が `id` と `mode` 以外の情報を伏せて返すため、ファイル名も download URL も持たない。
 - 外部サービス連携の文言は `is_external` が true の場合だけに使う。download URL が無いことだけを理由に使わない。
 - 外部サービス連携のファイルの `url_private` / `url_private_download` は、Slack ではなく外部サービスの URL を指す。download すると外部サービスが返す page(ログイン画面など)を original として保存しうるため、画像でも thumbnail の有無によらず download せず、サイズ上限も判定しない。thumbnail は他の画像と同じく保存して表示するが、クリックで開く original は無い。thumbnail を取得できなかった場合は、ファイル名の下に `画像の取得に失敗しました。` と表示する(manifest の `upload_thumb` の status は `failed`)。決定経緯は `decision-log/0017-uploaded-image-assets.md` の 2026-09-27 の追記を参照する。
+- thumbnail があり download URL の無い画像(外部サービス連携を除く)は、original を取得できないため、original の download もサイズ上限の判定もしない。`size` が上限を超えていても上限以下と同じ表示になり、manifest に `upload_original` の entry を作らず、Assets phase と完了時の summary の `skipped by size limit` にも数えない。thumbnail は他の画像と同じく保存して表示するが、クリックで開く original は無い。
 
 保存対象 asset とサイズ上限の方針は `output-format.md` を参照する。
 
