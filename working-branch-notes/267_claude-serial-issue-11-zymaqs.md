@@ -14,7 +14,7 @@ Issue #250(FU-16)。download 中にサイズ上限を超えた asset は、manif
 
 - 依存は無い(`progress.md` の依存欄は `-`。順序の条件の FU-15 は done)。main `315a8a8` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #267 作成済み。review(P2)の指摘 2 件に対応した(P4)。
+- PR #267 作成済み。review cycle(P2〜P5)を終え、未対応は 0 件。残るのは人間の手番(「次にやること」)である。
 
 ## 決定事項
 
@@ -68,7 +68,11 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 - `progress.md` の FU-16 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 指摘 2 件に対応し、処置を返信する(P4)。(完了)
-- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
+- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。(完了)
+- (人間)follow-up 候補(接続の失敗で download の URL が出る)を起票するかを決める(「リスク・ブロッカー」)。
+- (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
+- (人間)resolve 可とした review thread 2 件(`[imo]` 警告行の確認の範囲、`[fyi]` 接続の失敗で URL が出る)を確かめて resolve する。
+- (人間)PR を merge する。
 
 ## 検証
 
@@ -99,3 +103,5 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 - 2026-09-27(P1): draft PR #267 を作成し、note を採番した(`1feeb41`)。`progress.md` の FU-16 の PR 欄に #267 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #267`(PR 欄の記入)、`- PR 未作成。` → `- PR #267 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-serial-issue-11-zymaqs.md` → `267_claude-serial-issue-11-zymaqs.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
 - 2026-09-27: P2 / P3。review cycle `claude-code-bf72e63-20260927052533`、`Reviewed head` `bf72e63b4b1addca1761b107cb7183f0296b3f38`。指摘は 2 件(inline 2 / top-level 0)で、prefix の内訳は `[imo]` 1、`[fyi]` 1、`[must]`、`[ask]`、`[nits]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。依頼した観点(警告行の文言、事前判定で警告しない判断と設計文書の規則、guard limit の 1 文、decision log を作らない判断、`Logf` の doc comment、test、出力生成系 skill、PR description と note)はいずれも妥当とされた。subagent は guard limit の 1 文を、5MiB を超える URL preview 画像の使い捨ての結合 test で確かめた。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。commit の trailer に model 名が入る点が参考として挙がった(投稿はしていない)。platform の attribution の指示どおりで、これまでの PR と同じため変えない。
 - 2026-09-27: P4。処置は `[imo]` 1 件が「採用し修正した」、`[fyi]` 1 件が「妥当だが今回はスコープ外である」。`[imo]`(警告行が無いことの確認が `WARN: asset ` で始まる行に限られる)は、scratch の copy で subagent の変異 2 種(`message_view.go` の事前判定の直後に別の文言で警告する、`SkipTooLarge` で `asset ` で始まらない文言で警告する)を再現し、前者ではすべての test が通り、後者では単体 test だけが失敗することを確かめた。helper を、Messages と Assets の phase の行を除くすべての `WARN:` の行を照合する `assertWarnings` に改め、8 か所の呼び出しを置き換えた(`5ba4485`)。修正後は、前者で 10a と 10f、後者で単体 test と 10a、10b、10e、10f が失敗する。head のコードで `go test ./...`、`go test -count=3 -shuffle=on ./internal/export`、`go vet ./...`、`gofmt -l .`、`git diff --check` を再実行し、問題なかった。PR description の「主な変更」と「検証」を直した(push を伴わない修正)。`[fyi]`(接続の失敗で download の URL が警告行と retry の通知に出る)は、`internal/slack/client.go` の `downloadRetry` と、Compose の container で `http.Get` の error の文言に URL が入ることを確かめたうえで、本 PR より前からの挙動のためスコープ外とし、follow-up 候補に残した(「リスク・ブロッカー」)。open の Issue に該当するものは無い。出力生成系 3 skill は、変更が test だけのため引き続き適用しない。
+- 2026-09-27: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `9f1707564b06ffdcc7f5638b0b078df25c8f6f1d`)。修正確認済み 1 件(`[imo]`)、スコープ外として確認済み 1 件(`[fyi]`。記録先は「リスク・ブロッカー」の follow-up 候補)、対応不要として確認済み 0 件、未対応 0 件(inline 2 / top-level 0)。resolve 可は inline の 2 thread(`[imo]` の thread は修正で行が変わり、outdated と表示される)。subagent は、指摘の変異 2 種に加え、元の review の変異 2 種と、別の出どころの警告(Workspace phase の終わりの前に警告を足す)でも、修正後の test が失敗することを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-27: P6。終了時の状態: PR #267 は draft で、P5 が確かめた head `9f17075` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。残るのは人間の手番(「次にやること」)である。
