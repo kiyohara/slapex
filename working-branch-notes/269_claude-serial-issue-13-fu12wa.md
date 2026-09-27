@@ -14,7 +14,7 @@ Issue #247(FU-14)。thumbnail があり download URL(`url_private_download` / `u
 
 - 依存(PR #243、PR #244)と、直列に進める #246(PR #268)は merge 済み。main `6a88edb` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #269 作成済み。
+- PR #269 作成済み。review cycle の P2 の指摘 1 件(`[fyi]`)に対応した(P4)。再確認(P5)はまだである。
 
 ## 決定事項
 
@@ -64,8 +64,11 @@ Issue #247(FU-14)。thumbnail があり download URL(`url_private_download` / `u
 
 - draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-14 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
+- CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。(完了)
+- 指摘 1 件に対応する(P4)。(完了。処置の返信は、P4 の記録の push 後に投稿する)
+- 処置の返信の後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
 - review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
+- (人間)follow-up 候補(#245 への申し送り)をどう扱うかを決める(「リスク・ブロッカー」)。
 - (人間)Codex のクロスレビュー、review thread の resolve、PR の merge。
 
 ## 検証
@@ -88,9 +91,13 @@ Issue #247(FU-14)。thumbnail があり download URL(`url_private_download` / `u
 
 - thumbnail があり download URL の無い file object が実際の Slack で返るかは確かめていない(Issue の未確認の前提。実 token を使わないため)。
 - 表示が変わるのは thumbnail があり download URL の無い画像だけで、同梱の sample と README の GIF には現れない。`size` が上限以下のこの画像にも注記が出るようになる(修正前は注記なし)。
+- follow-up 候補(P2 の `[fyi]`。扱いはユーザーが判断する)
+  - #245 の作業内容は、`slack-api-usage.md` の「file / asset の取得」に「download URL を持たないファイル(外部サービス連携、削除済み、プラン制限で非表示、その他 URL の無いもの)は download せず、manifest に記録しない」と書くとしている。PR #268 の review から #245 に足されたコメントの書き分けの一案も、thumbnail を保存して `upload_thumb` を記録する例外を外部サービス連携のファイルの側にだけ付け、「download URL を持たないファイル(削除済み、プラン制限で非表示、その他 URL の無いもの)」の側には付けていない。thumbnail があり download URL の無い画像(外部サービス連携を除く)は、thumbnail を保存して manifest に `upload_thumb` の entry を作る(取得に失敗すれば `failed`)。これは本 PR の前からの挙動で(main `6a88edb` の `addImage` は original の分岐より前に thumbnail を `Save` する)、本 PR が初めて設計文書に書き、case 11d の manifest の照合で確かめている。#245 を Issue とコメントの文面のまま進めると、この thumbnail の記録と食い違う。本 PR は `slack-api-usage.md` を触っておらず、変更は `html-rendering.md` の表と項の中で閉じている。申し送りの案は、#245 への Issue コメント(thumbnail のある画像の例外を URL の無い側にも付ける)である(該当する既存の Issue は #245 だけ)。
 
 ## セッションログ
 
 - 2026-09-27: #246(PR #268)の merge 後、逐次処理の 13 件目として #247 を選んだ。依存(PR #243、PR #244)と #246(PR #268)は merge 済み。branch は main `6a88edb` にある。
 - 2026-09-27: test を先に書き、修正前のコードで失敗することを確かめてから、`addImage` と `SkipTooLarge` を直し、`html-rendering.md` を更新した。Issue の「検証」を実行した。
 - 2026-09-27(P1): draft PR #269 を作成し、note を採番した(`866a904`)。`progress.md` の FU-14 の PR 欄に #269 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #269`(PR 欄の記入)、`- PR 未作成。` → `- PR #269 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-serial-issue-13-fu12wa.md` → `269_claude-serial-issue-13-fu12wa.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。PR の reviewer にユーザーを指定しようとしたが、PR の作成者(同じアカウント)には review を依頼できず、指定できなかった(assignee は指定した)。
+- 2026-09-27: P2 / P3。review cycle `claude-code-97c695c-20260927081054`、`Reviewed head` `97c695c5d89500f0b5f181d8abf9ed77984da45a`。指摘は 1 件(inline 1 / top-level 0)で、prefix の内訳は `[fyi]` 1、`[must]`、`[ask]`、`[imo]`、`[nits]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。依頼した 8 観点(`addImage` の分岐の位置と `default:`、注記を出す判断と文言、`SkipTooLarge` の空の URL、`html-rendering.md` と他の設計文書、case 11d と単体 test、decision log を作らない判断、出力生成系 skill、PR description と note と `progress.md` とスコープ)は、いずれも妥当とされた。subagent は scratch の copy で test を再実行し、修正前のコードで case 11d と単体 test が失敗することと、変異 10 種(PR description の 7 種と、thumbnail から thumbnail 自身へ link する、上限超過でサイズ上限の注記を出す、thumbnail の取得失敗に URL 無しの文言を出す)で test が失敗し、動作の変わらない変更(`default:` を元の case に戻す)では通ることを確かめた。gensample の再生成結果と、base と head の `--demo` の比較も再現した。完了要約の `Model` は、上位の指示が review のコメントを対象から外すと確認できなかったため `unknown` とされた(PR #267、PR #268 と同じ)。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-27: P4。処置は `[fyi]` 1 件が「妥当だが今回はスコープ外である」。`[fyi]`(#245 の作業内容と、PR #268 の review から #245 に足されたコメントの書き分けの一案が、thumbnail があり download URL の無い画像の `upload_thumb` の記録と食い違う)は、#245 の本文とコメントで文面を確かめ、main `6a88edb` の `addImage` が original の分岐より前に thumbnail を `Save` すること(本 PR の前からの挙動)と、case 11d が `upload_thumb` の entry を照合していることを確かめたうえで、`slack-api-usage.md` の記述と #245 の文面は #245 のスコープのためスコープ外とし、follow-up 候補に残した(「リスク・ブロッカー」)。修正の commit は無く、この記録だけを push する。出力生成系 3 skill は、コードを変えていないため引き続き適用しない。処置の返信は、この記録の push 後に投稿する。
