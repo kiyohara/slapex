@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/pf-01-issue-273-gu5zis`(cloud session が指定。Issue の推奨ブランチ名は `perf-http-trace-and-bench`)
-- PR:
+- PR: #281
 - 最終更新: 2026-09-27
 
 ## 目的
