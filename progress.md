@@ -47,7 +47,7 @@ RF-03 → FU-05 → FU-13 → FU-14 → FU-18 → FU-15 → FU-16 → RF-06 → 
 |---|---|---|---|---|---|
 | FU-05 | [#206](https://github.com/kiyohara/slapex/issues/206) filter 時の broadcast thread 件数不整合 | done(PR merge後) | #191 | merge後は対応なし | [#263](https://github.com/kiyohara/slapex/pull/263) |
 | FU-13 | [#246](https://github.com/kiyohara/slapex/issues/246) 外部連携画像の url_private を original として保存 | done(PR merge後) | PR #243, PR #244 | merge後は対応なし | [#268](https://github.com/kiyohara/slapex/pull/268) |
-| FU-14 | [#247](https://github.com/kiyohara/slapex/issues/247) URL 無し画像の size 超過で空の source_url を記録 | done(PR merge後) | PR #243, PR #244 | merge後は対応なし | - |
+| FU-14 | [#247](https://github.com/kiyohara/slapex/issues/247) URL 無し画像の size 超過で空の source_url を記録 | done(PR merge後) | PR #243, PR #244 | merge後は対応なし | [#269](https://github.com/kiyohara/slapex/pull/269) |
 | FU-18 | [#254](https://github.com/kiyohara/slapex/issues/254) 429 retry test がまれに失敗 | done(PR merge後) | - | merge後は対応なし | [#264](https://github.com/kiyohara/slapex/pull/264) |
 | FU-15 | [#249](https://github.com/kiyohara/slapex/issues/249) 同じファイルの size 超過を重複記録 | done(PR merge後) | - | merge後は対応なし | [#266](https://github.com/kiyohara/slapex/pull/266) |
 | FU-16 | [#250](https://github.com/kiyohara/slapex/issues/250) download 中の size 超過を asset failed と警告 | done(PR merge後) | - | merge後は対応なし | [#267](https://github.com/kiyohara/slapex/pull/267) |

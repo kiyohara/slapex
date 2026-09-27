@@ -63,7 +63,7 @@ Issue #247(FU-14)。thumbnail があり download URL(`url_private_download` / `u
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- `progress.md` の FU-14 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の FU-14 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
 - review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
 - (人間)Codex のクロスレビュー、review thread の resolve、PR の merge。
@@ -93,3 +93,4 @@ Issue #247(FU-14)。thumbnail があり download URL(`url_private_download` / `u
 
 - 2026-09-27: #246(PR #268)の merge 後、逐次処理の 13 件目として #247 を選んだ。依存(PR #243、PR #244)と #246(PR #268)は merge 済み。branch は main `6a88edb` にある。
 - 2026-09-27: test を先に書き、修正前のコードで失敗することを確かめてから、`addImage` と `SkipTooLarge` を直し、`html-rendering.md` を更新した。Issue の「検証」を実行した。
+- 2026-09-27(P1): draft PR #269 を作成し、note を採番した(`866a904`)。`progress.md` の FU-14 の PR 欄に #269 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #269`(PR 欄の記入)、`- PR 未作成。` → `- PR #269 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-serial-issue-13-fu12wa.md` → `269_claude-serial-issue-13-fu12wa.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。PR の reviewer にユーザーを指定しようとしたが、PR の作成者(同じアカウント)には review を依頼できず、指定できなかった(assignee は指定した)。
