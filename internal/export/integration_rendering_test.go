@@ -583,7 +583,7 @@ func TestRunIntegrationOversizeAttachment(t *testing.T) {
 	}
 	// A file the pre-check keeps out is the limit working as configured: the
 	// counts report it, and no warning line does (output-format.md).
-	assertAssetWarnings(t, got.Logs)
+	assertWarnings(t, got.Logs)
 }
 
 // --- case 10b: oversize image original keeps thumbnail + note ----------------
@@ -636,7 +636,7 @@ func TestRunIntegrationOversizeImageOriginal(t *testing.T) {
 	}); !ok {
 		t.Fatalf("manifest missing saved upload_thumb entry: %+v", entries)
 	}
-	assertAssetWarnings(t, got.Logs)
+	assertWarnings(t, got.Logs)
 }
 
 // --- case 10c: size limit hit during the download reads as a size skip -------
@@ -689,7 +689,7 @@ func TestRunIntegrationOversizeAttachmentAtDownload(t *testing.T) {
 	if len(matched) != 1 || matched[0].Kind != "attachment" || matched[0].Status != "skipped_size" {
 		t.Fatalf("F-BIG manifest entries = %+v, want one attachment entry with status skipped_size", matched)
 	}
-	assertAssetWarnings(t, got.Logs, "WARN: asset skipped by size limit (attachment): download exceeds size limit")
+	assertWarnings(t, got.Logs, "WARN: asset skipped by size limit (attachment): download exceeds size limit")
 	const counts = "0 saved, 1 skipped by size limit, 0 failed"
 	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
 	assertDoneSummary(t, got.Logs, "  assets: "+counts)
@@ -740,7 +740,7 @@ func TestRunIntegrationOversizeImageOriginalAtDownload(t *testing.T) {
 	if !ok || orig.Status != "skipped_size" {
 		t.Fatalf("upload_original entry = %+v (ok=%v), want skipped_size", orig, ok)
 	}
-	assertAssetWarnings(t, got.Logs, "WARN: asset skipped by size limit (upload_original): download exceeds size limit")
+	assertWarnings(t, got.Logs, "WARN: asset skipped by size limit (upload_original): download exceeds size limit")
 	const counts = "1 saved, 1 skipped by size limit, 0 failed"
 	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
 	assertDoneSummary(t, got.Logs, "  assets: "+counts)
@@ -817,7 +817,7 @@ func TestRunIntegrationOversizeImageWithoutThumbnail(t *testing.T) {
 			t.Fatalf("upload_original entry for %s = %+v (ok=%v), want status %s", id, e, ok, want)
 		}
 	}
-	assertAssetWarnings(t, got.Logs,
+	assertWarnings(t, got.Logs,
 		"WARN: asset skipped by size limit (upload_original): download exceeds size limit",
 		"WARN: asset failed (upload_original): unexpected HTTP 404",
 	)
@@ -930,7 +930,7 @@ func TestRunIntegrationOversizeFilesInBroadcastRecordedOnce(t *testing.T) {
 	const counts = "1 saved, 2 skipped by size limit, 0 failed"
 	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
 	assertDoneSummary(t, got.Logs, "  assets: "+counts)
-	assertAssetWarnings(t, got.Logs)
+	assertWarnings(t, got.Logs)
 	var metadata struct {
 		Counts struct {
 			AssetsSaved   int `json:"assets_saved"`
@@ -983,7 +983,7 @@ func TestRunIntegrationAssetDownloadFailure(t *testing.T) {
 	if !ok || entry.Status != "failed" {
 		t.Fatalf("attachment entry = %+v (ok=%v), want status failed", entry, ok)
 	}
-	assertAssetWarnings(t, got.Logs, "WARN: asset failed (attachment): unexpected HTTP 404")
+	assertWarnings(t, got.Logs, "WARN: asset failed (attachment): unexpected HTTP 404")
 }
 
 // --- case 11b: a file slapex does not download says why ----------------------
@@ -1056,7 +1056,7 @@ func TestRunIntegrationFilesNotDownloaded(t *testing.T) {
 	const counts = "0 saved, 0 skipped by size limit, 0 failed"
 	assertAssetsPhaseLine(t, got.Logs, "OK: assets: "+counts)
 	assertDoneSummary(t, got.Logs, "  assets: "+counts)
-	assertAssetWarnings(t, got.Logs)
+	assertWarnings(t, got.Logs)
 }
 
 // --- case 12: thread replies over 1000 are truncated with a notice ----------

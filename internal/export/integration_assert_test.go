@@ -166,19 +166,22 @@ func assertAssetsPhaseLine(t *testing.T, logs []string, want string) {
 	t.Fatalf("no assets phase line\nlogs:\n%s", strings.Join(logs, "\n"))
 }
 
-// assertAssetWarnings checks the per-asset warning lines printed for downloads
-// that did not complete ("asset failed ..." / "asset skipped by size limit
-// ..."), in order. With no lines given, it checks that none was printed.
-func assertAssetWarnings(t *testing.T, logs []string, want ...string) {
+// assertWarnings checks the standalone warning lines, in order: every WARN:
+// line except the ones closing the Messages and Assets phases, the only phases
+// that can end in a warning (assertMessagesPhaseLine and assertAssetsPhaseLine
+// check those). With no lines given, it checks that no warning was printed,
+// whatever its wording or where it came from (Issue #250).
+func assertWarnings(t *testing.T, logs []string, want ...string) {
 	t.Helper()
 	var got []string
 	for _, line := range logs {
-		if strings.HasPrefix(line, "WARN: asset ") {
+		if strings.HasPrefix(line, "WARN: ") &&
+			!strings.HasPrefix(line, "WARN: messages: ") && !strings.HasPrefix(line, "WARN: assets: ") {
 			got = append(got, line)
 		}
 	}
 	if !slices.Equal(got, want) {
-		t.Fatalf("asset warning lines = %q, want %q\nlogs:\n%s", got, want, strings.Join(logs, "\n"))
+		t.Fatalf("warning lines = %q, want %q\nlogs:\n%s", got, want, strings.Join(logs, "\n"))
 	}
 }
 
