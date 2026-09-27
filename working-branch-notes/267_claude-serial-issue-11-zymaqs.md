@@ -15,6 +15,7 @@ Issue #250(FU-16)。download 中にサイズ上限を超えた asset は、manif
 - 依存は無い(`progress.md` の依存欄は `-`。順序の条件の FU-15 は done)。main `315a8a8` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
 - PR #267 作成済み。review cycle(P2〜P5)を終え、未対応は 0 件。残るのは人間の手番(「次にやること」)である。
+- follow-up 候補(接続の失敗で download の URL が出る)は、2026-09-27 06:15Z のユーザーの判断で、#192(RF-04)に Issue コメントで申し送った。起票はしない。
 
 ## 決定事項
 
@@ -69,7 +70,7 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 指摘 2 件に対応し、処置を返信する(P4)。(完了)
 - 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。(完了)
-- (人間)follow-up 候補(接続の失敗で download の URL が出る)を起票するかを決める(「リスク・ブロッカー」)。
+- (人間)follow-up 候補(接続の失敗で download の URL が出る)を起票するかを決める(「リスク・ブロッカー」)。(完了。#192 に申し送った)
 - (人間)Codex のクロスレビューと Ready for review。指摘があれば agent が `address-comments` で対応する。
 - (人間)resolve 可とした review thread 2 件(`[imo]` 警告行の確認の範囲、`[fyi]` 接続の失敗で URL が出る)を確かめて resolve する。
 - (人間)PR を merge する。
@@ -93,7 +94,7 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 ## リスク・ブロッカー
 
 - download 中の上限超過の警告行の文言が変わる。stderr の診断表示で、機械可読の契約(stdout の出力先 path)ではないが、利用者の script が `asset failed` を照合している場合は、download 中の上限超過がその照合に当たらなくなる。
-- follow-up 候補(起票はユーザーが判断する)
+- follow-up 候補(2026-09-27 06:15Z のユーザーの判断で #192 に申し送った。https://github.com/kiyohara/slapex/issues/192#issuecomment-5853300389)
   - 接続の失敗(DNS、接続拒否、TLS、timeout など)で download が止まると、取得失敗の警告行(`asset failed (<kind>): giving up after 5 retries: <err>`)と retry 中の通知(`internal/slack/client.go` の `retrying download in ... (<err>)`)の `<err>` が Go の `*url.Error` の文言になり、download の URL を全部含む。実際の実行では Slack の private file URL が出力され、`doc/design/cli-interface.md` の「出力制御」の「Slack private file URL などの機密情報は出力しない」と食い違う。本 PR より前からの挙動で、本 PR は `internal/slack` と取得失敗の `<err>` を変えていない(P2 の `[fyi]`)。404 / 5xx と `download exceeds size limit` の文言には URL が入らない。retry の制御を共通化する #192(RF-04)が同じ `downloadRetry` を触る。
 
 ## セッションログ
@@ -105,3 +106,4 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 - 2026-09-27: P4。処置は `[imo]` 1 件が「採用し修正した」、`[fyi]` 1 件が「妥当だが今回はスコープ外である」。`[imo]`(警告行が無いことの確認が `WARN: asset ` で始まる行に限られる)は、scratch の copy で subagent の変異 2 種(`message_view.go` の事前判定の直後に別の文言で警告する、`SkipTooLarge` で `asset ` で始まらない文言で警告する)を再現し、前者ではすべての test が通り、後者では単体 test だけが失敗することを確かめた。helper を、Messages と Assets の phase の行を除くすべての `WARN:` の行を照合する `assertWarnings` に改め、8 か所の呼び出しを置き換えた(`5ba4485`)。修正後は、前者で 10a と 10f、後者で単体 test と 10a、10b、10e、10f が失敗する。head のコードで `go test ./...`、`go test -count=3 -shuffle=on ./internal/export`、`go vet ./...`、`gofmt -l .`、`git diff --check` を再実行し、問題なかった。PR description の「主な変更」と「検証」を直した(push を伴わない修正)。`[fyi]`(接続の失敗で download の URL が警告行と retry の通知に出る)は、`internal/slack/client.go` の `downloadRetry` と、Compose の container で `http.Get` の error の文言に URL が入ることを確かめたうえで、本 PR より前からの挙動のためスコープ外とし、follow-up 候補に残した(「リスク・ブロッカー」)。open の Issue に該当するものは無い。出力生成系 3 skill は、変更が test だけのため引き続き適用しない。
 - 2026-09-27: P5。P2 と同じ subagent が `verify-comments` を実行した(`Reviewed head` `9f1707564b06ffdcc7f5638b0b078df25c8f6f1d`)。修正確認済み 1 件(`[imo]`)、スコープ外として確認済み 1 件(`[fyi]`。記録先は「リスク・ブロッカー」の follow-up 候補)、対応不要として確認済み 0 件、未対応 0 件(inline 2 / top-level 0)。resolve 可は inline の 2 thread(`[imo]` の thread は修正で行が変わり、outdated と表示される)。subagent は、指摘の変異 2 種に加え、元の review の変異 2 種と、別の出どころの警告(Workspace phase の終わりの前に警告を足す)でも、修正後の test が失敗することを確かめた。check runs は 5 件 success。`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。
 - 2026-09-27: P6。終了時の状態: PR #267 は draft で、P5 が確かめた head `9f17075` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。残るのは人間の手番(「次にやること」)である。
+- 2026-09-27: follow-up 候補(接続の失敗で download の URL が出る)は、ユーザーの判断(06:15Z)で #192(RF-04)に Issue コメントで申し送った。起票はしない。#192 の完了条件の「ログ文言を維持する」の例外になるため、共通化とは別の commit で直し、URL が出ないことを確かめる test を足すことをコメントに添えた。この記録は note だけの commit で、CI の確認点に含めない。
