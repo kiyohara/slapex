@@ -125,7 +125,8 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 	if err := c.pace(ctx, method); err != nil {
 		return "", fmt.Errorf("slack api %s: %w", method, err)
 	}
-	body, err := c.withRetry(ctx, "api "+method, func() (*http.Response, error) {
+	var body []byte
+	err := c.withRetry(ctx, "api "+method, func() (*http.Response, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+method,
 			strings.NewReader(params.Encode()))
 		if err != nil {
@@ -134,6 +135,13 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Authorization", "Bearer "+c.token)
 		return c.httpClient.Do(req)
+	}, func(resp *http.Response) error {
+		// The body is read whole before it is decoded, so a read that fails
+		// part way is retried like a network error.
+		var err error
+		body, err = io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return err
 	})
 	if err != nil {
 		return "", fmt.Errorf("slack api %s: %w", method, err)
@@ -153,26 +161,34 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 	return env.ResponseMetadata.NextCursor, nil
 }
 
-// withRetry runs doReq honouring 429 + Retry-After and retrying transient
-// failures (5xx, network errors) with exponential backoff and jitter.
-func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http.Response, error)) ([]byte, error) {
+// withRetry sends a request until it gets a 200 response that accept takes,
+// honouring 429 + Retry-After and retrying transient failures (5xx, network
+// errors) with exponential backoff and jitter, at most maxRetries times. The
+// Web API calls and Download share it; what names the request in the
+// progress lines.
+//
+// send builds and sends one request, and its error is retried. withRetry
+// closes every response it does not pass to accept. accept owns the body of
+// the 200 response it gets: it closes the body or hands it on, and its error
+// is retried like a network error.
+func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.Response, error), accept func(*http.Response) error) error {
 	var lastErr error
 	// skipBackoff is set when a 429 already waited out Retry-After; the wait
 	// happens at detection so it is honoured even when retries are exhausted.
 	skipBackoff := false
 	for attempt := 0; ; attempt++ {
 		if attempt > maxRetries {
-			return nil, fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
+			return fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
 		}
 		if attempt > 0 && !skipBackoff {
 			wait := backoffWait(attempt)
 			c.Logf("retrying %s in %s (%s)", what, wait.Round(time.Second), lastErr)
 			if err := c.sleep(ctx, wait); err != nil {
-				return nil, err
+				return err
 			}
 		}
 		skipBackoff = false
-		resp, err := doReq()
+		resp, err := send()
 		if err != nil {
 			lastErr = err
 			continue
@@ -184,7 +200,7 @@ func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http
 			if wait, ok := retryAfter(resp); ok {
 				c.Logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
 				if err := c.sleep(ctx, wait); err != nil {
-					return nil, err
+					return err
 				}
 				skipBackoff = true
 			}
@@ -194,16 +210,14 @@ func (c *Client) withRetry(ctx context.Context, what string, doReq func() (*http
 			lastErr = fmt.Errorf("server error: HTTP %d", resp.StatusCode)
 			continue
 		case resp.StatusCode != http.StatusOK:
-			defer resp.Body.Close()
-			return nil, fmt.Errorf("unexpected HTTP %d", resp.StatusCode)
+			resp.Body.Close()
+			return fmt.Errorf("unexpected HTTP %d", resp.StatusCode)
 		}
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
+		if err := accept(resp); err != nil {
 			lastErr = err
 			continue
 		}
-		return body, nil
+		return nil
 	}
 }
 
@@ -264,56 +278,30 @@ func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.
 	return written, ct, nil
 }
 
+// downloadRetry sends the GET for srcURL through withRetry and returns the 200
+// response's body unread, for the caller to stream and close. A failure while
+// streaming is therefore not retried: part of the body may already be written.
 func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadCloser, string, error) {
-	var lastErr error
-	// skipBackoff: see withRetry.
-	skipBackoff := false
-	for attempt := 0; ; attempt++ {
-		if attempt > maxRetries {
-			return nil, "", fmt.Errorf("giving up after %d retries: %w", maxRetries, lastErr)
-		}
-		if attempt > 0 && !skipBackoff {
-			wait := backoffWait(attempt)
-			c.Logf("retrying download in %s (%s)", wait.Round(time.Second), lastErr)
-			if err := c.sleep(ctx, wait); err != nil {
-				return nil, "", err
-			}
-		}
-		skipBackoff = false
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, srcURL, nil)
-		if err != nil {
-			return nil, "", err
-		}
-		if downloadNeedsAuth(srcURL) {
-			req.Header.Set("Authorization", "Bearer "+c.token)
-		}
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		switch {
-		case resp.StatusCode == http.StatusTooManyRequests:
-			resp.Body.Close()
-			lastErr = fmt.Errorf("rate limited (429)")
-			if wait, ok := retryAfter(resp); ok {
-				c.Logf("rate limited on download, waiting %s as instructed by Slack", wait.Round(time.Second))
-				if err := c.sleep(ctx, wait); err != nil {
-					return nil, "", err
-				}
-				skipBackoff = true
-			}
-			continue
-		case resp.StatusCode >= 500:
-			resp.Body.Close()
-			lastErr = fmt.Errorf("server error: HTTP %d", resp.StatusCode)
-			continue
-		case resp.StatusCode != http.StatusOK:
-			resp.Body.Close()
-			return nil, "", fmt.Errorf("unexpected HTTP %d", resp.StatusCode)
-		}
-		return resp.Body, resp.Header.Get("Content-Type"), nil
+	// Every attempt sends this one request: a GET has no body to use up, and
+	// withRetry closes each response it rejects before it sends again.
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srcURL, nil)
+	if err != nil {
+		return nil, "", err
 	}
+	if downloadNeedsAuth(srcURL) {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	var resp *http.Response
+	err = c.withRetry(ctx, "download", func() (*http.Response, error) {
+		return c.httpClient.Do(req)
+	}, func(ok *http.Response) error {
+		resp = ok
+		return nil
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	return resp.Body, resp.Header.Get("Content-Type"), nil
 }
 
 func downloadNeedsAuth(srcURL string) bool {
