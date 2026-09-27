@@ -119,7 +119,12 @@ type Assets struct {
 	entries []ManifestEntry
 	reuse   *ReuseSource // previous run's assets to copy instead of downloading
 	reused  int          // assets taken from the reuse source instead of downloaded
-	Logf    func(format string, args ...any)
+	// Logf receives a warning for each download that did not complete, worded
+	// after its manifest status: a failure, or a download the size limit
+	// stopped. SkipTooLarge warns of nothing: a file its pre-check keeps out
+	// is the limit working as configured, and the Assets counts report it
+	// (doc/design/output-format.md).
+	Logf func(format string, args ...any)
 }
 
 // ReuseSource lets Save copy an already-saved asset from a previous run's
@@ -233,12 +238,14 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h, &head))
 	tmp.Close()
 	if err != nil {
-		status := StatusFailed
+		status, warning := StatusFailed, "asset failed"
 		if errors.Is(err, slack.ErrTooLarge) {
-			status = StatusSkippedSize
+			// A download the size limit stopped is a size skip, not a failure,
+			// in the warning as in the manifest and the counts (Issue #250).
+			status, warning = StatusSkippedSize, "asset skipped by size limit"
 		}
 		a.record(kind, srcURL, meta, "", status, err.Error())
-		a.Logf("asset failed (%s): %s", kind, err)
+		a.Logf("%s (%s): %s", warning, kind, err)
 		return "", false
 	}
 

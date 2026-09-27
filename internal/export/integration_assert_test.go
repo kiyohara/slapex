@@ -149,6 +149,39 @@ func assertMessagesPhaseLine(t *testing.T, logs []string, prefix, suffix string)
 	t.Fatalf("no messages phase line\nlogs:\n%s", strings.Join(logs, "\n"))
 }
 
+// assertAssetsPhaseLine checks the line that closes the Assets phase as a
+// whole: its status, the saved / skipped / failed counts and any meta. The
+// Done summary repeats the counts on its own assets line, so matching the
+// counts alone would pass on either line (Issue #250).
+func assertAssetsPhaseLine(t *testing.T, logs []string, want string) {
+	t.Helper()
+	for _, line := range logs {
+		if strings.HasPrefix(line, "OK: assets: ") || strings.HasPrefix(line, "WARN: assets: ") {
+			if line != want {
+				t.Fatalf("assets phase line = %q, want %q", line, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("no assets phase line\nlogs:\n%s", strings.Join(logs, "\n"))
+}
+
+// assertAssetWarnings checks the per-asset warning lines printed for downloads
+// that did not complete ("asset failed ..." / "asset skipped by size limit
+// ..."), in order. With no lines given, it checks that none was printed.
+func assertAssetWarnings(t *testing.T, logs []string, want ...string) {
+	t.Helper()
+	var got []string
+	for _, line := range logs {
+		if strings.HasPrefix(line, "WARN: asset ") {
+			got = append(got, line)
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("asset warning lines = %q, want %q\nlogs:\n%s", got, want, strings.Join(logs, "\n"))
+	}
+}
+
 // assertDoneSummary checks that the Done summary printed each of the given
 // detail lines verbatim.
 func assertDoneSummary(t *testing.T, logs []string, lines ...string) {

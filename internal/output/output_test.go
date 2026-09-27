@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -261,6 +263,46 @@ func TestAssetsSkipTooLargeRecordsEachURLOnce(t *testing.T) {
 	assets.SkipTooLarge(KindUploadOriginal, "", AssetMeta{FileID: "F004", SizeBytes: 99})
 	if got := len(assets.Entries()); got != 4 {
 		t.Fatalf("entries after two files without a URL = %d, want 4", got)
+	}
+}
+
+// TestAssetsWarningsFollowManifestStatus covers the warning line for an asset
+// Save could not download (Issue #250). A download the size limit stopped is
+// recorded skipped_size and counted as skipped by size limit, so its warning
+// says so; "asset failed" stays for a real failure. A file the pre-check kept
+// out (SkipTooLarge) gets no warning, and a URL met again is neither
+// downloaded nor warned of again, so each file warns at most once.
+func TestAssetsWarningsFollowManifestStatus(t *testing.T) {
+	t.Parallel()
+
+	dl := &fakeDownloader{
+		content: map[string]fakeDownload{
+			"https://example.com/too-large": {err: slack.ErrTooLarge},
+			"https://example.com/fail":      {err: errors.New("download failed")},
+			"https://example.com/saved":     {body: "saved", contentType: "application/pdf"},
+			// pre-checked is not served: a Save that downloaded it would warn.
+		},
+	}
+	assets := NewAssets(context.Background(), dl, t.TempDir(), 10)
+	var warnings []string
+	assets.Logf = func(format string, args ...any) {
+		warnings = append(warnings, fmt.Sprintf(format, args...))
+	}
+
+	for range 2 {
+		assets.Save(KindUploadOriginal, "https://example.com/too-large", AssetMeta{FileID: "F001"})
+		assets.Save(KindAttachment, "https://example.com/fail", AssetMeta{FileID: "F002"})
+		assets.Save(KindAttachment, "https://example.com/saved", AssetMeta{FileID: "F003"})
+		assets.SkipTooLarge(KindAttachment, "https://example.com/pre-checked", AssetMeta{FileID: "F004", SizeBytes: 99})
+		assets.Save(KindAttachment, "https://example.com/pre-checked", AssetMeta{FileID: "F004"})
+	}
+
+	want := []string{
+		"asset skipped by size limit (upload_original): download exceeds size limit",
+		"asset failed (attachment): download failed",
+	}
+	if !slices.Equal(warnings, want) {
+		t.Fatalf("warnings = %q, want %q", warnings, want)
 	}
 }
 

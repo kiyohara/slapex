@@ -13,7 +13,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -582,6 +581,9 @@ func TestRunIntegrationOversizeAttachment(t *testing.T) {
 	if entry.OriginalName != "big-archive.zip" || entry.SizeBytes != 5000 {
 		t.Fatalf("attachment manifest = %+v, want big-archive.zip / 5000", entry)
 	}
+	// A file the pre-check keeps out is the limit working as configured: the
+	// counts report it, and no warning line does (output-format.md).
+	assertAssetWarnings(t, got.Logs)
 }
 
 // --- case 10b: oversize image original keeps thumbnail + note ----------------
@@ -634,6 +636,7 @@ func TestRunIntegrationOversizeImageOriginal(t *testing.T) {
 	}); !ok {
 		t.Fatalf("manifest missing saved upload_thumb entry: %+v", entries)
 	}
+	assertAssetWarnings(t, got.Logs)
 }
 
 // --- case 10c: size limit hit during the download reads as a size skip -------
@@ -645,6 +648,8 @@ func TestRunIntegrationOversizeImageOriginal(t *testing.T) {
 // summary (skipped by size limit). The real size is unknown, so only the limit
 // shows. The file is posted twice: the second post reuses the first download's
 // outcome without recording anything new, and must read the same (Issue #203).
+// The warning line calls it a size skip too, not a failure, once for the file
+// (Issue #250).
 func TestRunIntegrationOversizeAttachmentAtDownload(t *testing.T) {
 	t.Parallel()
 
@@ -684,9 +689,10 @@ func TestRunIntegrationOversizeAttachmentAtDownload(t *testing.T) {
 	if len(matched) != 1 || matched[0].Kind != "attachment" || matched[0].Status != "skipped_size" {
 		t.Fatalf("F-BIG manifest entries = %+v, want one attachment entry with status skipped_size", matched)
 	}
-	if !logsContain(got.Logs, "1 skipped by size limit, 0 failed") {
-		t.Fatalf("summary does not count the size skip: %v", got.Logs)
-	}
+	assertAssetWarnings(t, got.Logs, "WARN: asset skipped by size limit (attachment): download exceeds size limit")
+	const counts = "0 saved, 1 skipped by size limit, 0 failed"
+	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
 }
 
 // --- case 10d: an original over the limit at download keeps its thumbnail ----
@@ -734,9 +740,10 @@ func TestRunIntegrationOversizeImageOriginalAtDownload(t *testing.T) {
 	if !ok || orig.Status != "skipped_size" {
 		t.Fatalf("upload_original entry = %+v (ok=%v), want skipped_size", orig, ok)
 	}
-	if !logsContain(got.Logs, "1 skipped by size limit, 0 failed") {
-		t.Fatalf("summary does not count the size skip: %v", got.Logs)
-	}
+	assertAssetWarnings(t, got.Logs, "WARN: asset skipped by size limit (upload_original): download exceeds size limit")
+	const counts = "1 saved, 1 skipped by size limit, 0 failed"
+	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
 }
 
 // --- case 10e: an oversize image with no thumbnail keeps size and limit ------
@@ -745,6 +752,10 @@ func TestRunIntegrationOversizeImageOriginalAtDownload(t *testing.T) {
 // (html-rendering.md). An original over the limit must still say so there with
 // its size and the limit — found by the pre-check or during the download —
 // while only a real failure reads "画像の取得に失敗しました。" (Issue #203).
+// The warning lines split the same way (Issue #250): the download stopped at
+// the limit warns as a size skip and the real failure as a failure, while the
+// pre-checked file, kept out as the limit is configured to, warns of nothing.
+// The Assets line and the Done summary count all three.
 func TestRunIntegrationOversizeImageWithoutThumbnail(t *testing.T) {
 	t.Parallel()
 
@@ -806,9 +817,13 @@ func TestRunIntegrationOversizeImageWithoutThumbnail(t *testing.T) {
 			t.Fatalf("upload_original entry for %s = %+v (ok=%v), want status %s", id, e, ok, want)
 		}
 	}
-	if !logsContain(got.Logs, "2 skipped by size limit, 1 failed") {
-		t.Fatalf("summary does not match the manifest: %v", got.Logs)
-	}
+	assertAssetWarnings(t, got.Logs,
+		"WARN: asset skipped by size limit (upload_original): download exceeds size limit",
+		"WARN: asset failed (upload_original): unexpected HTTP 404",
+	)
+	const counts = "0 saved, 2 skipped by size limit, 1 failed"
+	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
 }
 
 // --- case 10f: oversize files shown twice are recorded once ------------------
@@ -911,12 +926,11 @@ func TestRunIntegrationOversizeFilesInBroadcastRecordedOnce(t *testing.T) {
 	}
 
 	// The Assets line and the Done summary print the same counts, so each is
-	// matched as a whole line.
+	// matched as a whole line. Met twice, the pre-check still warns of nothing.
 	const counts = "1 saved, 2 skipped by size limit, 0 failed"
-	if !slices.Contains(got.Logs, "WARN: assets: "+counts) {
-		t.Fatalf("assets phase line does not count each file once\nlogs:\n%s", strings.Join(got.Logs, "\n"))
-	}
+	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
 	assertDoneSummary(t, got.Logs, "  assets: "+counts)
+	assertAssetWarnings(t, got.Logs)
 	var metadata struct {
 		Counts struct {
 			AssetsSaved   int `json:"assets_saved"`
@@ -969,6 +983,7 @@ func TestRunIntegrationAssetDownloadFailure(t *testing.T) {
 	if !ok || entry.Status != "failed" {
 		t.Fatalf("attachment entry = %+v (ok=%v), want status failed", entry, ok)
 	}
+	assertAssetWarnings(t, got.Logs, "WARN: asset failed (attachment): unexpected HTTP 404")
 }
 
 // --- case 11b: a file slapex does not download says why ----------------------
@@ -1038,9 +1053,10 @@ func TestRunIntegrationFilesNotDownloaded(t *testing.T) {
 	}); ok {
 		t.Fatalf("manifest records %+v, want no entry for a file that is not downloaded", e)
 	}
-	if !logsContain(got.Logs, "0 saved, 0 skipped by size limit, 0 failed") {
-		t.Fatalf("summary counts a file that is not downloaded: %v", got.Logs)
-	}
+	const counts = "0 saved, 0 skipped by size limit, 0 failed"
+	assertAssetsPhaseLine(t, got.Logs, "OK: assets: "+counts)
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
+	assertAssetWarnings(t, got.Logs)
 }
 
 // --- case 12: thread replies over 1000 are truncated with a notice ----------
