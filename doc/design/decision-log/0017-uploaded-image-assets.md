@@ -2,8 +2,8 @@
 
 - 状態: decided
 - 作成日: 2026-06-02
-- 最終更新日: 2026-06-02
-- 関連: `../output-format.md`, `../html-rendering.md`, `0010-attachment-file-downloads.md`, `0016-asset-filenames.md`
+- 最終更新日: 2026-09-27
+- 関連: `../output-format.md`, `../html-rendering.md`, `0010-attachment-file-downloads.md`, `0016-asset-filenames.md`, `0040-credential-scope-for-asset-downloads.md`
 
 ## 背景
 
@@ -53,8 +53,26 @@ original の保存量は `--max-attachment-size` で制御できるため、CI a
 
 HTML 生成では、thumbnail が保存できた場合は `<a>` の内側に `<img>` を置く形で original へリンクする。original が保存できなかった場合は、thumbnail 表示と上限超過メッセージを組み合わせる。
 
+## 追記(2026-09-27): 外部サービス連携の画像
+
+外部サービス連携の画像(file object の `is_external` が true)は original を保存しない方針を、Issue #246 で確定した。
+
+実装は、thumbnail の無い外部サービス連携の画像だけを保存対象外にし、thumbnail のある画像は通常の upload と同じく original(`url_private_download`、無ければ `url_private`)も download していた。Slack API の文書(docs.slack.dev の file object と `files.remote.*` の reference。2026-09-27 に確認)では、`is_external` は file の本体が Slack の外にあることを示し、外部サービス連携の file の `url_private` は外部サービスの URL(response 例では Google Docs)になる。token は `files.slack.com` にだけ送る(`0040-credential-scope-for-asset-downloads.md`)ため、外部サービスへは token の無い request になり、返ってきた page(ログイン画面など)を original として保存して thumbnail から link していた。一方、`thumb_*` は Slack の認証が要る URL とされ、remote file の preview image は Slack に保存される。外部サービス連携の画像に `thumb_*` が付く response 例は文書に無く、実 workspace の response は確かめていない。
+
+thumbnail の扱いは次の 3 案を比べた。
+
+- thumbnail は他の画像と同じく保存して表示する。
+- thumbnail も Slack の private file URL(`files.slack.com`)の場合だけ取得する。
+- thumbnail も保存せず、thumbnail の無い外部サービス連携の画像と同じ表示にする。
+
+2 案目は、外部サービスへの request を host の判定で確実に無くせる。ただし、文書上 thumbnail は Slack の URL であり、他の画像の thumbnail も host を限定していない。host を限定すると、loopback の fake server で動く結合 test と `--demo` では、外部サービス連携の画像の thumbnail を扱えなくなる。token の送信先は、thumbnail の host によらず 0040 の allowlist に限られる。3 案目は、Slack が表示している preview を出力から失う。このため 1 案目を採った。
+
+外部サービス連携の画像は、thumbnail の有無によらず original を download せず、manifest にも記録せず、サイズ上限も判定しない。thumbnail は他の画像と同じく保存して inline image にし、original へのリンクは付けず、その下に original を保存していないことを表示する。thumbnail を取得できなかった場合は、取得失敗として表示する。表示の文言は `html-rendering.md` の「画像と添付ファイルの表示」を正本とする。外部サービスの file へのリンク表示は追加していない。
+
 ## 後から見直す条件
 
 CI artifact サイズや実行時間への影響が大きい場合は、original 画像を保存しない option や、画像 original 専用のサイズ上限 option を検討する。
 
 Slack file object の thumbnail / original URL の提供形態が変わり、thumbnail と original の両方保存が安定しなくなった場合は再検討する。
+
+外部サービス連携の画像の `thumb_*` が Slack 以外の host を指す response が確かめられた場合は、thumbnail の取得を `files.slack.com` に限る案(2026-09-27 の追記の 2 案目)を再検討する。
