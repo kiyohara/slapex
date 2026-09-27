@@ -1185,6 +1185,114 @@ func TestRunIntegrationExternalImageOriginalNotDownloaded(t *testing.T) {
 	assertDoneSummary(t, got.Logs, "  assets: "+counts)
 }
 
+// --- case 11d: an image with no original URL reads the same at any size ------
+
+// An image Slack gave a thumbnail but no download URL (neither
+// url_private_download nor url_private) has no original to fetch, so the size
+// limit has no original to keep out either (Issue #247). Over the limit or
+// under it, the thumbnail is saved and shown like any other, but opens nothing
+// and notes that the original cannot be fetched; no upload_original entry is
+// recorded and nothing counts as skipped by size limit. A thumbnail that fails
+// reads as the failure it is, not as a file the size limit kept out. An
+// external image without a URL keeps the external note: is_external is told
+// apart first, as for an attachment.
+func TestRunIntegrationImageOriginalWithoutURL(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message",
+			TS:   "1700001180.000000",
+			User: "U01",
+			Text: "Images without an original URL",
+			Files: []slack.File{
+				{
+					ID:       "F-NOORIG",
+					Name:     "diagram.png",
+					Mimetype: "image/png",
+					Size:     500, // under the 1MB limit
+					Thumb480: "{{base}}/files/diagram-thumb.png",
+				},
+				{
+					ID:       "F-NOORIGBIG",
+					Name:     "poster.png",
+					Mimetype: "image/png",
+					Size:     2 << 20, // over the 1MB limit, yet there is no original to skip
+					Thumb360: "{{base}}/files/poster-thumb.png",
+				},
+				{
+					ID:       "F-NOORIGFAIL",
+					Name:     "chart.png",
+					Mimetype: "image/png",
+					Size:     2 << 20,
+					Thumb360: "{{base}}/files/chart-thumb.png", // not served: 404
+				},
+				{
+					ID:         "F-EXTNOURL",
+					Name:       "photo.png",
+					Mimetype:   "image/png",
+					Mode:       "external",
+					IsExternal: true,
+					Thumb360:   "{{base}}/files/photo-thumb.png",
+				},
+			},
+		},
+	}
+	sc.Assets["/files/diagram-thumb.png"] = pngAsset("diagram-thumb")
+	sc.Assets["/files/poster-thumb.png"] = pngAsset("poster-thumb")
+	sc.Assets["/files/photo-thumb.png"] = pngAsset("photo-thumb")
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	// Each file records only its thumbnail: no upload_original entry, saved or
+	// skipped by size.
+	entries := readManifestEntries(t, got.OutputDir)
+	var records []string
+	for _, e := range entries {
+		if e.SourceURL == "" {
+			t.Fatalf("manifest entry %+v has no source_url", e)
+		}
+		if e.FileID != "" {
+			records = append(records, e.FileID+" "+e.Kind+" "+e.Status)
+		}
+	}
+	wantRecords := []string{
+		"F-NOORIG upload_thumb saved",
+		"F-NOORIGBIG upload_thumb saved",
+		"F-NOORIGFAIL upload_thumb failed",
+		"F-EXTNOURL upload_thumb saved",
+	}
+	if strings.Join(records, "\n") != strings.Join(wantRecords, "\n") {
+		t.Fatalf("manifest file entries = %q, want %q", records, wantRecords)
+	}
+
+	// The saved thumbnails show without a link to an original, over the note:
+	// the same one under the limit and over it.
+	const (
+		note         = `<div class="asset-note">(original は取得できないため保存対象外)</div>`
+		externalNote = `<div class="asset-note">(外部サービス連携の画像のため original は保存対象外)</div>`
+	)
+	for _, f := range []struct{ id, name, note string }{
+		{"F-NOORIG", "diagram.png", note},
+		{"F-NOORIGBIG", "poster.png", note},
+		{"F-EXTNOURL", "photo.png", externalNote},
+	} {
+		thumb, _ := findManifest(entries, func(e manifestEntryFull) bool { return e.FileID == f.id })
+		mustContain(t, body, `<img class="upload-thumb" src="`+thumb.LocalPath+`" alt="`+f.name+`">`+f.note)
+	}
+	mustContain(t, body, `<span class="file-link unavailable">📄 chart.png</span><div class="asset-note">画像の取得に失敗しました。</div>`)
+	mustNotContain(t, body, "assets/uploads/originals/")
+	mustNotContain(t, body, "サイズ上限超過")
+	mustNotContain(t, body, "サイズオーバー")
+
+	assertWarnings(t, got.Logs, "WARN: asset failed (upload_thumb): unexpected HTTP 404")
+	const counts = "3 saved, 0 skipped by size limit, 1 failed"
+	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
+}
+
 // --- case 12: thread replies over 1000 are truncated with a notice ----------
 
 func TestRunIntegrationRepliesTruncated(t *testing.T) {

@@ -256,13 +256,15 @@ func TestAssetsSkipTooLargeRecordsEachURLOnce(t *testing.T) {
 		t.Fatalf("Counts() = saved:%d skipped:%d failed:%d, want saved:1 skipped:1 failed:0", saved, skipped, failed)
 	}
 
-	// An empty URL names no file, so it is never taken as already recorded:
-	// two files without one stay two entries. Whether such files are recorded
-	// at all is Issue #247's.
+	// An empty URL names no file to download, so none for the size limit to
+	// keep out: as with Save, nothing is recorded for it (Issue #247).
 	assets.SkipTooLarge(KindUploadOriginal, "", AssetMeta{FileID: "F003", SizeBytes: 99})
 	assets.SkipTooLarge(KindUploadOriginal, "", AssetMeta{FileID: "F004", SizeBytes: 99})
-	if got := len(assets.Entries()); got != 4 {
-		t.Fatalf("entries after two files without a URL = %d, want 4", got)
+	if got := len(assets.Entries()); got != 2 {
+		t.Fatalf("entries after two files without a URL = %d, want 2", got)
+	}
+	if got := assets.Status(""); got != "" {
+		t.Fatalf(`Status("") = %q, want ""`, got)
 	}
 }
 
