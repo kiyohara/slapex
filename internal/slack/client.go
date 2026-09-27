@@ -49,6 +49,8 @@ type Client struct {
 	// sleep performs pacing and retry waits. Tests replace it with a fake
 	// that records the requested durations without sleeping.
 	sleep func(context.Context, time.Duration) error
+	// trace writes the HTTP trace (WithTrace, trace.go); nil when off.
+	trace *tracer
 	// Logf reports progress such as rate limit waits. Defaults to a no-op.
 	Logf func(format string, args ...any)
 }
@@ -97,6 +99,9 @@ func New(token string, opts ...Option) *Client {
 	for _, opt := range opts {
 		opt(c)
 	}
+	if c.trace != nil {
+		c.trace.install(c)
+	}
 	return c
 }
 
@@ -122,6 +127,8 @@ func (c *Client) pace(ctx context.Context, key string) error {
 
 // call POSTs a form-encoded Web API request and decodes the body into out.
 func (c *Client) call(ctx context.Context, method string, params url.Values, out any) (string, error) {
+	ctx, endTrace := c.traceRequest(ctx, TraceAPI, method)
+	defer endTrace()
 	if err := c.pace(ctx, method); err != nil {
 		return "", fmt.Errorf("slack api %s: %w", method, err)
 	}
@@ -256,6 +263,8 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 // icons do not.
 // When limit > 0 and the body exceeds it, ErrTooLarge is returned.
 func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.Writer) (written int64, contentType string, err error) {
+	ctx, endTrace := c.traceRequest(ctx, TraceDownload, assetKind(ctx))
+	defer endTrace()
 	if err := c.pace(ctx, "download"); err != nil {
 		return 0, "", err
 	}
