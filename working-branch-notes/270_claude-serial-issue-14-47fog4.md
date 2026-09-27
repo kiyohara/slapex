@@ -14,7 +14,7 @@ Issue #194(RF-06)。`writeCaches` は 19 個の位置引数を取り、timeline 
 
 - 依存(#188)は merge 済み。推奨順で前に置かれた RF-03(#191 / PR #262)も merge 済みで、その結果型を再利用した。main `1c4d477` から作業した。
 - test、整理、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #270 作成済み。
+- PR #270 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
 
 ## 決定事項
 
@@ -47,7 +47,7 @@ Issue の背景は main `d5aa977` 時点の記述である。その後の RF-02(
 
 - 引数: 19 → 10。同じ型が連続する位置引数は、int 7 個と string 2 個 → 0。
 - Run の呼び出し: 4 行、field の転記 14 個 → 1 行、0 個。
-- 定義の重複: `writeCaches` の 13 個の引数(`dir`、`auth`、`ch`、`wsLabel`、`chLabel`、7 個の int、`users` と `bots`)は、RF-03 の結果型の field と同じ値を別名で宣言していた(`replies` と `replyTotal`、`excluded` と `excludedTotal` など)。この重複は無くなった。JSON の key 名が書き出し(map の key)と読込(struct の tag)の両方にある重複(3 ファイルの `schema_version`、`users`、`bots`、`emoji`、`assets`、`workspace.team_id`、`channel.id`)は、上記の理由で変えていない。
+- 定義の重複: `writeCaches` の 14 個の引数(`dir`、`auth`、`ch`、`wsLabel`、`chLabel`、7 個の int、`users`、`bots`)は、RF-03 の結果型の field を 1 つずつ受け取っていた(`dir` と `path`、`ch` と `channel`、`replyTotal` と `replies`、`excludedTotal` と `excluded` は名前も異なる)。この重複は無くなった。JSON の key 名が書き出し(map の key)と読込(struct の tag)の両方にある重複(3 ファイルの `schema_version`、`users`、`bots`、`emoji`、`assets`、`workspace.team_id`、`channel.id`)は、上記の理由で変えていない。
 - 追加の型: 0。追加の関数: `newCachedUser`、`newCachedBot`(書き出し側の変換に名前を付けて、再利用側の変換と並べた)。
 - 行数: production code(`cache.go`、`reuse.go`、`export.go`)は 666 → 683 行(+17。`cache.go` 140 → 180、`reuse.go` 196 → 176、`export.go` 330 → 327)。`writeCaches` は 73 → 71 行。test は `cache_test.go` の +466 行(大半が期待する JSON)。
 
@@ -80,7 +80,7 @@ Issue の背景は main `d5aa977` 時点の記述である。その後の RF-02(
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- `progress.md` の RF-06 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の RF-06 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
 - review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
 - (人間)Codex のクロスレビュー。指摘があれば agent が `address-comments` で対応する。
@@ -113,3 +113,4 @@ Issue の背景は main `d5aa977` 時点の記述である。その後の RF-02(
 ## セッションログ
 
 - 2026-09-27: #194 に着手。characterization test(`e7e7dca`)、整理(`3ff66b2`)、検証。
+- 2026-09-27 P1: draft PR #270 を作成し、note を採番した(`4a770f2`)。`progress.md` の RF-06 の PR 欄を反映した。検証は「検証」のとおりすべて ok。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`number-working-branch-note` の報告から引き上げた項目: 書き換えた行は、note の状況の stale 表現 1 行(`PR 未作成。` → `PR #270 作成済み。`)、note の完了タスク行 1 行(「draft PR を作成し、note を採番する。」に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `270_`)。title は書き換えていない。触らずに残した行は note、PR description、title とも無し。ほかに note の `PR:` 欄に `#270` を記入した。情報統制チェックで直した箇所は無い。
