@@ -24,6 +24,8 @@ PR #201(RF-02)の review などで見つかった既存挙動の修正・改善 
 
 review cycle の skill(`drive-issue-to-reviewed-pr` と `review-pull-request`)の改善 Issue も、「進行中タスク: review cycle の skill 改善」で追跡する。
 
+export の所要時間を最小化する取り組み(#272)の Issue も、「進行中タスク: 所要時間の最小化」で追跡する。
+
 ## 進行中タスク: 段階的リファクタリング
 
 表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。RF-03/RF-06は同じexportを触るため推奨順で直列実行するが、RF-06はRF-03なしでも着手可能。他の施策は技術的に分離可能だが、運用上は並行実行しない。完了した施策は「完了済みフェーズ(参考)」を参照する。
@@ -66,6 +68,24 @@ PR #233、PR #235、PR #237、PR #242 の作業で見つかった、`drive-issue
 | RV-02 | [#253](https://github.com/kiyohara/slapex/issues/253) スコープ外とした指摘の再確認 | done(PR merge後) | - | merge後は対応なし | [#256](https://github.com/kiyohara/slapex/pull/256) |
 | RV-03 | [#255](https://github.com/kiyohara/slapex/issues/255) cloud session の subagent の tool 選択 | done(PR merge後) | - | merge後は対応なし | [#258](https://github.com/kiyohara/slapex/pull/258) |
 | RV-01 | [#252](https://github.com/kiyohara/slapex/issues/252) review の prefix の統一への追従 | done(PR merge後) | - | merge後は対応なし | [#259](https://github.com/kiyohara/slapex/pull/259) |
+
+## 進行中タスク: 所要時間の最小化
+
+asset の並列取得と Slack API の並行化で、export の所要時間を最小化する Issue 群を追跡する。目的、測った事実、設計の骨子、Claude Projects での進め方は全体像の Issue [#272](https://github.com/kiyohara/slapex/issues/272) を、各タスクの作業条件は各 Issue を正本とする。#272 は PR を持たないため表に載せず、PF-01〜PF-07 がすべて close された後に close する。
+
+表の順を推奨順として直列実行する。依存欄は必須条件のみとし、単なる推奨順は含めない。PF-01 と PF-02 は触るファイルが分かれる見込みのため、ユーザーの判断で並行してよい。PF-01 は #192(PR #271)の merge を待つ。既存の着手順(「進行中タスク: review で見つかった既存挙動の修正」)の残りのうち、PF-02 は FU-10(#211)、PF-03 は FU-12(#245)、PF-06 は FU-08(#209)と FU-17(#251)の後を推奨する(同じ箇所を触るため)。既存の残りを先に済ませればこの推奨順はすべて満たされる。PF-01 と PF-02 をそれより先に進めるかはユーザーが決める。
+
+PF-01 / PF-02 → PF-03 → PF-04 → PF-05 → PF-06 → PF-07
+
+| ID | Issue | 状態 | 依存 | 次にやること | PR |
+|---|---|---|---|---|---|
+| PF-01 | [#273](https://github.com/kiyohara/slapex/issues/273) trace と benchmark | todo | #192 | PR #271 の merge 後に着手 | - |
+| PF-02 | [#274](https://github.com/kiyohara/slapex/issues/274) 取得リストの計画(描画 2 回) | todo | - | 出力をバイト単位で変えずに計画と確定を分ける | - |
+| PF-03 | [#275](https://github.com/kiyohara/slapex/issues/275) origin lane の並列取得と download の pacing 撤去 | todo | #273, #274 | 同時数の上限を PF-01 の benchmark で決める | - |
+| PF-04 | [#276](https://github.com/kiyohara/slapex/issues/276) 429 を受けた origin 全体の待機 | todo | #275, #192 | #192 の `withRetry` に lane への通知を足す | - |
+| PF-05 | [#277](https://github.com/kiyohara/slapex/issues/277) method lane と先行取得の設計 | todo | #273, #275 | 手元の trace の集計(#272)を材料に設計し、PF-06 / PF-07 の本文を具体化 | - |
+| PF-06 | [#278](https://github.com/kiyohara/slapex/issues/278) Web API の method lane | todo | #277 | PF-05 で本文を具体化してから着手 | - |
+| PF-07 | [#279](https://github.com/kiyohara/slapex/issues/279) API 待ちの裏での asset 取得 | todo | #276, #277 | PF-05 で本文を具体化してから着手。PF-06 の後を推奨 | - |
 
 ## リリース履歴
 
