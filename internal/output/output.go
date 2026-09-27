@@ -237,7 +237,9 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	// from the content (decision log 0052, Issue #183) without a second read.
 	h := sha256.New()
 	var head headBuffer
-	size, contentType, err := a.dl.Download(a.ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h, &head))
+	// The kind labels the download in the HTTP trace (Issue #273).
+	ctx := slack.WithAssetKind(a.ctx, kind)
+	size, contentType, err := a.dl.Download(ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h, &head))
 	tmp.Close()
 	if err != nil {
 		status, warning := StatusFailed, "asset failed"

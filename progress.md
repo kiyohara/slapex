@@ -79,7 +79,7 @@ PF-01 / PF-02 → PF-03 → PF-04 → PF-05 → PF-06 → PF-07
 
 | ID | Issue | 状態 | 依存 | 次にやること | PR |
 |---|---|---|---|---|---|
-| PF-01 | [#273](https://github.com/kiyohara/slapex/issues/273) trace と benchmark | todo | #192 | PR #271 の merge 後に着手 | - |
+| PF-01 | [#273](https://github.com/kiyohara/slapex/issues/273) trace と benchmark | done(PR merge後) | #192 | merge 後にユーザーが手元で trace を取り、集計を #272 にコメント | [#281](https://github.com/kiyohara/slapex/pull/281) |
 | PF-02 | [#274](https://github.com/kiyohara/slapex/issues/274) 取得リストの計画(描画 2 回) | todo | - | 出力をバイト単位で変えずに計画と確定を分ける | - |
 | PF-03 | [#275](https://github.com/kiyohara/slapex/issues/275) origin lane の並列取得と download の pacing 撤去 | todo | #273, #274 | 同時数の上限を PF-01 の benchmark で決める | - |
 | PF-04 | [#276](https://github.com/kiyohara/slapex/issues/276) 429 を受けた origin 全体の待機 | todo | #275, #192 | #192 の `withRetry` に lane への通知を足す | - |

@@ -123,7 +123,13 @@ func run() int {
 		return reportMissingToken(printer)
 	}
 
-	client := newSlackClient(token, os.Getenv)
+	httpTrace, err := openHTTPTrace(os.Getenv)
+	if err != nil {
+		return reportRunError(printer, err)
+	}
+	defer httpTrace.finish(printer)
+
+	client := newSlackClient(token, os.Getenv, httpTrace.clientOptions()...)
 	client.Logf = printer.Noticef
 
 	exportOpts := export.Options{
@@ -144,7 +150,11 @@ func run() int {
 		ToolVersion:          version,
 	}
 
+	// The trace ends with the run line, the export's start and duration, which
+	// its summary sets the requests against (tools/tracereport).
+	runStart := time.Now()
 	dir, err := export.Run(context.Background(), client, exportOpts, printer)
+	client.TraceRun(runStart)
 	if err != nil {
 		// A phase may still be live when Run fails; clear its spinner line so
 		// the error report starts on a clean line.
@@ -221,15 +231,15 @@ func apiBaseURLFromEnv(getenv func(string) string) string {
 	return strings.TrimSpace(getenv(apiBaseURLEnv))
 }
 
-// newSlackClient builds the Slack client for token, honouring the internal
-// apiBaseURLEnv override. The token follows the base URL, so the override is
-// applied only when explicitly set; every other run targets the default
-// Slack host (doc/guidelines/credential-scope-guidelines.md).
-func newSlackClient(token string, getenv func(string) string) *slack.Client {
+// newSlackClient builds the Slack client for token with opts, honouring the
+// internal apiBaseURLEnv override. The token follows the base URL, so the
+// override is applied only when explicitly set; every other run targets the
+// default Slack host (doc/guidelines/credential-scope-guidelines.md).
+func newSlackClient(token string, getenv func(string) string, opts ...slack.Option) *slack.Client {
 	if base := apiBaseURLFromEnv(getenv); base != "" {
-		return slack.New(token, slack.WithBaseURL(base))
+		opts = append([]slack.Option{slack.WithBaseURL(base)}, opts...)
 	}
-	return slack.New(token)
+	return slack.New(token, opts...)
 }
 
 // resolveToken returns the Slack token to use for this run. It prefers the
