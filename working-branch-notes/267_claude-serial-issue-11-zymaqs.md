@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/serial-issue-11-zymaqs`(cloud session が指定。Issue の推奨ブランチ名は `size-limit-warning-wording`)
-- PR: 未作成
+- PR: #267
 - 最終更新: 2026-09-27
 
 ## 目的
@@ -14,7 +14,7 @@ Issue #250(FU-16)。download 中にサイズ上限を超えた asset は、manif
 
 - 依存は無い(`progress.md` の依存欄は `-`。順序の条件の FU-15 は done)。main `315a8a8` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
-- PR 未作成。
+- PR #267 作成済み。
 
 ## 決定事項
 
@@ -64,7 +64,7 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 
 ## 次にやること
 
-- draft PR を作成し、note を採番する。
+- draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-16 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。
 
