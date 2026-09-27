@@ -47,12 +47,13 @@ func run() int {
 	// never from stdout, keeping the stdout path contract independent
 	// (doc/design/cli-interface.md「出力制御」).
 	printer := ui.NewPrinter(os.Stderr, ui.Styled(os.Stderr, os.Getenv, opts.noColor))
+	exportOpts := opts.exportOptions()
 
 	// --demo exports a bundled fictional fixture and needs neither a Slack
 	// token nor a controlling terminal, so it short-circuits before both
 	// (doc/design/cli-interface.md, Issue #113).
 	if opts.demo {
-		return runDemo(opts, printer, os.Getenv)
+		return runDemo(exportOpts, printer, os.Getenv)
 	}
 
 	// Open the controlling terminal once; it drives both the interactive
@@ -63,6 +64,7 @@ func run() int {
 	if promptTTY != nil {
 		defer promptTTY.Close()
 	}
+	exportOpts.PromptTTY = promptTTY
 
 	token := resolveToken(slackTokenFromEnv(os.Getenv), promptTTY, opts.noInteractive, promptForToken)
 	if token == "" {
@@ -77,24 +79,6 @@ func run() int {
 
 	client := newSlackClient(token, os.Getenv, httpTrace.clientOptions()...)
 	client.Logf = printer.Noticef
-
-	exportOpts := export.Options{
-		ChannelKeyword:       opts.channel,
-		OutputDir:            opts.outputDir,
-		MaxPosts:             opts.maxPosts,
-		Days:                 opts.days,
-		Date:                 opts.date,
-		From:                 opts.from,
-		To:                   opts.to,
-		ExcludeBodyEmoji:     opts.excludeBodyEmoji,
-		ExcludeReactionEmoji: opts.excludeReactionEmoji,
-		MaxAttachBytes:       opts.maxAttachBytes,
-		KeepCache:            opts.keepCache,
-		ReuseCache:           opts.reuseCache,
-		NoInteractive:        opts.noInteractive,
-		PromptTTY:            promptTTY,
-		ToolVersion:          version,
-	}
 
 	// The trace ends with the run line, the export's start and duration, which
 	// its summary sets the requests against (tools/tracereport).

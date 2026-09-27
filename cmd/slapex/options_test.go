@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/kiyohara/slapex/internal/export"
 )
 
 func TestParseSize(t *testing.T) {
@@ -318,6 +320,62 @@ func TestParseArgsVersionAndHelp(t *testing.T) {
 				t.Fatalf("parseCLIArgs(%q) = %+v, %v; want only showVersion", tt.args, got, err)
 			}
 		})
+	}
+}
+
+// TestExportOptions: the options of the command line reach the export options
+// a normal run and --demo start from (Issue #193). The export options no
+// command line sets are the ones the caller adds (PromptTTY, by the normal run)
+// or no option selects (Now); an export option added later is either set by
+// exportOptions or added to that list.
+func TestExportOptions(t *testing.T) {
+	tests := []struct {
+		args []string
+		want export.Options
+	}{
+		{
+			args: []string{"general", "--output", "out", "--days", "7", "--max-posts", "7",
+				"--max-attachment-size", "2KB", "--keep-cache", "--reuse-cache", "prev", "--no-interactive"},
+			want: export.Options{ChannelKeyword: "general", OutputDir: "out", MaxPosts: 7, Days: 7,
+				MaxAttachBytes: 2 << 10, KeepCache: true, ReuseCache: "prev", NoInteractive: true, ToolVersion: version},
+		},
+		{
+			args: []string{"--date", "2026-07-03", "--exclude-body-emoji", "shushing_face"},
+			want: export.Options{MaxPosts: 1000, Date: "2026-07-03", ExcludeBodyEmoji: []string{"shushing_face"},
+				MaxAttachBytes: 10 << 20, ToolVersion: version},
+		},
+		{
+			args: []string{"--from", "2026-07-03T09", "--to", "2026-07-04", "--exclude-reaction-emoji", "speak_no_evil,see_no_evil"},
+			want: export.Options{MaxPosts: 1000, From: "2026-07-03T09", To: "2026-07-04",
+				ExcludeReactionEmoji: []string{"speak_no_evil", "see_no_evil"}, MaxAttachBytes: 10 << 20, ToolVersion: version},
+		},
+	}
+
+	set := map[string]bool{}
+	for _, tt := range tests {
+		opts, err := parseCLIArgs(tt.args, io.Discard)
+		if err != nil {
+			t.Fatalf("parseCLIArgs(%q) returned error: %v", tt.args, err)
+		}
+		got := opts.exportOptions()
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("exportOptions() of %q = %+v, want %+v", tt.args, got, tt.want)
+		}
+		v := reflect.ValueOf(got)
+		for i := range v.NumField() {
+			if !v.Field(i).IsZero() {
+				set[v.Type().Field(i).Name] = true
+			}
+		}
+	}
+	for _, f := range reflect.VisibleFields(reflect.TypeFor[export.Options]()) {
+		leftToCaller := f.Name == "PromptTTY" || f.Name == "Now"
+		switch {
+		case !set[f.Name] && !leftToCaller:
+			t.Errorf("no command line sets export.Options.%s: set it in exportOptions, or list it as left to the caller", f.Name)
+		case set[f.Name] && leftToCaller:
+			t.Errorf("a command line sets export.Options.%s, which is left to the caller", f.Name)
+		}
 	}
 }
 

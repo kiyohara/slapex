@@ -15,6 +15,7 @@ import (
 
 	"github.com/kiyohara/slapex/internal/datetime"
 	"github.com/kiyohara/slapex/internal/emoji"
+	"github.com/kiyohara/slapex/internal/export"
 )
 
 var errUsage = errors.New("usage error")
@@ -36,6 +37,29 @@ type cliOptions struct {
 	noColor              bool
 	demo                 bool
 	showVersion          bool
+}
+
+// exportOptions returns the export options the command line selects. A normal
+// run and --demo both start from them, so an option set here reaches both: the
+// normal run adds its controlling terminal (PromptTTY), and demo.Run replaces
+// what its fixture decides (the channel, resolved without prompting).
+func (o *cliOptions) exportOptions() export.Options {
+	return export.Options{
+		ChannelKeyword:       o.channel,
+		OutputDir:            o.outputDir,
+		MaxPosts:             o.maxPosts,
+		Days:                 o.days,
+		Date:                 o.date,
+		From:                 o.from,
+		To:                   o.to,
+		ExcludeBodyEmoji:     o.excludeBodyEmoji,
+		ExcludeReactionEmoji: o.excludeReactionEmoji,
+		MaxAttachBytes:       o.maxAttachBytes,
+		KeepCache:            o.keepCache,
+		ReuseCache:           o.reuseCache,
+		NoInteractive:        o.noInteractive,
+		ToolVersion:          version,
+	}
 }
 
 func parseCLIArgs(args []string, diagnostics io.Writer) (*cliOptions, error) {

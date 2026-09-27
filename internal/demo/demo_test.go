@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
 )
@@ -51,6 +52,27 @@ func TestScenariosRenderEndToEnd(t *testing.T) {
 				t.Fatal("no assets were written")
 			}
 		})
+	}
+}
+
+// TestRunUsesTheFixtureChannel: Run exports the fixture's channel whatever
+// channel keyword the caller passes (slapex --demo passes the channel argument
+// of its command line, which the demo ignores).
+func TestRunUsesTheFixtureChannel(t *testing.T) {
+	sc := ScenarioEN(time.Now())
+	dir, err := Run(context.Background(), sc, export.Options{
+		ChannelKeyword: "no-such-channel",
+		OutputDir:      t.TempDir(),
+		MaxPosts:       1000,
+		Days:           30,
+		MaxAttachBytes: 10 << 20,
+		ToolVersion:    "test",
+	}, ui.NewPrinter(io.Discard, false))
+	if err != nil {
+		t.Fatalf("demo.Run: %v", err)
+	}
+	if filepath.Base(dir) != sc.ChannelName {
+		t.Fatalf("demo.Run exported %s, want the fixture's channel %s", dir, sc.ChannelName)
 	}
 }
 

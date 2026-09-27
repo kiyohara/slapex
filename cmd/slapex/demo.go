@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kiyohara/slapex/internal/demo"
+	"github.com/kiyohara/slapex/internal/export"
 	"github.com/kiyohara/slapex/internal/ui"
 )
 
@@ -19,27 +20,16 @@ import (
 // without a Slack token (Issue #113, decision log 0047). It starts an
 // in-process fake Slack API server for the fixture and points the client at it
 // with an internal fake token, so nothing reaches a real Slack host and the
-// user needs neither a Slack App nor a token to see the output. The stdout
-// contract is unchanged: on success the output directory path is printed to
-// stdout. The fixture has a single channel, so selection is non-interactive.
-func runDemo(opts *cliOptions, printer *ui.Printer, getenv func(string) string) int {
+// user needs neither a Slack App nor a token to see the output. opts are the
+// export options of the command line, the same a normal run starts from;
+// demo.Run replaces the channel with the fixture's single channel, so
+// selection is non-interactive. The stdout contract is unchanged: on success
+// the output directory path is printed to stdout.
+func runDemo(opts export.Options, printer *ui.Printer, getenv func(string) string) int {
 	sc := demoScenario(getenv)
 	printer.Noticef("Running the bundled demo fixture (#%s, fictional data, no Slack token used).", sc.ChannelName)
 
-	dir, err := demo.Export(context.Background(), sc, demo.Options{
-		OutputDir:            opts.outputDir,
-		MaxPosts:             opts.maxPosts,
-		Days:                 opts.days,
-		Date:                 opts.date,
-		From:                 opts.from,
-		To:                   opts.to,
-		ExcludeBodyEmoji:     opts.excludeBodyEmoji,
-		ExcludeReactionEmoji: opts.excludeReactionEmoji,
-		MaxAttachBytes:       opts.maxAttachBytes,
-		KeepCache:            opts.keepCache,
-		ReuseCache:           opts.reuseCache,
-		ToolVersion:          version,
-	}, printer)
+	dir, err := demo.Run(context.Background(), sc, opts, printer)
 	if err != nil {
 		printer.StopPhase()
 		return reportRunError(printer, err)

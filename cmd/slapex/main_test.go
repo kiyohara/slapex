@@ -2,13 +2,19 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/kiyohara/slapex/internal/demo"
 )
 
 // captureStdio runs fn with os.Stdout / os.Stderr redirected to pipes and
@@ -80,6 +86,84 @@ func TestRunHelp(t *testing.T) {
 			t.Fatalf("run(%q) = %d, stdout %q, stderr %q; want %d and the usage on stderr only", args[1:], code, stdout, stderr, exitOK)
 		}
 	}
+}
+
+// TestRunNormalAndDemoShareOptions runs slapex with the same options normally,
+// against a fixture server, and with --demo, and compares what each export
+// records of them in .cache/metadata.json: the fetch range, the filters, the
+// limits and the tool version. Both also report the --reuse-cache path and
+// write under --output (Issue #193).
+func TestRunNormalAndDemoShareOptions(t *testing.T) {
+	// Without messages, the normal run sends one request per Slack API method,
+	// so its pacing never waits.
+	sc := demo.ScenarioEN(time.Now())
+	sc.Messages, sc.Replies = nil, nil
+	srv := demo.NewServer(sc)
+	defer srv.Close()
+	t.Setenv(slackTokenEnv, demo.FakeToken)
+	t.Setenv(apiBaseURLEnv, srv.APIBaseURL())
+	t.Setenv(httpTraceEnv, "")
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "days and limits", args: []string{"--days", "7", "--max-posts", "7", "--max-attachment-size", "2KB"}},
+		{name: "date", args: []string{"--date", "2026-07-03"}},
+		{name: "datetime range and filters", args: []string{"--from", "2026-07-03T09", "--to", "2026-07-04",
+			"--exclude-body-emoji", "shushing_face", "--exclude-reaction-emoji", "speak_no_evil,see_no_evil"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			reuse := filepath.Join(dir, "no-cache")
+			var recorded [2]map[string]any
+			for i, mode := range [][]string{nil, {"--demo"}} {
+				out := filepath.Join(dir, fmt.Sprintf("out%d", i))
+				args := []string{"slapex", sc.ChannelName, "--no-color", "--no-interactive", "--keep-cache", "--reuse-cache", reuse, "--output", out}
+				os.Args = append(append(args, tt.args...), mode...)
+				var code int
+				stdout, stderr := captureStdio(t, func() { code = run() })
+				if code != exitOK || !strings.HasPrefix(stdout, out) {
+					t.Fatalf("run(%q) = %d, stdout %q; want %d and a directory under --output\nstderr:\n%s", os.Args[1:], code, stdout, exitOK, stderr)
+				}
+				if !strings.Contains(stderr, "--reuse-cache "+reuse+" cannot be used") {
+					t.Errorf("run(%q) does not report the --reuse-cache path\nstderr:\n%s", os.Args[1:], stderr)
+				}
+				recorded[i] = recordedOptions(t, strings.TrimSpace(stdout))
+			}
+			if !reflect.DeepEqual(recorded[0], recorded[1]) {
+				t.Errorf("the normal run recorded %v\n--demo recorded %v", recorded[0], recorded[1])
+			}
+		})
+	}
+}
+
+// recordedOptions returns what the export in dir recorded of its options in
+// .cache/metadata.json: the tool version and the fetch settings, without what
+// moves with the clock (the execution time, and the range of --days).
+func recordedOptions(t *testing.T, dir string) map[string]any {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, ".cache", "metadata.json"))
+	if err != nil {
+		t.Fatalf("read metadata: %v", err)
+	}
+	var meta struct {
+		ToolVersion string         `json:"tool_version"`
+		Fetch       map[string]any `json:"fetch"`
+	}
+	if err := json.Unmarshal(data, &meta); err != nil {
+		t.Fatalf("parse metadata: %v", err)
+	}
+	delete(meta.Fetch, "executed_at")
+	if options, _ := meta.Fetch["options"].(map[string]any); options["range_mode"] == "days" {
+		delete(meta.Fetch, "oldest_ts")
+		delete(meta.Fetch, "latest_ts")
+		delete(meta.Fetch, "target_range")
+	}
+	return map[string]any{"tool_version": meta.ToolVersion, "fetch": meta.Fetch}
 }
 
 func TestRunDateUsageErrors(t *testing.T) {
