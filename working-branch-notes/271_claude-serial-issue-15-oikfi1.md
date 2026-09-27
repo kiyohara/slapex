@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/serial-issue-15-oikfi1`(cloud session が指定。Issue の推奨ブランチ名は `refactor-slack-retry-policy`)
-- PR: 未作成
+- PR: #271
 - 最終更新: 2026-09-27
 
 ## 目的
@@ -19,7 +19,7 @@ Issue #192(RF-04)。Web API の呼び出し(`withRetry`)と asset の download(`
 
 - 依存(#188)は merge 済み。推奨順で前に置かれた FU-18(#254 / PR #264)も merge 済み。main `0a83bf7` から作業した。
 - 申し送り 1(`e5e101b`)、characterization test(`5e6e3ca`)、共通化(`9c7d022`)、申し送り 2(`3c5dc24`)を実装し、Issue の「検証」を実行した(「検証」)。
-- PR 未作成。
+- PR #271 作成済み。
 
 ## 決定事項
 
@@ -118,7 +118,7 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 
 ## 次にやること
 
-- draft PR を作成し、note を採番する。
+- draft PR を作成し、note を採番する。(完了)
 - `progress.md` の RF-04 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。
 - 指摘があれば対応し、処置を返信する(P4)。CI を確かめてから再確認を subagent に委譲する(P5)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
