@@ -52,7 +52,7 @@ original 画像の保存には `--max-attachment-size` を適用する。origina
 - `file ID: <Slack file ID>, ` は、file ID を取得できる場合だけ表示する。
 - 画像以外の添付ファイルと、下の表で `(取得できないファイルのため保存対象外)` と表示する画像にファイル名が無い場合は、ファイル名の位置に file ID を表示する。
 
-次のファイルは、ファイル本体(画像では original)を download せず、Slack の file object の状態に応じた文言で表示する。download を試みないため、上の表の取得失敗やサイズ上限超過の文言では表示しない。
+次のファイルは、ファイル本体(画像では original)を download せず、Slack の file object の状態に応じた文言で表示する。ファイル本体は download もサイズ上限の判定もしないため、上の表の取得失敗やサイズ上限超過の文言では表示しない。ただし、thumbnail のある外部サービス連携の画像は thumbnail だけを download し、thumbnail を取得できなかった場合は `画像の取得に失敗しました。` と表示する。
 
 | 対象 | file object の状態 | 表示 |
 |---|---|---|
