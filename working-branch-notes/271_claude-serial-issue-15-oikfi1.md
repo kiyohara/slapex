@@ -19,7 +19,7 @@ Issue #192(RF-04)。Web API の呼び出し(`withRetry`)と asset の download(`
 
 - 依存(#188)は merge 済み。推奨順で前に置かれた FU-18(#254 / PR #264)も merge 済み。main `0a83bf7` から作業した。
 - 申し送り 1(`e5e101b`)、characterization test(`5e6e3ca`)、共通化(`9c7d022`)、申し送り 2(`3c5dc24`)を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #271 作成済み。
+- PR #271 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。次は CI を確かめてから review cycle(P2〜P5)に進む。
 
 ## 決定事項
 
@@ -119,7 +119,7 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 ## 次にやること
 
 - draft PR を作成し、note を採番する。(完了)
-- `progress.md` の RF-04 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
+- `progress.md` の RF-04 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - 指摘があれば対応し、処置を返信する(P4)。CI を確かめてから再確認を subagent に委譲する(P5)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
 - review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
@@ -147,3 +147,4 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 ## セッションログ
 
 - 2026-09-27: #192 に着手。申し送り 1(`e5e101b`)、characterization test(`5e6e3ca`)、共通化(`9c7d022`)、申し送り 2(`3c5dc24`)、検証。
+- 2026-09-27 P1: draft PR #271 を作成し、note を採番した(`0add570`)。`progress.md` の RF-04 の PR 欄を反映した。検証は「検証」のとおりすべて ok。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`number-working-branch-note` の報告から引き上げた項目: 書き換えた行は、note の状況の stale 表現 1 行(`PR 未作成。` → `PR #271 作成済み。`)、note の完了タスク行 1 行(「draft PR を作成し、note を採番する。」に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `271_`)。title は書き換えていない。触らずに残した行は note、PR description、title とも無し。ほかに note の `PR:` 欄に `#271` を記入した。情報統制チェックで直した箇所は無い。PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
