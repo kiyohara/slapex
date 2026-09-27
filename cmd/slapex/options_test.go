@@ -240,6 +240,9 @@ func TestParseArgsDiagnostics(t *testing.T) {
 		// The first problem in the check order is the one reported.
 		{name: "extra argument before values", args: []string{"--max-posts", "0", "general", "extra"}, want: "slapex: too many arguments: extra\n", wantUsage: true},
 		{name: "max posts before range", args: []string{"--max-posts", "0", "--days", "0"}, want: "slapex: --max-posts must be between 1 and 10000\n"},
+		{name: "range pairing before date", args: []string{"--from", "2026-07-03", "--date", "2026-07-03"}, want: "slapex: --from and --to must be used together\n"},
+		{name: "range with date before days", args: []string{"--from", "2026-07-03", "--to", "2026-07-04", "--date", "2026-07-03", "--days", "7"}, want: "slapex: --from/--to and --date cannot be used together\n"},
+		{name: "range with date before its dates", args: []string{"--from", "bad", "--to", "bad", "--date", "x"}, want: "slapex: --from/--to and --date cannot be used together\n"},
 		{name: "range combination before its dates", args: []string{"--from", "bad", "--to", "bad", "--days", "7"}, want: "slapex: --from/--to and --days cannot be used together\n"},
 		{name: "date before days", args: []string{"--date", "yesterday", "--days", "7"}, want: "slapex: invalid --date \"yesterday\" (unsupported date/time format)\n"},
 		{name: "days before size", args: []string{"--days", "0", "--max-attachment-size", "1"}, want: "slapex: --days must be between 1 and 90\n"},
