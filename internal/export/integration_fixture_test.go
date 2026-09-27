@@ -66,11 +66,13 @@ type endpointFault struct {
 // faultResponse is a single fake response. A non-zero httpStatus (429 or 5xx)
 // is written directly, with Retry-After taken from retryAfterSec when > 0. An
 // httpStatus of 0 with slackError set yields an {"ok":false,...} body;
-// otherwise the endpoint's normal handler runs.
+// dropConnection hangs up without a response, which the client sees as a
+// network error; otherwise the endpoint's normal handler runs.
 type faultResponse struct {
-	httpStatus    int
-	retryAfterSec int
-	slackError    string
+	httpStatus     int
+	retryAfterSec  int
+	slackError     string
+	dropConnection bool
 }
 
 // happyPathScenario is the full-featured fixture: two channels (one matching

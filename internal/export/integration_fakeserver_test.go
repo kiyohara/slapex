@@ -215,10 +215,19 @@ func (f *fakeSlackServer) nextFault(faults map[string]*endpointFault, path strin
 
 // writeFault emits resp and reports whether it handled the request. A 429 or
 // 5xx status is written directly (with Retry-After for 429); httpStatus 0 with
-// slackError yields an {"ok":false} body. Any other shape returns false so the
-// caller runs the endpoint's normal handler.
+// slackError yields an {"ok":false} body; dropConnection closes the connection
+// without writing anything. Any other shape returns false so the caller runs
+// the endpoint's normal handler.
 func (f *fakeSlackServer) writeFault(w http.ResponseWriter, resp *faultResponse) bool {
 	switch {
+	case resp.dropConnection:
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			f.t.Errorf("drop connection: %v", err)
+			return true
+		}
+		conn.Close()
+		return true
 	case resp.httpStatus == http.StatusTooManyRequests:
 		if resp.retryAfterSec > 0 {
 			w.Header().Set("Retry-After", strconv.Itoa(resp.retryAfterSec))

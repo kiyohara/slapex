@@ -473,6 +473,56 @@ func TestRetryStopsWhenCanceled(t *testing.T) {
 	}
 }
 
+// TestDownloadErrorsLeaveOutTheURL: net/http names the request URL in the text
+// of a failed request's error, and a download's error reaches stderr in the
+// retry notices and the asset warning. Download leaves the URL — a Slack
+// private file URL for an upload — out and keeps the cause (cli-interface.md
+// 出力制御).
+func TestDownloadErrorsLeaveOutTheURL(t *testing.T) {
+	t.Parallel()
+
+	t.Run("connection failure", func(t *testing.T) {
+		t.Parallel()
+
+		refused := errors.New("dial tcp 192.0.2.1:443: connect: connection refused")
+		c, tr, _, logs := newScriptClient(slices.Repeat([]scriptStep{{err: refused}}, maxRetries+1)...)
+		_, _, err := c.Download(context.Background(), slackFileURL, 0, io.Discard)
+		if want := "giving up after 5 retries: Get: " + refused.Error(); err == nil || err.Error() != want {
+			t.Fatalf("err = %v, want %q", err, want)
+		}
+		if !errors.Is(err, refused) {
+			t.Errorf("err = %v, want it to wrap the cause", err)
+		}
+		if n := len(tr.requests()); n != maxRetries+1 {
+			t.Errorf("requests = %d, want %d", n, maxRetries+1)
+		}
+		re := regexp.MustCompile(`^retrying download in \d+s \(Get: ` + regexp.QuoteMeta(refused.Error()) + `\)$`)
+		lines := logs.recorded()
+		if len(lines) != maxRetries {
+			t.Fatalf("log lines = %q, want %d retry notices", lines, maxRetries)
+		}
+		for i, line := range lines {
+			if !re.MatchString(line) {
+				t.Errorf("log line %d = %q, want it to match %s", i, line, re)
+			}
+		}
+	})
+
+	t.Run("URL a request cannot be built from", func(t *testing.T) {
+		t.Parallel()
+
+		c, tr, _, _ := newScriptClient()
+		badURL := "https://files.slack.com/files-pri/T0EXAMPLE-F0EXAMPLE/download/bad\x7f.pdf"
+		_, _, err := c.Download(context.Background(), badURL, 0, io.Discard)
+		if err == nil || !strings.HasPrefix(err.Error(), "parse: ") || strings.Contains(err.Error(), "files-pri") {
+			t.Fatalf("err = %v, want the parse failure without the URL", err)
+		}
+		if n := len(tr.requests()); n != 0 {
+			t.Errorf("requests = %d, want none", n)
+		}
+	})
+}
+
 // TestRetriedRequestsResendTheRequest: every attempt sends the same request,
 // the Web API form body and token included, and a download sends the token
 // only to files.slack.com.

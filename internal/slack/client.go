@@ -286,14 +286,18 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 	// withRetry closes each response it rejects before it sends again.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srcURL, nil)
 	if err != nil {
-		return nil, "", err
+		return nil, "", withoutURL(err)
 	}
 	if downloadNeedsAuth(srcURL) {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	var resp *http.Response
 	err = c.withRetry(ctx, "download", func() (*http.Response, error) {
-		return c.httpClient.Do(req)
+		r, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, withoutURL(err)
+		}
+		return r, nil
 	}, func(ok *http.Response) error {
 		resp = ok
 		return nil
@@ -302,6 +306,19 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 		return nil, "", err
 	}
 	return resp.Body, resp.Header.Get("Content-Type"), nil
+}
+
+// withoutURL drops the URL that net/http puts in the text of a failed
+// request's error (*url.Error, `Get "<url>": <cause>`), keeping the operation
+// and the cause (`Get: <cause>`). A download's error reaches stderr in the
+// retry notices and the asset warning, and the URL of an upload is a Slack
+// private file URL, which must not be shown (cli-interface.md 出力制御).
+func withoutURL(err error) error {
+	var urlErr *url.Error
+	if !errors.As(err, &urlErr) {
+		return err
+	}
+	return fmt.Errorf("%s: %w", urlErr.Op, urlErr.Err)
 }
 
 func downloadNeedsAuth(srcURL string) bool {

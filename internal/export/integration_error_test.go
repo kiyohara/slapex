@@ -211,6 +211,70 @@ func TestRunIntegrationAssetDownloadRetriesThenFails(t *testing.T) {
 	}
 }
 
+// --- case 6b: asset connection fails for good -> no URL on stderr (exit 0) ---
+
+// A download that fails on the connection (refused, reset, DNS, TLS, timeout)
+// is retried and recorded as failed like a persistent 5xx, but its error is
+// net/http's *url.Error, whose text names the whole request URL. For an upload
+// that is a Slack private file URL, which the retry notices and the asset
+// warning must not show (cli-interface.md 出力制御, Issue #192). The fake
+// server hangs up on every attempt.
+func TestRunIntegrationAssetConnectionFailureHidesURL(t *testing.T) {
+	t.Parallel()
+
+	const filePath = "/files-pri/TACME123-F0DROPPED/download/report.pdf"
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message",
+			TS:   "1700000001.000000",
+			User: "U01",
+			Text: "Report attached",
+			Files: []slack.File{
+				{
+					ID:                 "F0DROPPED",
+					Name:               "report.pdf",
+					Mimetype:           "application/pdf",
+					Size:               50,
+					URLPrivateDownload: "{{base}}" + filePath,
+				},
+			},
+		},
+	}
+	sc.AssetFaults = map[string]*endpointFault{
+		filePath: {sticky: &faultResponse{dropConnection: true}},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+
+	// The server's request count is not asserted: net/http itself resends a
+	// GET once when a reused idle connection is hung up on, so the first
+	// attempt can reach the server twice. The five retry notices and the
+	// warning show the download was tried six times.
+	retries := 0
+	for _, line := range got.Logs {
+		if strings.Contains(line, filePath) {
+			t.Errorf("log line shows the download URL: %q", line)
+		}
+		if strings.HasPrefix(line, "INFO: assets: retrying download in ") {
+			retries++
+		}
+	}
+	if retries != 5 {
+		t.Errorf("download retry notices = %d, want 5\nlogs:\n%s", retries, strings.Join(got.Logs, "\n"))
+	}
+	var warnings []string
+	for _, line := range got.Logs {
+		if strings.HasPrefix(line, "WARN: asset failed (attachment): giving up after 5 retries: Get: ") {
+			warnings = append(warnings, line)
+		}
+	}
+	if len(warnings) != 1 {
+		t.Errorf("asset warnings = %q, want one naming the failed request without its URL\nlogs:\n%s",
+			warnings, strings.Join(got.Logs, "\n"))
+	}
+}
+
 // --- case 7: transient 5xx -> backoff retry succeeds (exit 0) ----------------
 
 func TestRunIntegrationTransientServerErrorRecovers(t *testing.T) {
