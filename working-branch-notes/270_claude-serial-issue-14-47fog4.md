@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/serial-issue-14-47fog4`(cloud session が指定。Issue の推奨ブランチ名は `refactor-cache-write-inputs`)
-- PR: 未作成
+- PR: #270
 - 最終更新: 2026-09-27
 
 ## 目的
@@ -14,7 +14,7 @@ Issue #194(RF-06)。`writeCaches` は 19 個の位置引数を取り、timeline 
 
 - 依存(#188)は merge 済み。推奨順で前に置かれた RF-03(#191 / PR #262)も merge 済みで、その結果型を再利用した。main `1c4d477` から作業した。
 - test、整理、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
-- PR 未作成。
+- PR #270 作成済み。
 
 ## 決定事項
 
@@ -79,7 +79,7 @@ Issue の背景は main `d5aa977` 時点の記述である。その後の RF-02(
 
 ## 次にやること
 
-- draft PR を作成し、note を採番する。
+- draft PR を作成し、note を採番する。(完了)
 - `progress.md` の RF-06 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。
 - CI を確かめてから review を subagent に委譲する(P2)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
 - review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
