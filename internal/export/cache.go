@@ -1,6 +1,9 @@
 // Cache output: assembles the metadata.json / assets_manifest.json /
 // slack_api_cache.json payloads written under .cache/ (doc/design/cache.md).
-// Reading them back for --reuse-cache lives in reuse.go.
+// The slack_api_cache.json user and bot entries live here with their
+// conversions both ways: from the resolved users and bots when writing, and
+// back to them for --reuse-cache. Loading and validating a cache for
+// --reuse-cache lives in reuse.go.
 
 package export
 
@@ -11,6 +14,8 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
+// cachedUser is one users.info result: the names and the avatar URL slapex
+// saved, so --reuse-cache can skip the call (doc/design/cache.md).
 type cachedUser struct {
 	DisplayName string `json:"display_name"`
 	RealName    string `json:"real_name,omitempty"`
@@ -20,6 +25,23 @@ type cachedUser struct {
 	IsBot bool `json:"is_bot,omitempty"`
 }
 
+// newCachedUser records u for slack_api_cache.json. The avatar URL is the one
+// slapex saves (avatarURL), so a reused user's avatar has the same source_url.
+func newCachedUser(u *slack.User) cachedUser {
+	return cachedUser{DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: avatarURL(u), IsBot: u.IsBot}
+}
+
+// toUser reconstructs the minimal slack.User the messageViewBuilder needs
+// (resolved display name and avatar URL) from a cached entry, so a cached user
+// needs no users.info call this run.
+func (c cachedUser) toUser(id string) *slack.User {
+	u := &slack.User{ID: id, RealName: c.RealName, IsBot: c.IsBot}
+	u.Profile.DisplayName = c.DisplayName
+	u.Profile.RealName = c.RealName
+	u.Profile.Image72 = c.AvatarURL
+	return u
+}
+
 // cachedBot is one bots.info result: the app name and the icon URL slapex saved,
 // so --reuse-cache can skip the call (doc/design/cache.md).
 type cachedBot struct {
@@ -27,11 +49,31 @@ type cachedBot struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
-func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Channel, opts Options,
-	fetchRange messageFetchRange, wsLabel, chLabel string, timeline, threads, replyTotal, excludedTotal, saved, skipped, failed int,
-	users map[string]*slack.User, bots map[string]*slack.Bot, customEmoji map[string]string, assets *output.Assets) error {
+// newCachedBot records b for slack_api_cache.json, with the icon URL slapex
+// saves (slack.BotIcons.URL).
+func newCachedBot(b *slack.Bot) cachedBot {
+	return cachedBot{Name: b.Name, AvatarURL: b.Icons.URL()}
+}
+
+// toBot reconstructs the minimal slack.Bot the messageViewBuilder needs (app
+// name and icon URL) from a cached entry, so a cached bot needs no bots.info
+// call this run.
+func (c cachedBot) toBot(id string) *slack.Bot {
+	b := &slack.Bot{ID: id, Name: c.Name}
+	b.Icons.Image72 = c.AvatarURL
+	return b
+}
+
+// writeCaches writes the three .cache/ files into out's directory from the
+// results of Run's stages. Every parameter has its own type, so an argument in
+// the wrong position does not compile, and the counts are recorded as the
+// Messages line, the Assets line and the Done summary report them. It takes no
+// message bodies, which the cache never keeps (doc/design/cache.md).
+func writeCaches(out outputDir, now time.Time, target exportTarget, opts Options, fetchRange messageFetchRange,
+	counts exportCounts, assetTotals assetCounts, resolved resolvedUsers, customEmoji map[string]string, assets *output.Assets) error {
 
 	common := output.CacheCommon{SchemaVersion: output.SchemaVersion, GeneratedAt: now.UTC().Format(time.RFC3339)}
+	auth, ch := target.auth, target.channel
 
 	metadata := map[string]any{
 		"schema_version": common.SchemaVersion,
@@ -57,16 +99,16 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 			"options":                   fetchRange.metadataOptions(opts),
 		},
 		"labels": map[string]string{
-			"workspace_label": wsLabel, "channel_label": chLabel,
+			"workspace_label": out.wsLabel, "channel_label": out.chLabel,
 			"workspace_name": auth.Team, "channel_name": ch.Name,
 		},
 		"counts": map[string]int{
-			"timeline_messages": timeline, "threads": threads, "replies": replyTotal,
-			"excluded_messages": excludedTotal,
-			"assets_saved":      saved, "assets_skipped": skipped, "assets_failed": failed,
+			"timeline_messages": counts.timeline, "threads": counts.threads, "replies": counts.replies,
+			"excluded_messages": counts.excluded,
+			"assets_saved":      assetTotals.saved, "assets_skipped": assetTotals.skipped, "assets_failed": assetTotals.failed,
 		},
 	}
-	if err := output.WriteCacheFile(dir, "metadata.json", metadata); err != nil {
+	if err := output.WriteCacheFile(out.path, "metadata.json", metadata); err != nil {
 		return err
 	}
 
@@ -75,19 +117,17 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 		"generated_at":   common.GeneratedAt,
 		"assets":         assets.Entries(),
 	}
-	if err := output.WriteCacheFile(dir, "assets_manifest.json", manifest); err != nil {
+	if err := output.WriteCacheFile(out.path, "assets_manifest.json", manifest); err != nil {
 		return err
 	}
 
 	cachedUsers := map[string]cachedUser{}
-	for id, u := range users {
-		cachedUsers[id] = cachedUser{
-			DisplayName: u.DisplayName(), RealName: u.RealName, AvatarURL: avatarURL(u), IsBot: u.IsBot,
-		}
+	for id, u := range resolved.users {
+		cachedUsers[id] = newCachedUser(u)
 	}
 	cachedBots := map[string]cachedBot{}
-	for id, bot := range bots {
-		cachedBots[id] = cachedBot{Name: bot.Name, AvatarURL: bot.Icons.URL()}
+	for id, bot := range resolved.bots {
+		cachedBots[id] = newCachedBot(bot)
 	}
 	apiCache := map[string]any{
 		"schema_version": common.SchemaVersion,
@@ -98,7 +138,7 @@ func writeCaches(dir string, now time.Time, auth *slack.AuthTest, ch slack.Chann
 		"workspace":      auth,
 		"channel":        ch,
 	}
-	return output.WriteCacheFile(dir, "slack_api_cache.json", apiCache)
+	return output.WriteCacheFile(out.path, "slack_api_cache.json", apiCache)
 }
 
 func (r messageFetchRange) metadataTargetRange() map[string]any {

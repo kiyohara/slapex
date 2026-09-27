@@ -61,15 +61,16 @@ func writeTestCaches(t *testing.T, c writeCachesCase) string {
 	if c.saveAssets != nil {
 		c.saveAssets(assets)
 	}
-	auth := &slack.AuthTest{
-		URL: "https://acme.example.slack.com/", Team: "Acme Example", TeamID: "T0TEST01",
-		User: "alice", UserID: "U0TEST01",
+	out := outputDir{path: dir, wsLabel: "acme-example", chLabel: "project-alpha_C0TEST01"}
+	target := exportTarget{
+		auth: &slack.AuthTest{
+			URL: "https://acme.example.slack.com/", Team: "Acme Example", TeamID: "T0TEST01",
+			User: "alice", UserID: "U0TEST01",
+		},
+		channel: slack.Channel{ID: "C0TEST01", Name: "project-alpha", IsPrivate: true, IsMember: true},
 	}
-	ch := slack.Channel{ID: "C0TEST01", Name: "project-alpha", IsPrivate: true, IsMember: true}
-	if err := writeCaches(dir, cacheTestNow, auth, ch, c.opts, c.fetchRange, "acme-example", "project-alpha_C0TEST01",
-		c.counts.timeline, c.counts.threads, c.counts.replies, c.counts.excluded,
-		c.assetTotals.saved, c.assetTotals.skipped, c.assetTotals.failed,
-		c.users, c.bots, c.emoji, assets); err != nil {
+	resolved := resolvedUsers{users: c.users, bots: c.bots}
+	if err := writeCaches(out, cacheTestNow, target, c.opts, c.fetchRange, c.counts, c.assetTotals, resolved, c.emoji, assets); err != nil {
 		t.Fatalf("writeCaches: %v", err)
 	}
 	return dir

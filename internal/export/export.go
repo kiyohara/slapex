@@ -127,10 +127,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 	assetTotals := endAssetsPhase(p, assets)
 
 	counts := fetched.counts()
-	if err := writeCaches(out.path, now, target.auth, target.channel, opts, fetchRange, out.wsLabel, out.chLabel,
-		counts.timeline, counts.threads, counts.replies, counts.excluded,
-		assetTotals.saved, assetTotals.skipped, assetTotals.failed,
-		resolved.users, resolved.bots, customEmoji, assets); err != nil {
+	if err := writeCaches(out, now, target, opts, fetchRange, counts, assetTotals, resolved, customEmoji, assets); err != nil {
 		return "", err
 	}
 	if !opts.KeepCache {
