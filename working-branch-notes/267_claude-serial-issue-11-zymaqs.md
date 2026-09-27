@@ -14,7 +14,7 @@ Issue #250(FU-16)。download 中にサイズ上限を超えた asset は、manif
 
 - 依存は無い(`progress.md` の依存欄は `-`。順序の条件の FU-15 は done)。main `315a8a8` から作業した。
 - 修正と test を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #267 作成済み。
+- PR #267 作成済み。review(P2)の指摘 2 件に対応した(P4)。
 
 ## 決定事項
 
@@ -51,7 +51,7 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 ### test
 
 - 単体 test `TestAssetsWarningsFollowManifestStatus`(`internal/output/output_test.go`): download が上限で止まった URL、取得に失敗した URL、保存できた URL、事前判定で上限を超えた URL(その後の `Save` を含む)を 2 周処理し、警告が「サイズ上限超過 1 行、取得失敗 1 行」だけであることを確かめる。事前判定の URL は fake downloader に登録しておらず、`Save` が download すれば取得失敗の警告が出る。
-- 結合 test: helper 2 つ(`assertAssetsPhaseLine`、`assertAssetWarnings`)を `internal/export/integration_assert_test.go` に足した。`internal/export/integration_rendering_test.go` の上限超過と取得失敗の case で、警告行と件数を確かめる。
+- 結合 test: helper 2 つ(`assertAssetsPhaseLine`、`assertWarnings`)を `internal/export/integration_assert_test.go` に足した。`assertWarnings` は、Messages と Assets の phase の行(警告で終わり得る phase はこの 2 つだけ)を除くすべての `WARN:` の行を順に照合する。警告が無いことの確認は、文言や出どころによらない(P2 の `[imo]` を受けて、`WARN: asset ` で始まる行に限っていた範囲を広げた)。`internal/export/integration_rendering_test.go` の上限超過と取得失敗の case で、警告行と件数を確かめる。
   - 事前判定だけの case(10a、10b、10f)は警告行が無いこと、download 中の case(10c、10d)は 1 行だけであること(10c は同じファイルを 2 回投稿する)、事前判定・download 中・取得失敗を含む 10e は 2 行であること、取得失敗の 11(404)は `asset failed` の文言のままであること、download しない 11b は警告行が無いことを確かめる。
   - #250 のコメント(PR #262 の再確認からの申し送り)にある Assets 行の helper を足した。件数だけを `logsContain` で照合していた 4 か所(10c、10d、10e、11b)を、Assets phase の行と Done の行の、それぞれ行全体の照合に置き換えた。10f の `slices.Contains` も helper にした。`logsContain` は他の file の test が使うため残した。
 
@@ -66,7 +66,9 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 
 - draft PR を作成し、note を採番する。(完了)
 - `progress.md` の FU-16 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- 指摘 2 件に対応し、処置を返信する(P4)。(完了)
+- 指摘への対応(P4)の push 後、CI を確かめてから再確認を P2 と同じ subagent に委譲する(P5)。
 
 ## 検証
 
@@ -87,9 +89,13 @@ WARN: assets: 0 saved, 1 skipped by size limit, 0 failed
 ## リスク・ブロッカー
 
 - download 中の上限超過の警告行の文言が変わる。stderr の診断表示で、機械可読の契約(stdout の出力先 path)ではないが、利用者の script が `asset failed` を照合している場合は、download 中の上限超過がその照合に当たらなくなる。
+- follow-up 候補(起票はユーザーが判断する)
+  - 接続の失敗(DNS、接続拒否、TLS、timeout など)で download が止まると、取得失敗の警告行(`asset failed (<kind>): giving up after 5 retries: <err>`)と retry 中の通知(`internal/slack/client.go` の `retrying download in ... (<err>)`)の `<err>` が Go の `*url.Error` の文言になり、download の URL を全部含む。実際の実行では Slack の private file URL が出力され、`doc/design/cli-interface.md` の「出力制御」の「Slack private file URL などの機密情報は出力しない」と食い違う。本 PR より前からの挙動で、本 PR は `internal/slack` と取得失敗の `<err>` を変えていない(P2 の `[fyi]`)。404 / 5xx と `download exceeds size limit` の文言には URL が入らない。retry の制御を共通化する #192(RF-04)が同じ `downloadRetry` を触る。
 
 ## セッションログ
 
 - 2026-09-27: #249(PR #266)の merge 後、逐次処理の 11 件目として #250 を選び、Issue ごとに新しい thread で進める方式で始めた。docs.slack.dev と api.slack.com は 403 のままで、FU-13(#246)は着手できなかった。依存は無い。branch は main `315a8a8` にある。
 - 2026-09-27: test を先に書き、修正前のコードで警告行の文言により 4 件失敗することを確かめた。`Save` の警告行を status で分け、`output-format.md` に警告行の扱いを書いた(`88675d8`)。Issue の「検証」を実行した。
 - 2026-09-27(P1): draft PR #267 を作成し、note を採番した(`1feeb41`)。`progress.md` の FU-16 の PR 欄に #267 を記入した。Issue の「検証」はすべて通った(「検証」)。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note` の確認経路の項目(書き換えた行)は、note の `- PR: 未作成` → `- PR: #267`(PR 欄の記入)、`- PR 未作成。` → `- PR #267 作成済み。`(状況の stale 表現)、`- draft PR を作成し、note を採番する。` の行末に `(完了)`(完了タスク行)、PR description の note の path(`draft_claude-serial-issue-11-zymaqs.md` → `267_claude-serial-issue-11-zymaqs.md`)の 4 行で、title は書き換えていない。残された事項(触らずに残した行)は 0 件で、途中の停止も無い。出力生成系 3 skill は呼ばなかったため、引き上げる項目は無い。
+- 2026-09-27: P2 / P3。review cycle `claude-code-bf72e63-20260927052533`、`Reviewed head` `bf72e63b4b1addca1761b107cb7183f0296b3f38`。指摘は 2 件(inline 2 / top-level 0)で、prefix の内訳は `[imo]` 1、`[fyi]` 1、`[must]`、`[ask]`、`[nits]`、prefix 無しは 0。1 件以上のため P4 へ進んだ。依頼した観点(警告行の文言、事前判定で警告しない判断と設計文書の規則、guard limit の 1 文、decision log を作らない判断、`Logf` の doc comment、test、出力生成系 skill、PR description と note)はいずれも妥当とされた。subagent は guard limit の 1 文を、5MiB を超える URL preview 画像の使い捨ての結合 test で確かめた。subagent の報告では、`gh` への fallback(read を含む)、停止、訂正できなかった誤りはいずれもなし。commit の trailer に model 名が入る点が参考として挙がった(投稿はしていない)。platform の attribution の指示どおりで、これまでの PR と同じため変えない。
+- 2026-09-27: P4。処置は `[imo]` 1 件が「採用し修正した」、`[fyi]` 1 件が「妥当だが今回はスコープ外である」。`[imo]`(警告行が無いことの確認が `WARN: asset ` で始まる行に限られる)は、scratch の copy で subagent の変異 2 種(`message_view.go` の事前判定の直後に別の文言で警告する、`SkipTooLarge` で `asset ` で始まらない文言で警告する)を再現し、前者ではすべての test が通り、後者では単体 test だけが失敗することを確かめた。helper を、Messages と Assets の phase の行を除くすべての `WARN:` の行を照合する `assertWarnings` に改め、8 か所の呼び出しを置き換えた(`5ba4485`)。修正後は、前者で 10a と 10f、後者で単体 test と 10a、10b、10e、10f が失敗する。head のコードで `go test ./...`、`go test -count=3 -shuffle=on ./internal/export`、`go vet ./...`、`gofmt -l .`、`git diff --check` を再実行し、問題なかった。PR description の「主な変更」と「検証」を直した(push を伴わない修正)。`[fyi]`(接続の失敗で download の URL が警告行と retry の通知に出る)は、`internal/slack/client.go` の `downloadRetry` と、Compose の container で `http.Get` の error の文言に URL が入ることを確かめたうえで、本 PR より前からの挙動のためスコープ外とし、follow-up 候補に残した(「リスク・ブロッカー」)。open の Issue に該当するものは無い。出力生成系 3 skill は、変更が test だけのため引き続き適用しない。
