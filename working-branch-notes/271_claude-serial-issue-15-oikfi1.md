@@ -19,7 +19,8 @@ Issue #192(RF-04)。Web API の呼び出し(`withRetry`)と asset の download(`
 
 - 依存(#188)は merge 済み。推奨順で前に置かれた FU-18(#254 / PR #264)も merge 済み。main `0a83bf7` から作業した。
 - 申し送り 1(`e5e101b`)、characterization test(`5e6e3ca`)、共通化(`9c7d022`)、申し送り 2(`3c5dc24`)を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #271 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。review(P2)の指摘 1 件に対応した(P4)。次は CI を確かめてから再確認(P5)に進む。
+- PR #271 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- review cycle(P2〜P5)を終え、未対応は 0 件。この記録の push の後、CI を確かめて agent が Ready for review にする(2026-09-27 06:33Z のユーザーの指示)。残るのは人間の手番(「次にやること」)である。
 
 ## 決定事項
 
@@ -122,9 +123,10 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 - `progress.md` の RF-04 の PR 欄に PR 番号を記入し、採番の報告から引き上げた項目を「セッションログ」の P1 に残して push する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 指摘 1 件に対応し、処置を返信する(P4)。(完了)
-- CI を確かめてから再確認を subagent に委譲する(P5)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。
-- review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。
+- CI を確かめてから再確認を subagent に委譲する(P5)。review cycle の間は draft のまま進める(2026-09-27 06:33Z のユーザーの指示)。(完了)
+- review cycle の完了後、PR を Ready for review にして、Codex のクロスレビューと merge をユーザーに依頼する。Ready for review から 2 時間経っても Codex のレビューコメントが無ければ、ユーザーに知らせる(06:36Z のユーザーの指示)。(agent がこの記録の push の後に行う)
 - (人間)Codex のクロスレビュー。指摘があれば agent が `address-comments` で対応する。
+- (人間)resolve 可とした review thread 1 件(`[nits]` 「費用」の数えた時点と `WithTransport` の記載漏れ)を確かめて resolve する。
 - (人間)PR を merge する。
 
 ## 検証
@@ -151,3 +153,5 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 - 2026-09-27 P1: draft PR #271 を作成し、note を採番した(`0add570`)。`progress.md` の RF-04 の PR 欄を反映した。検証は「検証」のとおりすべて ok。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`number-working-branch-note` の報告から引き上げた項目: 書き換えた行は、note の状況の stale 表現 1 行(`PR 未作成。` → `PR #271 作成済み。`)、note の完了タスク行 1 行(「draft PR を作成し、note を採番する。」に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `271_`)。title は書き換えていない。触らずに残した行は note、PR description、title とも無し。ほかに note の `PR:` 欄に `#271` を記入した。情報統制チェックで直した箇所は無い。PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
 - 2026-09-27 P2 / P3: review cycle `claude-code-998999c-20260927115106`、Reviewed head `998999c`。指摘 1 件(inline 1 件、top-level 0 件。`[nits]` 1 件で、`[must]`、`[ask]`、`[imo]`、`[fyi]`、prefix 無しは 0)。merge 前に直す指摘(`[must]`)は無い。1 件以上のため P4 に進んだ。依頼した観点(完了条件、`withRetry` の契約と attempt closure 案との比較、download の request の再利用と認証情報の送信先、申し送り 2 件、足した test、出力生成系 skill、設計文書)は、「費用」の数えた時点と `WithTransport` の記載漏れを除いて妥当とされた。subagent は scratch の copy で、申し送り 1 の競合の注入(main 10 回失敗、head 10 回成功)、申し送り 2 の test の変更前の失敗、独自の変異 8 種、gensample の再生成、繰り返し実行(`-race -count=30 -cpu 1,2,4` など)を再現した。指摘にしなかった点として、`withoutURL` を通すと `*url.Error` が error の連鎖から外れるため、note の「`errors.As` は従来どおり使える」は厳密には正しくないと報告された(依存する呼び出し側は無い)。完了要約の `Model` は、上位の指示が review のコメントを対象から外すと確認できなかったため `unknown` とされた。`gh` への write の fallback、停止、訂正できなかった誤りはなし(head の確認で read だけの `gh api` を 1 回実行し、MCP で取り直したと報告された)。
 - 2026-09-27 P4: 処置は「採用し修正した」1 件。note の「費用」の行数に、共通化の commit(`9c7d022`)の前後の値であることと、head の値(`downloadRetry` 26 行、計 114 行。main の 133 行から -19)、ファイル全体の行数(main 314 行、head 330 行)を書き添え、追加の関数に `WithTransport` を足した(`9a673b6`)。PR description の「重複の削減」表も同じく直した(push を伴わない修正。`pull_request_read(get)` で反映を確かめた)。あわせて、P2 の報告にあった note の「`errors.As` は従来どおり使える」の不正確さを直した(同じ `9a673b6`)。返信は head `9a673b6` で投稿した。スコープ外とした指摘は無く、follow-up の候補も無い。出力生成系 3 skill は、note と PR description だけの変更のため再判断でも呼ばない。`gh` への write の fallback は無い。head の確認で read だけの `gh api` を 1 回実行した(routing からの逸脱。副作用は無く、MCP の read で取り直した)。
+- 2026-09-27 P5: P2 と同じ subagent が `verify-comments` を実行した(Reviewed head `1be0cc5`)。修正確認済み 1 件、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件(inline 1 / top-level 0)。resolve 可は inline の 1 thread(note の行が変わったため、GitHub では outdated と表示される)。subagent は、各時点の `client.go` の行数(`5e6e3ca`、`9c7d022`、head、main)が note と PR description の値に一致すること、足された関数が `WithTransport` と `withoutURL` だけであること、`errors.Is` / `errors.As` の訂正が正しいこと、`998999c..1be0cc5` が note だけの変更であることを確かめた。Go の test は、Go のファイルが P2 で test した `998999c` と同一で CI も success のため、再実行していない。check runs は 5 件 success。`gh` への fallback、停止、訂正できなかった誤りはいずれもなし。
+- 2026-09-27 P6: 終了時の状態: PR #271 は draft で、P5 が確かめた head `1be0cc5` の check runs は 5 件 success。この P5 / P6 の記録は note だけの commit で、P5 が確かめた head より後のため、CI の確認点に含めない。この記録の push の後、CI を確かめて Ready for review にする(06:33Z のユーザーの指示)。残るのは人間の手番(「次にやること」)である。
