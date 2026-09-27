@@ -41,10 +41,14 @@ func TestOpenHTTPTraceOff(t *testing.T) {
 }
 
 // TestOpenHTTPTraceCreatesFile: the file is created for the user only, or
-// truncated when it exists, and holds what the client writes.
+// truncated when it exists, keeping its permissions, and holds what the
+// client writes.
 func TestOpenHTTPTraceCreatesFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "trace.jsonl")
 	if err := os.WriteFile(path, []byte("an older trace\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil { // whatever the umask
 		t.Fatal(err)
 	}
 	trace, err := openHTTPTrace(func(key string) string {
@@ -67,6 +71,12 @@ func TestOpenHTTPTraceCreatesFile(t *testing.T) {
 	data, err := os.ReadFile(path)
 	if err != nil || string(data) != "{}\n" {
 		t.Fatalf("trace file = %q, %v; want only the new line", data, err)
+	}
+	// A file that exists keeps its permissions.
+	if info, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	} else if runtime.GOOS != "windows" && info.Mode().Perm() != 0o644 {
+		t.Errorf("existing trace file mode = %v, want its own 0644", info.Mode().Perm())
 	}
 
 	// A new file is readable by the user only.

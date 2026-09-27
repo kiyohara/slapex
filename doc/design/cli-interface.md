@@ -31,7 +31,7 @@ token を CLI option や引数として受け取る経路は提供しない。�
 
 - 記録するのは、開始時刻、種別(Web API の method 名、または asset の kind)、scheme と host、URL の hash、試行と redirect の番号、HTTP version、status、失敗の種類、DNS・接続・TLS・接続の取得(再利用の有無)・最初の byte・完了の各時点、受信 bytes、pacing と retry の待機時間である。
 - URL そのもの(path と query)、header(Authorization を含む)、token、body、error の本文は記録しない。URL の hash は実行ごとの乱数を鍵にした HMAC で、同じ trace の中で同じ URL を見分けることにだけ使え、既知の URL とは照合できない。host は記録するため、trace ファイル自体は第三者 host の名前を含む。共有には、host 名を出さない `tools/tracereport` の集計を使う。
-- ファイルは所有者だけが読み書きできる権限(`0600`)で作り、既にあれば中身を置き換える。ファイルを作れない場合は、Slack に接続する前に exit code `4` で終了する。書き込みに失敗しても export は続け、終了時に trace が不完全である旨を stderr に警告する。exit code は export の結果のままとする。
+- ファイルが無ければ、所有者だけが読み書きできる権限(`0600`)で作る。既にあれば、中身を置き換え、権限は変えない。ファイルを作れない場合は、Slack に接続する前に exit code `4` で終了する。書き込みに失敗しても export は続け、終了時に trace が不完全である旨を stderr に警告する。exit code は export の結果のままとする。
 - 未設定、空、空白だけのときは trace を書かず、出力(stdout、stderr、HTML、assets、cache)も挙動も変えない。
 - trace を書くときも、request の送り方、retry、pacing は変えない。ただし、HTTP client の timeout(120 秒)で request が失敗したときの error の文(retry の通知、asset の警告、manifest の `error`)は、trace を書かないときと異なることがある。trace のために transport を包むと、`net/http` が timeout で request を止める経路が変わるためである。止める時点は変わらない。
 - `--demo` は in-process の fixture とだけ通信するため、trace の対象にしない。

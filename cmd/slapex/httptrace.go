@@ -25,8 +25,9 @@ type httpTraceFile struct {
 	err error // the first failed write
 }
 
-// openHTTPTrace creates (or truncates) the file httpTraceEnv names, readable
-// by the user only. It returns nil when the variable is unset or blank.
+// openHTTPTrace creates the file httpTraceEnv names, readable by the user
+// only, or truncates it, keeping its permissions, when it exists (as
+// os.WriteFile does). It returns nil when the variable is unset or blank.
 func openHTTPTrace(getenv func(string) string) (*httpTraceFile, error) {
 	path := getenv(httpTraceEnv)
 	if strings.TrimSpace(path) == "" {
