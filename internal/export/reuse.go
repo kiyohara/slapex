@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/kiyohara/slapex/internal/output"
-	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
 )
 
@@ -174,23 +173,4 @@ func (rc *reusableCache) validate(teamID, channelID string) (string, bool) {
 // reuseSource adapts the loaded cache for output.Assets asset copying.
 func (rc *reusableCache) reuseSource() *output.ReuseSource {
 	return &output.ReuseSource{OldDir: rc.oldDir, Entries: rc.savedAssets}
-}
-
-// toUser reconstructs the minimal slack.User the messageViewBuilder needs (resolved display
-// name and avatar URL) from a cached entry, so a cached user needs no users.info
-// call this run.
-func (c cachedUser) toUser(id string) *slack.User {
-	u := &slack.User{ID: id, RealName: c.RealName, IsBot: c.IsBot}
-	u.Profile.DisplayName = c.DisplayName
-	u.Profile.RealName = c.RealName
-	u.Profile.Image72 = c.AvatarURL
-	return u
-}
-
-// toBot reconstructs the minimal slack.Bot the messageViewBuilder needs (app name and icon
-// URL) from a cached entry, so a cached bot needs no bots.info call this run.
-func (c cachedBot) toBot(id string) *slack.Bot {
-	b := &slack.Bot{ID: id, Name: c.Name}
-	b.Icons.Image72 = c.AvatarURL
-	return b
 }

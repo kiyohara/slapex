@@ -45,7 +45,7 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 
 `export.Run` は工程の順序と失敗時の処理だけを持ち、各工程は結果を値で次の工程へ渡す。Workspace・Channel(`resolveTarget`)、再利用する cache・出力先・取得範囲、Messages(`fetchMessages`。親の除外後の補充を含む history/replies の取得で、timeline・親が timeline にある thread の replies・打ち切りの有無・除外件数を返す。Messages 行・metadata.json・Done の件数はこの結果から数える)、Users(`resolveUsers`)、Emoji(`resolveCustomEmoji`)、Assets(avatar の保存、`buildTimeline`、`buildPage`、`writePage`。`endAssetsPhase` が asset の集計を返す)、cache の書き出しと cleanup(`writeCaches`、`output.RemoveCache`)、Done(`reportDone`)の順に進み、最初の error で止まる。
 
-cache の schema に沿った object の組立は `export`、JSON の書き出しと asset manifest entry は `output` に分かれる。再利用の読込・検証は [export/reuse.go](../../internal/export/reuse.go)、保存済み asset のコピーは `output` が担う。確認済みの仕様差は [cache.md](cache.md#確認済みの仕様と実装の差) を参照する。
+cache の schema に沿った object の組立は `export`、JSON の書き出しと asset manifest entry は `output` に分かれる。`export` の組立([export/cache.go](../../internal/export/cache.go))は `Run` の各工程の結果をそのまま受け取る。ただし Messages の結果からは件数(`exportCounts`)だけを受け取り、メッセージ本文は受け取らない(cache はメッセージ本文を保持しない)。`slack_api_cache.json` の user / bot の entry の型と、書き出しと再利用の両方向の変換も同じファイルに置く。再利用の読込・検証は [export/reuse.go](../../internal/export/reuse.go)、保存済み asset のコピーは `output` が担う。確認済みの仕様差は [cache.md](cache.md#確認済みの仕様と実装の差) を参照する。
 
 生成用入口は [tools/genemoji](../../tools/genemoji/main.go)(標準絵文字データ)、[tools/gensample](../../tools/gensample/main.go)(`demo` / `ui` を使う ja/en sample export)、[tools/genscreenshot](../../tools/genscreenshot/main.go)(同梱 sample の screenshot)、[tools/demo](../../tools/demo/record.sh)(terminal demo GIF)に置く。
 
