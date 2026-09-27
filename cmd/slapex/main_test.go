@@ -66,6 +66,22 @@ func TestRunStdoutCarriesOnlyTheResult(t *testing.T) {
 	}
 }
 
+// TestRunHelp: --help exits 0 with the usage on stderr and nothing on stdout,
+// also when --version is given (TestParseArgsVersionAndHelp).
+func TestRunHelp(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	for _, args := range [][]string{{"slapex", "--help"}, {"slapex", "--version", "--help"}} {
+		os.Args = args
+		var code int
+		stdout, stderr := captureStdio(t, func() { code = run() })
+		if code != exitOK || stdout != "" || !strings.HasPrefix(stderr, "Usage: slapex [channel] [options]\n") {
+			t.Fatalf("run(%q) = %d, stdout %q, stderr %q; want %d and the usage on stderr only", args[1:], code, stdout, stderr, exitOK)
+		}
+	}
+}
+
 func TestRunDateUsageErrors(t *testing.T) {
 	origArgs := os.Args
 	defer func() { os.Args = origArgs }()

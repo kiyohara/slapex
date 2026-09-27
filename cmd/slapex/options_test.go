@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -190,6 +191,131 @@ func TestParseArgsUsageErrors(t *testing.T) {
 			}
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("parseCLIArgs(%v) error = %v, want %v", tt.args, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestParseArgsDiagnostics fixes what parseCLIArgs writes for an invalid
+// command line (doc/design/cli-interface.md): one "slapex: ..." line for the
+// first problem in the order the options are checked, and the usage after an
+// extra argument or a flag the flag package rejects. An explicit empty
+// --date, --from, --max-attachment-size or emoji list is invalid, unlike an
+// unset one (TestParseArgsDefaults).
+func TestParseArgsDiagnostics(t *testing.T) {
+	const usage = "Usage: slapex [channel] [options]\n"
+	tests := []struct {
+		name      string
+		args      []string
+		want      string // the diagnostics; with wantUsage, the line before the usage
+		wantUsage bool
+	}{
+		{name: "unknown option", args: []string{"--unknown"}, want: "flag provided but not defined: -unknown\n", wantUsage: true},
+		{name: "invalid flag value", args: []string{"--days", "x"}, want: "invalid value \"x\" for flag -days: parse error\n", wantUsage: true},
+		{name: "too many arguments", args: []string{"general", "extra", "more"}, want: "slapex: too many arguments: extra more\n", wantUsage: true},
+		{name: "max posts", args: []string{"--max-posts", "0"}, want: "slapex: --max-posts must be between 1 and 10000\n"},
+		{name: "from only", args: []string{"--from", "2026-07-03"}, want: "slapex: --from and --to must be used together\n"},
+		{name: "to only", args: []string{"--to", "2026-07-04"}, want: "slapex: --from and --to must be used together\n"},
+		{name: "range with date", args: []string{"--from", "2026-07-03", "--to", "2026-07-04", "--date", "2026-07-03"}, want: "slapex: --from/--to and --date cannot be used together\n"},
+		{name: "range with days", args: []string{"--from", "2026-07-03", "--to", "2026-07-04", "--days", "7"}, want: "slapex: --from/--to and --days cannot be used together\n"},
+		{name: "invalid from", args: []string{"--from", "2026-02-30", "--to", "2026-03-01"}, want: "slapex: invalid --from \"2026-02-30\" (unsupported date/time format)\n"},
+		{name: "invalid to", args: []string{"--from", "2026-07-03", "--to", "yesterday"}, want: "slapex: invalid --to \"yesterday\" (unsupported date/time format)\n"},
+		{name: "reversed range", args: []string{"--from", "2026-07-04", "--to", "2026-07-03"}, want: "slapex: --from must be before --to\n"},
+		{name: "invalid date", args: []string{"--date", "yesterday"}, want: "slapex: invalid --date \"yesterday\" (unsupported date/time format)\n"},
+		{name: "date with days", args: []string{"--date", "2026-07-03", "--days", "7"}, want: "slapex: --date and --days cannot be used together\n"},
+		{name: "days", args: []string{"--days", "91"}, want: "slapex: --days must be between 1 and 90\n"},
+		{name: "max attachment size", args: []string{"--max-attachment-size", "1023"}, want: "slapex: invalid --max-attachment-size \"1023\" (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n"},
+		{name: "exclude body emoji", args: []string{"--exclude-body-emoji", "shushing_face,"}, want: "slapex: invalid --exclude-body-emoji \"shushing_face,\": invalid emoji name \"\"\n"},
+		{name: "exclude reaction emoji", args: []string{"--exclude-reaction-emoji", "a b"}, want: "slapex: invalid --exclude-reaction-emoji \"a b\": invalid emoji name \"a b\"\n"},
+
+		// An explicit empty value.
+		{name: "empty date", args: []string{"--date", ""}, want: "slapex: invalid --date \"\" (unsupported date/time format)\n"},
+		{name: "empty range", args: []string{"--from", "", "--to", ""}, want: "slapex: invalid --from \"\" (unsupported date/time format)\n"},
+		{name: "empty max attachment size", args: []string{"--max-attachment-size", ""}, want: "slapex: invalid --max-attachment-size \"\" (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n"},
+		{name: "empty exclude body emoji", args: []string{"--exclude-body-emoji", ""}, want: "slapex: invalid --exclude-body-emoji \"\": invalid emoji name \"\"\n"},
+		{name: "empty exclude reaction emoji", args: []string{"--exclude-reaction-emoji", ""}, want: "slapex: invalid --exclude-reaction-emoji \"\": invalid emoji name \"\"\n"},
+
+		// The first problem in the check order is the one reported.
+		{name: "extra argument before values", args: []string{"--max-posts", "0", "general", "extra"}, want: "slapex: too many arguments: extra\n", wantUsage: true},
+		{name: "max posts before range", args: []string{"--max-posts", "0", "--days", "0"}, want: "slapex: --max-posts must be between 1 and 10000\n"},
+		{name: "range combination before its dates", args: []string{"--from", "bad", "--to", "bad", "--days", "7"}, want: "slapex: --from/--to and --days cannot be used together\n"},
+		{name: "date before days", args: []string{"--date", "yesterday", "--days", "7"}, want: "slapex: invalid --date \"yesterday\" (unsupported date/time format)\n"},
+		{name: "days before size", args: []string{"--days", "0", "--max-attachment-size", "1"}, want: "slapex: --days must be between 1 and 90\n"},
+		{name: "size before emoji", args: []string{"--max-attachment-size", "1", "--exclude-body-emoji", ""}, want: "slapex: invalid --max-attachment-size \"1\" (expected e.g. 10MB, 512KB, or a byte count >= 1KB)\n"},
+		{name: "body emoji before reaction emoji", args: []string{"--exclude-reaction-emoji", "", "--exclude-body-emoji", ""}, want: "slapex: invalid --exclude-body-emoji \"\": invalid emoji name \"\"\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			got, err := parseCLIArgs(tt.args, &buf)
+			if got != nil || !errors.Is(err, errUsage) {
+				t.Fatalf("parseCLIArgs(%q) = %+v, %v; want a usage error", tt.args, got, err)
+			}
+			out := buf.String()
+			if tt.wantUsage {
+				if !strings.HasPrefix(out, tt.want+usage) {
+					t.Fatalf("diagnostics = %q, want %q and the usage", out, tt.want)
+				}
+				return
+			}
+			if out != tt.want {
+				t.Fatalf("diagnostics = %q, want %q", out, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseArgsDefaults fixes the options of an empty command line. An
+// explicit empty --output or --reuse-cache is the same as leaving it unset.
+func TestParseArgsDefaults(t *testing.T) {
+	want := cliOptions{maxPosts: 1000, days: 30, maxAttachBytes: 10 << 20}
+	for _, args := range [][]string{nil, {"--output", ""}, {"--reuse-cache", ""}} {
+		got, err := parseCLIArgs(args, io.Discard)
+		if err != nil {
+			t.Fatalf("parseCLIArgs(%q) returned error: %v", args, err)
+		}
+		if !reflect.DeepEqual(*got, want) {
+			t.Fatalf("parseCLIArgs(%q) = %+v, want %+v", args, *got, want)
+		}
+	}
+}
+
+// TestParseArgsVersionAndHelp fixes how --version and --help rank against the
+// other checks, wherever they appear around the channel: --help wins once the
+// flag package reads it, --version wins over the checks after the parse, and
+// a flag the parse rejects wins over --version.
+func TestParseArgsVersionAndHelp(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr error // nil: the options only print the version
+	}{
+		{name: "version over invalid values", args: []string{"--version", "--days", "0"}},
+		{name: "version after invalid values", args: []string{"--max-posts", "0", "--version"}},
+		{name: "version over extra arguments", args: []string{"--version", "general", "extra"}},
+		{name: "version after the channel", args: []string{"general", "--version", "--date", "yesterday"}},
+		{name: "help over version", args: []string{"--version", "--help"}, wantErr: flag.ErrHelp},
+		{name: "help before version", args: []string{"--help", "--version"}, wantErr: flag.ErrHelp},
+		{name: "help after the channel", args: []string{"general", "--version", "--help"}, wantErr: flag.ErrHelp},
+		{name: "help over invalid values", args: []string{"--days", "0", "--help"}, wantErr: flag.ErrHelp},
+		{name: "rejected flag over version", args: []string{"--version", "--unknown"}, wantErr: errUsage},
+		// Only the arguments up to the one after the channel are parsed, so a
+		// flag after that is an extra argument.
+		{name: "version after an extra argument", args: []string{"general", "extra", "--version"}, wantErr: errUsage},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseCLIArgs(tt.args, io.Discard)
+			if tt.wantErr != nil {
+				if got != nil || !errors.Is(err, tt.wantErr) {
+					t.Fatalf("parseCLIArgs(%q) = %+v, %v; want %v", tt.args, got, err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil || !reflect.DeepEqual(*got, cliOptions{showVersion: true}) {
+				t.Fatalf("parseCLIArgs(%q) = %+v, %v; want only showVersion", tt.args, got, err)
 			}
 		})
 	}
