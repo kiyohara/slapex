@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
@@ -127,7 +128,8 @@ func TestHTTPTraceFinishWarnsWhenIncomplete(t *testing.T) {
 
 // TestRunWritesHTTPTrace runs slapex with SLAPEX_HTTP_TRACE against a fake
 // Slack API (SLAPEX_API_BASE_URL) that rejects the token: the one request is
-// traced, without the token, and the exit code stays the auth error's.
+// traced, then the run line, without the token, and the exit code stays the
+// auth error's.
 func TestRunWritesHTTPTrace(t *testing.T) {
 	const token = "xoxb-cli-trace-test"
 	requests := 0
@@ -156,12 +158,25 @@ func TestRunWritesHTTPTrace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read trace: %v", err)
 	}
-	var rec slack.TraceRecord
-	if err := json.Unmarshal(data, &rec); err != nil || strings.Count(string(data), "\n") != 1 {
-		t.Fatalf("trace = %q (%v), want one JSON line", data, err)
+	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("trace = %q, want the request line and the run line", data)
+	}
+	var rec, runRec slack.TraceRecord
+	if err := json.Unmarshal([]byte(lines[0]), &rec); err != nil {
+		t.Fatalf("trace line %q: %v", lines[0], err)
+	}
+	if err := json.Unmarshal([]byte(lines[1]), &runRec); err != nil {
+		t.Fatalf("trace line %q: %v", lines[1], err)
 	}
 	if rec.Type != slack.TraceAPI || rec.Method != "auth.test" || rec.Status != http.StatusOK || requests != 1 {
 		t.Errorf("trace line = %+v for %d requests, want the one auth.test call", rec, requests)
+	}
+	// The run began before the request and ended after it (the offsets are
+	// whole microseconds, so allow one).
+	if runRec.Type != slack.TraceRun || runRec.Start.After(rec.Start) || runRec.DoneUS == nil || rec.DoneUS == nil ||
+		runRec.Start.Add(time.Duration(*runRec.DoneUS+1)*time.Microsecond).Before(rec.Start.Add(time.Duration(*rec.DoneUS)*time.Microsecond)) {
+		t.Errorf("run line = %+v, want the run around the request %+v", runRec, rec)
 	}
 	if strings.Contains(string(data), token) || strings.Contains(stderr, httpTraceEnv) {
 		t.Errorf("trace %q or stderr %q shows what it should not", data, stderr)

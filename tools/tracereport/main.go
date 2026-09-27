@@ -12,11 +12,15 @@
 //
 //	docker compose run --rm dev go run ./tools/tracereport trace.jsonl
 //
-// With no file it reads the trace from stdin. The run is the span from the
-// first request (with its pacing wait) to the end of the last one (with its
-// retry wait); "Outside requests" is the part of the span that no request
-// took, such as rendering and writing files. Requests that overlap, as in
-// parallel downloads, can take more than 100% of the span between them.
+// With no file it reads the trace from stdin. The run is the export from its
+// start to its end, as the run line at the end of the trace gives it;
+// "Outside requests" is the part of the run that no request took, such as
+// choosing the channel, rendering and writing files (a channel chosen at the
+// prompt adds the time the choice took). A trace without the run line, of a
+// run that was killed for one, is summarized over the span of its requests
+// instead: from the first request (with its pacing wait) to the end of the
+// last one (with its retry wait). Requests that overlap, as in parallel
+// downloads, can take more than 100% of the run between them.
 package main
 
 import (
@@ -171,7 +175,10 @@ func (s *stats) add(rec slack.TraceRecord) {
 }
 
 type summary struct {
+	// span is the run: from the run line, or, in a trace without one (run is
+	// false), from the first request to the end of the last one.
 	span     time.Duration
+	run      bool
 	all      stats
 	classes  map[string]*stats
 	methods  map[string]*stats // Web API requests by method
@@ -189,16 +196,24 @@ func summarize(recs []slack.TraceRecord) summary {
 		errors:   map[string]int{},
 	}
 	var first, last time.Time
-	for i, rec := range recs {
-		t := rec.Times()
-		begin := rec.Start.Add(-t.PacingWait)
-		end := rec.Start.Add(lastOffset(rec) + t.RetryWait)
-		if i == 0 || begin.Before(first) {
+	seen := false
+	extend := func(begin, end time.Time) {
+		if !seen || begin.Before(first) {
 			first = begin
 		}
-		if i == 0 || end.After(last) {
+		if !seen || end.After(last) {
 			last = end
 		}
+		seen = true
+	}
+	for _, rec := range recs {
+		if rec.Type == slack.TraceRun {
+			s.run = true
+			extend(rec.Start, rec.Start.Add(lastOffset(rec)))
+			continue
+		}
+		t := rec.Times()
+		extend(rec.Start.Add(-t.PacingWait), rec.Start.Add(lastOffset(rec)+t.RetryWait))
 		s.all.add(rec)
 		addTo(s.classes, classOf(rec), rec)
 		if rec.Type == slack.TraceAPI {
@@ -248,8 +263,15 @@ func writeReport(w io.Writer, s summary) {
 		}
 	}
 	fmt.Fprintf(w, "## HTTP trace\n\n")
-	fmt.Fprintf(w, "%s over %s: %s, and %s from %s.\n\n", plural(s.all.requests, "request"), seconds(s.span),
+	over := "in a run of " + seconds(s.span)
+	if !s.run {
+		over = "over " + seconds(s.span)
+	}
+	fmt.Fprintf(w, "%s %s: %s, and %s from %s.\n\n", plural(s.all.requests, "request"), over,
 		plural(api.calls, "Web API call"), plural(s.all.calls-api.calls, "download"), plural(downloadOrigins, "origin"))
+	if !s.run {
+		fmt.Fprint(w, "The trace has no run line, so the shares are of the time from the first request to the end of the last one, without the work before and after them.\n\n")
+	}
 
 	fmt.Fprintln(w, "| Class | Requests | Retries | Redirects | New conns | Bytes | Pacing wait | Retry wait | Connect | First byte | Transfer | Total | Share |")
 	fmt.Fprintln(w, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")

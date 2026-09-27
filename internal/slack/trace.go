@@ -20,6 +20,10 @@ package slack
 // retry wait that the latest request's failure caused (a backoff or a
 // Retry-After). A record is therefore written when the next request starts or
 // when the call or download ends.
+//
+// slapex ends the trace with the run line (TraceRun, Client.TraceRun): when the
+// export started and how long it ran, which a summary sets the requests
+// against.
 
 import (
 	"context"
@@ -43,16 +47,19 @@ import (
 const (
 	TraceAPI      = "api"
 	TraceDownload = "download"
+	// TraceRun is the run line (Client.TraceRun). It has only Start, when the
+	// export started, and DoneUS, when it ended.
+	TraceRun = "run"
 )
 
 // TraceRecord is one line of the HTTP trace: one HTTP request, which is one
-// attempt of a Web API call or a download, or one redirect hop of an attempt.
-// The *US offsets are microseconds from Start; a phase that did not happen has
-// none.
+// attempt of a Web API call or a download, or one redirect hop of an attempt;
+// or the run line (TraceRun). The *US offsets are microseconds from Start; a
+// phase that did not happen has none.
 type TraceRecord struct {
 	// Start is when the request was handed to the transport, in UTC.
 	Start time.Time `json:"start"`
-	// Type is TraceAPI or TraceDownload.
+	// Type is TraceAPI, TraceDownload or TraceRun.
 	Type string `json:"type"`
 	// Method is the Web API method of a call. Kind is the asset kind of a
 	// download (output.Kind*), when its caller gave one (WithAssetKind).
@@ -155,7 +162,7 @@ func offset(us *int64) time.Duration {
 }
 
 // WithTrace writes the HTTP trace to w, one JSON line (TraceRecord) per HTTP
-// request the client sends, each line in one Write. The client ignores write
+// request the client sends and the run line (TraceRun), each line in one Write. The client ignores write
 // errors: a writer that must report them keeps them itself.
 func WithTrace(w io.Writer) Option {
 	return func(c *Client) {
@@ -214,14 +221,34 @@ func (t *tracer) urlHash(u string) string {
 	return hex.EncodeToString(mac.Sum(nil)[:8])
 }
 
-func (t *tracer) write(rec TraceRecord) {
+// write writes rec, a TraceRecord or a traceRun, as one line.
+func (t *tracer) write(rec any) {
 	line, err := json.Marshal(rec)
 	if err != nil {
-		return // a TraceRecord always marshals
+		return // both always marshal
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.w.Write(append(line, '\n'))
+}
+
+// TraceRun writes the run line: the export that started at start ends now.
+// slapex writes it once, after the export, so that a summary of the trace can
+// set the requests against the whole run, including the work before the first
+// request and after the last one (tools/tracereport). Without a trace it does
+// nothing.
+func (c *Client) TraceRun(start time.Time) {
+	if c.trace == nil {
+		return
+	}
+	c.trace.write(traceRun{Start: start.UTC(), Type: TraceRun, DoneUS: time.Since(start).Microseconds()})
+}
+
+// traceRun is the run line, which a TraceRecord reads back.
+type traceRun struct {
+	Start  time.Time `json:"start"`
+	Type   string    `json:"type"`
+	DoneUS int64     `json:"done_us"`
 }
 
 type requestTraceKey struct{}

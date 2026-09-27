@@ -150,7 +150,11 @@ func run() int {
 		ToolVersion:          version,
 	}
 
+	// The trace ends with the run line, the export's start and duration, which
+	// its summary sets the requests against (tools/tracereport).
+	runStart := time.Now()
 	dir, err := export.Run(context.Background(), client, exportOpts, printer)
+	client.TraceRun(runStart)
 	if err != nil {
 		// A phase may still be live when Run fails; clear its spinner line so
 		// the error report starts on a clean line.

@@ -10,8 +10,8 @@ import (
 )
 
 // httpTraceEnv names a file for the HTTP trace of the export: one JSON line
-// per HTTP request to Slack or to an asset host (internal/slack trace.go,
-// Issue #273). Internal use only, like apiBaseURLEnv: it is for measuring
+// per HTTP request to Slack or to an asset host, and a last line with the
+// export's start and duration (internal/slack trace.go, Issue #273). Internal use only, like apiBaseURLEnv: it is for measuring
 // where an export spends its time (tools/tracereport), not part of the public
 // CLI surface, and stays out of --help and user-facing docs
 // (doc/design/cli-interface.md). --demo is not traced: it only talks to its

@@ -63,8 +63,10 @@ func TestReport(t *testing.T) {
 	report := out.String()
 
 	for _, want := range []string{
-		// 8.4s + the last request's 0.1s, from the first request: 8.5s.
+		// Without the run line, 8.4s + the last request's 0.1s, from the
+		// first request: 8.5s.
 		"9 requests over 8.500 s: 2 Web API calls, and 5 downloads from 5 origins.",
+		"The trace has no run line, so the shares are of the time from the first request to the end of the last one",
 		"| Web API | 3 | 1 | 0 | 1 | 2.0 KB | 0.000 s | 1.000 s | 0.030 s | 0.060 s | 0.210 s | 1.300 s | 15.3% |",
 		"| files.slack.com | 1 | 0 | 0 | 1 | 3.0 MB | 0.000 s | 0.000 s | 0.010 s | 0.020 s | 0.070 s | 0.100 s | 1.2% |",
 		"| Slack CDN | 1 | 0 | 0 | 1 | 0 B | 0.600 s |",
@@ -87,6 +89,42 @@ func TestReport(t *testing.T) {
 		if strings.Contains(report, secret) {
 			t.Errorf("report contains %q:\n%s", secret, report)
 		}
+	}
+}
+
+// TestReportRun: with the run line, the shares are of the whole run, which
+// includes the work before the first request and after the last one: 1 s of
+// requests in a run of 10 s is 10%, and the other 9 s are outside requests.
+func TestReportRun(t *testing.T) {
+	start := time.Date(2026, 9, 27, 12, 0, 0, 0, time.UTC)
+	us := func(v int64) *int64 { return &v }
+	req, err := json.Marshal(slack.TraceRecord{Start: start.Add(200 * time.Millisecond), Type: slack.TraceAPI,
+		Method: "auth.test", Scheme: "https", Host: "slack.com", URLHash: "00000000000000a1", Status: 200,
+		GotConnUS: us(100_000), FirstByteUS: us(900_000), DoneUS: us(1_000_000)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The run line as slapex writes it, last.
+	run := `{"start":"2026-09-27T12:00:00Z","type":"run","done_us":10000000}`
+	recs, skipped, err := readTrace(strings.NewReader(string(req) + "\n" + run + "\n"))
+	if err != nil || skipped != 0 || len(recs) != 2 {
+		t.Fatalf("readTrace = %d records, %d skipped, %v; want 2", len(recs), skipped, err)
+	}
+	var out bytes.Buffer
+	writeReport(&out, summarize(recs))
+	report := out.String()
+	for _, want := range []string{
+		"1 request in a run of 10.000 s: 1 Web API call, and 0 downloads from 0 origins.",
+		"| All | 1 | 0 | 0 | 1 | 0 B | 0.000 s | 0.000 s | 0.100 s | 0.800 s | 0.100 s | 1.000 s | 10.0% |",
+		"| Outside requests | | | | | | | | | | | 9.000 s | 90.0% |",
+		"Statuses: 200 ×1. Failed requests: none.",
+	} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report misses %q:\n%s", want, report)
+		}
+	}
+	if strings.Contains(report, "no run line") {
+		t.Errorf("report says the trace has no run line:\n%s", report)
 	}
 }
 

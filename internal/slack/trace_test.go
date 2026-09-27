@@ -382,6 +382,32 @@ func TestTraceRecordsUnlabeledRequest(t *testing.T) {
 	}
 }
 
+// TestTraceRun: the run line holds when the export started, in UTC, and how
+// long it ran, and nothing else. Without a trace TraceRun writes nothing.
+func TestTraceRun(t *testing.T) {
+	t.Parallel()
+
+	New(testToken).TraceRun(time.Now())
+
+	w := &traceWriter{}
+	c := New(testToken, WithTrace(w))
+	start := time.Now().Add(-1500 * time.Millisecond)
+	c.TraceRun(start)
+	recs := w.records(t)
+	if len(recs) != 1 {
+		t.Fatalf("trace = %s, want one line", w)
+	}
+	if rec := recs[0]; rec.Type != TraceRun || !rec.Start.Equal(start) || rec.DoneUS == nil ||
+		*rec.DoneUS < 1_500_000 || *rec.DoneUS > 60_000_000 {
+		t.Fatalf("run line = %+v, want the start and about 1.5 s", rec)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal([]byte(w.String()), &fields); err != nil || len(fields) != 3 ||
+		!strings.HasSuffix(fmt.Sprint(fields["start"]), "Z") {
+		t.Fatalf("run line %s: fields %v (%v), want start in UTC, type and done_us only", w, fields, err)
+	}
+}
+
 // TestTraceTimeoutClass: a request that runs out the client's timeout is a
 // timeout, whether it was waiting for the headers or reading the body. With
 // the trace on, http.Client cancels a request both through its context and
