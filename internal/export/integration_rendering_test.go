@@ -1059,6 +1059,132 @@ func TestRunIntegrationFilesNotDownloaded(t *testing.T) {
 	assertWarnings(t, got.Logs)
 }
 
+// --- case 11c: an external image keeps its thumbnail, never its original -----
+
+// The url_private / url_private_download of an external file point at the
+// external service, not at Slack, so downloading them saves whatever page the
+// service returns as the original (Issue #246). An external image downloads
+// neither, with or without a thumbnail: a thumbnail is saved and shown like any
+// other, but opens nothing and notes that the original is not saved; the size
+// limit has no original to keep out; a thumbnail that fails reads as the
+// failure it is, with no original fetched in its place; and an image with no
+// thumbnail keeps its placeholder.
+func TestRunIntegrationExternalImageOriginalNotDownloaded(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			Type: "message",
+			TS:   "1700001170.000000",
+			User: "U01",
+			Text: "Images from an external service",
+			Files: []slack.File{
+				{
+					ID:                 "F-EXTIMG",
+					Name:               "diagram.png",
+					Mimetype:           "image/png",
+					Size:               500, // under the limit: only is_external keeps the original out
+					Mode:               "external",
+					IsExternal:         true,
+					URLPrivate:         "{{base}}/external/diagram.png",
+					URLPrivateDownload: "{{base}}/external/download/diagram.png",
+					Thumb480:           "{{base}}/files/diagram-thumb.png",
+				},
+				{
+					ID:         "F-EXTBIG",
+					Name:       "poster.png",
+					Mimetype:   "image/png",
+					Size:       2 << 20, // over the 1MB limit, yet there is no original to skip
+					Mode:       "external",
+					IsExternal: true,
+					URLPrivate: "{{base}}/external/poster.png",
+					Thumb360:   "{{base}}/files/poster-thumb.png",
+				},
+				{
+					ID:         "F-EXTFAIL",
+					Name:       "chart.png",
+					Mimetype:   "image/png",
+					Mode:       "external",
+					IsExternal: true,
+					URLPrivate: "{{base}}/external/chart.png",
+					Thumb360:   "{{base}}/files/chart-thumb.png", // not served: 404
+				},
+				{
+					ID:         "F-EXTNOTHUMB",
+					Name:       "photo.jpg",
+					Mimetype:   "image/jpeg",
+					Mode:       "external",
+					IsExternal: true,
+					URLPrivate: "{{base}}/external/photo.jpg",
+				},
+			},
+		},
+	}
+	// The external service answers with a sign-in page, as one might without
+	// its own credentials. None of these URLs may be requested.
+	externalPaths := []string{
+		"/external/diagram.png",
+		"/external/download/diagram.png",
+		"/external/poster.png",
+		"/external/chart.png",
+		"/external/photo.jpg",
+	}
+	for _, path := range externalPaths {
+		sc.Assets[path] = fakeAsset{ContentType: "text/html", Body: "<html>sign in</html>"}
+	}
+	sc.Assets["/files/diagram-thumb.png"] = pngAsset("diagram-thumb")
+	sc.Assets["/files/poster-thumb.png"] = pngAsset("poster-thumb")
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	for _, path := range externalPaths {
+		if n := got.Server.Count(path); n != 0 {
+			t.Fatalf("%s requested %d times, want 0", path, n)
+		}
+	}
+
+	// Each file records only its thumbnail, if it has one: no upload_original
+	// entry, saved or skipped by size.
+	entries := readManifestEntries(t, got.OutputDir)
+	var records []string
+	for _, e := range entries {
+		if e.FileID != "" {
+			records = append(records, e.FileID+" "+e.Kind+" "+e.Status)
+		}
+	}
+	wantRecords := []string{
+		"F-EXTIMG upload_thumb saved",
+		"F-EXTBIG upload_thumb saved",
+		"F-EXTFAIL upload_thumb failed",
+	}
+	if strings.Join(records, "\n") != strings.Join(wantRecords, "\n") {
+		t.Fatalf("manifest file entries = %q, want %q", records, wantRecords)
+	}
+
+	// The saved thumbnails show without a link to an original, over the note.
+	const externalNote = `<div class="asset-note">(外部サービス連携の画像のため original は保存対象外)</div>`
+	for _, f := range []struct{ id, name string }{{"F-EXTIMG", "diagram.png"}, {"F-EXTBIG", "poster.png"}} {
+		thumb, _ := findManifest(entries, func(e manifestEntryFull) bool { return e.FileID == f.id })
+		mustContain(t, body, `<img class="upload-thumb" src="`+thumb.LocalPath+`" alt="`+f.name+`">`+externalNote)
+	}
+	for _, row := range []string{
+		`<span class="file-link unavailable">📄 chart.png</span><div class="asset-note">画像の取得に失敗しました。</div>`,
+		`<span class="file-link unavailable">📄 photo.jpg</span><div class="asset-note">(外部サービス連携の画像のため保存対象外)</div>`,
+	} {
+		mustContain(t, body, row)
+	}
+	mustNotContain(t, body, "assets/uploads/originals/")
+	mustNotContain(t, body, "サイズ上限超過")
+	mustNotContain(t, body, "サイズオーバー")
+
+	assertWarnings(t, got.Logs, "WARN: asset failed (upload_thumb): unexpected HTTP 404")
+	const counts = "2 saved, 0 skipped by size limit, 1 failed"
+	assertAssetsPhaseLine(t, got.Logs, "WARN: assets: "+counts)
+	assertDoneSummary(t, got.Logs, "  assets: "+counts)
+}
+
 // --- case 12: thread replies over 1000 are truncated with a notice ----------
 
 func TestRunIntegrationRepliesTruncated(t *testing.T) {

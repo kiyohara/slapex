@@ -28,7 +28,7 @@
 | 0014 | decided | URL preview の取得元 | URL preview 画像は Slack API で取得できる unfurl / attachment 情報だけを使い、ツール自身による Open Graph fetch は行わない | [0014-url-preview-source.md](0014-url-preview-source.md) |
 | 0015 | decided | channel scope 設定 | 初期利用手順では public / private channel の scope を同じ設定手順で扱い、`channels:*` と `groups:*` をまとめて案内する | [0015-channel-scope-setup.md](0015-channel-scope-setup.md) |
 | 0016 | decided | asset ファイル名 | asset は種別ごとの分類ディレクトリに保存し、人間向け情報は manifest と HTML 表示に保持する。ファイル名の hash 対象は 0052 で URL hash → 内容 hash へ変更 | [0016-asset-filenames.md](0016-asset-filenames.md), [0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md) |
-| 0017 | decided | uploaded image assets | ユーザーアップロード画像は thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする | [0017-uploaded-image-assets.md](0017-uploaded-image-assets.md) |
+| 0017 | decided | uploaded image assets | ユーザーアップロード画像は thumbnail と original の両方を保存し、HTML では thumbnail を表示してクリックで original を開けるようにする。外部サービス連携の画像(`is_external`)は original を download せず、thumbnail だけを保存する(2026-09-27 追記) | [0017-uploaded-image-assets.md](0017-uploaded-image-assets.md) |
 | 0018 | decided | CLI help pages | Slack App セットアップ手順は GitHub 上で参照できる help ページに分離し、CLI エラーは短い診断と URL 案内に絞る | [0018-cli-help-pages.md](0018-cli-help-pages.md) |
 | 0019 | decided | document directory structure | 設計文書は `doc/design/`、利用者向け help は `doc/help/`、作業状況は root の `progress.md` に分ける | [0019-document-directory-structure.md](0019-document-directory-structure.md) |
 | 0020 | decided | 処理対象 workspace / channel の表示 | token から解決した workspace と確定した channel を実行中、完了時、生成 HTML に表示する。画面表示用 label と directory 用 label は役割を分ける | [0020-target-label-display.md](0020-target-label-display.md) |

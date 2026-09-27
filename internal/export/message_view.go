@@ -293,6 +293,12 @@ func (b *messageViewBuilder) addImage(v *render.MessageView, f *slack.File) {
 	// size shown for it (see oversizeFileNote).
 	oversize, origSize := false, int64(0)
 	switch {
+	case f.IsExternal:
+		// The original of an external file stays in the external service, and
+		// its url_private / url_private_download point there rather than at
+		// Slack: downloading them would save whatever page the service returns
+		// (Issue #246). Only the thumbnail is kept, so it opens nothing.
+		img.Note = "(外部サービス連携の画像のため original は保存対象外)"
 	case b.maxAttachmentBytes > 0 && f.Size > b.maxAttachmentBytes:
 		b.assets.SkipTooLarge(output.KindUploadOriginal, f.DownloadURL(), meta)
 		oversize, origSize = true, f.Size
