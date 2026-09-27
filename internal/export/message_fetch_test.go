@@ -29,7 +29,8 @@ func TestFetchThreadHoldsExcludedRepliesByTS(t *testing.T) {
 	}
 	fake := newFakeSlackServer(t, &sc)
 	t.Cleanup(fake.Close)
-	client := slack.New(integrationTestToken, slack.WithBaseURL(fake.URL()+"/api/"))
+	client := slack.New(integrationTestToken, slack.WithBaseURL(fake.URL()+"/api/"),
+		slack.WithTransport(fake.Transport()))
 	filter := newMessageFilter([]string{"shushing_face"}, nil)
 
 	thread, included, err := fetchThread(context.Background(), client, "C123", threadTS, filter)

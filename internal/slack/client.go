@@ -73,6 +73,17 @@ func WithSleeper(sleep func(context.Context, time.Duration) error) Option {
 	}
 }
 
+// WithTransport sends requests through rt instead of http.DefaultTransport,
+// keeping the client's timeout. Tests pass their fake server's own transport:
+// every httptest.Server.Close closes the idle connections of
+// http.DefaultTransport, which can break a response a client of a parallel
+// test is about to receive (Issue #254).
+func WithTransport(rt http.RoundTripper) Option {
+	return func(c *Client) {
+		c.httpClient.Transport = rt
+	}
+}
+
 // New creates a Slack Web API client for token.
 func New(token string, opts ...Option) *Client {
 	c := &Client{

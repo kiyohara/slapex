@@ -74,6 +74,15 @@ func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
 
 func (f *fakeSlackServer) URL() string { return f.srv.URL }
 
+// Transport is the server's own transport, for the Slack client under test
+// (slack.WithTransport). Every httptest.Server.Close closes the idle
+// connections of http.DefaultTransport, and net/http returns a connection to
+// the idle pool just before it hands over a response without a body (a 429 or
+// 5xx fault here). A parallel test closing its server in between would turn a
+// 429 into a broken connection, retried with backoff instead of its
+// Retry-After (Issue #254, #192).
+func (f *fakeSlackServer) Transport() http.RoundTripper { return f.srv.Client().Transport }
+
 func (f *fakeSlackServer) Close() {
 	f.srv.Close()
 }
