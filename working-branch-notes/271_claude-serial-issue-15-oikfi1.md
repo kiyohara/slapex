@@ -56,13 +56,13 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 
 - retry の方針を変える箇所: 2 → 1(`withRetry`)。
 - 重複していた文字列と呼び出し: `giving up after %d retries`、`rate limited on ...`、`rate limited (429)`、`server error: HTTP %d`、`unexpected HTTP %d`、`backoffWait` の呼び出し、`retryAfter` の呼び出し、`skipBackoff = true` がそれぞれ 2 → 1。retry の通知は 2(`retrying %s` と `retrying download`)→ 1。
-- 行数(`internal/slack/client.go`、doc comment を除く): `call` 31 → 39、`withRetry` 51 → 49、`downloadRetry` 51 → 22。3 関数で 133 → 110(-23)。共通化の commit の前後で、doc comment を含むファイル全体は 325 → 313 行(-12)。
-- 追加の型と関数: 共通化の commit では 0。申し送り 2 の commit で `withoutURL` を足した。
+- 行数(`internal/slack/client.go`、doc comment を除く): 共通化の commit(`9c7d022`)の前後で、`call` 31 → 39、`withRetry` 51 → 49、`downloadRetry` 51 → 22。3 関数で 133 → 110(-23)。doc comment を含むファイル全体は 325 → 313 行(-12)。head では、申し送り 2(`3c5dc24`)が download の `send` に `withoutURL` の分岐を足したため、`downloadRetry` は 26 行、3 関数は計 114 行(main の 133 から -19)になる。ファイル全体は main 314 行、head 330 行である。
+- 追加の型と関数: 共通化の commit では 0。申し送り 1 の commit(`e5e101b`)で `WithTransport`、申し送り 2 の commit(`3c5dc24`)で `withoutURL` を足した。
 
 ### 申し送り 2: 接続の失敗で URL を出さない(`3c5dc24`)
 
 - `http.Client.Do` の error は `*url.Error` で、文字列は `Get "<URL>": <原因>` になる。download が接続の失敗(拒否、切断、DNS、TLS、timeout)で止まると、この文字列が retry の通知と取得失敗の警告行に出ていた。upload の URL は Slack private file URL で、`cli-interface.md` の出力制御に反する。変更前のコードで、fake server が接続を切ると両方の行に URL の path が出ることを確かめた。
-- `withoutURL` で `*url.Error` を `Get: <原因>` の形にして URL を落とした。原因の error は wrap したまま残す(`errors.Is` / `errors.As` は従来どおり使える)。
+- `withoutURL` で `*url.Error` を `Get: <原因>` の形にして URL を落とした。原因の error は wrap したまま残す(原因に対する `errors.Is` / `errors.As` は従来どおり使える)。`*url.Error` 自体は error の連鎖から外れるが、それに依存する呼び出し側は無い(production code で `*url.Error` を見るのは `withoutURL` だけである)。
   - URL から request を作れない場合の parse の error も同じ形(`parse: <原因>`)にした。申し送りは接続の失敗だけを挙げているが、同じ URL が同じ警告行に出るため合わせた。
   - private file URL かどうかで分けず、download の error からは常に URL を落とす。公開 asset の URL も出なくなるが、判定を誤っても漏れない安全側を取った。どの asset が失敗したかは、従来どおり HTML の表示(ファイル名の下の「取得に失敗しました。」など)と、`--keep-cache` で残した manifest の `source_url` で分かる。
   - manifest の `error` 欄の文字列も同じく変わる。`error` は失敗理由の自由記述で(`cache.md`)、`--reuse-cache` は読まない。`source_url` は従来どおり URL を持つ。
@@ -148,3 +148,4 @@ Issue の背景は main `d5aa977` 時点の記述である。main `0a83bf7` で�
 
 - 2026-09-27: #192 に着手。申し送り 1(`e5e101b`)、characterization test(`5e6e3ca`)、共通化(`9c7d022`)、申し送り 2(`3c5dc24`)、検証。
 - 2026-09-27 P1: draft PR #271 を作成し、note を採番した(`0add570`)。`progress.md` の RF-04 の PR 欄を反映した。検証は「検証」のとおりすべて ok。出力生成系 3 skill は呼ばなかった(「出力生成系 skill」)。`number-working-branch-note` の報告から引き上げた項目: 書き換えた行は、note の状況の stale 表現 1 行(`PR 未作成。` → `PR #271 作成済み。`)、note の完了タスク行 1 行(「draft PR を作成し、note を採番する。」に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `271_`)。title は書き換えていない。触らずに残した行は note、PR description、title とも無し。ほかに note の `PR:` 欄に `#271` を記入した。情報統制チェックで直した箇所は無い。PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-27 P2 / P3: review cycle `claude-code-998999c-20260927115106`、Reviewed head `998999c`。指摘 1 件(inline 1 件、top-level 0 件。`[nits]` 1 件で、`[must]`、`[ask]`、`[imo]`、`[fyi]`、prefix 無しは 0)。merge 前に直す指摘(`[must]`)は無い。1 件以上のため P4 に進んだ。依頼した観点(完了条件、`withRetry` の契約と attempt closure 案との比較、download の request の再利用と認証情報の送信先、申し送り 2 件、足した test、出力生成系 skill、設計文書)は、「費用」の数えた時点と `WithTransport` の記載漏れを除いて妥当とされた。subagent は scratch の copy で、申し送り 1 の競合の注入(main 10 回失敗、head 10 回成功)、申し送り 2 の test の変更前の失敗、独自の変異 8 種、gensample の再生成、繰り返し実行(`-race -count=30 -cpu 1,2,4` など)を再現した。指摘にしなかった点として、`withoutURL` を通すと `*url.Error` が error の連鎖から外れるため、note の「`errors.As` は従来どおり使える」は厳密には正しくないと報告された(依存する呼び出し側は無い)。完了要約の `Model` は、上位の指示が review のコメントを対象から外すと確認できなかったため `unknown` とされた。`gh` への write の fallback、停止、訂正できなかった誤りはなし(head の確認で read だけの `gh api` を 1 回実行し、MCP で取り直したと報告された)。
