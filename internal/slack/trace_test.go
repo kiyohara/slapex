@@ -382,6 +382,51 @@ func TestTraceRecordsUnlabeledRequest(t *testing.T) {
 	}
 }
 
+// TestTraceTimeoutClass: a request that runs out the client's timeout is a
+// timeout, whether it was waiting for the headers or reading the body. With
+// the trace on, http.Client cancels a request both through its context and
+// through Request.Cancel (it does not know traceTransport), and the transport
+// reports whichever it notices first.
+func TestTraceTimeoutClass(t *testing.T) {
+	t.Parallel()
+
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/stalled-body" {
+			w.Header().Set("Content-Length", "10")
+			w.WriteHeader(http.StatusOK)
+			w.(http.Flusher).Flush()
+		}
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	defer srv.Close()
+	defer close(release)
+
+	w := &traceWriter{}
+	c := New(testToken, WithSleeper(shortSleep), WithTransport(srv.Client().Transport), WithTrace(w))
+	c.httpClient.Timeout = 20 * time.Millisecond
+	// Each download waiting for the headers makes 6 attempts; a download
+	// whose body stalls makes 1.
+	for _, path := range []string{"/stalled", "/stalled", "/stalled", "/stalled-body", "/stalled-body", "/stalled-body",
+		"/stalled-body", "/stalled-body", "/stalled-body", "/stalled-body", "/stalled-body", "/stalled-body"} {
+		if _, _, err := c.Download(context.Background(), srv.URL+path, 0, io.Discard); err == nil {
+			t.Fatalf("Download(%s) succeeded, want a timeout", path)
+		}
+	}
+	recs := w.records(t)
+	if len(recs) != 3*(maxRetries+1)+9 {
+		t.Fatalf("trace has %d lines, want %d", len(recs), 3*(maxRetries+1)+9)
+	}
+	for i, rec := range recs {
+		if rec.Error != "timeout" {
+			t.Errorf("line %d (status %d) error = %q, want timeout", i, rec.Status, rec.Error)
+		}
+	}
+}
+
 func TestTraceRecordTimes(t *testing.T) {
 	t.Parallel()
 

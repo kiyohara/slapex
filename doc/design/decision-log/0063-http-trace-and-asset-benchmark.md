@@ -20,7 +20,7 @@ trace はユーザーが実 workspace の export で取り、集計を Issue に
 
 ## 検討内容
 
-- 取り付け位置: (A) は #192 で共通化した `withRetry` に計測の分岐を持ち込むうえ、`http.Client` の中で起きる redirect の各段を拾えない。(B) は `withRetry` を変えずに、transport が受け取る request ごと(試行と redirect の各段)に行を作れる。`net/http/httptrace` の hook は request の context に載せる必要があるが、transport が request ごとに載せれば、同じ request を再送する `Download` の試行も別の行になる。redirect の段は `Request.Response` で見分けられる。
+- 取り付け位置: (A) は #192 で共通化した `withRetry` に計測の分岐を持ち込むうえ、`http.Client` の中で起きる redirect の各段を拾えない。(B) は `withRetry` を変えずに、transport が受け取る request ごと(試行と redirect の各段)に行を作れる。`net/http/httptrace` の hook は request の context に載せる必要があるが、transport が request ごとに載せれば、同じ request を再送する `Download` の試行も別の行になる。redirect の段は `Request.Response` で見分けられる。ただし (B) では transport が `http.Client` の知らない型になるため、`http.Client` は timeout で request を止めるのに context に加えて `Request.Cancel` も使う。止める時点は同じだが、transport が返す error は先に気付いたほうになり、timeout の error の文が trace の無い実行と変わり得る(PR #281 の review で確認)。transport を包まずに hook と redirect の判定を context と `CheckRedirect` に移せば避けられるが、redirect の段の記録が粗くなり、既定の redirect の方針を複製することになる。
 - 待機の帰属: 待機は request と request の間で起きる。最初の request の前の待機を pacing、失敗した request の後の待機(backoff、Retry-After)をその request の retry 待機とし、行は次の request が始まるときか、呼び出しが終わるときに書く。Retry-After の待機は試行の上限に達したときも行う(#192)ため、最後の行に残る。待機は要求値ではなく実測で記録する。sleeper を差し替えた実行(demo、benchmark の pacing なし)では、実際に待っていないためである。
 - URL の識別: (A) では同じ URL への再送と別の URL を見分けられない。(B) は既知の URL の hash と照合できてしまう。(C) は同じ trace の中の同一性だけを残し、鍵を記録しないため照合できない。
 - host: 集計(origin の種別、origin ごとの件数、HTTP version)に要るため記録する。trace ファイルは第三者 host の名前を含むので、共有には host 名を出さない集計 tool の出力を使う。
@@ -31,7 +31,8 @@ trace はユーザーが実 workspace の export で取り、集計を Issue に
 
 - trace は `internal/slack` の `WithTrace(io.Writer)` で有効にする。client の transport と sleeper を包み、HTTP request 1 件ごとに JSON Lines の 1 行(`slack.TraceRecord`)を書く。retry の各試行と redirect の各段が 1 行ずつになる。`withRetry` と pacing は変えない。
 - asset の kind は `output.Assets.Save` が `slack.WithAssetKind` で context に載せる。
-- URL(path と query)、header(Authorization を含む)、token、body、error の本文は記録しない。URL は、client ごとの乱数を鍵にした HMAC-SHA256 の先頭 8 bytes(16 桁の hex)で識別する。error は種類(`canceled` / `timeout` / `dns` / `network`)だけを記録する。
+- URL(path と query)、header(Authorization を含む)、token、body、error の本文は記録しない。URL は、client ごとの乱数を鍵にした HMAC-SHA256 の先頭 8 bytes(16 桁の hex)で識別する。error は種類(`canceled` / `timeout` / `dns` / `network`)だけを記録する。request の deadline を過ぎた後の失敗は、error の型によらず `timeout` とする。
+- timeout の error の文が trace の有無で変わり得ることは受け入れ、`cli-interface.md` に書く。trace は計測のための内部用途で、止める時点と retry は変わらないためである。
 - CLI は、内部用途の環境変数 `SLAPEX_HTTP_TRACE` が空白以外のときだけ trace を有効にし、その path に書く。仕様(権限、上書き、失敗時の exit code と警告、`--demo` の扱い)は `cli-interface.md` の「環境変数」を正本とする。
 - 集計は `tools/tracereport`、benchmark は `tools/assetbench` に置く。benchmark は in-process の fake origin(`httptest` の TLS、HTTP/2 と HTTP/1.1。origin ごとに handshake と最初の byte の遅延、帯域、`MAX_CONCURRENT_STREAMS` を設定できる)に対し、slapex の client と `output.Assets` で取得して、現行(直列、pacing あり)と pacing なしの直列を比べる。並列方式は PF-03(#275)が足す。
 - 新しい依存は足さない(0033)。
@@ -45,7 +46,7 @@ trace はユーザーが実 workspace の export で取り、集計を Issue に
 ## 影響
 
 - `cli-interface.md` の「環境変数」に `SLAPEX_HTTP_TRACE` を追記した。`architecture.md` の `internal/slack` の責務と `tools/` の入口に追記した。
-- trace が無効のときの出力(stdout、stderr、HTML、assets、cache)は変わらない。有効時と無効時の export の出力が同じであることも、統合 test で確かめる。
+- trace が無効のときの出力(stdout、stderr、HTML、assets、cache)は変わらない。有効時と無効時の export の出力が同じであることも、統合 test で確かめる。例外は、HTTP client の timeout で失敗した request の error の文である(「決定」)。
 - 実 workspace の計測は merge 後にユーザーが手元で行い、`tools/tracereport` の出力を #272 にコメントする。PF-03 の上限値と PF-05 の判断に使う。
 - 並列の取得(PF-03 以降)では request の時間が重なるため、集計の割合の合計が 100% を超え得る。
 

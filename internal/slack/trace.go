@@ -70,7 +70,8 @@ type TraceRecord struct {
 	// PacingWaitUS is the pacing wait before the first attempt.
 	PacingWaitUS int64 `json:"pacing_wait_us,omitempty"`
 	// Proto and Status come from the response. Error classes a failure of the
-	// request or of reading its body (errorClass); it holds no error text.
+	// request or of reading its body (errorClass, or timeout once the
+	// request's deadline has passed); it holds no error text.
 	Proto          string `json:"proto,omitempty"`
 	Status         int    `json:"status,omitempty"`
 	Error          string `json:"error,omitempty"`
@@ -282,6 +283,7 @@ func (r *requestTrace) start(req *http.Request) *traceLine {
 	r.last = &traceLine{rec: rec}
 	r.last.begin = time.Now()
 	r.last.rec.Start = r.last.begin.UTC()
+	r.last.deadline, _ = req.Context().Deadline()
 	return r.last
 }
 
@@ -314,6 +316,7 @@ func (r *requestTrace) end() {
 type traceLine struct {
 	mu        sync.Mutex
 	begin     time.Time
+	deadline  time.Time // the request's, from the client's timeout or the caller
 	rec       TraceRecord
 	retryWait time.Duration
 	finished  bool
@@ -370,6 +373,11 @@ func (l *traceLine) responded(resp *http.Response) {
 }
 
 // failed records a failure of the request or of a body read, which ends it.
+// A failure once the request's deadline has passed is a timeout, whatever the
+// error says: http.Client stops a request it sends through a transport it does
+// not know, as traceTransport is, both by its context and by Request.Cancel,
+// and the transport reports whichever it notices first ("net/http: request
+// canceled" for the latter).
 func (l *traceLine) failed(err error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -377,6 +385,9 @@ func (l *traceLine) failed(err error) {
 		return
 	}
 	l.rec.Error = errorClass(err)
+	if !l.deadline.IsZero() && !time.Now().Before(l.deadline) {
+		l.rec.Error = "timeout"
+	}
 	l.markLocked(&l.rec.DoneUS)
 }
 
@@ -428,7 +439,10 @@ func errorClass(err error) string {
 }
 
 // traceTransport records each request it sends in the requestTrace of the
-// request's context.
+// request's context. http.Client does not know this transport, so it stops a
+// request at its Timeout by Request.Cancel as well as by the context: the
+// request stops at the same time, but the error text can differ from a run
+// without the trace (cli-interface.md).
 type traceTransport struct {
 	t    *tracer
 	next http.RoundTripper
