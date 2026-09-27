@@ -18,7 +18,7 @@ Issue #273(所要時間の最小化 #272 の PF-01)。asset の download と Sla
 ## 現在の状況
 
 - 依存(#192 / PR #271)は merge 済み。main `2666ff1` から作業した。
-- 実装と Issue の「検証」を終え、draft PR #281 を作成した。review cycle(P2 以降)を進める。
+- 実装と Issue の「検証」を終え、draft PR #281 を作成した。review cycle の P4(指摘への対応)を進めている。
 
 ## 決定事項
 
@@ -33,6 +33,8 @@ Issue #273(所要時間の最小化 #272 の PF-01)。asset の download と Sla
 - 集計: `tools/tracereport` は origin を Web API、files.slack.com、Slack CDN(`slack-edge.com` と `slack-imgs.com` の配下)、gravatar、その他に分け、件数、bytes、時間の内訳と実行全体に対する割合を出す。host 名は出さず、origin の数と、origin あたりの件数の分布(`n ×k`)と、HTTP version の分布だけを出す。Web API は method ごと、download は asset の kind ごとの内訳も出す。
 - benchmark: `tools/assetbench` は workload(asset の件数・サイズ・origin、origin ごとの handshake と最初の byte の遅延、帯域、`MAX_CONCURRENT_STREAMS`)を preset(`recent`、`small`)か JSON で受け取る。origin は `httptest` の TLS server で、HTTP/2 と HTTP/1.1 を origin ごとに選べる。取得は slapex の client(`slack.WithTransport`、`slack.WithSleeper`)と `output.Assets` で行う。
 - 統合 test の比較: trace の有無で export の出力を比べる test は、`.cache/assets_manifest.json` の entry を並べ替えてから比べる。user の avatar は map の順に保存され(`newMessageViewBuilder`)、manifest の entry の順が実行ごとに変わるためである(既存の挙動。下記「follow-up 候補」)。
+- timeout の分類(P2 の `[must]`): trace を有効にすると、`http.Client` は知らない transport(`traceTransport`)に送る request を、timeout で context に加えて `Request.Cancel` でも止める。transport は先に気付いたほうの error を返すため、`net/http: request canceled` が混ざる。行に request の deadline を持たせ、deadline を過ぎた後の失敗は error の型によらず `timeout` とした。timeout の error の文(retry の通知、asset の警告、manifest の `error`)が trace の有無で変わり得ることは受け入れ、`cli-interface.md` と decision log 0063 に書いた。止める時点と retry は変わらない。transport を包まない案(hook を context に載せ、redirect の段を `CheckRedirect` で区切る)は、redirect の段の記録が粗くなり、既定の redirect の方針を複製することになるため採らなかった。
+- trace ファイルの権限(P2 の `[nits]`): 既存のファイルは中身を置き換え、権限は変えない(`os.WriteFile` と同じ)。`Chmod` で `0600` に揃える案は、device(`/dev/stderr` など)を指定されたときに端末の権限まで変え得るため採らなかった。
 
 ### follow-up 候補
 
@@ -91,3 +93,4 @@ Workload "recent": 56 assets (8.5 MB) from 25 origins (files.slack.com 4 on 1, S
 - 2026-09-27: 着手。Issue #273、#272、#275、#277、PR #271 の引き継ぎ(`/mnt/project-files` の報告)を読んだ。
 - 2026-09-27: trace、`SLAPEX_HTTP_TRACE`、`tools/tracereport`、`tools/assetbench`、文書(decision log 0063、`cli-interface.md`、`architecture.md`、`progress.md`)を実装した。Issue の「検証」を Compose で実行し、benchmark を計測した。
 - 2026-09-27 P1: draft PR #281 を作成し、note を採番した(`dd8c98c`)。`progress.md` の PF-01 の PR 欄を反映した。検証は「検証」のとおりすべて ok。出力生成系 3 skill は呼ばなかった(「検証」の「出力生成系 skill」)。`number-working-branch-note` の報告から引き上げた項目: 書き換えた行は、PR description の note のファイル名参照 1 行(`draft_` → `281_`)だけで、note の stale 表現と完了タスク行、title は書き換えていない。触らずに残した行は、note の「次にやること」の「draft PR を作成し、note を採番する。`progress.md` の PR 欄を反映する。」(複合行。`progress.md` の反映は同 skill の範囲外)と、「現在の状況」の「実装と Issue の「検証」を終え、draft PR を作る段階である。」(定型に当てはまらない)の 2 行。PR description と title には無い。どちらの行も、この P1 の記録で orchestrator が更新した。ほかに note の `PR:` 欄に `#281` を記入した。情報統制チェックで直した箇所は無い。PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-27 P2 / P3: review cycle `claude-code-37d0fdd-20260927145527`、Reviewed head `37d0fdd`。指摘 2 件(inline 2 件、top-level 0 件。`[must]` 1 件、`[nits]` 1 件で、`[ask]`、`[imo]`、`[fyi]`、prefix 無しは 0)。merge 前に直す指摘(`[must]`)が 1 件あった(trace を有効にすると timeout の約半数が `network` と記録され、timeout の error の文も変わる)。`[nits]` は既存の trace ファイルの権限。1 件以上のため P4 に進んだ。依頼した 8 観点は、この 2 件を除いて妥当とされた。subagent は PR head の複製(作業ツリーの外)で、timeout、redirect と Authorization、最後の試行の Retry-After、cancel の実験 test、`gensample -serve` への E2E、固定時刻の sample の再生成、`assetbench -runs 1`(PR の表と一致)を実行した。完了要約の `Model` は、上位の指示が review のコメントを対象から外すと確認できなかったため `unknown` とされた。`gh` への fallback、停止、訂正できなかった誤りはなし。
