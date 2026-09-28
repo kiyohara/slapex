@@ -15,7 +15,8 @@ Issue #289。設計文書と decision log 0025 は、message の file object に
 - 依存は無い(Issue の「依存・順序」)。main `b0a42c9`(PR #288 の merge)から作業した。
 - 方針は、推奨を添えて thread のカードで伺い、ユーザーが A(仕様から外す)を選んだ(2026-09-28 22:55Z。「決定事項」)。
 - 設計文書と decision log を直し、Issue の「検証」を実行した(「検証」)。
-- 次は PR の作成(draft)と採番。
+- PR #290 を draft で作成し、note を採番した。`progress.md` の索引に #289 は無いため更新しない。
+- 次は CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -90,3 +91,7 @@ Go のコードを変えていないため、Docker Compose での `go vet` / `g
 
 - 2026-09-28: Issue #289、project の memory と前 2 件の報告(issue-245-pr-287、issue-210-pr-288)、関連する設計文書、decision log、実装を読んだ。依存は無い。Slack の文書(Slack Connect、file object、`files.info`、`files:read`)を確かめた。
 - 2026-09-28: 方針を thread のカードで伺い(推奨は A)、ユーザーが A を選んだ(22:55Z)。A で設計文書と decision log を直した。Issue の「検証」を実行した(「検証」)。
+- 2026-09-28: PR #290 を draft で作成し、note を採番した(`f5fef32`)。`progress.md` の索引に #289 は無いため更新しない(P1)。検証は「検証」のとおり(`git diff --check` は出力なし、変更は設計文書、decision log、note だけ)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#290`)、note の「次にやること」の「PR を draft で作成し、note を採番する。」(完了タスク行。行末に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `290_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)。この行は採番の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+  - PR description の read-back に `gh api`(read)を 1 回使った。本来は組み込みの `pull_request_read` を使う操作で、以後は MCP tool で行う。write はすべて組み込みの GitHub MCP tool で行った。
