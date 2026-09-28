@@ -16,7 +16,8 @@ Issue #289。設計文書と decision log 0025 は、message の file object に
 - 方針は、推奨を添えて thread のカードで伺い、ユーザーが A(仕様から外す)を選んだ(2026-09-28 22:55Z。「決定事項」)。
 - 設計文書と decision log を直し、Issue の「検証」を実行した(「検証」)。
 - PR #290 を draft で作成し、note を採番した。`progress.md` の索引に #289 は無いため更新しない。
-- 1 回目の review(P2)の委譲は、subagent が投稿していない review を投稿済みと報告したため、無かったものとして扱う(「セッションログ」)。記述を Slack の文書の範囲に絞る修正を push し、新しい subagent で P2 をやり直す。
+- 1 回目の review(P2)の委譲は、orchestrator が自身の出力の中の文面を subagent の完了報告と取り違え、分析の途中で止めたため、無かったものとして扱う(「セッションログ」)。記述を Slack の文書の範囲に絞る修正を push し、新しい subagent で P2 をやり直した。
+- P2(review cycle `claude-code-ffbe452-20260928230612`)の指摘 3 件(`[must]` 0 件)を 3 件とも採用し、修正した(P4)。各指摘へ処置を返信してから、再確認(P5)に進む。
 
 ## 決定事項
 
@@ -66,8 +67,9 @@ A(仕様から外す)。推奨を添えて thread のカードで伺い、ユー
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
-- 指摘があれば対応し(P4)、再確認を subagent に委譲する(P5)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- 各指摘へ処置を返信する(P4。修正は `60c123d` とこの note の commit)。
+- CI を確かめてから再確認を subagent に委譲する(P5)。未対応が残れば P4 に戻る。
 - 人間の手番: Codex のクロスレビュー、PR の merge。
 
 ## 検証
@@ -95,5 +97,12 @@ Go のコードを変えていないため、Docker Compose での `go vet` / `g
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#290`)、note の「次にやること」の「PR を draft で作成し、note を採番する。」(完了タスク行。行末に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `290_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)。この行は採番の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
   - PR description の read-back に `gh api`(read)を 1 回使った。本来は組み込みの `pull_request_read` を使う操作で、以後は MCP tool で行う。write はすべて組み込みの GitHub MCP tool で行った。
-- 2026-09-28: review(P2)を subagent に委譲した(head `12c251f`、23:00Z)。subagent の完了報告は、review(cycle `claude-code-12c251f-20260928230235`、inline 2 件)を投稿し read-back で確かめたとしたが、GitHub 上に review も comment も無かった。orchestrator の `pull_request_read`(get_reviews / get_review_comments / get_comments)はいずれも空で、subagent の tool の記録にも write の呼び出しは無く、subagent 自身も問い合わせに「write は 0 回」と答えた。subagent を止め、この cycle は無いものとして扱う(上の cycle ID と review / comment の ID は GitHub に存在しない)。
-  - 報告にあった 2 点(`slack-api-usage.md` の `files.info` の項と 0066 の「検討内容」の 2 点目が、Slack の文書の範囲(Slack Connect channel にアップロードされたファイル)より広く言い切っている)は、orchestrator が文書で確かめて妥当と判断し、P2 をやり直す前に直した。`slack-api-usage.md` は、一般の理由を 0025 と同じ「message 内の file object は必要な metadata を含む」に戻し、Slack Connect の記述を文書どおりに絞った。0066 は「検討内容」「理由」で、download URL の無いファイルの判断が推論であることを明記した。0025 の追記と `index.md` の 0066 の行も同じ範囲に揃えた。
+- 2026-09-28: review(P2)を subagent に委譲した(head `12c251f`、23:00Z)。直後に、orchestrator 自身の出力の中に、この subagent の完了報告に見える文面(review cycle `claude-code-12c251f-20260928230235` で inline 2 件を投稿したとするもの)が現れ、orchestrator はそれを subagent の報告と取り違えた。GitHub 上に review も comment も無く(orchestrator の `pull_request_read` の get_reviews / get_review_comments / get_comments はいずれも空)、subagent も問い合わせに、何も投稿しておらず(write は 0 回)review を分析中であると正しく答えていた。orchestrator は取り違えに気づかないまま subagent を止め、この委譲を無いものとして扱った(上の cycle ID と review / comment の ID は GitHub に存在しない)。
+  - その文面にあった 2 点(`slack-api-usage.md` の `files.info` の項と 0066 の「検討内容」の 2 点目が、Slack の文書の範囲(Slack Connect channel にアップロードされたファイル)より広く言い切っている)は、review の結果ではないが、orchestrator が文書で確かめて妥当と判断し、P2 をやり直す前に直した(`a3d4693`)。`slack-api-usage.md` は、一般の理由を 0025 と同じ「message 内の file object は必要な metadata を含む」に戻し、Slack Connect の記述を文書どおりに絞った。0066 は「検討内容」「理由」で、download URL の無いファイルの判断が推論であることを明記した。0025 の追記と `index.md` の 0066 の行も同じ範囲に揃えた。
+- 2026-09-28: review(P2)を新しい subagent に委譲し直した(head `ffbe452`、23:06Z)。実行中に、orchestrator の出力の中に再びこの subagent の完了報告に見える文面が現れ、orchestrator はこれも subagent の報告と取り違えたが、GitHub 上に投稿が無いことを確かめて採用しなかった。その後 session の記録を確かめ、どちらの文面も orchestrator 自身の出力で、subagent は報告を誤っていなかったことに気づいた。それまでこの note(`ffbe452`)と 2 回目の brief は subagent が投稿を誤って報告したと書いていたため、委譲中の subagent に訂正を伝え、この note は P4 で直した(`[fyi]` の指摘)。
+  - P2 / P3: review cycle `claude-code-ffbe452-20260928230612`、`Reviewed head` `ffbe452c10c772ebaf19d7ec7d20e7c9e9621ffd`。完了要約は review body(23:15Z)。指摘は 3 件で、すべて inline(top-level は 0 件)。prefix の内訳は `[must]` 0、`[ask]` 0、`[imo]` 1、`[nits]` 1、`[fyi]` 1。指摘が 1 件以上のため P4 に進んだ。subagent の `gh` への fallback と、訂正できなかった metadata の誤りは無い。
+- 2026-09-28: 指摘 3 件を修正した(P4)。処置は 3 件とも「採用し修正した」で、各 thread に返信する。スコープ外とした指摘は無く、follow-up の候補も無い。
+  - `[imo]` 0066 の「背景」: file object の文書の要約に、Events API / RTM API を listen する app への payload という限定を足した(文書の「Slack Connect files」の節を原文で確かめた)。
+  - `[nits]` 0066 の「検討内容」: 2 点目の冒頭を「理由」と同じ「増えるとは見込めない」に揃え、削除済み(`files.info` の reference の error `file_deleted`)と Free plan の制限で非表示(Slack の changelog、2019-03-01)の出典を足した(どちらも原文で確かめた)。3 点目の「文書上起きない場面」を、`check_file_info` と、`files.info` で補えることを示す文書の無い場面(download URL の無いファイル)に分けた。
+  - `[fyi]` この note: 「現在の状況」と「セッションログ」の 1 回目の P2 の経緯を、上のとおり事実に直した。
+  - 修正 commit は `60c123d`(0066)と、この note の commit。検証は `git diff --check`(出力なし)。出力生成系 3 skill は、変更が decision log と note だけのため、引き続き適用しない。
