@@ -71,6 +71,8 @@ token type による主な違い:
 ## user 解決
 
 - 取得済みメッセージの投稿者、`channel_join` の inviter、mention に現れる unique な user ID を集め、`users.info` で表示名を解決する。
+- 投稿者と inviter は、HTML でその user の表示名や avatar を使う行からだけ集める(表示の分類は `html-rendering.md` の「メッセージ種別(subtype)の表示」)。通常表示の message は投稿者を集める。tombstone と本文の無い未知 subtype の行は user を表示しないため、投稿者も inviter も集めない。
+- system 行は avatar を表示しないため、`@表示名` の prefix を補完し得る行(`channel_topic` / `channel_purpose` / `channel_name` で、本文が投稿者の mention で始まらないもの)の投稿者と、`(invited by @表示名)` を補足し得る `channel_join` の行(inviter が参加した user と異なり、本文に inviter mention が無いもの)の inviter だけを集める。本文が `@表示名` で始まるかは表示名を解決するまで分からないため、その行の投稿者も集める。
 - mention は、HTML で mrkdwn として変換するテキストだけから集める。通常表示の message では本文と legacy attachment の本文テキスト、system 行では本文が対象である(表示の分類は `html-rendering.md` の「メッセージ種別(subtype)の表示」)。表示しないテキスト(system 行が持つ attachment、tombstone の本文など)と、title など mrkdwn を通さない field からは集めない。
 - 集める mention は label の無いもの(`<@U…>`)に限る。label 付きの mention(`<@U…|label>`)は label が空でも表示名を解決せず、label(空なら user ID)を表示する(`html-rendering.md` の「本文の変換(mrkdwn → HTML)」)ため、集めない。同じ user が投稿者や label の無い mention としても現れる場合は、そちらで集める。
 - 解決結果は `.cache/slack_api_cache.json` に蓄積し、同一実行内で再問い合わせしない。

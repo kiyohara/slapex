@@ -85,16 +85,21 @@ func oldestMessageTS(messages []slack.Message) string {
 var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)>`)
 
 // collectUserIDs returns the unique user IDs to resolve through users.info:
-// posters, channel_join inviters and the label-less mentions (reMention) in
-// every text the view builder passes to render.Mrkdwn. Mrkdwn resolves such a
-// mention through messageViewBuilder.UserName, which shows the raw user ID for
-// a user not collected here, so the scanned texts must match those Mrkdwn call
-// sites. They depend on how messageView shows the message, so the scan switches
-// on the same messageKindOf: a message shown in full renders its body
-// (messageView) and each legacy attachment's text (addUnfurls), and a system
-// row only its body (systemBody). Texts that are not rendered, such as the
-// attachments of a pinned_item row or a tombstone's body, are not scanned, nor
-// are fields rendered as plain text, such as the attachment title.
+// the posters and channel_join inviters messageView shows, and the label-less
+// mentions (reMention) in every text the view builder passes to
+// render.Mrkdwn. What messageView shows depends on how it shows the message,
+// so collectUserIDs switches on the same messageKindOf. A message shown in
+// full shows its poster's name and avatar, and renders its body (messageView)
+// and each legacy attachment's text (addUnfurls). A system row shows no
+// avatar: it renders only its body (systemBody) and names its poster or
+// inviter only where systemActorPrefixCandidate or
+// channelJoinInviterSuffixCandidate says so. A tombstone or a bodiless unknown
+// subtype shows no user and renders no text. Mrkdwn resolves a mention through
+// messageViewBuilder.UserName, which shows the raw user ID for a user not
+// collected here, so the scanned texts must match those Mrkdwn call sites.
+// Texts that are not rendered, such as the attachments of a pinned_item row or
+// a tombstone's body, are not scanned, nor are fields rendered as plain text,
+// such as the attachment title.
 func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message) []string {
 	seen := map[string]bool{}
 	addMentions := func(text string) {
@@ -103,19 +108,22 @@ func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message
 		}
 	}
 	add := func(m *slack.Message) {
-		if m.User != "" {
-			seen[m.User] = true
-		}
-		if m.Inviter != "" {
-			seen[m.Inviter] = true
-		}
 		switch messageKindOf(m) {
 		case messageFull:
+			if m.User != "" {
+				seen[m.User] = true
+			}
 			addMentions(m.Text)
 			for i := range m.Attachments {
 				addMentions(m.Attachments[i].Text)
 			}
 		case messageSystem:
+			if systemActorPrefixCandidate(m) {
+				seen[m.User] = true
+			}
+			if channelJoinInviterSuffixCandidate(m) {
+				seen[m.Inviter] = true
+			}
 			addMentions(m.Text)
 		}
 	}
