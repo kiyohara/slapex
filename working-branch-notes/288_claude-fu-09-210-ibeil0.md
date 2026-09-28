@@ -16,7 +16,8 @@ Issue #210(FU-09)。取得範囲の境界が秒単位に切り捨てられ、秒
 - 仕様判断(境界を秒未満まで使うか、秒未満の入力を拒否するか)は、推奨(秒未満まで使う)を添えてユーザーに thread のカードで伺い、返事を待たずに推奨で進めた(coordinator の指示)。ユーザーは 2026-09-28 にカードで推奨を選んだ。
 - 実装、test、設計文書、decision log 0065 を書き、Issue の「検証」を実行した(「検証」)。
 - PR #288 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- Claude の review cycle `claude-code-3b97818-20260928135205` で指摘 2 件(`[imo]` 1 件、`[nits]` 1 件。`[must]` は無い)を受け、どちらも採用して設計文書を直した(`0bc6495`)。次は CI を確かめてから再確認を subagent に委譲する(P5)。
+- Claude の review cycle `claude-code-3b97818-20260928135205` は、指摘 2 件(`[imo]` 1 件、`[nits]` 1 件。`[must]` は無い)をどちらも採用して設計文書を直し(`0bc6495`)、再確認で 2 件とも修正確認済み(未対応 0 件)となって完了した。
+- この記録の push の後に Ready for review にし、Codex のクロスレビューを待つ。
 - note の採番の commit(`b34bc2b`)で CI の `check` が失敗した。本 PR の差分外にある、時間に依存した test が原因で、follow-up の候補にした(「CI で見つかった follow-up の候補」)。
 
 ## 決定事項
@@ -89,7 +90,10 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - 仕様判断のカードへのユーザーの返事を確かめる。B が選ばれた場合は実装と 0065 を直す。(完了。推奨の A が選ばれた)
 - review の指摘に対応する(P4)。(完了)
-- CI を確かめてから再確認を subagent に委譲する(P5)。
+- CI を確かめてから再確認を subagent に委譲する(P5)。(完了)
+- Codex のクロスレビュー(他の Agent 種別の review cycle)。指摘があれば対応する。
+- follow-up の候補(`TestUnpacedRun` の時間依存)を起票するかの判断(ユーザー)。
+- review thread 2 件の resolve と、PR の merge(ユーザー)。
 
 ## 検証
 
@@ -128,3 +132,5 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 - 2026-09-28: Claude の review(P2)を subagent に委譲した。review cycle `claude-code-3b97818-20260928135205`、`Reviewed head` `3b9781895818946e8f13853c93257a532b8ad5f8`。指摘は 2 件(inline 2 件、top-level 0 件。`[imo]` 1 件、`[nits]` 1 件で、`[must]`、`[ask]`、`[fyi]` は無い)。`gh` への fallback は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
 - 2026-09-28: ユーザーが仕様判断のカードで推奨(秒未満まで使う)を選んだ。実装は変えない。
 - 2026-09-28: 指摘に対応した(P4)。処置の内訳は「採用し修正した」2 件(`0bc6495`)。`[imo]`(spec から 0065 を辿れない)は、`output-format.md` と `cache.md` から 0065 を参照し、任意とされた `slack-api-usage.md` の pagination も直して、0065 の `関連` と「影響」に加えた。`[nits]`(`--days` の開始境界の「N 日前」)は「`--days` × 24 時間前」に直した(0065 の「決定」も同じ)。スコープ外とした指摘は無い。出力生成系 3 skill の判断は変わらない(文書だけの変更で、出力を変えない)。
+- 2026-09-28 P5: verify-comments(P2 と同じ subagent。完了要約は PR の conversation comment、Reviewed head `576270db99aca74225b0933313416446c5cfcc5b`)。修正確認済み 2 件(resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。新しい指摘は無い。
+- 2026-09-28 P6: Claude の review cycle を 1 周(P4 → P5 の 1 往復)で終えた。終了時の状態: PR #288 は draft、head はこの note の commit(P5 が確かめた `576270d` より後の note だけの commit)、未対応の指摘は 0 件。この記録の push の後に Ready for review にする(2026-09-27 のユーザーの指示)。`gh` への fallback は P2 / P4 / P5 とも無く、metadata の誤りを訂正できなかった投稿も無い。follow-up の候補は 1 件(「CI で見つかった follow-up の候補」)で、起票していない。
