@@ -15,7 +15,7 @@ Issue #274(PF-02)。所要時間の最小化(#272)に向けて、Assets 工程�
 - 依存は無い(#274 の「依存・順序」)。推奨の前提だった #211(PR #285)と #192(PR #271)は merge 済み。main `a430231`(PR #285 の merge)から作業した。
 - 実装、test、設計文書、decision log 0064 を済ませ、Issue の「検証」を実行した(「検証」)。
 - PR #286 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- 次は CI を確かめてから、review を subagent に委譲する(P2)。
+- Claude の review(P2)の指摘 3 件をすべて採用して直した(P4)。次は再確認を subagent に委譲する(P5)。
 
 ## 決定事項
 
@@ -29,7 +29,7 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 
 - `output.Assets.Planner` が返す planner は、`Save`、`SkipTooLarge`、`Status` の判断(空の URL の無視、元 URL ごとの重複排除、最初の要求の kind による上限)を通し、要求を最初に要求された順に `PlannedAsset`(kind、元 URL、上限、meta、事前のサイズ判定で除いたか)として記録する。planner は書き込み、reuse の copy、警告をしない。planner の `Save` は常に「保存なし」を返す。
 - `Assets.Fetch` が計画を計画の順に直列で取得する。reuse の一致は取得のときに判定する(判定の時点を現行と揃えるため。#202 の同じ directory への再出力も同じ順になる)。結果は `Assets` の表に持ち、manifest には記録しない。download は一時ファイルから最終の path へ rename するため、2 回目に copy し直さない(大きい添付の二重 copy を避ける)。
-- 2 回目の描画の `Save` と `SkipTooLarge` が、要求の順に manifest へ記録する。計画に無い URL はその場で取得する。
+- 2 回目の描画の `Save` と `SkipTooLarge` が、要求の順に manifest へ記録する。計画に無い URL はその場で取得する。この fallback が保つのは HTML、assets、manifest で、stderr の並びと逆向きのずれ(計画にあって 2 回目に要求されない asset)は保たない。ずれは結合 test が検出する(decision log 0064 の「決定」。review の `[imo]` への対応)。
 - 警告は取得の終わりに出す。Issue の「作業内容」は「manifest と警告は 2 回目の呼び出し順で記録し、現行と同じ順序にする」とする。計画の順は 2 回目の呼び出し順と同じなので、警告の順は 2 回目の呼び出し順と一致する。2 回目の描画で出すと、取得中の retry 通知がすべて先に出て stderr の並びが変わり、完了条件(stderr がバイト単位で一致)を満たさないため、出す時点は取得の終わりにした。
 - `export.renderWithAssets` が planner への描画、`Fetch`、2 回目の描画を行い、`renderTimeline` が 1 回分の描画(workspace icon、avatar、timeline)を行う。
 - 計画は test のために context の値(`assetPlanObserverKey`)で観察する。`export.Options` に test 専用の field を足すと、`cmd/slapex` の `TestExportOptions`(field ごとに設定元が CLI か呼び出し側かを検査する)に例外が増えるため。
@@ -51,7 +51,7 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 
 - decision log 0064(`0064-two-pass-asset-planning.md`)を作り、`index.md` に行を足した。
 - `architecture.md`: `internal/export` と `internal/output` の責務、Assets 工程の説明を更新した。
-- `cache.md`: `assets_manifest.json` の entry の順(描画が asset を求めた順。avatar は ID 順)を書いた。
+- `cache.md`: `assets_manifest.json` の entry の順(描画が asset を求めた順。avatar は ID 順)を書いた。メッセージの中の順は要求の順で、HTML の表示の順と一致するとは限らない(review の `[must]` への対応で書き直した)。
 - `progress.md` の PF-02 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に記入する。
 
 ### 出力生成系 3 skill の適用判断
@@ -63,7 +63,9 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- review の指摘に対応する(P4)。(完了)
+- 再確認を subagent に委譲する(P5)。未対応が 0 件なら Ready for review にする。
 - avatar の保存順のカードへのユーザーの回答を確かめる。(完了。「この PR に含める」)
 
 ## 検証
@@ -95,3 +97,11 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 - 2026-09-28: PR #286 を draft で作成し、note を採番した(`bfb43a0`)。`progress.md` の PF-02 の PR 欄を #286 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」)。
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#286`)と、PR description の note のファイル名参照 1 行(`draft_` → `286_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-28: Claude の review(P2、subagent)。review cycle `claude-code-fac8b82-20260928061608`、Reviewed head `fac8b8223e5e5a6f011ba160e0a7bf63e5a983dc`。指摘は 3 件(inline 3 件、top-level 0 件。`[must]` 1 件、`[imo]` 1 件、`[nits]` 1 件)。P3 で P4 へ進んだ。
+  - reviewer は依頼した 8 観点をすべて妥当とした(`cache.md` の記述を除く)。前提(要求が `Save` の結果に左右されない)は、使い捨ての計装で test の export 111 件と gensample の ja / en を比べて確かめた。
+- 2026-09-28: 指摘への対応(P4)。処置は 3 件とも「採用し修正した」で、修正 commit は `79c654d`。
+  - `[must]` `cache.md`: メッセージの中の manifest の順を、表示の順ではなく描画が asset を求めた順(投稿者の `bot_profile` の icon、本文の emoji、`files` の順の画像と添付、URL preview ごとの本文の emoji・service icon・画像、reaction の emoji)として書き直し、HTML の表示の順と一致しないことを書いた。template(`index.html.tmpl`)と `integration_plan_test.go` の計画の順で確かめた。
+  - `[imo]` decision log 0064: 「決定」に、計画外の URL の fallback が保つ範囲(HTML、assets、manifest)と、保たないもの(stderr の並び、逆向きのずれ)、ずれを検出する test を書いた。
+  - `[nits]` `output.go`: `headBuffer` の doc comment を、MultiWriter の移った `download` に合わせた。
+  - スコープ外とした指摘は無く、follow-up の候補も無い。出力生成系 3 skill の判断は変わらない(文書とコメントだけの修正で、出力は変わらない)。
+  - 検証(Docker Compose): `gofmt -l .` は出力なし。`go vet ./...`、`go build ./...`、`go test ./...`、`git diff --check` は pass。
