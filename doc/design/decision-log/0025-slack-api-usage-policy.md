@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-06-10
+- 最終更新日: 2026-09-28
 - 関連: `doc/design/slack-api-usage.md`, `doc/design/output-format.md`, `doc/design/decision-log/0009-user-managed-slack-app.md`
 
 ## 背景
@@ -48,6 +48,10 @@
 ## 追記(2026-09-03)
 
 「bot 投稿は `bot_profile` / `username` を優先」は、その両方が無い場合を未定義のままにしていた。`user` も `bot_profile` も `username` も持たない `bot_message`(slash command の `in_channel` 応答、incoming webhook、`response_url` 経由の投稿)については、使用 API に `bots.info` を追加し、`bot_id` から app 名と app icon を解決する方針を確定した(`0054-bot-author-resolution.md`)。必要 scope は既存の `users:read` のままである。
+
+## 追記(2026-09-28)
+
+「file は message 内 file object を正とし、`files.info` は欠損時の補完のみ」のうち、`files.info` による補完は仕様から外した(`0066-no-files-info-fallback.md`)。Slack Connect channel のファイルでも `conversations.history` / `conversations.replies` は完全な file object を返し、情報を省いた file object(`"file_access": "check_file_info"`)が届くのは Events API / RTM API で file の event が push される場合だけであることを、Slack の文書で確かめたためである。file の情報は message 内 file object だけから得る。使用 API の一覧と必要な scope は変わらない。
 
 ## 後から見直す条件
 
