@@ -76,6 +76,8 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	sc := baseScenario()
 	sc.Users["U03"] = testUser("U03", "set", "Set User", "set", "")
 	sc.Users["U04"] = testUser("U04", "charlie", "Charlie Inviter", "Charlie", "")
+	sc.Users["U05"] = testUser("U05", "dave", "Dave Purpose", "Dave", "")
+	sc.Users["U06"] = testUser("U06", "erin", "Erin Topic", "Erin", "")
 	sc.Messages = []slack.Message{
 		{
 			Type:    "message",
@@ -105,6 +107,20 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 			User:    "U03",
 			Text:    "set the channel name: project-beta",
 		},
+		{
+			Type:    "message",
+			Subtype: "channel_purpose",
+			TS:      "1700000500.000000",
+			User:    "U05",
+			Text:    "<@U05> set the channel purpose: Docs",
+		},
+		{
+			Type:    "message",
+			Subtype: "channel_topic",
+			TS:      "1700000600.000000",
+			User:    "U06",
+			Text:    "@Erin set the channel topic: Roadmap",
+		},
 	}
 
 	got := runExportScenario(t, sc, renderingOptions(t))
@@ -116,6 +132,8 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	mustContain(t, body, `<span class="mention">@Bob</span> set the channel topic: Launch planning`)
 	mustContain(t, body, "set the channel purpose: Planning docs")
 	mustContain(t, body, `<span class="mention">@set</span> set the channel name: project-beta`)
+	mustContain(t, body, `<span class="mention">@Dave</span> set the channel purpose: Docs`)
+	mustContain(t, body, "@Erin set the channel topic: Roadmap")
 	if got := strings.Count(body, `<span class="mention">@Alice</span>`); got != 1 {
 		t.Fatalf("@Alice mention count = %d, want 1 (channel_join must not get a duplicate actor prefix)", got)
 	}
@@ -127,6 +145,12 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	}
 	if got := strings.Count(body, `<span class="mention">@set</span>`); got != 1 {
 		t.Fatalf("@set mention count = %d, want 1 (display name must not suppress actor prefix)", got)
+	}
+	if got := strings.Count(body, `<span class="mention">@Dave</span>`); got != 1 {
+		t.Fatalf("@Dave mention count = %d, want 1 (text starting with the poster's mention must not get a duplicate actor prefix)", got)
+	}
+	if got := strings.Count(body, "@Erin"); got != 1 {
+		t.Fatalf("@Erin count = %d, want 1 (text starting with @display name must not get a duplicate actor prefix)", got)
 	}
 	// System rows carry no avatar and are not rendered as full messages.
 	mustNotContain(t, body, `<div class="message">`)
