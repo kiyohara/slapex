@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/issue-209-fu-08-0o2y2t`(cloud session が指定。Issue の推奨ブランチ名は `skip-labelled-mention-resolution`)
-- PR: 未作成
+- PR: #283
 - 最終更新: 2026-09-28
 
 ## 目的
