@@ -78,19 +78,23 @@ func oldestMessageTS(messages []slack.Message) string {
 	return oldest
 }
 
-var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)[|>]`)
+// reMention matches a label-less mention (<@U…>), the only kind render.Mrkdwn
+// resolves through UserName: a mention with a label (<@U…|label>) shows the
+// label, or the user ID when the label is empty (doc/design/html-rendering.md),
+// so its user needs no lookup.
+var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)>`)
 
 // collectUserIDs returns the unique user IDs to resolve through users.info:
-// posters, channel_join inviters and the mentions in every text the view
-// builder passes to render.Mrkdwn. Mrkdwn resolves a label-less mention through
-// messageViewBuilder.UserName, which shows the raw user ID for a user not
-// collected here, so the scanned texts must match those Mrkdwn call sites. They
-// depend on how messageView shows the message, so the scan switches on the same
-// messageKindOf: a message shown in full renders its body (messageView) and
-// each legacy attachment's text (addUnfurls), and a system row only its body
-// (systemBody). Texts that are not rendered, such as the attachments of a
-// pinned_item row or a tombstone's body, are not scanned, nor are fields
-// rendered as plain text, such as the attachment title.
+// posters, channel_join inviters and the label-less mentions (reMention) in
+// every text the view builder passes to render.Mrkdwn. Mrkdwn resolves such a
+// mention through messageViewBuilder.UserName, which shows the raw user ID for
+// a user not collected here, so the scanned texts must match those Mrkdwn call
+// sites. They depend on how messageView shows the message, so the scan switches
+// on the same messageKindOf: a message shown in full renders its body
+// (messageView) and each legacy attachment's text (addUnfurls), and a system
+// row only its body (systemBody). Texts that are not rendered, such as the
+// attachments of a pinned_item row or a tombstone's body, are not scanned, nor
+// are fields rendered as plain text, such as the attachment title.
 func collectUserIDs(messages []slack.Message, replies map[string][]slack.Message) []string {
 	seen := map[string]bool{}
 	addMentions := func(text string) {

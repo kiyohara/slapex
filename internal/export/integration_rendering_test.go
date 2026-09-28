@@ -11,8 +11,11 @@ package export
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -336,6 +339,91 @@ func TestRunIntegrationUnrenderedTextMention(t *testing.T) {
 	// U01 posts and U03 is mentioned in a system row body. U04 to U07 appear
 	// only in texts that are not rendered, so none is looked up.
 	assertEndpointCounts(t, got.Server, map[string]int{"/api/users.info": 2})
+}
+
+// --- case 5d: a mention with a label costs no users.info call ----------------
+
+// TestRunIntegrationLabeledMention pins Issue #209: render.Mrkdwn shows a
+// mention with a label (<@U…|label>) as the label and resolves only a
+// label-less one, so a user mentioned only with labels costs no users.info
+// call, no avatar download and no slack_api_cache.json entry, whether the
+// label is in a body, a system row body, an attachment text or code. A user
+// also mentioned without a label is still resolved for that mention.
+func TestRunIntegrationLabeledMention(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000572.000000"
+	sc := baseScenario()
+	// Every user has an avatar, so an avatar saved for a user the page does
+	// not show would leave a manifest entry.
+	for _, u := range []slack.User{
+		testUser("U01", "alice", "Alice Example", "Alice", "{{base}}/files/avatar-u01.png"),
+		testUser("U02", "bob", "Bob Builder", "Bob", "{{base}}/files/avatar-u02.png"),
+		testUser("U03", "carol", "Carol Reviewer", "Carol", "{{base}}/files/avatar-u03.png"),
+		testUser("U04", "dave", "Dave Oncall", "Dave", "{{base}}/files/avatar-u04.png"),
+		testUser("U05", "erin", "Erin Owner", "Erin", "{{base}}/files/avatar-u05.png"),
+		testUser("U06", "frank", "Frank Runner", "Frank", "{{base}}/files/avatar-u06.png"),
+	} {
+		sc.Users[u.ID] = u
+		sc.Assets["/files/avatar-"+strings.ToLower(u.ID)+".png"] = pngAsset("avatar " + u.ID)
+	}
+	sc.Messages = []slack.Message{
+		// U03 appears only with a label, U02 also without one below.
+		{Type: "message", TS: "1700000571.000000", User: "U01", Text: "Thanks <@U03|carol> and <@U02|bobby>"},
+		{Type: "message", TS: parentTS, ThreadTS: parentTS, User: "U01", Text: "Over to <@U02>", ReplyCount: 1},
+		// U05 appears only with a label, in a system row body.
+		{
+			Type: "message", Subtype: "channel_topic", TS: "1700000573.000000", User: "U01",
+			Text: "set the channel topic: Owned by <@U05|erin>",
+		},
+	}
+	sc.Replies = map[string][]slack.Message{
+		parentTS: {
+			// U06 appears only with a label in inline code, U04 only with a
+			// label in an attachment text.
+			{
+				Type: "message", TS: "1700000574.000000", ThreadTS: parentTS, User: "U01",
+				Text:        "Paged with `notify <@U06|frank>`",
+				Attachments: []slack.Attachment{{Text: "Escalated to <@U04|dave>"}},
+			},
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `Thanks <span class="mention">@carol</span> and <span class="mention">@bobby</span>`)
+	mustContain(t, body, `Over to <span class="mention">@Bob</span>`)
+	mustContain(t, body, `<span class="mention">@Alice</span> set the channel topic: Owned by <span class="mention">@erin</span>`)
+	mustContain(t, body, "Paged with <code>notify @frank</code>")
+	mustContain(t, body, `<div class="unfurl-text">Escalated to <span class="mention">@dave</span></div>`)
+	for _, name := range []string{"@Carol", "@Dave", "@Erin", "@Frank"} {
+		mustNotContain(t, body, name)
+	}
+
+	// U01 posts and U02 is mentioned without a label once. U03 to U06 appear
+	// only with labels, so none is looked up, cached or given an avatar.
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/users.info": 2})
+	var api struct {
+		Users map[string]json.RawMessage `json:"users"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/slack_api_cache.json"), &api)
+	if ids := slices.Sorted(maps.Keys(api.Users)); !slices.Equal(ids, []string{"U01", "U02"}) {
+		t.Fatalf("cached users = %v, want [U01 U02]", ids)
+	}
+	manifest := readManifestEntries(t, got.OutputDir)
+	if _, ok := findManifest(manifest, func(e manifestEntryFull) bool {
+		return e.Kind == "avatar" && e.Status == "saved" && strings.HasSuffix(e.SourceURL, "/files/avatar-u01.png")
+	}); !ok {
+		t.Fatalf("assets_manifest.json has no saved avatar for U01: %+v", manifest)
+	}
+	for _, id := range []string{"u03", "u04", "u05", "u06"} {
+		path := "/files/avatar-" + id + ".png"
+		if e, ok := findManifest(manifest, func(e manifestEntryFull) bool { return strings.HasSuffix(e.SourceURL, path) }); ok {
+			t.Fatalf("assets_manifest.json has an entry for %s: %+v", path, e)
+		}
+		assertEndpointCounts(t, got.Server, map[string]int{path: 0})
+	}
 }
 
 // --- case 6: edited message shows the quiet (edited) marker ------------------

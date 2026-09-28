@@ -109,6 +109,16 @@ func TestMrkdwn(t *testing.T) {
 			want: `<span class="mention">@bob</span>`,
 		},
 		{
+			name: "user mention with label shows the label",
+			text: "<@U123|carol>",
+			want: `<span class="mention">@carol</span>`,
+		},
+		{
+			name: "user mention with empty label shows id",
+			text: "<@U123|>",
+			want: `<span class="mention">@U123</span>`,
+		},
+		{
 			name: "channel mention",
 			text: "<#C123|general>",
 			want: `<span class="mention">#general</span>`,
