@@ -14,7 +14,8 @@ Issue #274(PF-02)。所要時間の最小化(#272)に向けて、Assets 工程�
 
 - 依存は無い(#274 の「依存・順序」)。推奨の前提だった #211(PR #285)と #192(PR #271)は merge 済み。main `a430231`(PR #285 の merge)から作業した。
 - 実装、test、設計文書、decision log 0064 を済ませ、Issue の「検証」を実行した(「検証」)。
-- 次は PR の作成(draft)と採番。
+- PR #286 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- 次は CI を確かめてから、review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -36,7 +37,7 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 ### avatar の保存順(PR #281 からの申し送り)
 
 - user の avatar を bot の icon と同じく ID 順に保存する(`newMessageViewBuilder`)。manifest の entry と avatar の警告の順が実行ごとに変わらなくなり、計画と 2 回目の順も揃う。HTML、assets、cache の内容は変わらない(保存名は内容 hash)。
-- この PR に含めるかを thread のカードでユーザーに尋ね、推奨の「この PR に含める」で進めた。回答はまだ無い。「含めない」になった場合は、ID 順を外し、trace の結合 test の `sortedManifest` を戻し、順に依存しない比較に切り替える。
+- この PR に含めるかを thread のカードでユーザーに尋ね、推奨の「この PR に含める」で進めた。ユーザーは 2026-09-28 に「この PR に含める」を選んだ。
 - ID 順にしたため、`TestRunIntegrationHTTPTrace` の `sortedManifest`(manifest の entry を並べ替えて比べていた)を外した。
 
 ### test
@@ -55,15 +56,15 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 
 ### 出力生成系 3 skill の適用判断
 
-- `update-sample-exports`: 「いつ使うか」の `internal/export/**` と `internal/output/**` に当たるが、表示変換と保存 path は変えていない。Issue の「検証」どおり `TZ=Asia/Tokyo`、`-time 2026-07-04T16:32:41+09:00` で別ディレクトリへ再生成し、commit 済みの `doc/samples/ja` / `en` と `diff -r` で無差分だった。sample は commit しない。未確認事項は無い。
+- `update-sample-exports`: 適用しない。`internal/export/**` と `internal/output/**` を変えたが、サンプル出力に反映される変更ではない(表示変換と保存 path は変えていない)。Issue の「検証」どおり `TZ=Asia/Tokyo`、`-time 2026-07-04T16:32:41+09:00` で別ディレクトリへ再生成し、commit 済みの `doc/samples/ja` / `en` と `diff -r` で無差分だった。sample は commit しない。
 - `update-readme-preview-screenshots`: 適用しない。sample export に差分が無い。
 - `update-readme-demo-gif`: 適用しない。CLI の出力(phase 名、summary、進捗表示、警告の並び)を変えていない。
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
-- avatar の保存順のカードへのユーザーの回答を確かめる。
+- avatar の保存順のカードへのユーザーの回答を確かめる。(完了。「この PR に含める」)
 
 ## 検証
 
@@ -91,3 +92,6 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 - 2026-09-28: Issue #274、#274 のコメント(PR #281 からの avatar の保存順の申し送り)、`progress.md`、関連コードを読んだ。依存は無く、推奨の前提の #211 / #192 は merge 済み。
 - 2026-09-28: avatar の保存順をこの PR に含めるかを thread のカードで尋ね、推奨(含める)で進めた。
 - 2026-09-28: 描画 2 回の計画と取得を実装し、test、設計文書、decision log 0064 を足した。Issue の「検証」と変更前との比較を実行した(「検証」)。
+- 2026-09-28: PR #286 を draft で作成し、note を採番した(`bfb43a0`)。`progress.md` の PF-02 の PR 欄を #286 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#286`)と、PR description の note のファイル名参照 1 行(`draft_` → `286_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
