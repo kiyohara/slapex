@@ -15,7 +15,8 @@ Issue #210(FU-09)。取得範囲の境界が秒単位に切り捨てられ、秒
 - 依存は無い(Issue の「依存・順序」)。main `48c0198`(PR #287 の merge)から作業した。
 - 仕様判断(境界を秒未満まで使うか、秒未満の入力を拒否するか)は、推奨(秒未満まで使う)を添えてユーザーに thread のカードで伺い、返事を待たずに推奨で進めた(coordinator の指示)。
 - 実装、test、設計文書、decision log 0065 を書き、Issue の「検証」を実行した(「検証」)。
-- 次は PR の作成(draft)と採番。
+- PR #288 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- 次は CI を確かめてから Claude の review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -64,7 +65,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 - `doc/design/cache.md`: `target_range` の `start` / `end` の秒未満と、`start_slack_ts` / `end_slack_ts` の小数 6 桁を書いた。`schema_version` は変えない。
 - `doc/help/usage.md`: `--from` / `--to` に秒未満を含む日時を指定できることを 1 文足した。
 - `doc/design/decision-log/0065-subsecond-range-boundaries.md` と `index.md` の行を足した。
-- `progress.md` の FU-09 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に記入する。
+- `progress.md` の FU-09 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に #288 を記入した。
 
 ### 出力生成系 3 skill の適用判断
 
@@ -74,7 +75,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - 仕様判断のカードへのユーザーの返事を確かめる。B が選ばれた場合は実装と 0065 を直す。
 
@@ -99,10 +100,14 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 
 ## リスク・ブロッカー
 
-- 実 workspace での確認はしていない(実 token が要るため)。Slack の `conversations.history` が小数付きの `oldest` を受け付けることは、2 ページ目以降の `latest` に投稿の ts を渡す既存の取得で間接的に使っているが、`oldest` の小数は実 API で確かめていない。
+- 実 workspace での確認はしていない(実 token が要るため)。Slack の `conversations.history` が小数付きの `oldest` を受け付けることは、実 API で確かめていない。小数付きの `latest` は、2 ページ目以降の取得で投稿の ts を渡す既存の経路が使っている。
 - 仕様判断はユーザーの返事を待たずに推奨で進めた。B が選ばれた場合は実装を差し替える。
 
 ## セッションログ
 
 - 2026-09-28: Issue #210、`progress.md`、前のスレッドの報告(#245 / PR #287)を読んだ。Issue は open でコメントは無く、依存は無い。仕様判断を推奨つきのカードでユーザーに伺い、推奨(秒未満まで使う)で進めた。
 - 2026-09-28: 実装、test、設計文書、help、decision log 0065 を書き、Issue の「検証」、main との比較、sample export の一致を確かめた。
+- 2026-09-28: PR #288 を draft で作成し、note を採番した(`b34bc2b`)。`progress.md` の FU-09 の PR 欄を #288 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#288`)と、PR description の note のファイル名参照 1 行(`draft_` → `288_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」と「決定事項」の「PR 欄は採番後に記入する。」(どちらも定型に当てはまらない)、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。PR description と title で触らずに残した行は無い。この 3 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+  - 「リスク・ブロッカー」の実 API で確かめていない事項の書き方(`oldest` と `latest` の取り違え)を直した。
