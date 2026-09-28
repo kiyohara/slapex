@@ -85,7 +85,7 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 | `> quote` | 引用 block |
 | `<https://example.com>` / `<https://example.com\|label>` | リンク(label があれば label を表示) |
 | `<@U0123456789>` | `@表示名`(mention 風のハイライト表示) |
-| `<@U0123456789\|label>` | `@label`(mention 風のハイライト表示。label をそのまま表示し、表示名は解決しない) |
+| `<@U0123456789\|label>` | `@label`(mention 風のハイライト表示。label をそのまま表示し、表示名は解決しない。label が空なら user ID を表示する) |
 | `<#C0123456789\|general>` | `#channel名` |
 | `<!here>` / `<!channel>` / `<!everyone>` | `@here` などのハイライト表示 |
 | `<!subteam^S...\|@group>` | `@group名` |

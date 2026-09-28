@@ -23,9 +23,10 @@ func (r *userNameRecorder) EmojiHTML(name string) string { return ":" + name + "
 
 // TestCollectUserIDsMatchesMrkdwn pins Issue #209: collectUserIDs collects the
 // mentions in a text exactly when render.Mrkdwn resolves them through UserName.
-// Mrkdwn shows a mention with a label as the label, even an empty one, so only
-// a label-less mention needs its user looked up; code content resolves the
-// same way. Each case checks both sides, so a change to either shows here.
+// Mrkdwn never resolves a mention with a label, even an empty one: it shows the
+// label, or the user ID when the label is empty. So only a label-less mention
+// needs its user looked up; code content resolves the same way. Each case
+// checks both sides, so a change to either shows here.
 func TestCollectUserIDsMatchesMrkdwn(t *testing.T) {
 	t.Parallel()
 

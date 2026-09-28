@@ -80,7 +80,8 @@ func oldestMessageTS(messages []slack.Message) string {
 
 // reMention matches a label-less mention (<@U…>), the only kind render.Mrkdwn
 // resolves through UserName: a mention with a label (<@U…|label>) shows the
-// label as is (doc/design/html-rendering.md), so its user needs no lookup.
+// label, or the user ID when the label is empty (doc/design/html-rendering.md),
+// so its user needs no lookup.
 var reMention = regexp.MustCompile(`<@([UW][A-Z0-9]+)>`)
 
 // collectUserIDs returns the unique user IDs to resolve through users.info:
