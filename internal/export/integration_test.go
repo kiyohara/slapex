@@ -1108,6 +1108,68 @@ func TestRunIntegrationDateTimeRange(t *testing.T) {
 	}
 }
 
+// TestRunIntegrationDateTimeRangeBelowOneSecond covers Issue #210: a --from /
+// --to range inside one second passes the order check and fetches the
+// messages between its boundaries, down to the microsecond of their ts, where
+// the boundaries cut to whole seconds used to collapse into one ts and leave
+// the export empty without an error.
+func TestRunIntegrationDateTimeRangeBelowOneSecond(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{Type: "message", TS: "1783071000.800000", User: "U01", Text: "At the end boundary"},
+		{Type: "message", TS: "1783071000.799999", User: "U02", Text: "Just before the end"},
+		{Type: "message", TS: "1783071000.200000", User: "U01", Text: "At the start boundary"},
+		{Type: "message", TS: "1783071000.199999", User: "U02", Text: "Just before the start"},
+	}
+	const (
+		fromInput = "2026-07-03T09:30:00.2Z"
+		toInput   = "2026-07-03T09:30:00.8Z"
+	)
+	opts := integrationOptions(t, 10)
+	opts.Days = 0 // --from / --to replace the --days window; metadata records days as given
+	opts.From = fromInput
+	opts.To = toInput
+
+	got := runExportScenario(t, sc, opts)
+	html := readIndexHTML(t, got.OutputDir)
+
+	assertOrder(t, html, "At the start boundary", "Just before the end")
+	mustNotContain(t, html, "Just before the start") // before the included start
+	mustNotContain(t, html, "At the end boundary")   // the exclusive end boundary
+	mustContain(t, html, "From 2026-07-03T09:30:00.2Z (included); to 2026-07-03T09:30:00.8Z (not included); timezone: UTC")
+	assertMessagesPhaseLine(t, got.Logs,
+		"OK: messages: 2 fetched from 2026-07-03T09:30:00.2Z (included) to 2026-07-03T09:30:00.8Z (not included)",
+		" (threads 0, replies 0)")
+
+	var metadata struct {
+		Fetch struct {
+			OldestTS    string `json:"oldest_ts"`
+			LatestTS    string `json:"latest_ts"`
+			TargetRange struct {
+				Start        string `json:"start"`
+				End          string `json:"end"`
+				StartSlackTS string `json:"start_slack_ts"`
+				EndSlackTS   string `json:"end_slack_ts"`
+			} `json:"target_range"`
+		} `json:"fetch"`
+		Counts struct {
+			TimelineMessages int `json:"timeline_messages"`
+		} `json:"counts"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/metadata.json"), &metadata)
+	const wantOldest, wantLatest = "1783071000.200000", "1783071000.800000"
+	if metadata.Fetch.OldestTS != wantOldest || metadata.Fetch.LatestTS != wantLatest ||
+		metadata.Fetch.TargetRange.Start != "2026-07-03T09:30:00.2Z" || metadata.Fetch.TargetRange.End != "2026-07-03T09:30:00.8Z" ||
+		metadata.Fetch.TargetRange.StartSlackTS != wantOldest || metadata.Fetch.TargetRange.EndSlackTS != wantLatest {
+		t.Fatalf("metadata fetch = %+v", metadata.Fetch)
+	}
+	if metadata.Counts.TimelineMessages != 2 {
+		t.Fatalf("metadata timeline_messages = %d, want 2", metadata.Counts.TimelineMessages)
+	}
+}
+
 func escapePlusForHTMLAssertion(value string) string {
 	return strings.ReplaceAll(value, "+", "&#43;")
 }

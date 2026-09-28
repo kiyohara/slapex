@@ -6,7 +6,7 @@
 
 本ファイルの option 名、default 値、exit code は確定仕様として扱う。実装アーキテクチャは `architecture.md` を参照する。
 
-利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md`、`decision-log/0046-api-base-url-override.md`、`decision-log/0063-http-trace-and-asset-benchmark.md` を参照する。
+利用者の操作の流れは `usage-flow.md`、取得範囲と出力構造は `output-format.md`、Slack API の利用方針は `slack-api-usage.md` を参照する。決定経緯は `decision-log/0024-cli-options-and-exit-codes.md`、`decision-log/0031-supported-platforms.md`、`decision-log/0042-default-user-token.md`、`decision-log/0043-interactive-selection-streams.md`、`decision-log/0044-interactive-token-prompt.md`、`decision-log/0045-cli-output-style.md`、`decision-log/0046-api-base-url-override.md`、`decision-log/0063-http-trace-and-asset-benchmark.md`、`decision-log/0065-subsecond-range-boundaries.md` を参照する。
 
 ## コマンド形式
 
@@ -72,9 +72,11 @@ token を CLI option や引数として受け取る経路は提供しない。�
 
 `--from` と `--to` は必ずペアで指定し、開始は終了より前にする。範囲は開始を含み終了を含まない半開区間 `[from, to)` とする。`--from` / `--to` は `--date` および利用者が明示した `--days` と併用できない。`--date` または `--from` / `--to` だけを指定した場合、既定値 `--days 30` は適用しない。
 
-`--date` / `--from` / `--to` は RFC3339 / RFC3339Nano、または local timezone として解釈する次の形式を受け入れる。日付区切りは `-` / `/`、日付と時刻の区切りは `T` / 半角スペースを許可し、時刻は `HH` / `HH:MM` / `HH:MM:SS` の不足部分を `0` で補う。日付だけの場合も時刻を `00:00:00` とする。許可 layout は実装で明示的に列挙し、timezone abbreviation、自然言語、日本語日付、年を省略した形式は受け入れない。
+`--date` / `--from` / `--to` は RFC3339 / RFC3339Nano、または local timezone として解釈する次の形式を受け入れる。日付区切りは `-` / `/`、日付と時刻の区切りは `T` / 半角スペースを許可し、時刻は `HH` / `HH:MM` / `HH:MM:SS` の不足部分を `0` で補う。`HH:MM:SS` の後には秒未満の小数部を続けてもよい。日付だけの場合も時刻を `00:00:00` とする。許可 layout は実装で明示的に列挙し、timezone abbreviation、自然言語、日本語日付、年を省略した形式は受け入れない。
 
 offset なしの入力は local timezone として parse する。offset 付き入力は、その offset が表す絶対時刻として扱う。`--date` は parse した瞬間が属する local calendar date の 00:00 以上、翌日 00:00 未満を取得範囲とし、入力の時刻部分は対象日の決定にだけ使う。`--from` / `--to` は parse 後の瞬間をそのまま開始・終了境界に使う。たとえば `--from 2026/07/03 --to 2026/07/04` は local timezone の 2026-07-03 全体を表す。
+
+`--from` / `--to` の境界は秒未満も含め、Slack API へは Slack の ts と同じ小数 6 桁(マイクロ秒)で渡す。マイクロ秒より細かい部分は切り上げる。ts はマイクロ秒単位のため、切り上げても範囲に入る投稿は変わらない。開始が終了より前かは、切り上げた後の境界で判定する。footer と `.cache/metadata.json` も、この境界を秒未満まで示す(`output-format.md`、`cache.md`)。決定経緯は `decision-log/0065-subsecond-range-boundaries.md` を参照する。
 
 ### 将来検討とする option
 

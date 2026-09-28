@@ -145,11 +145,11 @@ func (r messageFetchRange) metadataTargetRange() map[string]any {
 	end := any(nil)
 	endSlackTS := any(nil)
 	if !r.end.IsZero() {
-		end = r.end.UTC().Format(time.RFC3339)
+		end = r.end.UTC().Format(time.RFC3339Nano)
 		endSlackTS = r.latestTS()
 	}
 	return map[string]any{
-		"start":          r.start.UTC().Format(time.RFC3339),
+		"start":          r.start.UTC().Format(time.RFC3339Nano),
 		"end":            end,
 		"start_slack_ts": r.oldestTS(),
 		"end_slack_ts":   endSlackTS,
