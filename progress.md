@@ -56,7 +56,7 @@ RF-03 → FU-05 → FU-13 → FU-14 → FU-18 → FU-15 → FU-16 → RF-06 → 
 | FU-08 | [#209](https://github.com/kiyohara/slapex/issues/209) label 付き mention の users.info | done(PR merge後) | - | merge後は対応なし | [#283](https://github.com/kiyohara/slapex/pull/283) |
 | FU-17 | [#251](https://github.com/kiyohara/slapex/issues/251) 表示しない投稿者の users.info | done(PR merge後) | - | merge後は対応なし | [#284](https://github.com/kiyohara/slapex/pull/284) |
 | FU-09 | [#210](https://github.com/kiyohara/slapex/issues/210) 取得境界の秒未満切り捨て | todo | - | 精度統一か入力拒否かを決めて実装 | - |
-| FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | todo | #190 | RF-03 で 1 要素の `const` group、RF-06 で `toUser` / `toBot` のコメントを吸収済み。残った項目だけ実施 | - |
+| FU-10 | [#211](https://github.com/kiyohara/slapex/issues/211) export 分割後の後片付け | done(PR merge後) | #190 | merge後は対応なし | - |
 | FU-12 | [#245](https://github.com/kiyohara/slapex/issues/245) URL 無しファイルの設計文書の記述 | todo | PR #243 | `slack-api-usage.md` の記述を実装に揃える | - |
 
 ## 進行中タスク: review cycle の skill 改善
