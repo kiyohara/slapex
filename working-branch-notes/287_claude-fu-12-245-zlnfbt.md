@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fu-12-245-zlnfbt`(cloud session が指定。Issue の推奨ブランチ名は `docs-urlless-file-handling`)
-- PR: 未作成
+- PR: #287
 - 最終更新: 2026-09-28
 
 ## 目的
