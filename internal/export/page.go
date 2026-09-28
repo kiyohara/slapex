@@ -1,10 +1,13 @@
 // Assets stage: the images the page shows saved under assets/, and index.html
 // rendered from the fetched messages with its stylesheet and static assets
-// (doc/design/output-format.md, doc/design/html-rendering.md).
+// (doc/design/output-format.md, doc/design/html-rendering.md). The timeline is
+// rendered twice: once to plan the assets, then with the fetched assets
+// (renderWithAssets, Issue #274).
 
 package export
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"os"
@@ -19,6 +22,41 @@ import (
 	"github.com/kiyohara/slapex/internal/ui"
 )
 
+// assetPlanObserverKey is the context key of a func([]output.PlannedAsset)
+// that renderWithAssets hands the plan to before fetching it. Only tests set
+// it, to compare the plan with what the second render asks for (Issue #274).
+type assetPlanObserverKey struct{}
+
+// renderWithAssets renders the page's timeline twice over assets (Issue #274).
+// The first render goes to a planner, which records the assets the page asks
+// for, in the order it asks, and fetches nothing. assets then fetches that
+// plan, and the second render builds the timeline from the results, so the
+// manifest keeps the order of its requests. Which assets a render asks for
+// does not depend on whether they could be saved, so the plan holds what the
+// second render asks for; an asset outside it would be fetched when asked
+// for. It returns the workspace icon path and the timeline.
+func renderWithAssets(ctx context.Context, assets *output.Assets, teamInfo *slack.TeamInfo, resolved resolvedUsers,
+	emojiResolver *emoji.Resolver, fetched fetchedMessages, maxAttachmentBytes int64) (string, []render.TimelineItem) {
+	planner := assets.Planner()
+	renderTimeline(planner, teamInfo, resolved, emojiResolver, fetched, maxAttachmentBytes)
+	plan := planner.Plan()
+	if observe, ok := ctx.Value(assetPlanObserverKey{}).(func([]output.PlannedAsset)); ok {
+		observe(plan)
+	}
+	assets.Fetch(plan)
+	return renderTimeline(assets, teamInfo, resolved, emojiResolver, fetched, maxAttachmentBytes)
+}
+
+// renderTimeline asks assets for everything the page shows — the workspace
+// icon, the avatars, then each timeline message's assets in timeline order —
+// and returns the workspace icon path and the timeline.
+func renderTimeline(assets *output.Assets, teamInfo *slack.TeamInfo, resolved resolvedUsers,
+	emojiResolver *emoji.Resolver, fetched fetchedMessages, maxAttachmentBytes int64) (string, []render.TimelineItem) {
+	workspaceIcon := saveWorkspaceIcon(assets, teamInfo)
+	views := newMessageViewBuilder(assets, resolved, emojiResolver, maxAttachmentBytes)
+	return workspaceIcon, buildTimeline(views, fetched)
+}
+
 // saveWorkspaceIcon saves the workspace icon for the page header and returns
 // its path, or "" when there is none or it was not saved.
 func saveWorkspaceIcon(assets *output.Assets, teamInfo *slack.TeamInfo) string {
@@ -30,15 +68,17 @@ func saveWorkspaceIcon(assets *output.Assets, teamInfo *slack.TeamInfo) string {
 }
 
 // newMessageViewBuilder saves the avatars the page shows, each resolved user's
-// and then each resolved bot's app icon in bot ID order, and returns the view
-// builder that renders messages with them. App icons are saved as ordinary
+// in user ID order and then each resolved bot's app icon in bot ID order, and
+// returns the view builder that renders messages with them. The fixed order
+// keeps the manifest and the warnings in the same order on every run, and in
+// the same order in both renders (Issue #274). App icons are saved as ordinary
 // avatars (output.KindAvatar), so they land in assets/avatars/ next to the
 // human ones and stay public downloads with no Authorization header
 // (doc/guidelines/credential-scope-guidelines.md).
 func newMessageViewBuilder(assets *output.Assets, resolved resolvedUsers, emojiResolver *emoji.Resolver, maxAttachmentBytes int64) *messageViewBuilder {
 	avatars := map[string]string{}
-	for id, u := range resolved.users {
-		if rel, ok := assets.Save(output.KindAvatar, avatarURL(u), output.AssetMeta{}); ok {
+	for _, id := range slices.Sorted(maps.Keys(resolved.users)) {
+		if rel, ok := assets.Save(output.KindAvatar, avatarURL(resolved.users[id]), output.AssetMeta{}); ok {
 			avatars[id] = rel
 		}
 	}

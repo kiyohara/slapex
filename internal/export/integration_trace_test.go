@@ -99,9 +99,8 @@ func TestRunIntegrationHTTPTrace(t *testing.T) {
 	}
 }
 
-// exportFiles reads every file of the export, with what differs between two
-// runs replaced or put in order: the fake server URL, and the order of the
-// asset manifest.
+// exportFiles reads every file of the export, with the fake server URL, which
+// differs between two runs, replaced.
 func exportFiles(t *testing.T, got exportRunResult) map[string]string {
 	t.Helper()
 	files := map[string]string{}
@@ -118,43 +117,13 @@ func exportFiles(t *testing.T, got exportRunResult) map[string]string {
 			return err
 		}
 		rel = filepath.ToSlash(rel)
-		content := strings.ReplaceAll(string(data), got.Server.URL(), "{{base}}")
-		if rel == ".cache/assets_manifest.json" {
-			content = sortedManifest(t, content)
-		}
-		files[rel] = content
+		files[rel] = strings.ReplaceAll(string(data), got.Server.URL(), "{{base}}")
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("read export: %v", err)
 	}
 	return files
-}
-
-// sortedManifest returns the asset manifest with its entries sorted. They
-// come in the order the assets were saved, and the user avatars are saved in
-// map order (newMessageViewBuilder), which differs from run to run.
-func sortedManifest(t *testing.T, content string) string {
-	t.Helper()
-	var manifest map[string]json.RawMessage
-	var entries []json.RawMessage
-	if err := json.Unmarshal([]byte(content), &manifest); err != nil {
-		t.Fatalf("manifest: %v", err)
-	}
-	if err := json.Unmarshal(manifest["assets"], &entries); err != nil {
-		t.Fatalf("manifest assets: %v", err)
-	}
-	slices.SortFunc(entries, func(a, b json.RawMessage) int { return bytes.Compare(a, b) })
-	sorted, err := json.MarshalIndent(entries, "", "  ")
-	if err != nil {
-		t.Fatalf("manifest assets: %v", err)
-	}
-	manifest["assets"] = sorted
-	out, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		t.Fatalf("manifest: %v", err)
-	}
-	return string(out)
 }
 
 // durationInLog matches the durations the logs round to the second: a retry

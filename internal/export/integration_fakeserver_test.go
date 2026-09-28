@@ -3,10 +3,11 @@ package export
 // Fake Slack server for the integration tests. newFakeSlackServer serves one
 // exportScenario (integration_fixture_test.go) over httptest: the Web API
 // endpoints the exporter calls, plus the asset paths the scenario declares. It
-// records a per-path request count (Count) that the cases assert on, injects
-// the scenario's APIFaults / AssetFaults ahead of the normal handlers, and
-// returns conversations.history unfiltered — the range narrowing is the
-// client's job, so the tests exercise it against raw responses.
+// records a per-path request count (Count) and the asset paths in request order
+// (AssetRequests) that the cases assert on, injects the scenario's APIFaults /
+// AssetFaults ahead of the normal handlers, and returns conversations.history
+// unfiltered — the range narrowing is the client's job, so the tests exercise
+// it against raw responses.
 //
 // This server is deliberately separate from the production demo server
 // (internal/demo): fault injection and request counting are test-only concerns.
@@ -34,6 +35,7 @@ type fakeSlackServer struct {
 
 	mu     sync.Mutex
 	counts map[string]int
+	assets []string // asset paths in request order
 }
 
 func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
@@ -102,6 +104,14 @@ func (f *fakeSlackServer) Total() int {
 		total += n
 	}
 	return total
+}
+
+// AssetRequests are the asset paths the server was asked for, in request
+// order, one entry per request (retries included).
+func (f *fakeSlackServer) AssetRequests() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.assets)
 }
 
 func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
@@ -180,6 +190,9 @@ func (f *fakeSlackServer) hasChannel(id string) bool {
 
 func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 	f.record(r)
+	f.mu.Lock()
+	f.assets = append(f.assets, r.URL.Path)
+	f.mu.Unlock()
 	if resp := f.nextFault(f.sc.AssetFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
 		return
 	}
