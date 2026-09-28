@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/issue-289-sv54s1`(cloud session が指定。Issue の推奨ブランチ名は `files-info-fallback-policy`)
-- PR: 未作成
+- PR: #290
 - 最終更新: 2026-09-28
 
 ## 目的
@@ -64,7 +64,7 @@ A(仕様から外す)。推奨を添えて thread のカードで伺い、ユー
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。
+- PR を draft で作成し、note を採番する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - 指摘があれば対応し(P4)、再確認を subagent に委譲する(P5)。
 - 人間の手番: Codex のクロスレビュー、PR の merge。
