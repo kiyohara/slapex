@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -498,6 +500,298 @@ func readAssetFile(t *testing.T, dir, rel string) string {
 	return string(data)
 }
 
+// TestAssetsPlannerRecordsFirstRequests covers a planner (Issue #274): each
+// source URL is planned once, at its first request, with that request's kind
+// and metadata and the size limit of the kind, and an empty URL not at all.
+// Its Save reports every asset unavailable, and its Status reports
+// skipped_size only for a file SkipTooLarge planned. It downloads, writes,
+// records and warns of nothing, and leaves the Assets it came from untouched.
+func TestAssetsPlannerRecordsFirstRequests(t *testing.T) {
+	t.Parallel()
+
+	outDir := t.TempDir()
+	dl := &fakeDownloader{content: map[string]fakeDownload{
+		"https://example.com/avatar": {body: "avatar", contentType: "image/png"},
+	}}
+	assets := NewAssets(context.Background(), dl, outDir, 10)
+	var warnings []string
+	assets.Logf = func(format string, args ...any) {
+		warnings = append(warnings, fmt.Sprintf(format, args...))
+	}
+	planner := assets.Planner()
+
+	emojiMeta := AssetMeta{EmojiName: "party"}
+	fileMeta := AssetMeta{FileID: "F001", OriginalName: "report.pdf", Mimetype: "application/pdf", SizeBytes: 99}
+	thumbMeta := AssetMeta{FileID: "F002", OriginalName: "photo.png"}
+	save := func(kind, srcURL string, meta AssetMeta) {
+		t.Helper()
+		if rel, ok := planner.Save(kind, srcURL, meta); rel != "" || ok {
+			t.Fatalf("planner Save(%s, %q) = %q, %v, want \"\", false", kind, srcURL, rel, ok)
+		}
+	}
+	save(KindAvatar, "https://example.com/avatar", AssetMeta{})
+	save(KindEmoji, "https://example.com/emoji", emojiMeta)
+	save(KindAvatar, "https://example.com/avatar", AssetMeta{}) // asked again
+	planner.SkipTooLarge(KindAttachment, "https://example.com/too-large", fileMeta)
+	save(KindAttachment, "https://example.com/too-large", fileMeta) // shared again, with no size
+	save(KindUploadThumb, "https://example.com/thumb", thumbMeta)
+	save(KindUploadOriginal, "https://example.com/thumb", fileMeta) // the first request's kind stays
+	planner.SkipTooLarge(KindAttachment, "https://example.com/thumb", fileMeta)
+	save(KindOGImage, "https://example.com/og", AssetMeta{})
+	save(KindAttachment, "", fileMeta)
+	planner.SkipTooLarge(KindAttachment, "", fileMeta)
+
+	want := []PlannedAsset{
+		{Kind: KindAvatar, SourceURL: "https://example.com/avatar"},
+		{Kind: KindEmoji, SourceURL: "https://example.com/emoji", Meta: emojiMeta},
+		{Kind: KindAttachment, SourceURL: "https://example.com/too-large", Limit: 10, Meta: fileMeta, SkipSize: true},
+		{Kind: KindUploadThumb, SourceURL: "https://example.com/thumb", Meta: thumbMeta},
+		{Kind: KindOGImage, SourceURL: "https://example.com/og", Limit: publicPreviewAssetLimit},
+	}
+	if got := planner.Plan(); !slices.Equal(got, want) {
+		t.Fatalf("Plan() = %+v\nwant %+v", got, want)
+	}
+	for srcURL, want := range map[string]string{
+		"https://example.com/too-large": StatusSkippedSize,
+		"https://example.com/avatar":    "",
+		"https://example.com/thumb":     "",
+		"https://example.com/unknown":   "",
+	} {
+		if got := planner.Status(srcURL); got != want {
+			t.Fatalf("planner Status(%q) = %q, want %q", srcURL, got, want)
+		}
+	}
+
+	if n := len(planner.Entries()); n != 0 {
+		t.Fatalf("planner recorded %d manifest entries, want none", n)
+	}
+	if saved, skipped, failed := planner.Counts(); saved+skipped+failed != 0 {
+		t.Fatalf("planner Counts() = %d, %d, %d, want all 0", saved, skipped, failed)
+	}
+	if len(dl.calls) != 0 {
+		t.Fatalf("downloads = %q, want none", dl.calls)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("warnings = %q, want none", warnings)
+	}
+	if files, err := os.ReadDir(outDir); err != nil || len(files) != 0 {
+		t.Fatalf("output directory holds %v (err %v), want nothing", files, err)
+	}
+	if n := len(assets.Entries()); n != 0 || assets.Status("https://example.com/too-large") != "" {
+		t.Fatalf("the planner changed the Assets it came from: %d entries", n)
+	}
+}
+
+// TestAssetsFetchThenSaveMatchesSave covers the two renders of the export
+// (Issue #274): a render planned, fetched and rendered again must end as the
+// same render asking Save directly does — the same answers, manifest, files,
+// warnings, counts and downloads, in the same order — for each way a request
+// ends: saved, saved under the content hash of another URL, failed, stopped by
+// the size limit, kept out by the pre-check, copied from the reuse source,
+// and a reused file over the limit downloaded instead.
+func TestAssetsFetchThenSaveMatchesSave(t *testing.T) {
+	t.Parallel()
+
+	oldDir := t.TempDir()
+	writeAssetFile(t, oldDir, "assets/avatars/reused.png", "reused")
+	writeAssetFile(t, oldDir, "assets/attachments/big.pdf", strings.Repeat("b", 20))
+	reuse := &ReuseSource{OldDir: oldDir, Entries: map[string]ManifestEntry{
+		"https://example.com/reused": {
+			Kind: KindAvatar, SourceURL: "https://example.com/reused",
+			LocalPath: "assets/avatars/reused.png", Mimetype: "image/png", SizeBytes: 6, Status: StatusSaved,
+		},
+		"https://example.com/big": {
+			Kind: KindAttachment, SourceURL: "https://example.com/big",
+			LocalPath: "assets/attachments/big.pdf", SizeBytes: 20, Status: StatusSaved,
+		},
+	}}
+	content := map[string]fakeDownload{
+		"https://example.com/workspace": {body: "workspace", contentType: "image/png"},
+		"https://example.com/avatar-b":  {body: "same", contentType: "image/png"},
+		"https://example.com/avatar-a":  {body: "same", contentType: "image/png"},
+		"https://example.com/emoji":     {body: "emoji", contentType: "image/gif"},
+		"https://example.com/fail":      {err: errors.New("download failed")},
+		"https://example.com/too-large": {err: slack.ErrTooLarge},
+		"https://example.com/big":       {err: slack.ErrTooLarge},
+		"https://example.com/doc":       {body: "doc", contentType: "application/pdf"},
+		// pre-checked is not served: downloading it would fail the run.
+	}
+	// render asks for assets as a page render does, and returns each answer.
+	render := func(a *Assets) []string {
+		var answers []string
+		save := func(kind, srcURL string, meta AssetMeta) {
+			rel, ok := a.Save(kind, srcURL, meta)
+			answers = append(answers, fmt.Sprintf("%s %s: %q %v %q", kind, srcURL, rel, ok, a.Status(srcURL)))
+		}
+		save(KindWorkspaceIcon, "https://example.com/workspace", AssetMeta{})
+		save(KindAvatar, "https://example.com/avatar-b", AssetMeta{})
+		save(KindAvatar, "https://example.com/avatar-a", AssetMeta{})
+		save(KindAvatar, "https://example.com/reused", AssetMeta{})
+		save(KindEmoji, "https://example.com/emoji", AssetMeta{EmojiName: "party"})
+		save(KindAttachment, "https://example.com/fail", AssetMeta{FileID: "F-FAIL"})
+		save(KindUploadOriginal, "https://example.com/too-large", AssetMeta{FileID: "F-LARGE"})
+		a.SkipTooLarge(KindAttachment, "https://example.com/pre-checked", AssetMeta{FileID: "F-PRE", SizeBytes: 99})
+		save(KindAttachment, "https://example.com/pre-checked", AssetMeta{FileID: "F-PRE"})
+		save(KindAttachment, "https://example.com/big", AssetMeta{FileID: "F-BIG"})
+		save(KindEmoji, "https://example.com/emoji", AssetMeta{EmojiName: "party"})
+		save(KindAttachment, "https://example.com/doc", AssetMeta{FileID: "F-DOC", Mimetype: "application/pdf", SizeBytes: 3})
+		save(KindAttachment, "https://example.com/fail", AssetMeta{FileID: "F-FAIL"})
+		return answers
+	}
+	type result struct {
+		answers, warnings []string
+		assets            *Assets
+		dl                *fakeDownloader
+		files             map[string]string
+	}
+	run := func(planned bool) result {
+		r := result{dl: &fakeDownloader{content: content}}
+		dir := t.TempDir()
+		r.assets = NewAssets(context.Background(), r.dl, dir, 10)
+		r.assets.SetReuseSource(reuse)
+		r.assets.Logf = func(format string, args ...any) {
+			r.warnings = append(r.warnings, fmt.Sprintf(format, args...))
+		}
+		if planned {
+			planner := r.assets.Planner()
+			render(planner)
+			r.assets.Fetch(planner.Plan())
+		}
+		r.answers = render(r.assets)
+		r.files = collectFiles(t, dir)
+		return r
+	}
+	direct, planned := run(false), run(true)
+
+	// The direct render ends each request the way this test is about.
+	if saved, skipped, failed := direct.assets.Counts(); saved != 6 || skipped != 3 || failed != 1 {
+		t.Fatalf("direct Counts() = %d, %d, %d, want 6, 3, 1", saved, skipped, failed)
+	}
+	if direct.assets.Reused() != 1 {
+		t.Fatalf("direct Reused() = %d, want 1", direct.assets.Reused())
+	}
+	wantDownloads := []string{
+		"https://example.com/workspace (limit 5242880)",
+		"https://example.com/avatar-b (limit 0)",
+		"https://example.com/avatar-a (limit 0)",
+		"https://example.com/emoji (limit 0)",
+		"https://example.com/fail (limit 10)",
+		"https://example.com/too-large (limit 10)",
+		"https://example.com/big (limit 10)",
+		"https://example.com/doc (limit 10)",
+	}
+	if !slices.Equal(direct.dl.calls, wantDownloads) {
+		t.Fatalf("direct downloads = %q\nwant %q", direct.dl.calls, wantDownloads)
+	}
+
+	// The planned render ends every request the same way, in the same order.
+	if !slices.Equal(planned.answers, direct.answers) {
+		t.Fatalf("planned answers = %q\ndirect answers  = %q", planned.answers, direct.answers)
+	}
+	if !slices.Equal(planned.assets.Entries(), direct.assets.Entries()) {
+		t.Fatalf("planned manifest = %+v\ndirect manifest  = %+v", planned.assets.Entries(), direct.assets.Entries())
+	}
+	if !slices.Equal(planned.warnings, direct.warnings) {
+		t.Fatalf("planned warnings = %q\ndirect warnings  = %q", planned.warnings, direct.warnings)
+	}
+	if !slices.Equal(planned.dl.calls, direct.dl.calls) {
+		t.Fatalf("planned downloads = %q\ndirect downloads  = %q", planned.dl.calls, direct.dl.calls)
+	}
+	if !maps.Equal(planned.files, direct.files) {
+		t.Fatalf("planned files = %q\ndirect files  = %q", planned.files, direct.files)
+	}
+	if planned.assets.Reused() != direct.assets.Reused() {
+		t.Fatalf("planned Reused() = %d, direct %d", planned.assets.Reused(), direct.assets.Reused())
+	}
+}
+
+// TestAssetsSaveOutsidePlanAcquiresWhenAsked covers a Save the plan did not
+// foresee (Issue #274). Fetch acquires each planned URL once, even when called
+// again, leaves a URL already recorded alone, and records nothing itself. A
+// Save for a URL outside the plan downloads it when asked, and warns then.
+func TestAssetsSaveOutsidePlanAcquiresWhenAsked(t *testing.T) {
+	t.Parallel()
+
+	dl := &fakeDownloader{content: map[string]fakeDownload{
+		"https://example.com/early":     {body: "early", contentType: "image/png"},
+		"https://example.com/planned":   {body: "planned", contentType: "image/png"},
+		"https://example.com/unplanned": {err: errors.New("download failed")},
+	}}
+	assets := NewAssets(context.Background(), dl, t.TempDir(), 0)
+	var events []string
+	assets.Logf = func(format string, args ...any) {
+		events = append(events, "warning: "+fmt.Sprintf(format, args...))
+	}
+
+	if _, ok := assets.Save(KindAvatar, "https://example.com/early", AssetMeta{}); !ok {
+		t.Fatalf("Save(early) ok = false")
+	}
+	plan := []PlannedAsset{
+		{Kind: KindAvatar, SourceURL: "https://example.com/early"},
+		{Kind: KindAvatar, SourceURL: "https://example.com/planned"},
+	}
+	assets.Fetch(plan)
+	assets.Fetch(plan)
+	wantDownloads := []string{"https://example.com/early (limit 0)", "https://example.com/planned (limit 0)"}
+	if !slices.Equal(dl.calls, wantDownloads) {
+		t.Fatalf("downloads after Fetch = %q, want %q", dl.calls, wantDownloads)
+	}
+	if n := len(assets.Entries()); n != 1 {
+		t.Fatalf("manifest entries after Fetch = %d, want 1 (Fetch records nothing)", n)
+	}
+
+	events = append(events, "render")
+	assets.Save(KindAvatar, "https://example.com/unplanned", AssetMeta{})
+	if _, ok := assets.Save(KindAvatar, "https://example.com/planned", AssetMeta{}); !ok {
+		t.Fatalf("Save(planned) ok = false")
+	}
+	wantDownloads = append(wantDownloads, "https://example.com/unplanned (limit 0)")
+	if !slices.Equal(dl.calls, wantDownloads) {
+		t.Fatalf("downloads = %q, want %q", dl.calls, wantDownloads)
+	}
+	if want := []string{"render", "warning: asset failed (avatar): download failed"}; !slices.Equal(events, want) {
+		t.Fatalf("events = %q, want %q", events, want)
+	}
+	var order []string
+	for _, e := range assets.Entries() {
+		order = append(order, e.SourceURL+" "+e.Status)
+	}
+	wantOrder := []string{
+		"https://example.com/early saved",
+		"https://example.com/unplanned failed",
+		"https://example.com/planned saved",
+	}
+	if !slices.Equal(order, wantOrder) {
+		t.Fatalf("manifest = %q, want %q", order, wantOrder)
+	}
+}
+
+// collectFiles returns every regular file under dir, by slash-separated path
+// relative to dir, with its content.
+func collectFiles(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	files := map[string]string{}
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || !d.Type().IsRegular() {
+			return err
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		files[filepath.ToSlash(rel)] = string(data)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", dir, err)
+	}
+	return files
+}
+
 func TestAssetsLimitFor(t *testing.T) {
 	t.Parallel()
 
@@ -781,9 +1075,11 @@ type fakeDownload struct {
 
 type fakeDownloader struct {
 	content map[string]fakeDownload
+	calls   []string // each Download's URL and limit, in call order
 }
 
-func (f *fakeDownloader) Download(_ context.Context, srcURL string, _ int64, w io.Writer) (int64, string, error) {
+func (f *fakeDownloader) Download(_ context.Context, srcURL string, limit int64, w io.Writer) (int64, string, error) {
+	f.calls = append(f.calls, fmt.Sprintf("%s (limit %d)", srcURL, limit))
 	item, ok := f.content[srcURL]
 	if !ok {
 		return 0, "", errors.New("unexpected url")

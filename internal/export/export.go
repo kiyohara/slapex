@@ -68,8 +68,10 @@ type Options struct {
 //     filters and --max-posts leave;
 //   - resolveUsers (Users) and resolveCustomEmoji (Emoji): the users, bots and
 //     custom emoji the messages show;
-//   - the Assets phase: the workspace icon and avatars, the timeline view with
-//     the assets it shows, and index.html;
+//   - the Assets phase: the workspace icon, the avatars and the timeline view
+//     rendered once to plan the assets they show, the fetch of that plan, the
+//     same render again with the fetched assets (renderWithAssets), and
+//     index.html;
 //   - writeCaches and the .cache/ cleanup, then reportDone (Done).
 func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (string, error) {
 	// start is the real clock for the Done elapsed time; now is the export
@@ -117,9 +119,7 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		assets.SetReuseSource(reuse.reuseSource())
 	}
 	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
-	workspaceIcon := saveWorkspaceIcon(assets, target.teamInfo)
-	views := newMessageViewBuilder(assets, resolved, emojiResolver, opts.MaxAttachBytes)
-	items := buildTimeline(views, fetched)
+	workspaceIcon, items := renderWithAssets(ctx, assets, target.teamInfo, resolved, emojiResolver, fetched, opts.MaxAttachBytes)
 	page := buildPage(target, workspaceIcon, items, fetched.truncated, fetchRange, opts, now)
 	if err := writePage(out.path, page); err != nil {
 		return "", err

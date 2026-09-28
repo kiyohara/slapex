@@ -109,6 +109,12 @@ type AssetMeta struct {
 
 // Assets downloads asset URLs into the per-kind directories with content-hash
 // file names, deduplicates by source URL, and records every outcome.
+//
+// The export asks for its assets while it renders the page, and renders twice
+// (Issue #274): a Planner records what the first render asks for, Fetch
+// acquires that plan, and the second render's Save and SkipTooLarge record the
+// results in the order it asks. A Save for a URL no Fetch acquired — outside
+// the plan, or with no plan at all — acquires it then.
 type Assets struct {
 	ctx     context.Context
 	dl      Downloader
@@ -119,19 +125,41 @@ type Assets struct {
 	entries []ManifestEntry
 	reuse   *ReuseSource // previous run's assets to copy instead of downloading
 	reused  int          // assets taken from the reuse source instead of downloaded
+	// planning marks a planner (Planner): Save and SkipTooLarge add each new
+	// source URL to plan instead of acquiring or recording it.
+	planning bool
+	plan     []PlannedAsset
+	// fetched holds what Fetch acquired, by source URL, for Save to record when
+	// the render asks for it.
+	fetched map[string]ManifestEntry
 	// Logf receives a warning for each download that did not complete, worded
 	// after its manifest status: a failure, or a download the size limit
 	// stopped. SkipTooLarge warns of nothing: a file its pre-check keeps out
 	// is the limit working as configured, and the Assets counts report it
-	// (doc/design/output-format.md).
+	// (doc/design/output-format.md). The warning comes when the download ends,
+	// so after a Fetch it follows the plan's order, which is the order the
+	// render asks in.
 	Logf func(format string, args ...any)
 }
 
-// ReuseSource lets Save copy an already-saved asset from a previous run's
-// output instead of downloading it again, for --reuse-cache (doc/design/cache.md,
-// decision log 0030). OldDir is the previous run's channel directory (the parent
-// of the reused .cache/); Entries maps each previously saved source_url to its
-// manifest entry, whose LocalPath is relative to OldDir.
+// PlannedAsset is one asset a planning render asked for (Assets.Planner): the
+// first request for its source URL, with that request's kind and metadata and
+// the per-file byte limit the kind gets (0 = unlimited). SkipSize marks a file
+// the size pre-check kept out (SkipTooLarge), which Fetch leaves alone.
+type PlannedAsset struct {
+	Kind      string
+	SourceURL string
+	Limit     int64
+	Meta      AssetMeta
+	SkipSize  bool
+}
+
+// ReuseSource lets Fetch and Save copy an already-saved asset from a previous
+// run's output instead of downloading it again, for --reuse-cache
+// (doc/design/cache.md, decision log 0030). OldDir is the previous run's
+// channel directory (the parent of the reused .cache/); Entries maps each
+// previously saved source_url to its manifest entry, whose LocalPath is
+// relative to OldDir.
 type ReuseSource struct {
 	OldDir  string
 	Entries map[string]ManifestEntry
@@ -149,7 +177,8 @@ func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Ass
 	}
 }
 
-// SetReuseSource enables copy-from-previous-run behaviour in Save (--reuse-cache).
+// SetReuseSource enables copy-from-previous-run behaviour in Fetch and Save
+// (--reuse-cache).
 func (a *Assets) SetReuseSource(r *ReuseSource) { a.reuse = r }
 
 // Reused returns how many assets came from the reuse source instead of being
@@ -172,6 +201,54 @@ func (a *Assets) limitFor(kind string) int64 {
 	}
 }
 
+// Planner returns an Assets for a render that only plans (Issue #274). Its
+// Save and SkipTooLarge take each request as a's would — an empty URL is
+// ignored, a source URL counts once, at its first request, and the kind of
+// that request sets the size limit — and add it to Plan instead of acquiring
+// it. A planner writes nothing to the output directory, copies nothing from
+// the reuse source and warns of nothing. Its Save reports every asset
+// unavailable, and its Status reports skipped_size only for a file
+// SkipTooLarge planned. Which assets a render asks for does not depend on
+// those answers, so a planning render asks for what the render after Fetch
+// will.
+func (a *Assets) Planner() *Assets {
+	return &Assets{
+		limit:    a.limit,
+		known:    map[string]string{},
+		status:   map[string]string{},
+		planning: true,
+		Logf:     func(string, ...any) {},
+	}
+}
+
+// Plan returns what a planner was asked for: one PlannedAsset per source URL,
+// in the order first requested.
+func (a *Assets) Plan() []PlannedAsset { return a.plan }
+
+// Fetch acquires the planned assets in plan order, each the way Save would at
+// the first request for it: a copy from the reuse source when that has the
+// asset, a download otherwise, with the same warning for a download that did
+// not complete. It records nothing in the manifest: Save records each result
+// when the render asks for it, so the manifest follows the order of the
+// render's requests. A file SkipTooLarge planned has nothing to fetch.
+func (a *Assets) Fetch(plan []PlannedAsset) {
+	if a.fetched == nil {
+		a.fetched = map[string]ManifestEntry{}
+	}
+	for _, p := range plan {
+		if p.SkipSize || p.SourceURL == "" {
+			continue
+		}
+		if _, done := a.fetched[p.SourceURL]; done {
+			continue
+		}
+		if _, seen := a.known[p.SourceURL]; seen {
+			continue
+		}
+		a.fetched[p.SourceURL] = a.acquire(p.Kind, p.SourceURL, p.Limit, p.Meta)
+	}
+}
+
 // SkipTooLarge records a file that was not downloaded due to the size limit.
 // Like Save, it records each source URL once, so a file shown again — a
 // thread_broadcast rendered on the timeline and in its thread, or one file in
@@ -187,12 +264,27 @@ func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
 	if _, seen := a.status[srcURL]; seen {
 		return
 	}
-	a.known[srcURL] = ""
-	a.status[srcURL] = StatusSkippedSize
-	a.entries = append(a.entries, ManifestEntry{
+	if a.planning {
+		a.addToPlan(kind, srcURL, meta, true)
+		return
+	}
+	a.record(ManifestEntry{
 		Kind: kind, SourceURL: srcURL, Status: StatusSkippedSize,
 		FileID: meta.FileID, OriginalName: meta.OriginalName,
 		Mimetype: meta.Mimetype, SizeBytes: meta.SizeBytes,
+	})
+}
+
+// addToPlan records a planner's first request for srcURL. skipSize marks one
+// from SkipTooLarge, which Status then reports as skipped_size.
+func (a *Assets) addToPlan(kind, srcURL string, meta AssetMeta, skipSize bool) {
+	a.known[srcURL] = ""
+	a.status[srcURL] = ""
+	if skipSize {
+		a.status[srcURL] = StatusSkippedSize
+	}
+	a.plan = append(a.plan, PlannedAsset{
+		Kind: kind, SourceURL: srcURL, Limit: a.limitFor(kind), Meta: meta, SkipSize: skipSize,
 	})
 }
 
@@ -204,9 +296,11 @@ func (a *Assets) SkipTooLarge(kind, srcURL string, meta AssetMeta) {
 // because a repeated Save of a known URL records no new entry.
 func (a *Assets) Status(srcURL string) string { return a.status[srcURL] }
 
-// Save downloads srcURL (unless an earlier Save or SkipTooLarge already
-// handled it) and returns the path relative to the output directory. ok is
-// false when the asset is unavailable.
+// Save records srcURL (unless an earlier Save or SkipTooLarge already handled
+// it) and returns the path relative to the output directory. ok is false when
+// the asset is unavailable. It records what Fetch acquired for srcURL, and
+// acquires the asset itself when no Fetch did. On a planner it only adds
+// srcURL to the plan (Planner).
 func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok bool) {
 	if srcURL == "" {
 		return "", false
@@ -214,17 +308,37 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	if rel, seen := a.known[srcURL]; seen {
 		return rel, rel != ""
 	}
+	if a.planning {
+		a.addToPlan(kind, srcURL, meta, false)
+		return "", false
+	}
+	e, fetched := a.fetched[srcURL]
+	if !fetched {
+		e = a.acquire(kind, srcURL, a.limitFor(kind), meta)
+	}
+	a.record(e)
+	return e.LocalPath, e.Status == StatusSaved
+}
 
+// acquire gets srcURL the way Save does at its first request: a copy from the
+// reuse source when that has the asset, a download otherwise. limit is the
+// per-file byte limit for kind. It returns the manifest entry for Save to
+// record.
+func (a *Assets) acquire(kind, srcURL string, limit int64, meta AssetMeta) ManifestEntry {
 	if a.reuse != nil {
-		if rel, ok := a.copyFromReuse(kind, srcURL, meta); ok {
-			return rel, true
+		if e, ok := a.copyFromReuse(kind, srcURL, limit, meta); ok {
+			return e
 		}
 	}
+	return a.download(kind, srcURL, limit, meta)
+}
 
+// download fetches srcURL into kind's directory under its content hash and
+// returns the manifest entry, warning of a download that did not complete.
+func (a *Assets) download(kind, srcURL string, limit int64, meta AssetMeta) ManifestEntry {
 	tmp, err := os.CreateTemp(a.dir, "asset-*")
 	if err != nil {
-		a.record(kind, srcURL, meta, "", StatusFailed, err.Error())
-		return "", false
+		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
 	}
 	defer os.Remove(tmp.Name())
 
@@ -239,7 +353,7 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	var head headBuffer
 	// The kind labels the download in the HTTP trace (Issue #273).
 	ctx := slack.WithAssetKind(a.ctx, kind)
-	size, contentType, err := a.dl.Download(ctx, srcURL, a.limitFor(kind), io.MultiWriter(tmp, h, &head))
+	size, contentType, err := a.dl.Download(ctx, srcURL, limit, io.MultiWriter(tmp, h, &head))
 	tmp.Close()
 	if err != nil {
 		status, warning := StatusFailed, "asset failed"
@@ -248,9 +362,8 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 			// in the warning as in the manifest and the counts (Issue #250).
 			status, warning = StatusSkippedSize, "asset skipped by size limit"
 		}
-		a.record(kind, srcURL, meta, "", status, err.Error())
 		a.Logf("%s (%s): %s", warning, kind, err)
-		return "", false
+		return newEntry(kind, srcURL, meta, "", status, err.Error())
 	}
 
 	sniffed := head.detect()
@@ -258,12 +371,10 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	rel := filepath.Join(kindDirs[kind], base+extensionFor(meta, srcURL, contentType, sniffed))
 	dst := filepath.Join(a.dir, rel)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		a.record(kind, srcURL, meta, "", StatusFailed, err.Error())
-		return "", false
+		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
 	}
 	if err := os.Rename(tmp.Name(), dst); err != nil {
-		a.record(kind, srcURL, meta, "", StatusFailed, err.Error())
-		return "", false
+		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
 	}
 	if meta.SizeBytes == 0 {
 		meta.SizeBytes = size
@@ -271,19 +382,25 @@ func (a *Assets) Save(kind, srcURL string, meta AssetMeta) (relPath string, ok b
 	if meta.Mimetype == "" {
 		meta.Mimetype = mimetypeFor(contentType, sniffed)
 	}
-	a.record(kind, srcURL, meta, filepath.ToSlash(rel), StatusSaved, "")
-	return filepath.ToSlash(rel), true
+	return newEntry(kind, srcURL, meta, filepath.ToSlash(rel), StatusSaved, "")
 }
 
-func (a *Assets) record(kind, srcURL string, meta AssetMeta, rel, status, errMsg string) {
-	a.known[srcURL] = rel
-	a.status[srcURL] = status
-	a.entries = append(a.entries, ManifestEntry{
+// newEntry is the manifest entry for srcURL with the given outcome.
+func newEntry(kind, srcURL string, meta AssetMeta, rel, status, errMsg string) ManifestEntry {
+	return ManifestEntry{
 		Kind: kind, SourceURL: srcURL, LocalPath: rel,
 		FileID: meta.FileID, EmojiName: meta.EmojiName, OriginalName: meta.OriginalName,
 		Mimetype: meta.Mimetype, SizeBytes: meta.SizeBytes,
 		Status: status, Error: errMsg,
-	})
+	}
+}
+
+// record adds e to the manifest, and makes its source URL known to later
+// requests and to Status.
+func (a *Assets) record(e ManifestEntry) {
+	a.known[e.SourceURL] = e.LocalPath
+	a.status[e.SourceURL] = e.Status
+	a.entries = append(a.entries, e)
 }
 
 // copyFromReuse copies an asset that a previous run already saved into this
@@ -293,32 +410,33 @@ func (a *Assets) record(kind, srcURL string, meta AssetMeta, rel, status, errMsg
 // the asset content is unchanged, a fresh download would resolve to the same
 // content hash anyway (decision log 0052); reusing a cache written by an older
 // URL-hash build simply keeps that build's names for the copied assets. It
-// returns false — so Save falls back to a normal download — when srcURL was not
-// a saved asset before or the previous file is gone.
-func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, bool) {
+// returns the manifest entry to record, or false — so acquire falls back to a
+// normal download — when srcURL was not a saved asset before or the previous
+// file is gone. limit is the per-file byte limit for kind.
+func (a *Assets) copyFromReuse(kind, srcURL string, limit int64, meta AssetMeta) (ManifestEntry, bool) {
 	entry, ok := a.reuse.Entries[srcURL]
 	if !ok || entry.LocalPath == "" {
-		return "", false
+		return ManifestEntry{}, false
 	}
 	// LocalPath comes from a previous run's manifest. Reject anything that is not
 	// a contained relative path so a corrupted or untrusted cache cannot read or
 	// write outside the old / new output directories (path traversal); such an
 	// asset falls back to a normal download.
 	if !filepath.IsLocal(filepath.FromSlash(entry.LocalPath)) {
-		return "", false
+		return ManifestEntry{}, false
 	}
 	src := filepath.Join(a.reuse.OldDir, filepath.FromSlash(entry.LocalPath))
 	info, err := os.Stat(src)
 	if err != nil || info.IsDir() {
-		return "", false
+		return ManifestEntry{}, false
 	}
 	// A previous run may have saved this asset under a larger --max-attachment-size.
 	// If its real size now exceeds this run's limit, do not copy it: fall back to a
 	// normal download so it is enforced and recorded as skipped_size, exactly like a
 	// fresh run (the export messageViewBuilder pre-check uses Slack's file.size, which
 	// can be absent or understated).
-	if limit := a.limitFor(kind); limit > 0 && info.Size() > limit {
-		return "", false
+	if limit > 0 && info.Size() > limit {
+		return ManifestEntry{}, false
 	}
 	dst := filepath.Join(a.dir, filepath.FromSlash(entry.LocalPath))
 	// --reuse-cache may point at the directory this run is writing to: re-running
@@ -329,10 +447,10 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	// have produced (Issue #202).
 	if !sameFile(info, dst) {
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return "", false
+			return ManifestEntry{}, false
 		}
 		if err := copyFile(src, dst); err != nil {
-			return "", false
+			return ManifestEntry{}, false
 		}
 	}
 	if meta.SizeBytes == 0 {
@@ -345,8 +463,7 @@ func (a *Assets) copyFromReuse(kind, srcURL string, meta AssetMeta) (string, boo
 	// Record under the requested kind: each source_url maps to exactly one kind,
 	// so this matches both the copied file's directory and what a fresh download
 	// would record, keeping the reused manifest identical to a normal run.
-	a.record(kind, srcURL, meta, entry.LocalPath, StatusSaved, "")
-	return entry.LocalPath, true
+	return newEntry(kind, srcURL, meta, entry.LocalPath, StatusSaved, ""), true
 }
 
 // sameFile reports whether dst is the same existing file as the one srcInfo

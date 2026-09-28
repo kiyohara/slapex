@@ -56,6 +56,13 @@ func runExportScenario(t *testing.T, sc exportScenario, opts Options) exportRunR
 // clientOpts are added to the Slack client's options (the HTTP trace case).
 func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options, clientOpts ...slack.Option) (exportRunResult, []time.Duration, error) {
 	t.Helper()
+	return runExportScenarioContext(t, context.Background(), sc, opts, clientOpts...)
+}
+
+// runExportScenarioContext is runExportScenarioRaw with the context Run gets,
+// for a case that hands Run a value through it (the asset plan observer).
+func runExportScenarioContext(t *testing.T, ctx context.Context, sc exportScenario, opts Options, clientOpts ...slack.Option) (exportRunResult, []time.Duration, error) {
+	t.Helper()
 	if opts.Now.IsZero() && len(sc.Messages) > 0 {
 		latest := tsTime(sc.Messages[0].TS)
 		for i := 1; i < len(sc.Messages); i++ {
@@ -91,7 +98,7 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options, clientO
 	}, clientOpts...)...)
 	client.Logf = printer.Noticef
 
-	outDir, err := Run(context.Background(), client, opts, printer)
+	outDir, err := Run(ctx, client, opts, printer)
 
 	mu.Lock()
 	defer mu.Unlock()

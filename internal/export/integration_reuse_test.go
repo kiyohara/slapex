@@ -442,13 +442,14 @@ func TestRunIntegrationReuseCacheThumbnailMetadata(t *testing.T) {
 // --- shared harness ----------------------------------------------------------
 
 // reuseRun holds the two output directories, the fake server request counts
-// captured after each run, and run 2's logs.
+// captured after each run, and run 2's logs and asset requests.
 type reuseRun struct {
 	dir1, dir2 string
 	assets     []string // fake-server asset paths (sc.Assets keys)
 	before     map[string]int
 	after      map[string]int
 	logs2      []string
+	requests2  []string // asset paths run 2 requested, in request order
 }
 
 // runReuseScenario runs the happy-path export twice against one shared fake
@@ -479,6 +480,14 @@ func runReuseScenarioOpts(t *testing.T, sc exportScenario, opts1, opts2 Options,
 
 func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, opts2 Options, tamper func(t *testing.T, cacheDir string), reusePath func(outputDir, cacheDir string) string) reuseRun {
 	t.Helper()
+	return runReuseScenarioContext(t, context.Background(), sc, opts1, opts2, tamper, reusePath)
+}
+
+// runReuseScenarioContext is runReuseScenarioOptsWithReusePath with the context
+// run 2 gets, for a case that hands run 2 a value through it (the asset plan
+// observer).
+func runReuseScenarioContext(t *testing.T, ctx2 context.Context, sc exportScenario, opts1, opts2 Options, tamper func(t *testing.T, cacheDir string), reusePath func(outputDir, cacheDir string) string) reuseRun {
+	t.Helper()
 
 	fake := newFakeSlackServer(t, &sc)
 	t.Cleanup(fake.Close)
@@ -502,6 +511,7 @@ func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, o
 		t.Fatalf("run 1 (populate cache) error: %v", err)
 	}
 	before := snapshotCounts(fake, countPaths)
+	requests1 := len(fake.AssetRequests())
 
 	cacheDir := filepath.Join(dir1, ".cache")
 	if tamper != nil {
@@ -510,7 +520,7 @@ func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, o
 
 	opts2.ReuseCache = reusePath(dir1, cacheDir)
 	var logs2 []string
-	dir2, err := Run(context.Background(), client, opts2, testPrinter(func(line string) {
+	dir2, err := Run(ctx2, client, opts2, testPrinter(func(line string) {
 		logs2 = append(logs2, line)
 	}))
 	if err != nil {
@@ -518,7 +528,8 @@ func runReuseScenarioOptsWithReusePath(t *testing.T, sc exportScenario, opts1, o
 	}
 	after := snapshotCounts(fake, countPaths)
 
-	return reuseRun{dir1: dir1, dir2: dir2, assets: assets, before: before, after: after, logs2: logs2}
+	return reuseRun{dir1: dir1, dir2: dir2, assets: assets, before: before, after: after, logs2: logs2,
+		requests2: fake.AssetRequests()[requests1:]}
 }
 
 // reuseOptions is integrationOptions with the two fields the reuse runs decide
