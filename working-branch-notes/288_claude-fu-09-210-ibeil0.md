@@ -13,10 +13,11 @@ Issue #210(FU-09)。取得範囲の境界が秒単位に切り捨てられ、秒
 ## 現在の状況
 
 - 依存は無い(Issue の「依存・順序」)。main `48c0198`(PR #287 の merge)から作業した。
-- 仕様判断(境界を秒未満まで使うか、秒未満の入力を拒否するか)は、推奨(秒未満まで使う)を添えてユーザーに thread のカードで伺い、返事を待たずに推奨で進めた(coordinator の指示)。
+- 仕様判断(境界を秒未満まで使うか、秒未満の入力を拒否するか)は、推奨(秒未満まで使う)を添えてユーザーに thread のカードで伺い、返事を待たずに推奨で進めた(coordinator の指示)。ユーザーは 2026-09-28 にカードで推奨を選んだ。
 - 実装、test、設計文書、decision log 0065 を書き、Issue の「検証」を実行した(「検証」)。
 - PR #288 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- 次は CI を確かめてから Claude の review を subagent に委譲する(P2)。
+- Claude の review cycle `claude-code-3b97818-20260928135205` で指摘 2 件(`[imo]` 1 件、`[nits]` 1 件。`[must]` は無い)を受け、どちらも採用して設計文書を直した(`0bc6495`)。次は CI を確かめてから再確認を subagent に委譲する(P5)。
+- note の採番の commit(`b34bc2b`)で CI の `check` が失敗した。本 PR の差分外にある、時間に依存した test が原因で、follow-up の候補にした(「CI で見つかった follow-up の候補」)。
 
 ## 決定事項
 
@@ -31,7 +32,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 
 ### 仕様判断
 
-- 境界を秒未満まで使う案(A)を採った。秒未満の入力を usage error にする案(B)は採らない。理由は decision log 0065 に書いた。要点は、仕様(`cli-interface.md`)が RFC3339Nano の受け付けを定めていること、B ではログなどからコピーした `.123Z` 付きの時刻が失敗するようになること、A でも秒単位の入力と `--date` / `--days` の出力が変わらないこと。
+- 境界を秒未満まで使う案(A)を採った。秒未満の入力を usage error にする案(B)は採らない。ユーザーは thread のカードで A を選んだ(2026-09-28)。理由は decision log 0065 に書いた。要点は、仕様(`cli-interface.md`)が RFC3339Nano の受け付けを定めていること、B ではログなどからコピーした `.123Z` 付きの時刻が失敗するようになること、A でも秒単位の入力と `--date` / `--days` の出力が変わらないこと。
 - マイクロ秒より細かい入力(RFC3339Nano の 7〜9 桁)は、マイクロ秒へ切り上げる。Slack の ts はマイクロ秒単位のため、開始(含む)と終了(含まない)のどちらでも、範囲に入る ts は入力どおりになる。切り捨てると、開始境界の直前の ts を含み得る。開始が終了より前かは切り上げた後に判定し、同じマイクロ秒の中の範囲(ts が入り得ない)は usage error にする。
 - `--days` は、実行時刻の秒未満を切り捨てた時刻を範囲の終了境界とした。Issue の「`--days` の `end` を秒に丸めるなら footer の表示と一致させる」に当たる。Slack へ渡す値、footer、metadata は変更前と同じ値になる(「検証」の main との比較)。
 - decision log 0065 を作った。複数案を比べて採否を決めたため(`doc/guidelines/decision-log-guidelines.md` の「記録が必要な場面」)。--date / --from / --to の既存の decision log は無く、0011 は `--days` の導入の記録である。
@@ -61,10 +62,11 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 ### 設計文書・help・progress.md
 
 - `doc/design/cli-interface.md`: local datetime の `HH:MM:SS` に秒未満の小数部を続けてよいこと(Go の parser の既存の挙動の明記)と、`--from` / `--to` の境界の精度、切り上げ、判定の順を書いた。決定経緯に 0065 を足した。
-- `doc/design/output-format.md`: `--from` / `--to` の秒未満、`--days` の終了境界、footer の `Range` の秒未満の表示を書いた。
-- `doc/design/cache.md`: `target_range` の `start` / `end` の秒未満と、`start_slack_ts` / `end_slack_ts` の小数 6 桁を書いた。`schema_version` は変えない。
+- `doc/design/output-format.md`: `--from` / `--to` の秒未満、`--days` の終了境界と開始境界(その `--days` × 24 時間前)、footer の `Range` の秒未満の表示を書いた。決定経緯として 0065 を参照する。
+- `doc/design/cache.md`: `target_range` の `start` / `end` の秒未満と、`start_slack_ts` / `end_slack_ts` の小数 6 桁を書いた。決定経緯として 0065 を参照する。`schema_version` は変えない。
+- `doc/design/slack-api-usage.md`: pagination の `--from` / `--to` に境界の渡し方(秒未満を含む小数 6 桁の ts、マイクロ秒より細かい部分の切り上げ)を、`--days` に実行基準時刻(実行時刻の秒未満を切り捨てた時刻)を書き足した。決定経緯として 0065 を参照する。
 - `doc/help/usage.md`: `--from` / `--to` に秒未満を含む日時を指定できることを 1 文足した。
-- `doc/design/decision-log/0065-subsecond-range-boundaries.md` と `index.md` の行を足した。
+- `doc/design/decision-log/0065-subsecond-range-boundaries.md` と `index.md` の行を足した。0065 の `関連` には、決定経緯として 0065 を参照する 4 つの spec(`cli-interface.md`、`output-format.md`、`cache.md`、`slack-api-usage.md`)を挙げる。
 - `progress.md` の FU-09 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に #288 を記入した。
 
 ### 出力生成系 3 skill の適用判断
@@ -73,11 +75,21 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 - `update-readme-preview-screenshots`: 適用しない。sample export に差分が無い。
 - `update-readme-demo-gif`: 適用しない。CLI の出力が変わるのは秒未満を含む `--from` / `--to` の進捗表示だけで、demo(`--demo`、`--days`)の出力は変わらない。
 
+### CI で見つかった follow-up の候補
+
+- `tools/assetbench` の `TestUnpacedRun` が、時間に依存して失敗する。note の採番の commit(`b34bc2b`)の CI の `check` で失敗し、Go のコードが同じ次の commit(`3b97818`)では成功した。本 PR は `tools/assetbench` と `internal/slack/trace.go` を変えていない(main `48c0198` のまま)。
+  - 原因: `internal/slack/trace.go` の `tracer.install` は、sleeper の呼び出しを `time.Now()` と `time.Since(start)` で挟んで待ち時間を記録する。unpaced の strategy の sleeper は何もせずに返るが、その間に goroutine が 1µs 以上止まると `PacingWaitUS` が 1 以上になり、`tools/assetbench/main_test.go` 70 行目の `res.times.PacingWait != 0` の検査で失敗する。
+  - 再現: Docker Compose で `GOMAXPROCS=1`、`-race`、`-count=40` で回すと、40 回のうち 1 回から数回、同じ形で失敗した。`-race` なしの 40 回では再現しなかった。
+  - 修正案: 検査を「待ちが無い」から「待ちが十分に小さい」へ緩める(`res.times.PacingWait >= time.Millisecond` で失敗とする)。paced の strategy の test は 1 秒以上の待ちを見ている。
+  - 本 PR には取り込まない(1 Issue = 1 PR で、最新 head の CI は成功している)。PR に説明のコメント(https://github.com/kiyohara/slapex/pull/288#issuecomment-5871328011)を残した。起票するかはユーザーが判断する。
+
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
-- 仕様判断のカードへのユーザーの返事を確かめる。B が選ばれた場合は実装と 0065 を直す。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- 仕様判断のカードへのユーザーの返事を確かめる。B が選ばれた場合は実装と 0065 を直す。(完了。推奨の A が選ばれた)
+- review の指摘に対応する(P4)。(完了)
+- CI を確かめてから再確認を subagent に委譲する(P5)。
 
 ## 検証
 
@@ -97,11 +109,12 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
 | sample export の再生成(`TZ=Asia/Tokyo`、`-time 2026-07-04T16:32:41+09:00`、別ディレクトリ) | `doc/samples/ja` / `en` と `diff -r` で無差分(各 18 ファイル) |
 | 新しい test を main `48c0198` の実装で実行(使い捨ての worktree。新しい関数を使う `TestFormatTimeTS` / `TestCeilMicrosecond` を除く) | 問題を再現した。`TestResolveDateTimeFetchRangeKeepsFractionOfSecond` の 4 通りと `TestRunIntegrationDateTimeRangeBelowOneSecond`(境界の内側の投稿が出ない)が失敗した。`TestResolveDateTimeFetchRangeRejectsEmptyOrReversedRange` は切り上げで空になる範囲だけ、`TestResolveFetchRangeDaysCutsNowToWholeSecond` は範囲の終了境界の比較だけが失敗した。`TestResolveFetchRangeWholeSecondsKeepTheirOutput`、秒未満を含む `--date`、`TestHistoryRangeBoundariesBelowOneSecond` は main でも通った(秒単位の出力と client 側の判定は変わらない) |
 | 秒未満を持つ実行時刻の `--days` の出力を main で確かめる(使い捨ての test。commit しない) | main でも Slack へ渡す値、footer、metadata の `start` / `end` が本 PR の `TestResolveFetchRangeDaysCutsNowToWholeSecond` と同じ値になった(`--days` の出力は変わらない) |
+| P4 の文書の修正(`0bc6495`)の後: `gofmt -l .`、`go vet ./...`、`go build ./...`、`go test ./...`、`git diff --check` | pass(Go のコードは変えていない) |
+| review の `[nits]` の例(`America/New_York`、実行時刻 2026-03-20 12:00:00.4、`--days 30`)を確かめる(使い捨ての test。commit しない) | footer は `From 2026-02-18T11:00:00-05:00 (included); to 2026-03-20T12:00:00-04:00 (not included)` で、暦の 30 日前(12:00)と 1 時間ずれた。開始境界は `--days` × 24 時間前である |
 
 ## リスク・ブロッカー
 
 - 実 workspace での確認はしていない(実 token が要るため)。Slack の `conversations.history` が小数付きの `oldest` を受け付けることは、実 API で確かめていない。小数付きの `latest` は、2 ページ目以降の取得で投稿の ts を渡す既存の経路が使っている。
-- 仕様判断はユーザーの返事を待たずに推奨で進めた。B が選ばれた場合は実装を差し替える。
 
 ## セッションログ
 
@@ -111,3 +124,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `48c01
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#288`)と、PR description の note のファイル名参照 1 行(`draft_` → `288_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」と「決定事項」の「PR 欄は採番後に記入する。」(どちらも定型に当てはまらない)、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。PR description と title で触らずに残した行は無い。この 3 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
   - 「リスク・ブロッカー」の実 API で確かめていない事項の書き方(`oldest` と `latest` の取り違え)を直した。
+- 2026-09-28: 途中の commit(`b34bc2b`)の CI の `check` の失敗を調べた。本 PR の差分外にある、時間に依存した test(`TestUnpacedRun`)で、PR にコメントを残し、follow-up の候補にした(「CI で見つかった follow-up の候補」)。最新 head `3b97818` の 5 件の check は成功した。
+- 2026-09-28: Claude の review(P2)を subagent に委譲した。review cycle `claude-code-3b97818-20260928135205`、`Reviewed head` `3b9781895818946e8f13853c93257a532b8ad5f8`。指摘は 2 件(inline 2 件、top-level 0 件。`[imo]` 1 件、`[nits]` 1 件で、`[must]`、`[ask]`、`[fyi]` は無い)。`gh` への fallback は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
+- 2026-09-28: ユーザーが仕様判断のカードで推奨(秒未満まで使う)を選んだ。実装は変えない。
+- 2026-09-28: 指摘に対応した(P4)。処置の内訳は「採用し修正した」2 件(`0bc6495`)。`[imo]`(spec から 0065 を辿れない)は、`output-format.md` と `cache.md` から 0065 を参照し、任意とされた `slack-api-usage.md` の pagination も直して、0065 の `関連` と「影響」に加えた。`[nits]`(`--days` の開始境界の「N 日前」)は「`--days` × 24 時間前」に直した(0065 の「決定」も同じ)。スコープ外とした指摘は無い。出力生成系 3 skill の判断は変わらない(文書だけの変更で、出力を変えない)。
