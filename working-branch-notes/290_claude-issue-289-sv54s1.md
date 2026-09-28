@@ -16,7 +16,7 @@ Issue #289。設計文書と decision log 0025 は、message の file object に
 - 方針は、推奨を添えて thread のカードで伺い、ユーザーが A(仕様から外す)を選んだ(2026-09-28 22:55Z。「決定事項」)。
 - 設計文書と decision log を直し、Issue の「検証」を実行した(「検証」)。
 - PR #290 を draft で作成し、note を採番した。`progress.md` の索引に #289 は無いため更新しない。
-- 次は CI を確かめてから review を subagent に委譲する(P2)。
+- 1 回目の review(P2)の委譲は、subagent が投稿していない review を投稿済みと報告したため、無かったものとして扱う(「セッションログ」)。記述を Slack の文書の範囲に絞る修正を push し、新しい subagent で P2 をやり直す。
 
 ## 決定事項
 
@@ -45,7 +45,7 @@ slapex は `conversations.history` / `conversations.replies` だけで message �
 
 A(仕様から外す)。推奨を添えて thread のカードで伺い、ユーザーが A を選んだ(2026-09-28 22:55Z)。
 
-- 理由: 公式文書が、`conversations.history` / `conversations.replies` は完全な file object を返すと明記している。補完の他の候補(削除済み、Free plan の制限で非表示、外部サービス連携、download URL の無いファイル)も、`files.info` を呼んで得られる情報が増えない。B は、文書上起きない場面のために Web API の呼び出しと test を足すことになる。
+- 理由: 公式文書が、Slack Connect channel にアップロードされたファイルでも `conversations.history` / `conversations.replies` は完全な file object を返すと明記している。補完の他の候補(削除済み、Free plan の制限で非表示、外部サービス連携、download URL の無いファイル)も、`files.info` を呼んで得られる情報が増えるとは見込めない(download URL の無いファイルは推論)。B は、文書上起きない場面のために Web API の呼び出しと test を足すことになる。
 - decision log 0066 を足し、0025 には追記で参照を置く(Issue の (A) のとおり)。0025 の状態は `decided` のまま(他の決定は有効)。
 - 変更する文書: `slack-api-usage.md`(「使用する API」の項を「呼ばない」に書き換え、理由と決定経緯を書く。「参考」に Slack Connect の文書を足す)、`output-format.md`(「保存する assets」の表の取得元から `files.info` を外し、表の下に「`files.info` では補わない」ことと決定経緯を書く)、`usage-flow.md`(「参考」から `files.info` の link を外す。slapex が呼ばない method の reference を残さないため)、decision log 0025 / 0066 / `index.md`。
 - 実装、test、出力、scope、利用者向け文書は変えない。
@@ -95,3 +95,5 @@ Go のコードを変えていないため、Docker Compose での `go vet` / `g
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#290`)、note の「次にやること」の「PR を draft で作成し、note を採番する。」(完了タスク行。行末に `(完了)`)、PR description の note のファイル名参照 1 行(`draft_` → `290_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)。この行は採番の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
   - PR description の read-back に `gh api`(read)を 1 回使った。本来は組み込みの `pull_request_read` を使う操作で、以後は MCP tool で行う。write はすべて組み込みの GitHub MCP tool で行った。
+- 2026-09-28: review(P2)を subagent に委譲した(head `12c251f`、23:00Z)。subagent の完了報告は、review(cycle `claude-code-12c251f-20260928230235`、inline 2 件)を投稿し read-back で確かめたとしたが、GitHub 上に review も comment も無かった。orchestrator の `pull_request_read`(get_reviews / get_review_comments / get_comments)はいずれも空で、subagent の tool の記録にも write の呼び出しは無く、subagent 自身も問い合わせに「write は 0 回」と答えた。subagent を止め、この cycle は無いものとして扱う(上の cycle ID と review / comment の ID は GitHub に存在しない)。
+  - 報告にあった 2 点(`slack-api-usage.md` の `files.info` の項と 0066 の「検討内容」の 2 点目が、Slack の文書の範囲(Slack Connect channel にアップロードされたファイル)より広く言い切っている)は、orchestrator が文書で確かめて妥当と判断し、P2 をやり直す前に直した。`slack-api-usage.md` は、一般の理由を 0025 と同じ「message 内の file object は必要な metadata を含む」に戻し、Slack Connect の記述を文書どおりに絞った。0066 は「検討内容」「理由」で、download URL の無いファイルの判断が推論であることを明記した。0025 の追記と `index.md` の 0066 の行も同じ範囲に揃えた。
