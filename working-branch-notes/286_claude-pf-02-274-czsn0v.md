@@ -15,7 +15,8 @@ Issue #274(PF-02)。所要時間の最小化(#272)に向けて、Assets 工程�
 - 依存は無い(#274 の「依存・順序」)。推奨の前提だった #211(PR #285)と #192(PR #271)は merge 済み。main `a430231`(PR #285 の merge)から作業した。
 - 実装、test、設計文書、decision log 0064 を済ませ、Issue の「検証」を実行した(「検証」)。
 - PR #286 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- Claude の review(P2)の指摘 3 件をすべて採用して直した(P4)。次は再確認を subagent に委譲する(P5)。
+- Claude の review cycle(P2〜P5)を終えた。指摘 3 件はすべて直し、再確認で修正確認済みになった(未対応 0 件)。
+- PR を Ready for review にし、Codex のクロスレビューとユーザーの merge を待つ。
 
 ## 決定事項
 
@@ -65,7 +66,8 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - review の指摘に対応する(P4)。(完了)
-- 再確認を subagent に委譲する(P5)。未対応が 0 件なら Ready for review にする。
+- 再確認を subagent に委譲する(P5)。未対応が 0 件なら Ready for review にする。(完了)
+- 人間の手番: review thread 3 件(いずれも修正確認済み)の resolve、Codex のクロスレビュー、PR の merge。
 - avatar の保存順のカードへのユーザーの回答を確かめる。(完了。「この PR に含める」)
 
 ## 検証
@@ -105,3 +107,6 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `a430231` でも�
   - `[nits]` `output.go`: `headBuffer` の doc comment を、MultiWriter の移った `download` に合わせた。
   - スコープ外とした指摘は無く、follow-up の候補も無い。出力生成系 3 skill の判断は変わらない(文書とコメントだけの修正で、出力は変わらない)。
   - 検証(Docker Compose): `gofmt -l .` は出力なし。`go vet ./...`、`go build ./...`、`go test ./...`、`git diff --check` は pass。
+- 2026-09-28: 再確認(P5、P2 と同じ subagent)。review cycle `claude-code-fac8b82-20260928061608`、Reviewed head `146ff335f24b2c18879a0f41276b7367233247d1`。修正確認済み 3 件(resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。新しい指摘は無い。出力生成系 3 skill を適用しない判断も、P4 の後で妥当とされた(固定 sample の再生成で一致)。
+  - 完了要約の指摘外の所見: PR description の「レビューしてほしい点」の最後の項が「HTML の表示の順とは一致しない」と言い切り、`cache.md` の「一致するとは限らない」より強かった。PR description を `cache.md` の書き方に揃えた。
+- 2026-09-28: 終了(P6)。note だけの commit で終了時の状態を残し(P5 が確かめた head より後の commit)、PR を Ready for review にする。`gh` への fallback は無い(P2 / P5 の subagent を含む)。follow-up の候補は無い。人間に残るのは、review thread 3 件の resolve、Codex のクロスレビュー、PR の merge。
