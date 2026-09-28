@@ -6,7 +6,7 @@
 
 ## 目的
 
-Issue #209(FU-08)。`collectUserIDs` の `reMention` は、label の有無にかかわらず mention 構文の user ID を集めていた。一方 `render` の `constructText` は、label 付きの mention(`<@U…|label>`)を label のまま表示し、`UserName` を呼ばない。そのため label 付きの mention にしか現れない user について、表示に使わない `users.info` の呼び出し、avatar の download、`.cache/slack_api_cache.json` の `users` の entry が発生していた。収集の条件を描画側と同じ「label の無い mention だけ」に揃える。
+Issue #209(FU-08)。`collectUserIDs` の `reMention` は、label の有無にかかわらず mention 構文の user ID を集めていた。一方 `render` の `constructText` は、label 付きの mention(`<@U…|label>`)を label のまま(label が空なら user ID を)表示し、`UserName` を呼ばない。そのため label 付きの mention にしか現れない user について、表示に使わない `users.info` の呼び出し、avatar の download、`.cache/slack_api_cache.json` の `users` の entry が発生していた。収集の条件を描画側と同じ「label の無い mention だけ」に揃える。
 
 本 Issue は `drive-issue-to-reviewed-pr` skill で、review と再確認を済ませた PR まで進める。ユーザーの指示(2026-09-25)で open Issue を 1 件ずつ直列に処理する流れの 18 件目で、Issue ごとに新しい thread で進める方式(2026-09-26)の 13 件目である。前のスレッド(#193 / PR #282)の報告が、FU-17(#251)と PF-06(#278)の前提になることから次の Issue に推した。
 
@@ -14,7 +14,8 @@ Issue #209(FU-08)。`collectUserIDs` の `reMention` は、label の有無にか
 
 - 依存(#205 = FU-04 / PR #241)は merge 済み。main `5a1f6f9`(PR #282 の merge)から作業した。
 - 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #283 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。次は Claude の review cycle(P2)。
+- PR #283 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- Claude の review cycle の P2 で `[nits]` 1 件を受け、P4 で対応した(セッションログ)。次は P5(再確認)。
 
 ## 決定事項
 
@@ -38,18 +39,19 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
 
 - `reMention` を `` `<@([UW][A-Z0-9]+)>` `` にした。label の無い mention だけに一致する。
 - 描画側の条件と一致する理由: `render.Mrkdwn` の `reConstruct`(`<([^<>]+)>`)は `<` と `>` を含まないため、テキスト中の `<@ID>`(ID は `[UW][A-Z0-9]+`)は、それより前から始まる構文に取り込まれず、必ず 1 つの構文として `constructText` に渡る。code の区切り(backtick)は ID に現れないため、`<@ID>` が code の境界で分かれることも無い。code の中の `<@ID>` も `codeText` 経由で解決される。逆に、`UserName` が呼ばれるのは `<@ID>` の形の構文だけである。
-- `reMention` と `collectUserIDs` の doc comment に、label の無い mention だけを集めることと、その理由(label 付きは label をそのまま表示する)を書いた。描画側(internal/render)には export への参照を書かない。下の contract test が両側のずれを検出する。
+- `reMention` と `collectUserIDs` の doc comment に、label の無い mention だけを集めることと、その理由(label 付きは label が空でも表示名を解決しない)を書いた。描画側(internal/render)には export への参照を書かない。下の contract test が両側のずれを検出する。
 
 ### test
 
 - `TestCollectUserIDsMatchesMrkdwn`(`internal/export/message_collect_test.go`、新規): mention の形ごとに、`render.Mrkdwn` が `UserName` に渡す ID と `collectUserIDs` が返す ID が、どちらも期待値に一致することを確かめる contract test。label の無い U / W、label 付き、空の label、同じ user の label 付きと label 無し、inline code、code block、mention でない形(小文字、空白入り、entity 化された `&lt;@U03&gt;`)の 7 通り。描画側だけを変えても、収集側だけを変えても失敗する。
 - `TestRunIntegrationLabeledMention`(`integration_rendering_test.go` の case 5d、case 5c の直後): label 付きの mention にだけ現れる user(本文の U03、system 行の本文の U05、attachment の `text` の U04、inline code の U06)について、`users.info` を呼ばず、`slack_api_cache.json` の `users` に入らず、avatar の manifest entry も download も無いことを確かめる。label 付きと label 無しの両方で現れる U02 は解決され、label 無しの mention は `@Bob`、label 付きは `@bobby` で表示される。`users.info` は U01(投稿者)と U02 の 2 回。
 - 投稿者の U01 の avatar が保存されることを、avatar の検査の陽性対照として確かめる。label 無しの mention にだけ現れる U02 の avatar の有無は検査しない。表示に使わない avatar を保存する既存の挙動(#251 がスコープ外とした「名前だけを表示する user の avatar download」)を固定しないためである。
+- `TestMrkdwn`(`internal/render/mrkdwn_test.go`)に、label 付きの mention が label を、空の label が user ID を表示することを確かめる 2 行を足した(P4)。resolver が表示名を返す user(U123)を使い、どちらも表示名を解決しないことを示す。
 
 ### 設計文書
 
-- `doc/design/slack-api-usage.md` の「user 解決」に、集める mention は label の無いものに限ること、label 付きは label をそのまま表示して表示名を解決しないため集めないこと、同じ user が投稿者や label の無い mention として現れればそちらで集めることを 1 行足した。PR #241 が収集対象の変更に合わせて同じ節を更新した前例に従う。
-- `doc/design/html-rendering.md` の「本文の変換(mrkdwn → HTML)」の変換表に、`<@U0123456789\|label>` → `@label`(label をそのまま表示し、表示名は解決しない)の行を足した。描画の挙動は変えておらず、既存の挙動の記載である。`slack-api-usage.md` の上の行が参照する描画側の条件を、仕様に置くために足した。Issue は描画側の方針を変える場合に `html-rendering.md` を更新するとしており、この追記はそれに当たらない。
+- `doc/design/slack-api-usage.md` の「user 解決」に、集める mention は label の無いものに限ること、label 付きは label が空でも表示名を解決せず、label(空なら user ID)を表示するため集めないこと、同じ user が投稿者や label の無い mention として現れればそちらで集めることを 1 行足した。PR #241 が収集対象の変更に合わせて同じ節を更新した前例に従う。
+- `doc/design/html-rendering.md` の「本文の変換(mrkdwn → HTML)」の変換表に、`<@U0123456789\|label>` → `@label`(label をそのまま表示し、表示名は解決しない。label が空なら user ID を表示する)の行を足した。描画の挙動は変えておらず、既存の挙動の記載である。`slack-api-usage.md` の上の行が参照する描画側の条件を、仕様に置くために足した。Issue は描画側の方針を変える場合に `html-rendering.md` を更新するとしており、この追記はそれに当たらない。
 - decision log は作らない。描画側の既存の挙動に収集側を揃える修正で、方針を変えていないため。
 - `progress.md` の FU-08 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に記入する。
 
@@ -83,6 +85,8 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
 | `git diff --check` | 出力なし |
 | cross-compile(`CGO_ENABLED=0`、darwin / linux × amd64 / arm64 の `go build ./cmd/slapex`) | 4 通りとも成功 |
 | sample export の再生成(`TZ=Asia/Tokyo`、`-time 2026-07-04T16:32:41+09:00`、別ディレクトリ) | `doc/samples/ja` / `en` と `diff -r` で無差分(各 18 ファイル)。Users phase は `4 users, 1 bot resolved` |
+| P4: `TestMrkdwn` に足した 2 行が描画側の変更を検出すること | `constructText` で label 付きも解決する変更では 2 行とも、空の label だけを解決する変更では空の label の行が失敗した(変更は戻した) |
+| P4 の修正後の `gofmt -l .`、`go vet ./...`、`go build ./...`、`go test ./...`、`-count=5 -shuffle=on`、`-race -count=2`、`git diff --check` | すべて pass(`gofmt` と `git diff --check` は出力なし) |
 
 ## リスク・ブロッカー
 
@@ -96,3 +100,5 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
 - 2026-09-28: PR #283 を draft で作成し、note を採番した(`8dcdcd3`)。`progress.md` の FU-08 の PR 欄を #283 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#283`)と、PR description の note のファイル名参照 1 行(`draft_` → `283_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-28: P2 の review(review cycle `claude-code-3396076-20260928004345`、Reviewed head `33960765e3e675323d0fef9b625498a43e3e5786`)。指摘は 1 件(inline 1、top-level 0。`[nits]` 1)。依頼した 6 観点のうち、収集条件の一致(差分 test と fuzz で不一致 0 件)、方針、test、出力生成系 skill の判断、`progress.md`・note・PR description は問題なしとされた。P3 は指摘が 1 件以上のため P4 へ進めた。
+- 2026-09-28: P4。`[nits]`(`html-rendering.md` に足した行と contract test の doc comment が、空の label の表示(user ID)と合わない)は「採用し修正した」。`render.Mrkdwn` で `<@U123|>` が `@U123` になることを test で確かめ、`html-rendering.md` の行に「label が空なら user ID を表示する」を足した。同じ表現を持つ `slack-api-usage.md` の行と `reMention` の doc comment も同じ趣旨に揃えた。表示を固定する test が無かったため、`TestMrkdwn` に 2 行を足した。修正 commit は `ef8330c`。PR description の「概要」「主な変更」「検証」も更新した。スコープ外とした指摘は無く、follow-up 候補も無い。出力生成系 3 skill は引き続き適用しない(文書、comment、test だけの変更で、出力は変わらない)。
