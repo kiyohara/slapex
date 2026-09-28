@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/fu-09-210-ibeil0`(cloud session が指定。Issue の推奨ブランチ名は `fix-range-subsecond-boundary`)
-- PR: 未作成
+- PR: #288
 - 最終更新: 2026-09-28
 
 ## 目的
