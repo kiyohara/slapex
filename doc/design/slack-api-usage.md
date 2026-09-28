@@ -99,11 +99,14 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
 
 ## file / asset の取得
 
-- message の `files` 配列を情報源とし、`url_private_download`(無ければ `url_private`)へ `Authorization: Bearer` ヘッダ付きの HTTP GET で取得する。
+- message の `files` 配列を情報源とし、ファイル本体(画像では original)を `url_private_download`(無ければ `url_private`)から、画像の表示用 thumbnail を `thumb_*` から HTTP GET で取得する。
+- `Authorization: Bearer` ヘッダ(Slack OAuth token)は、送信先の host が `files.slack.com`(Slack private file)の場合だけ付ける。asset の種類ではなく送信先の host で判定する(`doc/guidelines/credential-scope-guidelines.md`、`decision-log/0040-credential-scope-for-asset-downloads.md`)。
 - URL preview 画像、URL preview service icon、workspace icon、avatar、emoji など、Slack private file ではない public asset URL へは `Authorization: Bearer` ヘッダを送らない。
 - 画像は表示用 thumbnail と original の両方を保存する(`decision-log/0017-uploaded-image-assets.md`)。
 - file object の `size` が `--max-attachment-size` を超えるものは download しない(`output-format.md`)。
-- 外部サービス連携ファイル(external file)など download URL を持たないものは、リンクのみの添付として扱い、manifest に記録する。
+- 削除済み(`mode` が `tombstone`)のファイルと、Free plan の制限で非表示(`mode` が `hidden_by_limit`)のファイルは、thumbnail を含めて何も download せず、`.cache/assets_manifest.json` にも記録しない。
+- 削除済みと Free plan の制限で非表示のファイルを除き、外部サービス連携のファイル(`is_external` が true)と、download URL(`url_private_download` / `url_private`)を持たないファイルは、ファイル本体(画像では original)を download せず、サイズ上限の判定もせず、`.cache/assets_manifest.json` にも記録しない。外部サービス連携のファイルの `url_private` / `url_private_download` は Slack ではなく外部サービスを指し、download すると外部サービスが返す page(ログイン画面など)を保存しうるためである(`decision-log/0017-uploaded-image-assets.md` の 2026-09-27 の追記)。ただし、thumbnail のある画像は、thumbnail を他の画像と同じく保存し、`upload_thumb` として記録する(取得に失敗した場合の status は `failed`)。
+- これらのファイルの表示は、`html-rendering.md` の「画像と添付ファイルの表示」の、ファイル本体を download しないファイルの表とその下の注記を参照する。
 - asset の download にも上記のリトライ方針を適用する。失敗した asset は HTML 上で置換表示にし、export 全体は継続する。
 
 ## 取得の整合性
