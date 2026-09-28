@@ -353,7 +353,6 @@ CI では artifact path を固定しやすくするため、必要に応じて `
 - Slack Developer Docs: [`conversations.history`](https://docs.slack.dev/reference/methods/conversations.history)
 - Slack Developer Docs: [`conversations.replies`](https://docs.slack.dev/reference/methods/conversations.replies/)
 - Slack Developer Docs: [`conversations.list`](https://docs.slack.dev/reference/methods/conversations.list)
-- Slack Developer Docs: [`files.info`](https://docs.slack.dev/reference/methods/files.info)
 - Slack Developer Docs: [`files:read`](https://docs.slack.dev/reference/scopes/files.read)
 - Slack Developer Docs: [`auth.test`](https://docs.slack.dev/reference/methods/auth.test)
 - Slack Developer Docs: [Tokens](https://docs.slack.dev/authentication/tokens/)
