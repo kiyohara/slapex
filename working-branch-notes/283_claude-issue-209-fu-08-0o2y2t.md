@@ -15,7 +15,7 @@ Issue #209(FU-08)。`collectUserIDs` の `reMention` は、label の有無にか
 - 依存(#205 = FU-04 / PR #241)は merge 済み。main `5a1f6f9`(PR #282 の merge)から作業した。
 - 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
 - PR #283 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- Claude の review cycle の P2 で `[nits]` 1 件を受け、P4 で対応した(セッションログ)。次は P5(再確認)。
+- Claude の review cycle `claude-code-3396076-20260928004345` は、指摘 1 件(`[nits]`)を直し(`ef8330c`)、再確認で修正確認済み(未対応 0 件)となって完了した。この記録の push の後に Ready for review にし、Codex のクロスレビューを待つ。
 
 ## 決定事項
 
@@ -64,7 +64,11 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- Claude の review cycle(P2〜P5)を回す。完了したら Ready for review にし、Codex のクロスレビューを待つ。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- review の指摘 1 件に対応する(P4)。(完了)
+- CI を確かめてから再確認を subagent に委譲する(P5)。(完了)
+- Codex のクロスレビュー(他の Agent 種別の review cycle)。指摘があれば対応する。
+- review thread 1 件の resolve と、PR の merge(ユーザー)。
 
 ## 検証
 
@@ -102,3 +106,5 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
 - 2026-09-28: P2 の review(review cycle `claude-code-3396076-20260928004345`、Reviewed head `33960765e3e675323d0fef9b625498a43e3e5786`)。指摘は 1 件(inline 1、top-level 0。`[nits]` 1)。依頼した 6 観点のうち、収集条件の一致(差分 test と fuzz で不一致 0 件)、方針、test、出力生成系 skill の判断、`progress.md`・note・PR description は問題なしとされた。P3 は指摘が 1 件以上のため P4 へ進めた。
 - 2026-09-28: P4。`[nits]`(`html-rendering.md` に足した行と contract test の doc comment が、空の label の表示(user ID)と合わない)は「採用し修正した」。`render.Mrkdwn` で `<@U123|>` が `@U123` になることを test で確かめ、`html-rendering.md` の行に「label が空なら user ID を表示する」を足した。同じ表現を持つ `slack-api-usage.md` の行と `reMention` の doc comment も同じ趣旨に揃えた。表示を固定する test が無かったため、`TestMrkdwn` に 2 行を足した。修正 commit は `ef8330c`。PR description の「概要」「主な変更」「検証」も更新した。スコープ外とした指摘は無く、follow-up 候補も無い。出力生成系 3 skill は引き続き適用しない(文書、comment、test だけの変更で、出力は変わらない)。
+- 2026-09-28 P5: verify-comments(P2 と同じ subagent。完了要約は PR の conversation comment、Reviewed head `da2d9bbda1e7204b6ca43637508a0f02cde1745b`)。修正確認済み 1 件(resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。新しい指摘は無い。
+- 2026-09-28 P6: Claude の review cycle を 1 周(P4 → P5 の 1 往復)で終えた。終了時の状態: PR #283 は draft、head はこの note の commit(P5 が確かめた `da2d9bb` より後の note だけの commit)、未対応の指摘は 0 件。この記録の push の後に Ready for review にする(2026-09-27 のユーザーの指示)。`gh` への fallback は P2 / P4 / P5 とも無く、metadata の誤りを訂正できなかった投稿も無い。新しい follow-up の候補は無い(「リスク・ブロッカー」の avatar の件は #251 がスコープ外として記録済み)。
