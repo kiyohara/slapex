@@ -14,7 +14,8 @@ Issue #245(FU-12)。`doc/design/slack-api-usage.md` の「file / asset の取得
 
 - 依存の PR #243(#204)は 2026-09-25 に merge 済み。main `fe666ba`(PR #286 の merge)から作業した。
 - `slack-api-usage.md` の「file / asset の取得」を書き直し、`progress.md` の FU-12 の行を更新した。Issue の「検証」を実行した(「検証」)。
-- 次は PR の作成(draft)と採番。
+- PR #287 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- 次は CI を確かめてから、review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -54,7 +55,7 @@ Issue の行番号は PR #243 head `a3e7900` 時点の記載で、main `fe666ba`
 
 ### progress.md
 
-FU-12 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に記入する。
+FU-12 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に #287 にした。
 
 ### 出力生成系 3 skill の適用判断
 
@@ -66,7 +67,7 @@ FU-12 の行を `done(PR merge後)`、次にやることを「merge後は対応�
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - review の指摘に対応する(P4)。
 - 再確認を subagent に委譲する(P5)。未対応が 0 件なら Ready for review にする。
@@ -92,3 +93,6 @@ Go のコードを変えていないため、Docker Compose での `go vet` / `g
 
 - 2026-09-28: Issue #245 と申し送りのコメント 2 件(PR #268、PR #269 から)、`progress.md`、関連する設計文書、decision log、実装と結合 test を読んだ。依存の PR #243 は merge 済み。
 - 2026-09-28: `slack-api-usage.md` の「file / asset の取得」を書き直し、`progress.md` の FU-12 の行を更新した。Issue の「検証」を実行した(「検証」)。
+- 2026-09-28: PR #287 を draft で作成し、note を採番した(`5f2e203`)。`progress.md` の FU-12 の PR 欄を #287 にした(P1)。検証は「検証」のとおり(`git diff --check` は出力なし、変更は設計文書、`progress.md`、note だけ)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#287`)と、PR description の note のファイル名参照 1 行(`draft_` → `287_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
