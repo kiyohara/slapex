@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/issue-251-fu-17-u75f2x`(cloud session が指定。Issue の推奨ブランチ名は `skip-hidden-poster-resolution`)
-- PR: 未作成
+- PR: #284
 - 最終更新: 2026-09-28
 
 ## 目的
