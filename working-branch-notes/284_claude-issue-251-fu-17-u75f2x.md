@@ -14,7 +14,7 @@ Issue #251(FU-17)。`collectUserIDs` は、message の表示の分類によら�
 
 - 依存は無い。直列の条件だった #209(FU-08 / PR #283)は merge 済み。main `29614dd`(PR #283 の merge)から作業した。
 - 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
-- 次は PR の作成(draft)と採番。
+- PR #284 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。次は CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -62,7 +62,7 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - review の指摘に対応する(P4)。
 - CI を確かめてから再確認を subagent に委譲する(P5)。
@@ -98,3 +98,6 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 
 - 2026-09-28: Issue #251、`progress.md`、前のスレッドの報告を読んだ。Issue は open でコメントは無く、依存は無い。直列の条件だった #209 は PR #283 で merge 済み。`collectUserIDs` は main `29614dd` の `internal/export/message_collect.go` の 98 行目にある。
 - 2026-09-28: test を先に足し、修正前に失敗することを確かめてから収集条件を直した(`ec5e69d`)。設計文書と `progress.md` を更新し、Issue の「検証」と sample export の一致の確認を済ませた。
+- 2026-09-28: PR #284 を draft で作成し、note を採番した(`4705409`)。`progress.md` の FU-17 の PR 欄を #284 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#284`)と、PR description の note のファイル名参照 1 行(`draft_` → `284_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
