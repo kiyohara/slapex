@@ -522,7 +522,7 @@ func (a *Assets) Counts() (saved, skipped, failed int) {
 const sniffLen = 512 // http.DetectContentType looks at no more than this many bytes.
 
 // headBuffer keeps the first sniffLen bytes written through it so the download's
-// real format can be detected from the bytes themselves. It sits in Save's
+// real format can be detected from the bytes themselves. It sits in download's
 // MultiWriter next to the temp file and the hash, so nothing is downloaded or
 // read twice.
 type headBuffer struct{ buf []byte }

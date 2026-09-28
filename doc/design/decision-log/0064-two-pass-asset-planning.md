@@ -33,7 +33,7 @@ export の所要時間の最小化(#272)は、asset の並列取得(PF-03、#275
 
 - Assets 工程は timeline を 2 回描画する(`export.renderWithAssets`)。1 回目は `output.Assets.Planner` が返す planner に描画し、要求された asset を最初に要求された順に計画(`output.PlannedAsset`: kind、元 URL、kind の上限、meta、事前のサイズ判定で除いたか)として記録する。planner は出力 directory に書かず、`--reuse-cache` の copy をせず、警告を出さない。
 - `Assets.Fetch` が計画を計画の順に取得する。取得は直列で、pacing も現行と同じ(slack client の download)。事前のサイズ判定で除いたものは取得しない。reuse の一致は取得のときに判定し、一致すれば copy、しなければ download する。取得の結果は `Assets` の表に持ち、manifest には記録しない。
-- 2 回目の描画の `Save` と `SkipTooLarge` が、要求された順に manifest へ記録する。計画に無い URL が要求された場合は、その場で取得する(安全側の fallback)。
+- 2 回目の描画の `Save` と `SkipTooLarge` が、要求された順に manifest へ記録する。計画に無い URL が要求された場合は、その場で取得する(安全側の fallback)。fallback が保つのは HTML、assets、manifest で、stderr の並びは保たない(その asset の retry 通知と警告が、`Fetch` の出力の後に出る)。逆向きのずれ(計画にあって 2 回目に要求されない asset)は受け止めない。`Fetch` が取得したファイルが manifest にも HTML にも無いまま出力に残り、取得の警告も出る。どちらのずれも、計画と 2 回目の要求の一致を比べる test(`internal/export/integration_plan_test.go`)が検出する。
 - 警告は取得の終わりに出す。計画の順は 2 回目の要求の順と同じなので、manifest と警告の順は揃う。
 - user の avatar は user ID 順、`bots.info` で解決した bot の icon は bot ID 順に保存する。manifest の entry の順は、描画が asset を求めた順になる(`cache.md`)。
 - 計画は test のために context の値で観察できる(`export` の `assetPlanObserverKey`)。`export.Options` には足さない。`Options` は CLI の option と呼び出し側の設定を写す型で、`cmd/slapex` の test が field ごとに、設定するのが CLI か呼び出し側かを検査している。test 専用の field は、そのどちらにも当たらない。
