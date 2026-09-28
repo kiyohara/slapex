@@ -15,8 +15,8 @@ Issue #211(FU-10)。PR #201(#190)の review 補助分析で見つかった、exp
 - 依存(#190 / PR #201)は merge 済み。main `0db6387`(PR #284 の merge)から作業した。
 - Issue の 5 項目のうち 2 項目は RF-03 / RF-06 で吸収済みで、残る 3 項目を実装した(「決定事項」)。Issue の「検証」を実行した(「検証」)。
 - PR #285 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- Claude の review cycle `claude-code-48aa48e-20260928032117` の指摘 1 件(`[ask]`)に対応した(P4)。0 の offset の表示の追跡を残すかは、ユーザーが終了後に判断する(「review から出た follow-up の候補」)。
-- 次は CI を確かめ、再確認を subagent に委譲する(P5)。
+- Claude の review cycle `claude-code-48aa48e-20260928032117` は、指摘 1 件(`[ask]`)をスコープ外とし(doc comment は `6585a6c` で直した)、再確認でスコープ外として確認済み(未対応 0 件)となって完了した。0 の offset の表示の追跡を残すかは、ユーザーが判断する(「review から出た follow-up の候補」)。
+- この記録の push の後に Ready for review にし、Codex のクロスレビューを待つ。
 
 ## 決定事項
 
@@ -66,9 +66,10 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - review の指摘に対応する(P4)。(完了)
-- CI を確かめてから再確認を subagent に委譲する(P5)。
-- Ready for review にして、Codex のクロスレビュー(他の Agent 種別の review cycle)を待つ。指摘があれば対応する。
-- review thread の resolve と PR の merge(ユーザー)。
+- CI を確かめてから再確認を subagent に委譲する(P5)。(完了)
+- Codex のクロスレビュー(他の Agent 種別の review cycle)。指摘があれば対応する。
+- follow-up の候補(0 の offset の表示の追跡)を残すかの判断(ユーザー)。
+- review thread 1 件の resolve と、PR の merge(ユーザー)。
 
 ## 検証
 
@@ -104,3 +105,5 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
 - 2026-09-28: Claude の review(P2)を subagent に委譲した。review cycle `claude-code-48aa48e-20260928032117`、`Reviewed head` `48aa48e88097e54a5c931d21671b5ed6579a81aa`。指摘は 1 件(inline 1 件、top-level 0 件。`[ask]` 1 件で、`[must]`、`[imo]`、`[nits]`、`[fyi]` は無い)。`gh` への fallback は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
 - 2026-09-28: 指摘に対応した(P4)。処置の内訳は「妥当だが今回はスコープ外である」1 件。`[ask]`(0 の offset の表示の仕様判断の追跡先)は、追跡を残すかをユーザーが終了後に判断する follow-up の候補にした(「review から出た follow-up の候補」)。併せて、任意として挙がった `formatUTCOffset` の doc comment の書き方を直した(`6585a6c`)。出力生成系 3 skill の判断は変わらない(コメントだけの変更で、出力を変えない)。
+- 2026-09-28 P5: verify-comments(P2 と同じ subagent。完了要約は PR の conversation comment、Reviewed head `a50b1bf158b448ffc4ede6eaef9ef68a860c4093`)。修正確認済み 0 件、スコープ外として確認済み 1 件(resolve 可。記録先は「review から出た follow-up の候補」と PR description の「補足」)、対応不要として確認済み 0 件、未対応 0 件。新しい指摘は無い。
+- 2026-09-28 P6: Claude の review cycle を 1 周(P4 → P5 の 1 往復)で終えた。終了時の状態: PR #285 は draft、head はこの note の commit(P5 が確かめた `a50b1bf` より後の note だけの commit)、未対応の指摘は 0 件。この記録の push の後に Ready for review にする(2026-09-27 のユーザーの指示)。`gh` への fallback は P2 / P4 / P5 とも無く、metadata の誤りを訂正できなかった投稿も無い。follow-up の候補は 1 件(「review から出た follow-up の候補」)で、起票していない。
