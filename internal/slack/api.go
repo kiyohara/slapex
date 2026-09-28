@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 // AuthTest is the auth.test result used to resolve the workspace.
@@ -401,7 +402,20 @@ func (c *Client) EmojiList(ctx context.Context) (map[string]string, error) {
 	return out.Emoji, nil
 }
 
-// FormatTS renders a time as a Slack ts parameter value.
+// FormatTS renders whole Unix seconds as a Slack ts parameter value.
 func FormatTS(sec int64) string {
 	return fmt.Sprintf("%d.000000", sec)
+}
+
+// FormatTimeTS renders t as a Slack ts parameter value to the microsecond, the
+// six decimal places of a Slack ts. A finer part is rounded down, so a caller
+// that needs another rounding applies it to t first.
+func FormatTimeTS(t time.Time) string {
+	micros := t.UnixMicro()
+	sign := ""
+	if micros < 0 {
+		sign = "-"
+		micros = -micros
+	}
+	return fmt.Sprintf("%s%d.%06d", sign, micros/1e6, micros%1e6)
 }

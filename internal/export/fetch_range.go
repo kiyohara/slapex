@@ -25,6 +25,11 @@ const (
 	rangeModeDateTimeRange rangeMode = "datetime-range" // --from / --to
 )
 
+// messageFetchRange is the [start, end) window the export fetches. start and
+// end are exact to the microsecond, the step of a Slack ts: --from / --to keep
+// the input's fraction of a second, and --date / --days fall on whole seconds.
+// The footer, the --from / --to progress label and metadata.json show them as
+// RFC3339Nano, which leaves a whole second as plain RFC3339 does.
 type messageFetchRange struct {
 	mode            rangeMode
 	start           time.Time
@@ -41,10 +46,13 @@ func resolveFetchRangeInLocation(opts Options, now time.Time, loc *time.Location
 		return resolveDateTimeFetchRange(opts.From, opts.To, loc)
 	}
 	if opts.Date == "" {
+		// --days counts back from the export clock cut to the whole second,
+		// the boundary the footer shows (doc/design/output-format.md).
+		end := now.Truncate(time.Second)
 		return messageFetchRange{
 			mode:            rangeModeDays,
-			start:           now.Add(-time.Duration(opts.Days) * 24 * time.Hour),
-			end:             now,
+			start:           end.Add(-time.Duration(opts.Days) * 24 * time.Hour),
+			end:             end,
 			displayTimezone: environmentRangeDisplayTimezone(loc),
 		}, nil
 	}
@@ -64,6 +72,11 @@ func resolveDateTimeFetchRange(fromInput, toInput string, loc *time.Location) (m
 	if err != nil {
 		return messageFetchRange{}, usagef("invalid to date/time %q", toInput)
 	}
+	// A finer fraction than a Slack ts carries rounds up: over ts values in
+	// whole microseconds, the rounded [start, end) holds the same messages as
+	// the input. The order is checked after rounding, so a range the rounding
+	// leaves empty is a usage error as well.
+	start, end = ceilMicrosecond(start), ceilMicrosecond(end)
 	if !start.Before(end) {
 		return messageFetchRange{}, usagef("from date/time must be before to date/time")
 	}
@@ -73,6 +86,15 @@ func resolveDateTimeFetchRange(fromInput, toInput string, loc *time.Location) (m
 		end:             end,
 		displayTimezone: chooseDateTimeRangeDisplayTimezone(fromInput, toInput, loc),
 	}, nil
+}
+
+// ceilMicrosecond rounds t up to a whole microsecond, the finest step of a
+// Slack ts.
+func ceilMicrosecond(t time.Time) time.Time {
+	if rest := time.Duration(t.Nanosecond()) % time.Microsecond; rest != 0 {
+		return t.Add(time.Microsecond - rest)
+	}
+	return t
 }
 
 func resolveDateFetchRange(input string, loc *time.Location) (messageFetchRange, error) {
@@ -181,13 +203,13 @@ func offsetString(seconds int) string {
 	return fmt.Sprintf("%s%02d:%02d", sign, seconds/3600, (seconds%3600)/60)
 }
 
-func (r messageFetchRange) oldestTS() string { return slack.FormatTS(r.start.Unix()) }
+func (r messageFetchRange) oldestTS() string { return slack.FormatTimeTS(r.start) }
 
 func (r messageFetchRange) latestTS() string {
 	if r.end.IsZero() {
 		return ""
 	}
-	return slack.FormatTS(r.end.Unix())
+	return slack.FormatTimeTS(r.end)
 }
 
 func (r messageFetchRange) progressLabel() string {
@@ -195,7 +217,7 @@ func (r messageFetchRange) progressLabel() string {
 	case rangeModeDate:
 		return "on " + r.start.Format("2006-01-02") + " (local time)"
 	case rangeModeDateTimeRange:
-		return "from " + r.start.UTC().Format(time.RFC3339) + " (included) to " + r.end.UTC().Format(time.RFC3339) + " (not included)"
+		return "from " + r.start.UTC().Format(time.RFC3339Nano) + " (included) to " + r.end.UTC().Format(time.RFC3339Nano) + " (not included)"
 	}
 	return "since " + r.start.Format("2006-01-02")
 }
@@ -205,14 +227,14 @@ func (r messageFetchRange) footerRangeLabel() string {
 	if displayTimezone.location == nil {
 		displayTimezone = environmentRangeDisplayTimezone(nil)
 	}
-	start := r.start.In(displayTimezone.location).Format(time.RFC3339)
+	start := r.start.In(displayTimezone.location).Format(time.RFC3339Nano)
 	if r.end.IsZero() {
 		return fmt.Sprintf("From %s (included); no end boundary; timezone: %s", start, displayTimezone.label)
 	}
 	return fmt.Sprintf(
 		"From %s (included); to %s (not included); timezone: %s",
 		start,
-		r.end.In(displayTimezone.location).Format(time.RFC3339),
+		r.end.In(displayTimezone.location).Format(time.RFC3339Nano),
 		displayTimezone.label,
 	)
 }

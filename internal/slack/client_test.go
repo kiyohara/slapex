@@ -437,6 +437,74 @@ func TestHistoryRangeBoundariesAndMaxPosts(t *testing.T) {
 	}
 }
 
+// TestHistoryRangeBoundariesBelowOneSecond keeps a range shorter than a second
+// at the epoch seconds of current ts values, where the boundaries and the
+// messages differ only in the microseconds (Issue #210).
+func TestHistoryRangeBoundariesBelowOneSecond(t *testing.T) {
+	t.Parallel()
+
+	h := &pagedHandler{
+		t:    t,
+		path: "/api/conversations.history",
+		pages: map[string]string{
+			"": `{"ok":true,"messages":[{"ts":"1783071000.800000","text":"at end"},{"ts":"1783071000.799999","text":"just before end"},{"ts":"1783071000.200000","text":"at start"},{"ts":"1783071000.199999","text":"before"}],"response_metadata":{"next_cursor":""}}`,
+		},
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	c, _ := newTestClient(srv)
+	messages, truncated, err := c.History(context.Background(), "C123", "1783071000.200000", "1783071000.800000", 100, nil, nil)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if truncated {
+		t.Fatal("truncated = true, want false")
+	}
+	var texts []string
+	for _, m := range messages {
+		texts = append(texts, m.Text)
+	}
+	if got, want := strings.Join(texts, ","), "just before end,at start"; got != want {
+		t.Fatalf("messages = %q, want %q", got, want)
+	}
+	form := h.gotForms()[0]
+	if got := form.Get("oldest"); got != "1783071000.200000" {
+		t.Fatalf("oldest = %q, want 1783071000.200000", got)
+	}
+	if got := form.Get("latest"); got != "1783071000.800000" {
+		t.Fatalf("latest = %q, want 1783071000.800000", got)
+	}
+}
+
+func TestFormatTimeTS(t *testing.T) {
+	tests := []struct {
+		name string
+		t    time.Time
+		want string
+	}{
+		{name: "whole second", t: time.Unix(1783071000, 0), want: "1783071000.000000"},
+		{name: "fraction", t: time.Unix(1783071000, 200_000_000), want: "1783071000.200000"},
+		{name: "microseconds", t: time.Unix(1783071000, 123_456_000), want: "1783071000.123456"},
+		{name: "finer part rounds down", t: time.Unix(1783071000, 123_456_999), want: "1783071000.123456"},
+		{name: "epoch", t: time.Unix(0, 0), want: "0.000000"},
+		{name: "negative whole second", t: time.Unix(-315619200, 0), want: "-315619200.000000"},
+		{name: "negative fraction", t: time.Unix(-2, 250_000_000), want: "-1.750000"},
+	}
+	for _, tt := range tests {
+		if got := FormatTimeTS(tt.t); got != tt.want {
+			t.Errorf("%s: FormatTimeTS(%s) = %q, want %q", tt.name, tt.t.UTC().Format(time.RFC3339Nano), got, tt.want)
+		}
+	}
+	// A whole second renders as FormatTS does, so whole-second boundaries keep
+	// the Slack parameters they had.
+	for _, sec := range []int64{0, 1783071000, -315619200} {
+		if got, want := FormatTimeTS(time.Unix(sec, 0)), FormatTS(sec); got != want {
+			t.Errorf("FormatTimeTS(time.Unix(%d, 0)) = %q, want FormatTS %q", sec, got, want)
+		}
+	}
+}
+
 func TestHistoryAppliesPredicateBeforeMaxPosts(t *testing.T) {
 	t.Parallel()
 
