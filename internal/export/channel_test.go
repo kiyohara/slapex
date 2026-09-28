@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/kiyohara/slapex/internal/slack"
@@ -130,7 +129,7 @@ func TestChooseChannel(t *testing.T) {
 					t.Fatalf("chooseChannel() error = %v, want UsageError", err)
 				}
 				for _, want := range tt.wantLogs {
-					if !containsLog(logs, want) {
+					if !logsContain(logs, want) {
 						t.Fatalf("chooseChannel() logs = %q, want entry containing %q", logs, want)
 					}
 				}
@@ -239,13 +238,4 @@ func numberedChannels(n int, prefix string) []slack.Channel {
 		})
 	}
 	return channels
-}
-
-func containsLog(logs []string, want string) bool {
-	for _, log := range logs {
-		if strings.Contains(log, want) {
-			return true
-		}
-	}
-	return false
 }

@@ -158,7 +158,7 @@ func (r messageFetchRange) metadataTargetRange() map[string]any {
 
 func (r messageFetchRange) metadataOptions(opts Options) map[string]any {
 	values := map[string]any{
-		"range_mode":                r.mode,
+		"range_mode":                string(r.mode),
 		"max_posts":                 opts.MaxPosts,
 		"max_attachment_size_bytes": opts.MaxAttachBytes,
 	}
@@ -168,12 +168,13 @@ func (r messageFetchRange) metadataOptions(opts Options) map[string]any {
 	if len(opts.ExcludeReactionEmoji) > 0 {
 		values["exclude_reaction_emoji"] = opts.ExcludeReactionEmoji
 	}
-	if r.mode == "date" {
+	switch r.mode {
+	case rangeModeDate:
 		values["date"] = opts.Date
-	} else if r.mode == "datetime-range" {
+	case rangeModeDateTimeRange:
 		values["from"] = opts.From
 		values["to"] = opts.To
-	} else {
+	default:
 		values["days"] = opts.Days
 	}
 	return values

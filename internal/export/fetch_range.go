@@ -13,8 +13,20 @@ import (
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
+// rangeMode is the option that set the fetch range, recorded as
+// fetch.options.range_mode in metadata.json (doc/design/cache.md). The labels
+// and the recorded options handle date and datetime-range and fall back to
+// the days form for any other mode.
+type rangeMode string
+
+const (
+	rangeModeDays          rangeMode = "days"           // --days (the default)
+	rangeModeDate          rangeMode = "date"           // --date
+	rangeModeDateTimeRange rangeMode = "datetime-range" // --from / --to
+)
+
 type messageFetchRange struct {
-	mode            string
+	mode            rangeMode
 	start           time.Time
 	end             time.Time
 	displayTimezone rangeDisplayTimezone
@@ -30,7 +42,7 @@ func resolveFetchRangeInLocation(opts Options, now time.Time, loc *time.Location
 	}
 	if opts.Date == "" {
 		return messageFetchRange{
-			mode:            "days",
+			mode:            rangeModeDays,
 			start:           now.Add(-time.Duration(opts.Days) * 24 * time.Hour),
 			end:             now,
 			displayTimezone: environmentRangeDisplayTimezone(loc),
@@ -56,7 +68,7 @@ func resolveDateTimeFetchRange(fromInput, toInput string, loc *time.Location) (m
 		return messageFetchRange{}, usagef("from date/time must be before to date/time")
 	}
 	return messageFetchRange{
-		mode:            "datetime-range",
+		mode:            rangeModeDateTimeRange,
 		start:           start,
 		end:             end,
 		displayTimezone: chooseDateTimeRangeDisplayTimezone(fromInput, toInput, loc),
@@ -75,7 +87,7 @@ func resolveDateFetchRange(input string, loc *time.Location) (messageFetchRange,
 	localDate := parsed.In(loc)
 	start := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), 0, 0, 0, 0, loc)
 	return messageFetchRange{
-		mode:            "date",
+		mode:            rangeModeDate,
 		start:           start,
 		end:             start.AddDate(0, 0, 1),
 		displayTimezone: displayTimezone,
@@ -146,16 +158,27 @@ func environmentRangeDisplayTimezone(loc *time.Location) rangeDisplayTimezone {
 	}
 }
 
+// formatUTCOffset labels a fixed offset as UTC±HH:MM
+// (doc/design/output-format.md) and a zero offset as UTC. The spec does not
+// decide the zero form, and the footer's Exported line shows a zero offset as
+// UTC+00:00 (offsetString); Issue #211 kept both as they were.
 func formatUTCOffset(offset int) string {
 	if offset == 0 {
 		return "UTC"
 	}
-	sign := '+'
-	if offset < 0 {
-		sign = '-'
-		offset = -offset
+	return "UTC" + offsetString(offset)
+}
+
+// offsetString formats an offset in seconds east of UTC as ±HH:MM, dropping
+// seconds. The footer's Exported line (buildPage) also uses it, after "UTC",
+// and shows a zero offset as UTC+00:00.
+func offsetString(seconds int) string {
+	sign := "+"
+	if seconds < 0 {
+		sign = "-"
+		seconds = -seconds
 	}
-	return fmt.Sprintf("UTC%c%02d:%02d", sign, offset/(60*60), offset/60%60)
+	return fmt.Sprintf("%s%02d:%02d", sign, seconds/3600, (seconds%3600)/60)
 }
 
 func (r messageFetchRange) oldestTS() string { return slack.FormatTS(r.start.Unix()) }
@@ -169,9 +192,9 @@ func (r messageFetchRange) latestTS() string {
 
 func (r messageFetchRange) progressLabel() string {
 	switch r.mode {
-	case "date":
+	case rangeModeDate:
 		return "on " + r.start.Format("2006-01-02") + " (local time)"
-	case "datetime-range":
+	case rangeModeDateTimeRange:
 		return "from " + r.start.UTC().Format(time.RFC3339) + " (included) to " + r.end.UTC().Format(time.RFC3339) + " (not included)"
 	}
 	return "since " + r.start.Format("2006-01-02")
@@ -202,10 +225,10 @@ func (r messageFetchRange) footerOptionsLabel(opts Options) string {
 	if len(opts.ExcludeReactionEmoji) > 0 {
 		limit += ", --exclude-reaction-emoji " + strings.Join(opts.ExcludeReactionEmoji, ",")
 	}
-	if r.mode == "date" {
+	switch r.mode {
+	case rangeModeDate:
 		return fmt.Sprintf("--date %q, %s", opts.Date, limit)
-	}
-	if r.mode == "datetime-range" {
+	case rangeModeDateTimeRange:
 		return fmt.Sprintf("--from %q, --to %q, %s", opts.From, opts.To, limit)
 	}
 	return fmt.Sprintf("--days %d, %s", opts.Days, limit)
