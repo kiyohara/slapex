@@ -177,6 +177,32 @@ func TestFooterRangeLabelPreservesNamedTimezoneDSTOffsets(t *testing.T) {
 	}
 }
 
+// TestUTCOffsetFormats pins the two footer forms of an offset: the Range
+// timezone label (formatUTCOffset) shows a zero offset as UTC, while the
+// Exported line puts offsetString after "UTC" and shows it as UTC+00:00.
+func TestUTCOffsetFormats(t *testing.T) {
+	tests := []struct {
+		offset        int
+		wantOffset    string // offsetString
+		wantUTCOffset string // formatUTCOffset
+	}{
+		{offset: 0, wantOffset: "+00:00", wantUTCOffset: "UTC"},
+		{offset: 9 * 60 * 60, wantOffset: "+09:00", wantUTCOffset: "UTC+09:00"},
+		{offset: -7 * 60 * 60, wantOffset: "-07:00", wantUTCOffset: "UTC-07:00"},
+		{offset: 5*60*60 + 45*60, wantOffset: "+05:45", wantUTCOffset: "UTC+05:45"},
+		{offset: -(3*60*60 + 30*60), wantOffset: "-03:30", wantUTCOffset: "UTC-03:30"},
+		{offset: 9*60*60 + 18*60 + 59, wantOffset: "+09:18", wantUTCOffset: "UTC+09:18"}, // seconds dropped
+	}
+	for _, tt := range tests {
+		if got := offsetString(tt.offset); got != tt.wantOffset {
+			t.Errorf("offsetString(%d) = %q, want %q", tt.offset, got, tt.wantOffset)
+		}
+		if got := formatUTCOffset(tt.offset); got != tt.wantUTCOffset {
+			t.Errorf("formatUTCOffset(%d) = %q, want %q", tt.offset, got, tt.wantUTCOffset)
+		}
+	}
+}
+
 func TestResolveDateTimeFetchRangeRejectsEmptyOrReversedRange(t *testing.T) {
 	for _, to := range []string{"2026-07-03T09:30", "2026-07-03T09:00"} {
 		if _, err := resolveDateTimeFetchRange("2026-07-03T09:30", to, time.Local); err == nil {

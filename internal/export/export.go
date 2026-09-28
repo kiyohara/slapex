@@ -304,15 +304,6 @@ func hostOf(rawURL string) string {
 	return host
 }
 
-func offsetString(seconds int) string {
-	sign := "+"
-	if seconds < 0 {
-		sign = "-"
-		seconds = -seconds
-	}
-	return fmt.Sprintf("%s%02d:%02d", sign, seconds/3600, (seconds%3600)/60)
-}
-
 func humanBytes(n int64) string {
 	switch {
 	case n >= 1<<30 && n%(1<<30) == 0:
