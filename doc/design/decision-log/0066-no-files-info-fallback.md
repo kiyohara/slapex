@@ -9,7 +9,7 @@
 
 0025 は「file は message 内 file object を正とし、`files.info` は欠損時の補完のみ」と決め、`slack-api-usage.md` の「使用する API」も「file object に必要情報が欠けている場合だけ補完として呼ぶ」としていた。`output-format.md` の「保存する assets」の表も、ユーザーがアップロードした画像と画像以外の添付ファイルの取得元に `files.info` を挙げていた。一方、0025 の同じ「決定」が確定した使用 API の一覧に `files.info` は無く、実装も `files.info` を呼ばない。message の file object に download URL(`url_private_download` / `url_private`)が無いファイルは、補完せずに download URL の無いファイルとして扱い、`html-rendering.md` の「画像と添付ファイルの表示」の表のとおり表示する。Issue #289(PR #287 の作業中に、設計文書とコードを突き合わせて見つかった)。
 
-補完が要る場面の手がかりとして、Slack の file object の文書は、Slack Connect channel にアップロードされたファイルについて、情報を省いた file object(`"file_access": "check_file_info"`)が届き、metadata を見るには追加の操作が要るとしている。
+補完が要る場面の手がかりとして、Slack の file object の文書は、Slack Connect channel にアップロードされたファイルについて、Events API / RTM API を listen する app への payload には情報を省いた file object(`"file_access": "check_file_info"`)が届き、metadata を見るには追加の操作が要るとしている。
 
 ## 候補
 
@@ -19,8 +19,9 @@
 ## 検討内容
 
 - Slack の Slack Connect の文書(「Additional check required to access file info (`check_file_info`)」の節。2026-09-28 に確認)は、Slack Connect channel にアップロードされたファイルについて、情報を省いた file object が届くのは Events API / RTM API を listen する app であるとし、`conversations.history` / `conversations.replies` で message と file を取得する場合は完全な file object が返ると明記している。追加の API 呼び出しが要るのは、file の event が app へ push される場合だけとしている。file object の文書も、`check_file_info` を Events API / RTM API の payload の話として書き、詳細は Slack Connect の文書を参照させる。slapex は `conversations.history` / `conversations.replies` だけで message を取得し、Events API / RTM API を使わない。
-- 補完の他の候補も、`files.info` で得られる情報が増えない。削除済み(`tombstone`)と Free plan の制限で非表示(`hidden_by_limit`)のファイルは、Slack がファイルの情報を伏せている。外部サービス連携のファイル(`is_external`)は、`url_private` / `url_private_download` が外部サービスを指すため download しない(0017 の 2026-09-27 の追記)。それ以外で download URL の無いファイルについて、`files.info` が message の file object に無い URL を返すことを示す文書は無い(文書の記述からの推論で、実 workspace では確かめていない)。
-- B は、文書上起きない場面のために、Web API の呼び出し(rate limit の pacing、再試行、失敗時の扱い、進捗表示)と、それを確かめる fake server の test を足すことになる。`files.info` の scope は既存の `files:read` で足り、rate limit は Tier 4 で、どちらも障害ではないが、効果を確かめられない。
+- 補完の他の候補も、`files.info` で得られる情報が増えるとは見込めない。削除済み(`tombstone`)と Free plan の制限で非表示(`hidden_by_limit`)のファイルは、Slack がファイルの情報を伏せており、`files.info` でも同じである。`files.info` の reference は、削除済みのファイルには error `file_deleted` を返すとする。Slack の changelog「Wild West no more (for file limits, at least)」(2019-03-01)は、制限で非表示のファイルを情報を伏せて返す API に、`conversations.history` とともに `files.info` を挙げている。外部サービス連携のファイル(`is_external`)は、`url_private` / `url_private_download` が外部サービスを指すため download しない(0017 の 2026-09-27 の追記)。それ以外で download URL の無いファイルについて、`files.info` が message の file object に無い URL を返すことを示す文書は無い(文書の記述からの推論で、実 workspace では確かめていない)。
+  - 出典: [`files.info`](https://docs.slack.dev/reference/methods/files.info), [Wild West no more (for file limits, at least)](https://docs.slack.dev/changelog/2019-03-wild-west-for-files-no-more/)
+- B は、文書上起きない場面(`check_file_info`)や、`files.info` で補えることを示す文書の無い場面(download URL の無いファイル)のために、Web API の呼び出し(rate limit の pacing、再試行、失敗時の扱い、進捗表示)と、それを確かめる fake server の test を足すことになる。`files.info` の scope は既存の `files:read` で足り、rate limit は Tier 4 で、どちらも障害ではないが、効果を確かめられない。
 - A は実装を変えない。設計文書と decision log を、実装と Slack の文書に揃えるだけである。
 
 ## 決定
