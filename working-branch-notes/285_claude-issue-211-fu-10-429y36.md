@@ -15,7 +15,8 @@ Issue #211(FU-10)。PR #201(#190)の review 補助分析で見つかった、exp
 - 依存(#190 / PR #201)は merge 済み。main `0db6387`(PR #284 の merge)から作業した。
 - Issue の 5 項目のうち 2 項目は RF-03 / RF-06 で吸収済みで、残る 3 項目を実装した(「決定事項」)。Issue の「検証」を実行した(「検証」)。
 - PR #285 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- 次は CI を確かめ、review を subagent に委譲する(P2)。
+- Claude の review cycle `claude-code-48aa48e-20260928032117` の指摘 1 件(`[ask]`)に対応した(P4)。0 の offset の表示の追跡を残すかは、ユーザーが終了後に判断する(「review から出た follow-up の候補」)。
+- 次は CI を確かめ、再確認を subagent に委譲する(P5)。
 
 ## 決定事項
 
@@ -32,7 +33,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 ### 実装
 
 - `channel_test.go` の `containsLog` を削除し、`logsContain` を使う。`strings` の import も外れた。`logsContain` は `integration_assert_test.go` に置いたままにした(同じ package の test から使える。置き場所を変えるのは Issue の範囲を越える)。
-- `offsetString` を `export.go` から `fetch_range.go` の `formatUTCOffset` の隣へ移し、`formatUTCOffset` を `"UTC" + offsetString(offset)`(0 は `UTC`)で組み立てた。旧 `formatUTCOffset` の `offset/60%60` と `offsetString` の `(seconds%3600)/60` は、負でない値で同じ値になる。Exported 行の `UTC+00:00` と Range の timezone の `UTC` の違いは残した(UTC の表示を揃えるかは仕様判断で、Issue が「本 Issue では変えない」としている)。2 関数に doc comment を足し、この違いを書いた。
+- `offsetString` を `export.go` から `fetch_range.go` の `formatUTCOffset` の隣へ移し、`formatUTCOffset` を `"UTC" + offsetString(offset)`(0 は `UTC`)で組み立てた。旧 `formatUTCOffset` の `offset/60%60` と `offsetString` の `(seconds%3600)/60` は、負でない値で同じ値になる。Exported 行の `UTC+00:00` と Range の timezone の `UTC` の違いは残した(UTC の表示を揃えるかは仕様判断で、Issue が「本 Issue では変えない」としている)。2 関数に doc comment を足し、この違いを書いた。`formatUTCOffset` の doc comment は、設計文書(`output-format.md`)の参照を `UTC±HH:MM` の形だけに掛け、0 の形は仕様が決めていないことと、#211 が 2 つの形をそのまま残したことを書いた(review の `[ask]` への対応、`6585a6c`)。
 - `fetch_range.go` に `rangeMode` 型と定数 `rangeModeDays` / `rangeModeDate` / `rangeModeDateTimeRange` を置き、`messageFetchRange.mode` をこの型にした。生成の 3 か所、`progressLabel`、`footerOptionsLabel`、`cache.go` の `metadataOptions` が定数を参照する。
 - 3 つの分岐は、date と datetime-range を case に置き、それ以外を days の形にする switch に揃えた(`footerOptionsLabel` と `metadataOptions` は if の連続から switch へ)。days への fallback は変えていない。型の doc comment にその扱いを書いた。
 - `metadataOptions` の `range_mode` は `string(r.mode)` で入れ、payload の値は従来どおり string のままにした(JSON の値も同じ)。
@@ -54,11 +55,17 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 - `update-readme-preview-screenshots`: 適用しない。sample export に差分が無い。
 - `update-readme-demo-gif`: 適用しない。CLI の出力(phase 名、summary、進捗表示)を変えていない。`progressLabel` の出力も旧実装と一致する(「検証」)。
 
+### review から出た follow-up の候補
+
+- 0 の offset の表示の仕様判断の追跡先。footer の Range の timezone(`formatUTCOffset`)は 0 を `UTC`、Exported 行(`offsetString`)は `UTC+00:00` と表示する。どちらに揃えるか(揃えないか)は仕様判断で、#211 は「本 Issue では変えない」とした。`output-format.md`(38 行目)と `html-rendering.md`(29 行目)は固定 offset を `UTC±HH:MM` とするだけで、0 の扱いを書いていない。decision log(0028 と `index.md` の未決事項)、他の open Issue、`progress.md` にも、この判断を扱う記述は無い。#211 は本 PR の merge で close される。
+- review の `[ask]`(cycle `claude-code-48aa48e-20260928032117`)への処置は「妥当だが今回はスコープ外である」。追跡を残すか(新しい Issue、既存 Issue への申し送り、decision log の `index.md` の未決事項への追加など)はユーザーの判断で、本 PR では起票も記録の追加もしない。コードからは、`formatUTCOffset` の doc comment で 0 の形が仕様で決まっていないことが分かる(`6585a6c`)。
+- `progress.md` の FU-10 の行(「merge後は対応なし」)は変えない。追跡を Issue にする場合は、別の Issue として索引に登録するため。
+
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
-- review の指摘に対応する(P4)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- review の指摘に対応する(P4)。(完了)
 - CI を確かめてから再確認を subagent に委譲する(P5)。
 - Ready for review にして、Codex のクロスレビュー(他の Agent 種別の review cycle)を待つ。指摘があれば対応する。
 - review thread の resolve と PR の merge(ユーザー)。
@@ -82,6 +89,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 | `TestUTCOffsetFormats` の表を main の実装で実行(使い捨て) | pass(既存の挙動を固定する) |
 | `TestUTCOffsetFormats` の変異の検出(使い捨ての書き換え。いずれも戻した) | 4 種すべて検出した。0 を `UTC+00:00` にする、正の符号を付けない、秒を切り上げる、`formatUTCOffset` の `UTC` を外す |
 | sample export の再生成(`TZ=Asia/Tokyo`、`-time 2026-07-04T16:32:41+09:00`、別ディレクトリ) | `doc/samples/ja` / `en` と `diff -r` で無差分(各 18 ファイル) |
+| P4: doc comment の修正(`6585a6c`)の後の `gofmt -l .`、`go vet ./...`、`go build ./...`、`go test ./internal/export`、`go test ./...`、`git diff --check` | すべて pass(`gofmt` と `git diff --check` は出力なし) |
 
 ## リスク・ブロッカー
 
@@ -94,3 +102,5 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 - 2026-09-28: PR #285 を draft で作成し、note を採番した(`f5073be`)。`progress.md` の FU-10 の PR 欄を #285 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#285`)と、PR description の note のファイル名参照 1 行(`draft_` → `285_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-28: Claude の review(P2)を subagent に委譲した。review cycle `claude-code-48aa48e-20260928032117`、`Reviewed head` `48aa48e88097e54a5c931d21671b5ed6579a81aa`。指摘は 1 件(inline 1 件、top-level 0 件。`[ask]` 1 件で、`[must]`、`[imo]`、`[nits]`、`[fyi]` は無い)。`gh` への fallback は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
+- 2026-09-28: 指摘に対応した(P4)。処置の内訳は「妥当だが今回はスコープ外である」1 件。`[ask]`(0 の offset の表示の仕様判断の追跡先)は、追跡を残すかをユーザーが終了後に判断する follow-up の候補にした(「review から出た follow-up の候補」)。併せて、任意として挙がった `formatUTCOffset` の doc comment の書き方を直した(`6585a6c`)。出力生成系 3 skill の判断は変わらない(コメントだけの変更で、出力を変えない)。
