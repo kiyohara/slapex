@@ -35,7 +35,7 @@ export の所要時間を最小化する取り組み(#272)の Issue も、「進
 | RF-03 | [#191](https://github.com/kiyohara/slapex/issues/191) Run工程・状態整理 | done(PR merge後) | #188, #189, #190 | merge後は対応なし | [#262](https://github.com/kiyohara/slapex/pull/262) |
 | RF-06 | [#194](https://github.com/kiyohara/slapex/issues/194) cache入力整理 | done(PR merge後) | #188 | merge後は対応なし | [#270](https://github.com/kiyohara/slapex/pull/270) |
 | RF-04 | [#192](https://github.com/kiyohara/slapex/issues/192) retry共通化 | done(PR merge後) | #188 | merge後は対応なし | [#271](https://github.com/kiyohara/slapex/pull/271) |
-| RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | todo | #188 | 通常/demoの転記を整理 | - |
+| RF-05 | [#193](https://github.com/kiyohara/slapex/issues/193) CLI option集約 | done(PR merge後) | #188 | merge後は対応なし | [#282](https://github.com/kiyohara/slapex/pull/282) |
 
 ## 進行中タスク: review で見つかった既存挙動の修正
 

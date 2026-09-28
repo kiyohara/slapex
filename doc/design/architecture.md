@@ -41,7 +41,9 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 | [internal/ui](../../internal/ui/ui.go) | styled/plain 判定、進捗 phase・spinner・通知の出力 | なし |
 | [internal/demo](../../internal/demo/export.go) | 架空 scenario と local fake Slack server、通常の `export.Run` を使う demo/sample 共通 driver | export、slack、ui |
 
-通常実行は `cmd/slapex` が `slack.Client` と `ui.Printer` を用意して `export.Run` を呼ぶ。`--demo` は `demo.Export` を介して同じ工程を実行する。`export` が取得結果を `render` の表示用データへ変換し、asset の保存は `output` に委譲する。`emoji.list` の取得・cache 再利用は `export` と `slack` の責務であり、`emoji` 自体は API を呼ばない。
+通常実行は `cmd/slapex` が `slack.Client` と `ui.Printer` を用意して `export.Run` を呼ぶ。`--demo` は `demo.Run` を介して同じ工程を実行する。CLI option から `export.Options` への変換は `cmd/slapex` の `exportOptions` の 1 か所に置き、通常実行と `--demo` は同じ変換結果を使う。通常実行はそこへ controlling terminal を加え、`demo.Run` は fixture が決める channel と非対話の解決だけを差し替える。`export` が取得結果を `render` の表示用データへ変換し、asset の保存は `output` に委譲する。`emoji.list` の取得・cache 再利用は `export` と `slack` の責務であり、`emoji` 自体は API を呼ばない。
+
+`cmd/slapex` のファイルは責務で分ける。起動と通常実行の組立は [main.go](../../cmd/slapex/main.go)、option の定義・parse・検証は [options.go](../../cmd/slapex/options.go)、token と controlling terminal は [token.go](../../cmd/slapex/token.go)、`--demo` は [demo.go](../../cmd/slapex/demo.go)、exit code への対応づけと失敗の報告は [exitcode.go](../../cmd/slapex/exitcode.go)、HTTP trace のファイルは [httptrace.go](../../cmd/slapex/httptrace.go) に置く。
 
 `export.Run` は工程の順序と失敗時の処理だけを持ち、各工程は結果を値で次の工程へ渡す。Workspace・Channel(`resolveTarget`)、再利用する cache・出力先・取得範囲、Messages(`fetchMessages`。親の除外後の補充を含む history/replies の取得で、timeline・親が timeline にある thread の replies・打ち切りの有無・除外件数を返す。Messages 行・metadata.json・Done の件数はこの結果から数える)、Users(`resolveUsers`)、Emoji(`resolveCustomEmoji`)、Assets(avatar の保存、`buildTimeline`、`buildPage`、`writePage`。`endAssetsPhase` が asset の集計を返す)、cache の書き出しと cleanup(`writeCaches`、`output.RemoveCache`)、Done(`reportDone`)の順に進み、最初の error で止まる。
 

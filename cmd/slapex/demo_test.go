@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
+	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,5 +135,46 @@ func TestRunDemoStdoutIsOutputDirOnly(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "no Slack token used") {
 		t.Fatalf("stderr %q missing the token-free demo notice", stderr)
+	}
+}
+
+// TestRunDemoNeedsNoSlackToken: --demo exports without SLACK_TOKEN, and with
+// one set it neither sends a request to the Slack API base URL
+// (SLAPEX_API_BASE_URL) nor shows the token, and writes no HTTP trace
+// (SLAPEX_HTTP_TRACE): the demo only talks to its in-process fixture server
+// (doc/design/cli-interface.md). The channel argument is ignored.
+func TestRunDemoNeedsNoSlackToken(t *testing.T) {
+	const token = "xoxp-demo-must-not-send"
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		http.Error(w, "unexpected request", http.StatusTeapot)
+	}))
+	defer srv.Close()
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	dir := t.TempDir()
+	trace := filepath.Join(dir, "trace.jsonl")
+	t.Setenv(apiBaseURLEnv, srv.URL+"/api/")
+	t.Setenv(httpTraceEnv, trace)
+	for i, env := range []string{"", token} {
+		t.Setenv(slackTokenEnv, env)
+		out := filepath.Join(dir, fmt.Sprintf("out%d", i))
+		os.Args = []string{"slapex", "--demo", "--no-color", "--output", out, "no-such-channel"}
+		var code int
+		stdout, stderr := captureStdio(t, func() { code = run() })
+		if code != exitOK || !strings.HasPrefix(stdout, out) {
+			t.Fatalf("run(--demo) with SLACK_TOKEN %q = %d, stdout %q; want %d and the output dir\nstderr:\n%s", env, code, stdout, exitOK, stderr)
+		}
+		if strings.Contains(stdout+stderr, token) {
+			t.Errorf("run(--demo) showed the token: stdout %q, stderr %q", stdout, stderr)
+		}
+	}
+	if requests != 0 {
+		t.Errorf("the Slack API base URL got %d requests, want none", requests)
+	}
+	if _, err := os.Stat(trace); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("run(--demo) left an HTTP trace (stat: %v), want none", err)
 	}
 }
