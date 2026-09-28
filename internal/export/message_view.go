@@ -45,7 +45,8 @@ var normalSubtypes = map[string]bool{
 
 // messageKind is how messageView shows a message, following
 // html-rendering.md「メッセージ種別(subtype)の表示」. collectUserIDs reads the
-// same kind to scan only the texts that are rendered.
+// same kind to collect only the users shown and scan only the texts that are
+// rendered.
 type messageKind int
 
 const (
@@ -151,16 +152,38 @@ func (b *messageViewBuilder) systemBody(m *slack.Message) template.HTML {
 	if suffix, ok := b.channelJoinInviterSuffix(m); ok {
 		body += suffix
 	}
+	if !systemActorPrefixCandidate(m) {
+		return body
+	}
 	name, ok := b.userDisplayName(m.User)
-	if !ok || !actorPrefixSystemSubtypes[m.Subtype] || systemTextStartsWithActor(m.Text, m.User, name) {
+	if !ok || strings.HasPrefix(m.Text, "@"+name) {
 		return body
 	}
 	prefix := `<span class="mention">` + html.EscapeString("@"+name) + `</span> `
 	return render.Safe(prefix) + body
 }
 
+// systemActorPrefixCandidate reports whether systemBody needs the poster's
+// display name for a system row: channel_topic, channel_purpose and
+// channel_name get it as a prefix unless the text already starts with the
+// poster's mention or with "@" and that name. Only the name tells the latter,
+// so a text not starting with the mention needs it either way. collectUserIDs
+// looks the poster up exactly then.
+func systemActorPrefixCandidate(m *slack.Message) bool {
+	return m.User != "" && actorPrefixSystemSubtypes[m.Subtype] &&
+		!strings.HasPrefix(m.Text, "<@"+m.User+">") && !strings.HasPrefix(m.Text, "<@"+m.User+"|")
+}
+
+// channelJoinInviterSuffixCandidate reports whether systemBody needs the
+// inviter's display name for a channel_join row: an inviter other than the
+// joiner whom the text does not mention gets an "(invited by @name)" suffix.
+// collectUserIDs looks the inviter up exactly then.
+func channelJoinInviterSuffixCandidate(m *slack.Message) bool {
+	return m.Subtype == "channel_join" && m.Inviter != "" && m.Inviter != m.User && !systemTextMentionsUser(m.Text, m.Inviter)
+}
+
 func (b *messageViewBuilder) channelJoinInviterSuffix(m *slack.Message) (template.HTML, bool) {
-	if m.Subtype != "channel_join" || m.Inviter == "" || m.Inviter == m.User || systemTextMentionsUser(m.Text, m.Inviter) {
+	if !channelJoinInviterSuffixCandidate(m) {
 		return "", false
 	}
 	name, ok := b.userDisplayName(m.Inviter)
@@ -231,19 +254,6 @@ func (b *messageViewBuilder) userDisplayName(id string) (string, bool) {
 		return "", false
 	}
 	return u.DisplayName(), true
-}
-
-func systemTextStartsWithActor(text, userID, displayName string) bool {
-	for _, prefix := range []string{
-		"<@" + userID + ">",
-		"<@" + userID + "|",
-		"@" + displayName,
-	} {
-		if prefix != "" && strings.HasPrefix(text, prefix) {
-			return true
-		}
-	}
-	return false
 }
 
 func systemTextMentionsUser(text, userID string) bool {

@@ -76,6 +76,8 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	sc := baseScenario()
 	sc.Users["U03"] = testUser("U03", "set", "Set User", "set", "")
 	sc.Users["U04"] = testUser("U04", "charlie", "Charlie Inviter", "Charlie", "")
+	sc.Users["U05"] = testUser("U05", "dave", "Dave Purpose", "Dave", "")
+	sc.Users["U06"] = testUser("U06", "erin", "Erin Topic", "Erin", "")
 	sc.Messages = []slack.Message{
 		{
 			Type:    "message",
@@ -105,6 +107,20 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 			User:    "U03",
 			Text:    "set the channel name: project-beta",
 		},
+		{
+			Type:    "message",
+			Subtype: "channel_purpose",
+			TS:      "1700000500.000000",
+			User:    "U05",
+			Text:    "<@U05> set the channel purpose: Docs",
+		},
+		{
+			Type:    "message",
+			Subtype: "channel_topic",
+			TS:      "1700000600.000000",
+			User:    "U06",
+			Text:    "@Erin set the channel topic: Roadmap",
+		},
 	}
 
 	got := runExportScenario(t, sc, renderingOptions(t))
@@ -116,6 +132,8 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	mustContain(t, body, `<span class="mention">@Bob</span> set the channel topic: Launch planning`)
 	mustContain(t, body, "set the channel purpose: Planning docs")
 	mustContain(t, body, `<span class="mention">@set</span> set the channel name: project-beta`)
+	mustContain(t, body, `<span class="mention">@Dave</span> set the channel purpose: Docs`)
+	mustContain(t, body, "@Erin set the channel topic: Roadmap")
 	if got := strings.Count(body, `<span class="mention">@Alice</span>`); got != 1 {
 		t.Fatalf("@Alice mention count = %d, want 1 (channel_join must not get a duplicate actor prefix)", got)
 	}
@@ -127,6 +145,12 @@ func TestRunIntegrationSystemRows(t *testing.T) {
 	}
 	if got := strings.Count(body, `<span class="mention">@set</span>`); got != 1 {
 		t.Fatalf("@set mention count = %d, want 1 (display name must not suppress actor prefix)", got)
+	}
+	if got := strings.Count(body, `<span class="mention">@Dave</span>`); got != 1 {
+		t.Fatalf("@Dave mention count = %d, want 1 (text starting with the poster's mention must not get a duplicate actor prefix)", got)
+	}
+	if got := strings.Count(body, "@Erin"); got != 1 {
+		t.Fatalf("@Erin count = %d, want 1 (text starting with @display name must not get a duplicate actor prefix)", got)
 	}
 	// System rows carry no avatar and are not rendered as full messages.
 	mustNotContain(t, body, `<div class="message">`)
@@ -418,6 +442,110 @@ func TestRunIntegrationLabeledMention(t *testing.T) {
 		t.Fatalf("assets_manifest.json has no saved avatar for U01: %+v", manifest)
 	}
 	for _, id := range []string{"u03", "u04", "u05", "u06"} {
+		path := "/files/avatar-" + id + ".png"
+		if e, ok := findManifest(manifest, func(e manifestEntryFull) bool { return strings.HasSuffix(e.SourceURL, path) }); ok {
+			t.Fatalf("assets_manifest.json has an entry for %s: %+v", path, e)
+		}
+		assertEndpointCounts(t, got.Server, map[string]int{path: 0})
+	}
+}
+
+// --- case 5e: a poster the page never names costs no users.info call ---------
+
+// TestRunIntegrationUnshownPoster pins Issue #251: posters and channel_join
+// inviters are looked up only where messageView uses them. A tombstone and a
+// bodiless unknown subtype show no user. A system row shows no avatar and
+// names its poster only in the actor prefix of channel_topic /
+// channel_purpose / channel_name, which a text starting with the poster's
+// mention does without, and its inviter only in the invited-by suffix of
+// channel_join. A user appearing only as the poster of a row that does not
+// name them costs no users.info call, no avatar download and no
+// slack_api_cache.json entry.
+func TestRunIntegrationUnshownPoster(t *testing.T) {
+	t.Parallel()
+
+	const parentTS = "1700000584.000000"
+	sc := baseScenario()
+	// Every user has an avatar, so an avatar saved for a user the page does
+	// not show would leave a manifest entry.
+	for _, u := range []slack.User{
+		testUser("U01", "alice", "Alice Example", "Alice", "{{base}}/files/avatar-u01.png"),
+		testUser("U02", "bob", "Bob Builder", "Bob", "{{base}}/files/avatar-u02.png"),
+		testUser("U03", "carol", "Carol Reviewer", "Carol", "{{base}}/files/avatar-u03.png"),
+		testUser("U04", "dave", "Dave Oncall", "Dave", "{{base}}/files/avatar-u04.png"),
+		testUser("U05", "erin", "Erin Owner", "Erin", "{{base}}/files/avatar-u05.png"),
+		testUser("U06", "frank", "Frank Runner", "Frank", "{{base}}/files/avatar-u06.png"),
+		testUser("U07", "grace", "Grace Planner", "Grace", "{{base}}/files/avatar-u07.png"),
+	} {
+		sc.Users[u.ID] = u
+		sc.Assets["/files/avatar-"+strings.ToLower(u.ID)+".png"] = pngAsset("avatar " + u.ID)
+	}
+	sc.Messages = []slack.Message{
+		// U03 is named in the invited-by suffix, U02 in the actor prefix.
+		{
+			Type: "message", Subtype: "channel_join", TS: "1700000580.000000", User: "U01", Inviter: "U03",
+			Text: "<@U01> has joined the channel",
+		},
+		{
+			Type: "message", Subtype: "channel_topic", TS: "1700000581.000000", User: "U02",
+			Text: "set the channel topic: Launch planning",
+		},
+		// Legacy texts naming their posters by a labeled mention need no
+		// lookup of U06 or U07: a channel_join shows no actor prefix, and a
+		// channel_purpose starting with the poster's mention gets none.
+		{
+			Type: "message", Subtype: "channel_join", TS: "1700000582.000000", User: "U06",
+			Text: "<@U06|frank> has joined the channel",
+		},
+		{
+			Type: "message", Subtype: "channel_purpose", TS: "1700000583.000000", User: "U07",
+			Text: "<@U07|grace> set the channel purpose: Planning docs",
+		},
+		// U04 posted the deleted parent, U05 the bodiless unknown subtype.
+		{
+			Type: "message", Subtype: "tombstone", TS: parentTS, ThreadTS: parentTS, User: "U04",
+			Text: "This message was deleted.", ReplyCount: 1,
+		},
+		{Type: "message", Subtype: "some_unknown_event", TS: "1700000586.000000", User: "U05"},
+	}
+	sc.Replies = map[string][]slack.Message{
+		parentTS: {
+			{Type: "message", TS: "1700000585.000000", ThreadTS: parentTS, User: "U01", Text: "Reply after deletion"},
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `has joined the channel <span class="system-context">(invited by <span class="mention">@Carol</span>)</span>`)
+	mustContain(t, body, `<span class="mention">@Bob</span> set the channel topic: Launch planning`)
+	mustContain(t, body, `<span class="system-body"><span class="mention">@frank</span> has joined the channel</span>`)
+	mustContain(t, body, `<span class="system-body"><span class="mention">@grace</span> set the channel purpose: Planning docs</span>`)
+	mustContain(t, body, "(削除されたメッセージ)")
+	mustContain(t, body, "Reply after deletion")
+	mustContain(t, body, "(未対応のメッセージ種別: some_unknown_event)")
+	for _, name := range []string{"@Dave", "@Erin", "@Frank", "@Grace"} {
+		mustNotContain(t, body, name)
+	}
+
+	// U01 posts and joins, U02 and U03 are named in system rows. U04 to U07
+	// are posters of rows that do not name them, so none is looked up, cached
+	// or given an avatar.
+	assertEndpointCounts(t, got.Server, map[string]int{"/api/users.info": 3})
+	var api struct {
+		Users map[string]json.RawMessage `json:"users"`
+	}
+	readJSON(t, filepath.Join(got.OutputDir, ".cache/slack_api_cache.json"), &api)
+	if ids := slices.Sorted(maps.Keys(api.Users)); !slices.Equal(ids, []string{"U01", "U02", "U03"}) {
+		t.Fatalf("cached users = %v, want [U01 U02 U03]", ids)
+	}
+	manifest := readManifestEntries(t, got.OutputDir)
+	if _, ok := findManifest(manifest, func(e manifestEntryFull) bool {
+		return e.Kind == "avatar" && e.Status == "saved" && strings.HasSuffix(e.SourceURL, "/files/avatar-u01.png")
+	}); !ok {
+		t.Fatalf("assets_manifest.json has no saved avatar for U01: %+v", manifest)
+	}
+	for _, id := range []string{"u04", "u05", "u06", "u07"} {
 		path := "/files/avatar-" + id + ".png"
 		if e, ok := findManifest(manifest, func(e manifestEntryFull) bool { return strings.HasSuffix(e.SourceURL, path) }); ok {
 			t.Fatalf("assets_manifest.json has an entry for %s: %+v", path, e)
