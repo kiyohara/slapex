@@ -14,7 +14,8 @@ Issue #211(FU-10)。PR #201(#190)の review 補助分析で見つかった、exp
 
 - 依存(#190 / PR #201)は merge 済み。main `0db6387`(PR #284 の merge)から作業した。
 - Issue の 5 項目のうち 2 項目は RF-03 / RF-06 で吸収済みで、残る 3 項目を実装した(「決定事項」)。Issue の「検証」を実行した(「検証」)。
-- 次は PR の作成(draft)と採番。
+- PR #285 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- 次は CI を確かめ、review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -45,7 +46,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 
 - 設計文書は変えない。動作・出力・cache payload を変えない整理で、`doc/design/` は本 PR が触る関数と型の名前を記載していない。`cache.md` が書く `range_mode` の値(`date` / `datetime-range` / `days`)も変わらない。
 - decision log は作らない。方針を変えていないため。
-- `progress.md` の FU-10 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に記入する。着手順の行(… → FU-17 → FU-09 → FU-10 → FU-12)は変えていない。FU-09 との前後は選ぶ基準による運用上の入れ替えで、順序の制約(依存欄)は無い(#254 / PR #264 が推奨順と前後したときと同じ扱い)。
+- `progress.md` の FU-10 の行を `done(PR merge後)`、次にやることを「merge後は対応なし」にした。PR 欄は採番後に #285 を記入した。着手順の行(… → FU-17 → FU-09 → FU-10 → FU-12)は変えていない。FU-09 との前後は選ぶ基準による運用上の入れ替えで、順序の制約(依存欄)は無い(#254 / PR #264 が推奨順と前後したときと同じ扱い)。
 
 ### 出力生成系 3 skill の適用判断
 
@@ -55,7 +56,7 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - review の指摘に対応する(P4)。
 - CI を確かめてから再確認を subagent に委譲する(P5)。
@@ -90,3 +91,6 @@ Issue の行番号は PR #201 head `c0e2dc6` 時点の値である。main `0db63
 
 - 2026-09-28: Issue #211、`progress.md`、前のスレッドの報告(#251 / PR #284)を読んだ。Issue は open でコメントは無く、依存の #190 は PR #201 で merge 済み。Issue の 5 項目のうち、1 要素の `const` group は RF-03(`7a5e29f`)、`toUser` / `toBot` のコメントは RF-06(`3ff66b2`)で吸収済みと確かめた。
 - 2026-09-28: 残る 3 項目を実装し、`TestUTCOffsetFormats` を足した(`bbc28e1`)。Issue の「検証」、旧実装との一致、sample export の一致を確かめた。
+- 2026-09-28: PR #285 を draft で作成し、note を採番した(`f5073be`)。`progress.md` の FU-10 の PR 欄を #285 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#285`)と、PR description の note のファイル名参照 1 行(`draft_` → `285_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
