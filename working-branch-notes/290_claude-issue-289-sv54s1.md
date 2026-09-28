@@ -17,7 +17,7 @@ Issue #289。設計文書と decision log 0025 は、message の file object に
 - 設計文書と decision log を直し、Issue の「検証」を実行した(「検証」)。
 - PR #290 を draft で作成し、note を採番した。`progress.md` の索引に #289 は無いため更新しない。
 - 1 回目の review(P2)の委譲は、orchestrator が自身の出力の中の文面を subagent の完了報告と取り違え、分析の途中で止めたため、無かったものとして扱う(「セッションログ」)。記述を Slack の文書の範囲に絞る修正を push し、新しい subagent で P2 をやり直した。
-- P2(review cycle `claude-code-ffbe452-20260928230612`)の指摘 3 件(`[must]` 0 件)を 3 件とも採用し、修正した(P4)。各指摘へ処置を返信してから、再確認(P5)に進む。
+- Claude の review cycle(`claude-code-ffbe452-20260928230612`)は、指摘 3 件(`[must]` 0 件)を 3 件とも直し(P4)、再確認(P5)で 3 件とも修正確認済み(未対応 0 件)となって完了した。PR を Ready for review にした(2026-09-28 23:25Z)。
 
 ## 決定事項
 
@@ -68,9 +68,9 @@ A(仕様から外す)。推奨を添えて thread のカードで伺い、ユー
 
 - PR を draft で作成し、note を採番する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
-- 各指摘へ処置を返信する(P4。修正は `60c123d` とこの note の commit)。
-- CI を確かめてから再確認を subagent に委譲する(P5)。未対応が残れば P4 に戻る。
-- 人間の手番: Codex のクロスレビュー、PR の merge。
+- 各指摘へ処置を返信する(P4。修正は `60c123d` と `e2036eb`)。(完了)
+- CI を確かめてから再確認を subagent に委譲する(P5)。(完了。未対応 0 件)
+- 人間の手番: Codex のクロスレビュー、resolve 可の 3 thread の resolve、PR の merge。
 
 ## 検証
 
@@ -105,4 +105,7 @@ Go のコードを変えていないため、Docker Compose での `go vet` / `g
   - `[imo]` 0066 の「背景」: file object の文書の要約に、Events API / RTM API を listen する app への payload という限定を足した(文書の「Slack Connect files」の節を原文で確かめた)。
   - `[nits]` 0066 の「検討内容」: 2 点目の冒頭を「理由」と同じ「増えるとは見込めない」に揃え、削除済み(`files.info` の reference の error `file_deleted`)と Free plan の制限で非表示(Slack の changelog、2019-03-01)の出典を足した(どちらも原文で確かめた)。3 点目の「文書上起きない場面」を、`check_file_info` と、`files.info` で補えることを示す文書の無い場面(download URL の無いファイル)に分けた。
   - `[fyi]` この note: 「現在の状況」と「セッションログ」の 1 回目の P2 の経緯を、上のとおり事実に直した。
-  - 修正 commit は `60c123d`(0066)と、この note の commit。検証は `git diff --check`(出力なし)。出力生成系 3 skill は、変更が decision log と note だけのため、引き続き適用しない。
+  - 修正 commit は `60c123d`(0066)と `e2036eb`(この note)。検証は `git diff --check`(出力なし)。出力生成系 3 skill は、変更が decision log と note だけのため、引き続き適用しない。
+  - push の後、3 件の thread に処置を返信し(23:20Z)、read-back で確かめた。PR description の「主な変更」に `60c123d` を足した。head `e2036eb` の CI は 5 件すべて success(run 36497414623)。
+- 2026-09-28: 再確認(P5)を P2 と同じ subagent に委譲した(head `e2036eb`)。修正確認済み 3 件(resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件で、新しい指摘は無かった。完了要約は PR conversation comment(23:24Z)。subagent の `gh` への fallback と、訂正できなかった metadata の誤りは無い。
+- 2026-09-28: Claude の review cycle を終え、PR を Ready for review にした(23:25Z。P6)。この更新は、P5 が確かめた head `e2036eb` より後の note だけの commit である。残るのは人間の手番(Codex のクロスレビュー、resolve 可の 3 thread の resolve、PR の merge)だけである。
