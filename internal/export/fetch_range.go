@@ -158,8 +158,10 @@ func environmentRangeDisplayTimezone(loc *time.Location) rangeDisplayTimezone {
 	}
 }
 
-// formatUTCOffset labels a fixed offset as UTC±HH:MM, or UTC when it is zero
-// (doc/design/output-format.md).
+// formatUTCOffset labels a fixed offset as UTC±HH:MM
+// (doc/design/output-format.md) and a zero offset as UTC. The spec does not
+// decide the zero form, and the footer's Exported line shows a zero offset as
+// UTC+00:00 (offsetString); Issue #211 kept both as they were.
 func formatUTCOffset(offset int) string {
 	if offset == 0 {
 		return "UTC"
