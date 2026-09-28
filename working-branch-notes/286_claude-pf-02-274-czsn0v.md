@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/pf-02-274-czsn0v`(cloud session が指定。Issue の推奨ブランチ名は `perf-plan-asset-downloads`)
-- PR: 未作成
+- PR: #286
 - 最終更新: 2026-09-28
 
 ## 目的
