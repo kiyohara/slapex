@@ -15,7 +15,7 @@ Issue #251(FU-17)。`collectUserIDs` は、message の表示の分類によら�
 - 依存は無い。直列の条件だった #209(FU-08 / PR #283)は merge 済み。main `29614dd`(PR #283 の merge)から作業した。
 - 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
 - PR #284 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- Claude の review(P2)の指摘 1 件(`[imo]`)を採用し、actor の prefix を付けない 2 形の表示を固定する test を足した(P4、`0a210c0`)。次は CI を確かめてから再確認を subagent に委譲する(P5)。
+- Claude の review cycle `claude-code-fee066c-20260928020617` は、指摘 1 件(`[imo]`)を直し(`0a210c0`)、再確認で修正確認済み(未対応 0 件)となって完了した。この記録の push の後に Ready for review にし、Codex のクロスレビューを待つ。
 
 ## 決定事項
 
@@ -67,9 +67,9 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。(完了)
 - review の指摘に対応する(P4)。(完了)
-- CI を確かめてから再確認を subagent に委譲する(P5)。
+- CI を確かめてから再確認を subagent に委譲する(P5)。(完了)
 - Codex のクロスレビュー(他の Agent 種別の review cycle)。指摘があれば対応する。
-- review thread の resolve と、PR の merge(ユーザー)。
+- review thread 1 件の resolve と、PR の merge(ユーザー)。
 
 ## 検証
 
@@ -109,3 +109,5 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
 - 2026-09-28: Claude の review(P2)を subagent に委譲した。review cycle `claude-code-fee066c-20260928020617`、`Reviewed head` `fee066c4f3bb4819335018379a45802cf9a38531`。指摘は 1 件(inline 1 件、top-level 0 件。`[imo]` 1 件で、`[must]`、`[ask]`、`[nits]`、`[fyi]` は無い)。`gh` への fallback は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
 - 2026-09-28: 指摘に対応した(P4)。処置の内訳は「採用し修正した」1 件。actor の prefix を付けない 2 形の表示を `TestRunIntegrationSystemRows` で固定した(`0a210c0`、「test」「検証」)。スコープ外とした指摘は無く、follow-up の候補も無い。出力生成系 3 skill の判断は変わらない(test だけの変更で、出力を変えない)。
+- 2026-09-28 P5: verify-comments(P2 と同じ subagent。完了要約は PR の conversation comment、Reviewed head `5217deebaa20154327044ca94f14ba1d0082826d`)。修正確認済み 1 件(resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。新しい指摘は無い。
+- 2026-09-28 P6: Claude の review cycle を 1 周(P4 → P5 の 1 往復)で終えた。終了時の状態: PR #284 は draft、head はこの note の commit(P5 が確かめた `5217dee` より後の note だけの commit)、未対応の指摘は 0 件。この記録の push の後に Ready for review にする(2026-09-27 のユーザーの指示)。`gh` への fallback は P2 / P4 / P5 とも無く、metadata の誤りを訂正できなかった投稿も無い。review から出た follow-up の候補は無い。「リスク・ブロッカー」の avatar の件(名前だけを使う user の avatar download)は、#251 が「必要なら別 Issue にする」としてスコープ外に挙げ、#274(PF-02)のスコープ外にも記録がある。#251 は本 PR で close されるため、起票するかをユーザーに確かめる。
