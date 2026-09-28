@@ -13,7 +13,8 @@ Issue #209(FU-08)。`collectUserIDs` の `reMention` は、label の有無にか
 ## 現在の状況
 
 - 依存(#205 = FU-04 / PR #241)は merge 済み。main `5a1f6f9`(PR #282 の merge)から作業した。
-- 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。次は PR の作成(draft)と採番。
+- 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
+- PR #283 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。次は Claude の review cycle(P2)。
 
 ## 決定事項
 
@@ -60,7 +61,7 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - Claude の review cycle(P2〜P5)を回す。完了したら Ready for review にし、Codex のクロスレビューを待つ。
 
 ## 検証
@@ -92,3 +93,6 @@ Issue の作業内容の 2 案のうち、収集側を描画側に揃える案�
 
 - 2026-09-28: Issue #209、`progress.md`、前のスレッドの報告を読んだ。依存(#205)は close 済み(PR #241 が merge)。`collectUserIDs` は main `5a1f6f9` の `internal/export/message_collect.go` の 94 行目、`reMention` は 81 行目にある。
 - 2026-09-28: test を先に足し、修正前に失敗することを確かめてから `reMention` を直した。設計文書と `progress.md` を更新し、Issue の「検証」と sample export の一致の確認を済ませた。
+- 2026-09-28: PR #283 を draft で作成し、note を採番した(`8dcdcd3`)。`progress.md` の FU-08 の PR 欄を #283 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#283`)と、PR description の note のファイル名参照 1 行(`draft_` → `283_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
