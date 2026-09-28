@@ -14,7 +14,8 @@ Issue #251(FU-17)。`collectUserIDs` は、message の表示の分類によら�
 
 - 依存は無い。直列の条件だった #209(FU-08 / PR #283)は merge 済み。main `29614dd`(PR #283 の merge)から作業した。
 - 収集条件の修正、test、設計文書の同期を実装し、Issue の「検証」を実行した(「検証」)。
-- PR #284 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。次は CI を確かめてから review を subagent に委譲する(P2)。
+- PR #284 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
+- Claude の review(P2)の指摘 1 件(`[imo]`)を採用し、actor の prefix を付けない 2 形の表示を固定する test を足した(P4、`0a210c0`)。次は CI を確かめてから再確認を subagent に委譲する(P5)。
 
 ## 決定事項
 
@@ -46,6 +47,7 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 - `TestCollectUserIDsMatchesMessageView`(`internal/export/message_collect_test.go`): message の形ごとに、`messageView` が want の user だけを解決したときと全員を解決したときで同じ view を返すこと(描画側が want の外の user を使わない)と、`collectUserIDs` が want を返すことを確かめる contract test。通常表示、本文のある未知 subtype、通常表示の inviter、tombstone、本文の無い未知 subtype、`channel_join` 6 通り(mention の有無、inviter、参加した user と同じ inviter、inviter の mention の label の有無)、`channel_leave`、`pinned_item`、`channel_topic` / `channel_purpose` / `channel_name` の 4 通り(prefix を補う、mention で始まる、label 付きの mention で始まる、`@表示名` で始まる)、投稿者の無い `channel_topic` の 18 通り。`@表示名` で始まる行は、投稿者を解決しなくても同じ view になるが、そう分かるには名前が要るため want に残す(doc comment に書いた)。
 - `TestRunIntegrationUnshownPoster`(`integration_rendering_test.go` の case 5e、case 5d の直後): tombstone の親の投稿者(U04)、本文の無い未知 subtype の投稿者(U05)、label 付きの mention で投稿者を示す旧形式の `channel_join`(U06)と `channel_purpose`(U07)について、`users.info` を呼ばず、`slack_api_cache.json` の `users` に入らず、avatar の manifest entry も download も無いことを確かめる。actor の prefix の U02、invited-by の U03、投稿と mention の U01 は解決され、表示は変わらない。`users.info` は 3 回。
 - 投稿者の U01 の avatar が保存されることを、avatar の検査の陽性対照として確かめる。名前だけを使う U02 / U03 の avatar の有無は検査しない。名前だけを使う user の avatar download(#251 のスコープ外)を固定しないためである(#209 の case 5d と同じ扱い)。
+- `TestRunIntegrationSystemRows`(case 2)に、本文が投稿者の label の無い mention で始まる `channel_purpose`(U05)と、`@表示名` で始まる `channel_topic`(U06)を足し、actor が 1 回だけ表示されることを確かめる(P4、`0a210c0`)。この 2 形は `systemActorPrefixCandidate` と `systemBody` が prefix を付けない分岐で、表示を固定する test が無かった(main からある穴。P2 の `[imo]`)。`systemActorPrefixCandidate` は収集側と共有になり、収集の都合で直される機会が増えるため固定した。足した検査は main `29614dd` の実装でも通る。
 
 ### 設計文書
 
@@ -63,8 +65,8 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
-- review の指摘に対応する(P4)。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了)
+- review の指摘に対応する(P4)。(完了)
 - CI を確かめてから再確認を subagent に委譲する(P5)。
 - Codex のクロスレビュー(他の Agent 種別の review cycle)。指摘があれば対応する。
 - review thread の resolve と、PR の merge(ユーザー)。
@@ -88,6 +90,10 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 | `git diff --check` | 出力なし |
 | cross-compile(`CGO_ENABLED=0`、darwin / linux × amd64 / arm64 の `go build ./cmd/slapex`) | 4 通りとも成功 |
 | sample export の再生成(`TZ=Asia/Tokyo`、`-time 2026-07-04T16:32:41+09:00`、別ディレクトリ) | `doc/samples/ja` / `en` と `diff -r` で無差分(各 18 ファイル)。Users phase は ja / en とも `4 users, 1 bot resolved` |
+| P4: 指摘の再現(`fee066c`、使い捨ての書き換え。戻した) | `systemActorPrefixCandidate` から label の無い mention の判定を外す変異と、`systemBody` から `@表示名` の判定を外す変異は、どちらも `go test ./internal/export ./internal/demo` を通った |
+| P4: 足した検査の検出(`0a210c0`、同じ変異 2 種。戻した) | どちらも `TestRunIntegrationSystemRows` が検出した(`@Dave mention count = 2`、`@Erin count = 2`) |
+| P4: 足した検査を main `29614dd` の実装で実行 | `TestRunIntegrationSystemRows` は pass(既存の表示を固定する) |
+| P4: `gofmt -l .`、`go vet ./...`、`go build ./...`、`go test ./...`、`go test ./internal/export ./internal/render -count=5 -shuffle=on`、`go test -race -count=2 ./internal/export`(`CGO_ENABLED=1`)、`git diff --check` | すべて pass(`gofmt` と `git diff --check` は出力なし) |
 
 ## リスク・ブロッカー
 
@@ -101,3 +107,5 @@ Issue の行番号は main `c7b0f44` 時点の値である。main `29614dd` で�
 - 2026-09-28: PR #284 を draft で作成し、note を採番した(`4705409`)。`progress.md` の FU-17 の PR 欄を #284 にした(P1)。検証はすべて pass(「検証」)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」。`update-sample-exports` の適用条件を確かめるため、固定時刻で再生成して無差分を確かめた)。
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#284`)と、PR description の note のファイル名参照 1 行(`draft_` → `284_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に上のとおり書き換えた。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-28: Claude の review(P2)を subagent に委譲した。review cycle `claude-code-fee066c-20260928020617`、`Reviewed head` `fee066c4f3bb4819335018379a45802cf9a38531`。指摘は 1 件(inline 1 件、top-level 0 件。`[imo]` 1 件で、`[must]`、`[ask]`、`[nits]`、`[fyi]` は無い)。`gh` への fallback は無い。指摘が 1 件以上のため P4 へ進んだ(P3)。
+- 2026-09-28: 指摘に対応した(P4)。処置の内訳は「採用し修正した」1 件。actor の prefix を付けない 2 形の表示を `TestRunIntegrationSystemRows` で固定した(`0a210c0`、「test」「検証」)。スコープ外とした指摘は無く、follow-up の候補も無い。出力生成系 3 skill の判断は変わらない(test だけの変更で、出力を変えない)。
