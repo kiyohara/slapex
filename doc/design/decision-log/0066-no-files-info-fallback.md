@@ -18,8 +18,8 @@
 
 ## 検討内容
 
-- Slack の Slack Connect の文書(「Additional check required to access file info (`check_file_info`)」の節。2026-09-28 に確認)は、情報を省いた file object が届くのは Events API / RTM API を listen する app であるとし、`conversations.history` / `conversations.replies` で message と file を取得する場合は完全な file object が返ると明記している。追加の API 呼び出しが要るのは、file の event が app へ push される場合だけとしている。file object の文書も、`check_file_info` を Events API / RTM API の payload の話として書き、詳細は Slack Connect の文書を参照させる。slapex は `conversations.history` / `conversations.replies` だけで message を取得し、Events API / RTM API を使わない。
-- 補完の他の候補も、`files.info` で得られる情報が増えない。削除済み(`tombstone`)と Free plan の制限で非表示(`hidden_by_limit`)のファイルは、Slack がファイルの情報を伏せている。外部サービス連携のファイル(`is_external`)は、`url_private` / `url_private_download` が外部サービスを指すため download しない(0017 の 2026-09-27 の追記)。それ以外で download URL の無いファイルも、上記の文書のとおり message の file object は完全な file object であり、`files.info` が別の URL を返す根拠は無い。
+- Slack の Slack Connect の文書(「Additional check required to access file info (`check_file_info`)」の節。2026-09-28 に確認)は、Slack Connect channel にアップロードされたファイルについて、情報を省いた file object が届くのは Events API / RTM API を listen する app であるとし、`conversations.history` / `conversations.replies` で message と file を取得する場合は完全な file object が返ると明記している。追加の API 呼び出しが要るのは、file の event が app へ push される場合だけとしている。file object の文書も、`check_file_info` を Events API / RTM API の payload の話として書き、詳細は Slack Connect の文書を参照させる。slapex は `conversations.history` / `conversations.replies` だけで message を取得し、Events API / RTM API を使わない。
+- 補完の他の候補も、`files.info` で得られる情報が増えない。削除済み(`tombstone`)と Free plan の制限で非表示(`hidden_by_limit`)のファイルは、Slack がファイルの情報を伏せている。外部サービス連携のファイル(`is_external`)は、`url_private` / `url_private_download` が外部サービスを指すため download しない(0017 の 2026-09-27 の追記)。それ以外で download URL の無いファイルについて、`files.info` が message の file object に無い URL を返すことを示す文書は無い(文書の記述からの推論で、実 workspace では確かめていない)。
 - B は、文書上起きない場面のために、Web API の呼び出し(rate limit の pacing、再試行、失敗時の扱い、進捗表示)と、それを確かめる fake server の test を足すことになる。`files.info` の scope は既存の `files:read` で足り、rate limit は Tier 4 で、どちらも障害ではないが、効果を確かめられない。
 - A は実装を変えない。設計文書と decision log を、実装と Slack の文書に揃えるだけである。
 
@@ -33,8 +33,8 @@ A を採用する。
 
 ## 理由
 
-- Slack の文書が、slapex の取得経路(`conversations.history` / `conversations.replies`)では完全な file object が返ると明記しており、補完が要る場面が無い。
-- 補完の対象になり得るファイル(削除済み、非表示、外部サービス連携、download URL の無いファイル)は、`files.info` を呼んでも得られる情報が増えない。
+- Slack の文書が、Slack Connect channel のファイルでも slapex の取得経路(`conversations.history` / `conversations.replies`)では完全な file object が返ると明記しており、Issue が補完の手がかりに挙げた場面(`check_file_info`)は起きない。
+- 補完の対象になり得る他のファイル(削除済み、非表示、外部サービス連携、download URL の無いファイル)も、`files.info` を呼んで得られる情報が増えるとは見込めない(download URL の無いファイルは推論)。
 - 実装を変えずに、設計文書、decision log、実装を一致させられる(Issue #289 の完了条件)。
 
 ## 影響

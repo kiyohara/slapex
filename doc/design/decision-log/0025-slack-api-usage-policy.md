@@ -51,7 +51,7 @@
 
 ## 追記(2026-09-28)
 
-「file は message 内 file object を正とし、`files.info` は欠損時の補完のみ」のうち、`files.info` による補完は仕様から外した(`0066-no-files-info-fallback.md`)。`conversations.history` / `conversations.replies` は完全な file object を返し、情報を省いた file object(`"file_access": "check_file_info"`)が届くのは Events API / RTM API で file の event が push される場合だけであることを、Slack の文書で確かめたためである。file の情報は message 内 file object だけから得る。使用 API の一覧と必要な scope は変わらない。
+「file は message 内 file object を正とし、`files.info` は欠損時の補完のみ」のうち、`files.info` による補完は仕様から外した(`0066-no-files-info-fallback.md`)。Slack Connect channel のファイルでも `conversations.history` / `conversations.replies` は完全な file object を返し、情報を省いた file object(`"file_access": "check_file_info"`)が届くのは Events API / RTM API で file の event が push される場合だけであることを、Slack の文書で確かめたためである。file の情報は message 内 file object だけから得る。使用 API の一覧と必要な scope は変わらない。
 
 ## 後から見直す条件
 

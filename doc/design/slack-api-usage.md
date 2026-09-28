@@ -43,7 +43,7 @@ token type による主な違い:
 | `emoji.list` | カスタム絵文字 URL の取得 | 1 回 |
 | HTTP GET(`url_private_download`) | 添付ファイル・画像の download | 保存対象 asset ごと |
 
-- `files.info` は呼ばない。file の情報は、`conversations.history` / `conversations.replies` の応答の message の `files` 配列だけから得る。両 method は、必要な metadata(size、mimetype、thumbnail / original URL)を含む完全な file object を返すためである。Slack Connect channel のファイルについて情報を省いた file object(`"file_access": "check_file_info"`)が届くのは、Events API / RTM API で file の event が push される場合だけで、slapex はこれらを使わない。file object に download URL などが無いファイルは `files.info` で補わず、「file / asset の取得」のとおり扱う(決定経緯は `decision-log/0066-no-files-info-fallback.md`)。
+- `files.info` は呼ばない。file の情報は、`conversations.history` / `conversations.replies` の応答の message の `files` 配列だけから得る。message 内の file object は必要な metadata(size、mimetype、thumbnail / original URL)を含むためである。Slack の文書によると、Slack Connect channel にアップロードされたファイルについて情報を省いた file object(`"file_access": "check_file_info"`)が届くのは、Events API / RTM API で file の event が push される場合だけで、両 method はそのファイルでも完全な file object を返す。slapex は Events API / RTM API を使わない。file object に download URL などが無いファイルは `files.info` で補わず、「file / asset の取得」のとおり扱う(決定経緯は `decision-log/0066-no-files-info-fallback.md`)。
 - `users.list` による一括解決は採用しない。大規模 workspace で過剰取得になるためである。多人数 channel で `users.info` の呼び出し回数が問題になる場合の最適化(閾値での `users.list` 切り替えなど)は将来検討とする。
 - `team.info` はヘッダーの workspace icon 表示にだけ使う補助情報であるため、scope 不足などで失敗しても export 全体は継続する。
 
