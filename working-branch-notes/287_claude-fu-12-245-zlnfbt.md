@@ -14,8 +14,9 @@ Issue #245(FU-12)。`doc/design/slack-api-usage.md` の「file / asset の取得
 
 - 依存の PR #243(#204)は 2026-09-25 に merge 済み。main `fe666ba`(PR #286 の merge)から作業した。
 - `slack-api-usage.md` の「file / asset の取得」を書き直し、`progress.md` の FU-12 の行を更新した。Issue の「検証」を実行した(「検証」)。
-- PR #287 作成済み(draft)。採番と `progress.md` の PR 欄の反映を済ませた。
-- 次は CI を確かめてから、review を subagent に委譲する(P2)。
+- PR #287 作成済み。採番と `progress.md` の PR 欄の反映を済ませた。
+- Claude の review cycle を終えた。review(P2)は指摘 0 件で、対応(P4)と再確認(P5)は要らなかった(P3)。
+- PR を Ready for review にし、Codex のクロスレビューとユーザーの merge を待つ。
 
 ## 決定事項
 
@@ -68,9 +69,10 @@ FU-12 の行を `done(PR merge後)`、次にやることを「merge後は対応�
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
-- review の指摘に対応する(P4)。
-- 再確認を subagent に委譲する(P5)。未対応が 0 件なら Ready for review にする。
+- CI を確かめてから review を subagent に委譲する(P2)。(完了。指摘 0 件)
+- review の指摘に対応する(P4)。(不要。指摘 0 件)
+- 再確認を subagent に委譲する(P5)。未対応が 0 件なら Ready for review にする。(P5 は不要。この note の更新の push 後に Ready for review にする)
+- 人間の手番: Codex のクロスレビューと PR の merge。follow-up 候補(「リスク・ブロッカー」)を起票するかの判断。resolve する review thread は無い。
 
 ## 検証
 
@@ -96,3 +98,6 @@ Go のコードを変えていないため、Docker Compose での `go vet` / `g
 - 2026-09-28: PR #287 を draft で作成し、note を採番した(`5f2e203`)。`progress.md` の FU-12 の PR 欄を #287 にした(P1)。検証は「検証」のとおり(`git diff --check` は出力なし、変更は設計文書、`progress.md`、note だけ)。出力生成系 3 skill は適用しない(「出力生成系 3 skill の適用判断」)。
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#287`)と、PR description の note のファイル名参照 1 行(`draft_` → `287_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(`progress.md` の反映を含む複合行)。この 2 行は、`progress.md` の反映の後に書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(「いつ使うか」に当たらない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。
+- 2026-09-28: review(P2)を subagent に委譲した。review cycle `claude-code-d4a870e-20260928075724`、Reviewed head `d4a870e01abecdeff6368b7ffc78bbdb244645e5`。指摘 0 件(inline 0 件、top-level 0 件。`[must]` / `[ask]` / `[imo]` / `[nits]` / `[fyi]` とも 0 件)。完了要約は PR conversation comment。subagent は Docker Compose で関連する test 4 件(結合 test の case 11b / 11c / 11d と `TestDownloadNeedsAuthOnlyForSlackFiles`)を実行して PASS したことと、check runs 5 件が success であることを確かめた。decision log を作らない判断と、出力生成系 3 skill を適用しない判断も妥当とされた。指摘 0 件のため、P4 / P5 を経ずに終了(P6)へ進んだ(P3)。
+  - subagent が投稿しなかった所見: 変更していない「file object の `size` が `--max-attachment-size` を超えるものは download しない」の項は、ファイル本体に絞った書き方になっていない(実装は、サイズ上限を超えた画像でも thumbnail を保存する)。参照先の `output-format.md` の「添付ファイルのサイズ制限」は「添付ファイルまたは original 画像」に絞っており、本 Issue の範囲外のため扱わない。
+- 2026-09-28: 終了(P6)。note だけの commit で終了時の状態を残し(P2 が確かめた head より後の commit)、PR を Ready for review にする。`gh` への fallback は無い(P2 の subagent を含む)。follow-up の候補は「リスク・ブロッカー」の 1 件(`files.info` の補完)。人間に残るのは、Codex のクロスレビュー、PR の merge、follow-up 候補を起票するかの判断。
