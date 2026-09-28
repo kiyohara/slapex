@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/issue-211-fu-10-429y36`(cloud session が指定。Issue の推奨ブランチ名は `tidy-export-split-followups`)
-- PR: 未作成
+- PR: #285
 - 最終更新: 2026-09-28
 
 ## 目的
