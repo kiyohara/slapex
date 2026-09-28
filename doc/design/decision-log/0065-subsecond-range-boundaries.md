@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-09-28
 - 最終更新日: 2026-09-28
-- 関連: `doc/design/cli-interface.md`, `doc/design/output-format.md`, `doc/design/cache.md`, [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md)
+- 関連: `doc/design/cli-interface.md`, `doc/design/output-format.md`, `doc/design/cache.md`, `doc/design/slack-api-usage.md`, [0011-channel-html-and-fetch-limits.md](0011-channel-html-and-fetch-limits.md)
 
 ## 背景
 
@@ -31,7 +31,7 @@ A を採用する。
 - `--from` / `--to` の境界は秒未満を含めて使い、マイクロ秒より細かい部分は切り上げる。開始が終了より前かは、切り上げた後の境界で判定する。
 - Slack API へは、境界を小数 6 桁の ts で渡す。
 - 進捗表示、footer の `Range`、`.cache/metadata.json` の `fetch.target_range.start` / `end` は RFC3339Nano で書く。秒ちょうどの境界は従来と同じ文字列になる。
-- `--days` は、実行時刻の秒未満を切り捨てた時刻を終了境界とし、その N 日前を開始境界とする。
+- `--days` は、実行時刻の秒未満を切り捨てた時刻を終了境界とし、その `--days` × 24 時間前を開始境界とする。
 - `--date` は変えない。範囲は対象日の 00:00 からの 1 日で、秒未満を持たない。
 
 ## 理由
@@ -44,7 +44,7 @@ A を採用する。
 
 - 実装: `internal/export/fetch_range.go`(`--days` の終了境界、`--from` / `--to` の切り上げ、表示)、`internal/export/cache.go`(`target_range`)、`internal/slack/api.go`(境界を ts にする関数)。
 - test: 秒未満の `--from` / `--to`、切り上げ、秒単位の入力の出力、`--days` の unit test と、境界の前後の ts を持つ fake server の結合 test。
-- 文書: `cli-interface.md`、`output-format.md`、`cache.md`、`doc/help/usage.md`。
+- 文書: `cli-interface.md`、`output-format.md`、`cache.md`、`slack-api-usage.md`、`doc/help/usage.md`。
 - `.cache/metadata.json` の `schema_version` は変えない。`oldest_ts` / `latest_ts` / `start_slack_ts` / `end_slack_ts` は従来も小数 6 桁の文字列で、`start` / `end` の ISO 8601 が秒未満を含み得るようになるだけである。
 
 ## 後から見直す条件

@@ -31,7 +31,7 @@ option:
 
 `--from` / `--to` は必ずペアで指定し、開始が終了より前の半開区間 `[from, to)` とする。日付だけの場合は local timezone の 00:00 として解釈するため、`--from 2026/07/03 --to 2026/07/04` で local timezone の 2026-07-03 全体を取得できる。offset 付き入力は絶対時刻として扱う。秒未満を含む入力は、秒未満まで境界に使う(精度と丸めは `cli-interface.md` を正本とする)。`--date` および明示した `--days` とは排他にする。
 
-`--days` は、実行時刻の秒未満を切り捨てた時刻を終了境界とし、その N 日前を開始境界とする。
+`--days` は、実行時刻の秒未満を切り捨てた時刻を終了境界とし、その `--days` × 24 時間前を開始境界とする。取得範囲の境界の秒未満の扱い(`--from` / `--to`、`--days`、footer の `Range`)の決定経緯は `decision-log/0065-subsecond-range-boundaries.md` を参照する。
 
 `--max-posts` は時間範囲と emoji 除外条件を適用した後に残る親投稿数だけを数え、thread replies は含めない。対象になった親投稿に thread replies がある場合、replies は投稿時刻で切り詰めず一緒に取得する。ここでの「親投稿」は channel timeline 上に現れるメッセージを指し、thread への返信のうち channel にも送信されたもの(thread_broadcast)は timeline 上に現れるため数える。取得 API と pagination の詳細は `slack-api-usage.md` を参照する。
 

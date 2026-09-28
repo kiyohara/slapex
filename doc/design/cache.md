@@ -43,7 +43,7 @@
 | `labels` | 実際に使った `<workspace-label>` / `<channel-label>` と元の表示名 |
 | `counts` | 除外後の timeline メッセージ数、thread 数、replies 数、除外した一意 message 数、assets の保存・上限超過・失敗件数 |
 
-`fetch.target_range` は option の表現から独立した取得対象そのものを記録する。`start` / `end` は ISO 8601 UTC(境界が秒未満を持つ場合は秒未満まで)、`start_slack_ts` / `end_slack_ts` は Slack API へ渡す境界値(小数 6 桁の ts)とする。`--date`、`--from` / `--to`、`--days` はいずれも開始・終了を持つ半開区間として記録する。将来 open-ended range を導入する場合は、上限が無い側を `null` とする。
+`fetch.target_range` は option の表現から独立した取得対象そのものを記録する。`start` / `end` は ISO 8601 UTC(境界が秒未満を持つ場合は秒未満まで)、`start_slack_ts` / `end_slack_ts` は Slack API へ渡す境界値(小数 6 桁の ts)とする。境界の秒未満の扱いの決定経緯は `decision-log/0065-subsecond-range-boundaries.md` を参照する。`--date`、`--from` / `--to`、`--days` はいずれも開始・終了を持つ半開区間として記録する。将来 open-ended range を導入する場合は、上限が無い側を `null` とする。
 
 `fetch.options` は export 実行時に指定・適用された option を記録する。`range_mode` は `date` / `datetime-range` / `days` とし、range option の raw input である `date`、`from` / `to`、`days` のうち有効なものだけを入れる。`max_posts` と `max_attachment_size_bytes` もここへ置く。`--exclude-body-emoji` が有効な場合は正規化済みの名前を `exclude_body_emoji`、`--exclude-reaction-emoji` が有効な場合は `exclude_reaction_emoji` に記録する。schema version 1 の既存 reader との互換性のため、従来からある flat な `days` / `max_posts` / `max_attachment_size_bytes` / `oldest_ts` / `executed_at` は当面残す。`latest_ts` は `oldest_ts` と対になる終了境界として flat 欄にも記録する。新しい reader は `target_range` と `options` を優先する。
 

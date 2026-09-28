@@ -52,8 +52,8 @@ token type による主な違い:
 - cursor ベースの pagination を使い、`response_metadata.next_cursor` が空になるまで辿る。
 - `--date` では local timezone の対象日 00:00 を `conversations.history` の `oldest`、翌日 00:00 を `latest` に指定する。開始境界を含めるため `inclusive=true` も指定する。
 - `--date` の応答は client 側でも `[oldest, latest)` に絞り込み、Slack API の境界挙動だけに依存しない。開始境界ちょうどは含め、終了境界ちょうどは除外する。
-- `--from` / `--to` では、parse 後の開始を `oldest`、終了を `latest` に指定し、`--date` と同じ bounded range の API 境界と client 側判定を使う。
-- `--days` では `oldest` に「実行基準時刻 − `--days` × 24 時間」、`latest` に実行基準時刻を指定し、`--date` と同様に client 側でも半開区間を守る。
+- `--from` / `--to` では、parse 後の開始を `oldest`、終了を `latest` に指定し、`--date` と同じ bounded range の API 境界と client 側判定を使う。境界は秒未満も含めて小数 6 桁の ts で渡し、マイクロ秒より細かい部分は切り上げる(`cli-interface.md`。決定経緯は `decision-log/0065-subsecond-range-boundaries.md`)。
+- `--days` では `oldest` に「実行基準時刻 − `--days` × 24 時間」、`latest` に実行基準時刻を指定し、`--date` と同様に client 側でも半開区間を守る。実行基準時刻は、実行時刻の秒未満を切り捨てた時刻とする(`output-format.md`)。
 - 1 ページの要求件数は 200 件を上限とする。サーバー側がより小さいページ(例: 15 件)しか返さなくても、cursor 継続により動作が変わらない設計とする。
 - timeline 上で取得範囲と `--exclude-body-emoji` / `--exclude-reaction-emoji` の OR 条件を適用した後に残る親投稿件数が `--max-posts` に達するまで cursor を継続する。emoji filter で除外した投稿は数えない。`conversations.replies` だけに現れる thread replies は数えない(thread_broadcast は timeline に現れるため数える)。
 - timeline 親投稿を emoji filter で除外した場合、その親投稿の `conversations.replies` は呼ばない。取得した replies は取得後すぐ同じ message predicate で絞り、除外した message は timestamp だけを保持する。history の取得を終えた後、親投稿が timeline に残った thread についてだけ、除外した replies を除外件数に数え、残った message を user / emoji / asset 解決へ渡す。`thread_broadcast` は timeline と thread の両方で同じ predicate を適用する。
