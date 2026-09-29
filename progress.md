@@ -82,7 +82,7 @@ PF-01 / PF-02 → PF-03 → PF-04 → PF-05 → PF-06 → PF-07
 | PF-01 | [#273](https://github.com/kiyohara/slapex/issues/273) trace と benchmark | done(PR merge後) | #192 | merge 後にユーザーが手元で trace を取り、集計を #272 にコメント | [#281](https://github.com/kiyohara/slapex/pull/281) |
 | PF-02 | [#274](https://github.com/kiyohara/slapex/issues/274) 取得リストの計画(描画 2 回) | done(PR merge後) | - | merge後は対応なし | [#286](https://github.com/kiyohara/slapex/pull/286) |
 | PF-03 | [#275](https://github.com/kiyohara/slapex/issues/275) origin lane の並列取得と download の pacing 撤去 | done(PR merge後) | #273, #274 | merge 後にユーザーが手元で trace を取り直し、集計を #272 にコメント | [#291](https://github.com/kiyohara/slapex/pull/291) |
-| PF-04 | [#276](https://github.com/kiyohara/slapex/issues/276) 429 を受けた origin 全体の待機 | todo | #275, #192 | #192 の `withRetry` に lane への通知を足す | - |
+| PF-04 | [#276](https://github.com/kiyohara/slapex/issues/276) 429 を受けた origin 全体の待機 | done(PR merge後) | #275, #192 | merge後は対応なし | - |
 | PF-05 | [#277](https://github.com/kiyohara/slapex/issues/277) method lane と先行取得の設計 | todo | #273, #275 | 手元の trace の集計(#272)を材料に設計し、PF-06 / PF-07 の本文を具体化 | - |
 | PF-06 | [#278](https://github.com/kiyohara/slapex/issues/278) Web API の method lane | todo | #277 | PF-05 で本文を具体化してから着手 | - |
 | PF-07 | [#279](https://github.com/kiyohara/slapex/issues/279) API 待ちの裏での asset 取得 | todo | #276, #277 | PF-05 で本文を具体化してから着手。PF-06 の後を推奨 | - |
