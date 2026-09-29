@@ -16,7 +16,8 @@ Issue #275(PF-03)。所要時間の最小化(#272)に向けて、asset の downl
 - 実装、test、benchmark、設計文書、decision log 0067 を済ませ、Issue の「検証」を実行した(「検証」)。反復実行で見つかった test の不安定さ 5 件の原因を直した(コード 2 件、test の前提 3 件。「反復実行で見つかった不安定さ」)。
 - PR #291 を draft で作り、note を採番した。`progress.md` の PR 欄を反映した(P1)。
 - review(P2)の指摘 3 件(`[ask]` 1、`[imo]` 2)にすべて対応した(P4。「review の指摘への対応」)。`[ask]` はユーザーに判断を仰ぎ、回答を待つ間は推奨の案で進めた。
-- 次は CI を確かめてから、再確認を subagent に委譲する(P5)。
+- 再確認(P5 の 1 周目)で、`[imo]` の 2 件は修正確認済み(resolve 可)、`[ask]` の 1 件は decision log 0067 の 1 文の誤りで未対応とされた。その 1 文を直した(P4 の 2 周目)。
+- 次は、`[ask]` の上限の置き方へのユーザーの回答を待ち、回答に合わせて(別の案なら直してから)再確認を subagent に委譲する(P5 の 2 周目。reviewer も回答の後の再確認を求めている)。
 
 ## 決定事項
 
@@ -61,8 +62,14 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - 足した test: `TestInterruptWatchSecondSignal`(`mute()` が止まっていても `reset()` が先に済むこと、`reset()` の前に届いた 2 回目の signal で終わること)、`TestDownloadHeaderWaitPastFirstByte`(103 の後に何も返さない server を HTTP/1.1 と HTTP/2 で、header の途中で止まる server を HTTP/1.1 で打ち切る)、`TestDownloadHeaderWaitSkipsRedirectConnect`(redirect 先への接続に header の待ちより長くかかっても retry しない)、`TestDownloadPublicTimeout`(Slack の file 以外は少しずつ返し続けても 5 分の上限(test では 50 ms)で打ち切り、retry しない。Slack の file は打ち切らない)、`TestWatchdog` の試行の上限の規則。既定値の検査(`TestWithTransportKeepsTimeout`)に `publicTimeout` を足した。
 - 変異の確認: `reset()` を `mute()` の後に戻す、内側の select から 2 回目の signal を外す(どちらも `TestInterruptWatchSecondSignal` が落ちる)、最初の byte で待ちを外す(`TestDownloadHeaderWaitPastFirstByte` の 3 件が落ちる)、`GetConn` で待ちを止めない(`TestDownloadHeaderWaitSkipsRedirectConnect` が retry で落ちる)、試行の上限を外す、Slack の file にも上限を掛ける(`TestDownloadPublicTimeout` のそれぞれの場合が落ちる)。以前の変異(printer を止める、cancel、reset、止まった後の signal での終了のそれぞれを外す)も、順を変えた後のコードで落ちることを確かめ直した。
 - 設計文書: decision log 0067(候補、検討内容、決定、上限値の根拠、影響、後から見直す条件)、`index.md` の 0067 の行、`slack-api-usage.md` の「file / asset の取得」、`architecture.md` の `internal/slack` の行、`cli-interface.md` の `SLAPEX_HTTP_TRACE` の説明を更新した。
-- スコープ外とした指摘は無く、follow-up Issue の候補も無い。
+- スコープ外とした指摘は無い。
 - 出力生成系 3 skill の再判断: 変わらない。変更は download の打ち切りと中断の処理だけで、出力、サンプル、画面は変わらない。`update-readme-demo-gif` は P1 の判断(該当するが「ローカルで要再生成」)のまま。
+
+再確認(P5 の 1 周目、完了要約 https://github.com/kiyohara/slapex/pull/291#issuecomment-5883576949 、`Reviewed head` `ef21f607b71ee82af9de0c4601bea75dd3e8f312`)の結果と、その後の対応(P4 の 2 周目)。
+
+- 修正確認済み 2 件(resolve 可): `[imo]` 1xx の中間応答、`[imo]` 2 回目の signal。スコープ外として確認済み 0、対応不要として確認済み 0。
+- 未対応 1 件: `[ask]`。実装と test は推奨の案どおりと確認された。decision log 0067 の「上限値の根拠」の「応答 header の待ち(30 秒)と合わせて 5 分半まで」が実装と合わない(5 分は応答 header の待ちを含む 1 試行全体の上限で、応答 header の前の打ち切りは retry するため、1 件で約 8 分になりうる)と指摘された。指摘どおりで、「5 分は接続、応答 header の待ち、body を含む 1 試行全体の上限」「1 件の時間は、429 の `Retry-After` の待ちを除いて、6 試行(各 5 分まで)と backoff(計約 31〜36 秒)まで」「少しずつ返し続ける host では、応答 header の待ちの失敗 5 回の後で約 8 分」に直した(`4a762f1`)。0067 の決定と `slack-api-usage.md` にも「接続と応答 header の待ちを含めて」を足した。reviewer は、上限の置き方へのユーザーの回答の後にこの thread を再確認するとしている。
+- follow-up 候補(この cycle の外。完了要約の fyi): download の retry は、第三者 host の 429 の `Retry-After` にも上限なく従う(main と同じ)。1 つの host が export を長く止めうるため、PF-04(#276)で扱う候補とする。#276 へのコメントや起票はユーザーの判断による。
 
 ### 上限値の決定(benchmark)
 
@@ -111,9 +118,8 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- review(P2)と指摘への対応(P4)。(完了)
-- CI を確かめてから、再確認を subagent に委譲する(P5)。未対応が残れば P4 に戻る。
-- `[ask]` への回答(Slack 以外の download の時間の上限)を受けたら、その案に合わせる。
+- review(P2)と指摘への対応(P4)、再確認(P5 の 1 周目)と 2 周目の対応(P4)。(完了)
+- `[ask]` への回答(Slack 以外の download の時間の上限)を受けたら、その案に合わせ、CI を確かめてから再確認を subagent に委譲する(P5 の 2 周目。反復の上限の最後の周)。
 - merge 後: ユーザーが手元で PF-01 の trace を有効にして実 workspace を export し、集計を #272 にコメントする(手順は project の共有フォルダの `perf-trace/local-trace-prompt.md`)。
 
 ## 検証
@@ -150,3 +156,5 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。GitHub の操作はすべて組み込みの GitHub MCP tool で行い、`gh` は使っていない。
 - 2026-09-29: review(P2)を subagent に委譲した。review cycle `claude-code-a85f4c7-20260929031415`、`Reviewed head` `a85f4c76b715927a7077e055fad200192754d16e`。指摘 3 件(inline 3、top-level 0)。prefix ごとに `[must]` 0、`[ask]` 1、`[imo]` 2、`[nits]` 0、`[fyi]` 0。`gh` への fallback は無し。完了要約の `Model` は、上位の指示で記載を控えたため `unknown`。指摘が 1 件以上のため P4 に進んだ(P3)。
 - 2026-09-29: 指摘 3 件を採用して修正した(P4、`ffb9337`。「review の指摘への対応(P4)」)。処置の内訳は、採用し修正した 3 件(`[ask]` はユーザーに確認中で、推奨の案で進めた。1xx は提案と別の方法で直した)。スコープ外とした指摘と follow-up 候補は無い。出力生成系 3 skill の判断は変わらない。検証は「検証」の末尾のとおり。
+- 2026-09-29: 再確認(P5 の 1 周目)を P2 と同じ subagent に委譲した。修正確認済み 2 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 1 件(`[ask]`。0067 の 1 文の誤り。reviewer は、ユーザーの回答の後に再確認するとした)。`gh` への fallback は無し。完了要約の fyi から follow-up 候補 1 件(第三者 host の 429 の `Retry-After` に上限が無い。PF-04 の候補)。
+- 2026-09-29: 未対応の 1 件を採用して修正した(P4 の 2 周目、`4a762f1`。0067 と `slack-api-usage.md` の記載だけで、コードは変えていない)。出力生成系 3 skill の判断は変わらない。
