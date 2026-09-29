@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/issue-275-tu25zj`(cloud session が指定。Issue の推奨ブランチ名は `perf-parallel-asset-lanes`)
-- PR: 未作成
+- PR: #291
 - 最終更新: 2026-09-29
 
 ## 目的
