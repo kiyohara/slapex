@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-09-28
-- 最終更新日: 2026-09-28
+- 最終更新日: 2026-09-29
 - 関連: `../architecture.md`、`../cache.md`、[0030-cache-schema-and-reuse-validation.md](0030-cache-schema-and-reuse-validation.md)、[0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md)、[0063-http-trace-and-asset-benchmark.md](0063-http-trace-and-asset-benchmark.md)、Issue #272、Issue #274、Issue #275
 
 ## 背景
@@ -51,6 +51,12 @@ export の所要時間の最小化(#272)は、asset の並列取得(PF-03、#275
 - 出力は変更前と同じである。変更前のコードに avatar の ID 順だけを当てたものと比べ、export の結合 test が走らせる export すべてと、全種類の経路を含む場面(警告、retry、reuse、同じ directory への再出力を含む)で、HTML、assets、cache、stderr が一致した(fake server の URL、一時 directory、表示される待ち時間は揃えて比べた。実時刻を使う test と Messages 工程の待ち時間の揺れによる差は、変更と関係しない)。固定 sample(`tools/gensample -time 2026-07-04T16:32:41+09:00`)も `doc/samples/` と一致した。変更前のコードとの違いは、user の avatar が 2 人以上いるときの manifest の entry と avatar の警告の順だけで、これは変更前も実行ごとに変わっていた。
 - PF-03 は `Fetch` を並列にすればよい。manifest の順は 2 回目の描画が決めるため、取得の順に依存しない。警告と retry 通知の並びは、並列にすると変わりうる。
 - 描画を 2 回行うため、Assets 工程の CPU 時間が描画 1 回分増える。
+
+## 追記(2026-09-29)
+
+「取得は直列で、pacing も現行と同じ」は、PF-03(#275)で並列に改めた(`0067-parallel-asset-lanes.md`)。`Fetch` は、`--reuse-cache` の copy で済むものを計画の順に先に済ませ、残りを origin ごとの lane で並列に download する。警告と retry の通知は download ごとに保持して計画の順に出すため、stderr の行と並びはこのログの決定のまま保たれる。
+
+reuse の一致の判定は、すべての download の前に行うことになった。download が判定に影響するのは、同じ directory へ再出力する場合(#202)に、再利用元に無いファイルを、同じ内容の別の asset の download が同じ実行の中で作る場合だけである。従来は計画で後ろの asset がそのファイルを再利用できたが、今はその asset も download する。保存名は内容 hash(0052)で、再利用した entry は download した entry と同じ内容に作るため、HTML、assets、manifest は変わらず、Assets の件数のうち再利用の件数だけが変わりうる。
 
 ## 後から見直す条件
 
