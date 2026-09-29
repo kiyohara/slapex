@@ -17,6 +17,8 @@ Issue #277(PF-05)。export 全体の並行化(#272 の段階 3)の設計を決�
 - decision log 0069 と設計文書を書いた(「決定事項」)。
 - PR #293 を draft で作り、note を採番した。Issue #278(PF-06)と #279(PF-07)の本文を、0069 に沿って具体化した。
 - review(cycle `claude-code-1fcabdc-20260929212208`)の指摘 3 件([must] 3)を受け、0069 と `slack-api-usage.md` の「取得の並行化」、#278 と #279 の本文を直した(P4)。
+- 再確認(P5)で、指摘 3 件とも修正確認済み(resolve 可)になり、未対応は 0 件だった。review cycle `claude-code-1fcabdc-20260929212208` は完了した。
+- 終了時の状態(P6): head `181cfea` の check runs は 5 件すべて success。note だけの commit の push の後に、PR を Ready for review にする。
 
 ## 決定事項
 
@@ -54,9 +56,12 @@ main `fbd7cae` の run 19.064 秒の内訳: Web API 22 回が 15.693 秒の時�
 - PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。(完了)
 - #278 と #279 の本文を、0069 に沿って具体化する。(完了)
 - review(P2)。(完了)
-- 指摘への対応(P4): 修正の push、#278 と #279 の本文の修正、各指摘への処置の返信。
-- 再確認(P5)。
-- review cycle を終えたら PR を Ready for review にする(P6)。
+- 指摘への対応(P4): 修正の push、#278 と #279 の本文の修正、各指摘への処置の返信。(完了)
+- 再確認(P5)。(完了。未対応 0 件で review cycle を完了した)
+- review cycle を終えたら PR を Ready for review にする(P6)。(完了)
+- 人間: resolve 可とした 3 thread(Claude の cycle)を GitHub の UI で resolve する。
+- Codex: Ready for review の PR のクロスレビュー(ユーザーの Codex が行う)。
+- 人間: PR を merge する(PF-06 と PF-07 を進めるかの判断を含む。#272 の「ユーザーが行うこと」の 3)。
 
 ## 検証
 
@@ -83,3 +88,6 @@ main `fbd7cae` の run 19.064 秒の内訳: Web API 22 回が 15.693 秒の時�
   - L118(結合 test): request の件数の一致を成功する scenario に限り、失敗と cancel の比べ方を足した。#278 と #279 の完了条件を直した。
   - L88(trace): pacing の待ちの範囲を決め、L119 に比べる値と `tools/tracereport` の区間を書いた。#278 の作業内容 1 と文書、完了条件を直した。`cli-interface.md` の `SLAPEX_HTTP_TRACE` の download の lane の待ちの記述(main の既存の文)は、#278 の作業内容で直す。
   - follow-up 候補: なし。出力生成系 3 skill: 変更は decision log と設計文書だけで、使わない判断は変わらない。
+- 2026-09-29: P5。再確認を P2 と同じ subagent に委譲した(head `181cfea`)。修正確認済み 3 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 0 件。`gh` への fallback は無し。訂正できなかった metadata の誤りは無し。review cycle を完了し、P6 に進んだ。
+  - reviewer の補足(指摘ではない): `--reuse-cache` の copy も、先に download したときの kind の上限では copy できず、計画の kind では copy できる場合に request が 1 件増えるが、kind が食い違う場合の例外に収まる(PF-07 の実装で扱う)。0069 の「決定性」の上限の行は、計画の上限以上の上限で止まった先の download を直接は書いていないが、保った失敗から entry を作る前の行と `slack-api-usage.md` の規則で扱われる。
+- 2026-09-29: 終了時の状態(P6): head `181cfea` の check runs は 5 件すべて success。note だけの commit を push した後に、PR を Ready for review にする。follow-up 候補は無し。
