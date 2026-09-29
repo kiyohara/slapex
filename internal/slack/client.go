@@ -267,9 +267,9 @@ func (c *Client) noticef(ctx context.Context) func(format string, args ...any) {
 // the lane of each 429 and each 200 response. A request that no lane runs,
 // such as a Web API call, waits for no lane and tells none.
 //
-// maxWait, when it is not 0, bounds the wait a 429 may ask for: a 429 whose
-// Retry-After asks for longer, or a lane that waits out a 429 for longer,
-// fails the request at once.
+// maxWait, when it is not 0, bounds the wait a 429 may ask for, not counting
+// the jitter added to it: a 429 whose Retry-After asks for longer, or a lane
+// whose 429s ask it to wait longer from now, fails the request at once.
 //
 // send builds and sends one request, and its error is retried. withRetry
 // closes every response it does not pass to accept. accept owns the body of
@@ -310,14 +310,19 @@ func (c *Client) withRetry(ctx context.Context, what string, maxWait time.Durati
 		case resp.StatusCode == http.StatusTooManyRequests:
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
-			// wait is 0 without a usable Retry-After: the lane then halves
-			// its limit and waits for nothing.
-			wait, ok := retryAfter(resp)
-			lane.RateLimited(ctx, wait)
+			// asked is 0 without a usable Retry-After: the lane then halves
+			// its limit and waits for nothing. maxWait holds asked, so that
+			// a Retry-After of maxWait is waited out whatever its jitter.
+			asked, ok := retryAfter(resp)
+			wait := asked
+			if ok {
+				wait += jitter()
+			}
+			lane.RateLimited(ctx, asked, wait)
 			lane.Yield(ctx)
 			if ok {
-				if maxWait > 0 && wait > maxWait {
-					return waitTooLong(wait, maxWait)
+				if maxWait > 0 && asked > maxWait {
+					return waitTooLong(asked, maxWait)
 				}
 				logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
 				if err := c.sleep(ctx, wait); err != nil {
@@ -346,25 +351,32 @@ func (c *Client) withRetry(ctx context.Context, what string, maxWait time.Durati
 }
 
 // waitTooLong is the error of a request that a 429 asks to wait for wait,
-// longer than maxWait.
+// longer than maxWait. It rounds wait up to whole seconds, which a
+// Retry-After counts in, so that it never reads as maxWait itself.
 func waitTooLong(wait, maxWait time.Duration) error {
-	return fmt.Errorf("rate limited (429): the server asks to wait %s, over the %s limit", wait.Round(time.Second), maxWait)
+	wait = (wait + time.Second - 1).Truncate(time.Second)
+	return fmt.Errorf("rate limited (429): the server asks to wait %s, over the %s limit", wait, maxWait)
 }
 
 // backoffWait is the exponential backoff before the given retry attempt
 // (1-based): 1s, 2s, 4s, ... capped at maxBackoff, plus up to 1s of jitter.
 func backoffWait(attempt int) time.Duration {
 	wait := min(time.Duration(1<<(attempt-1))*time.Second, maxBackoff)
-	return wait + time.Duration(rand.Int63n(int64(time.Second)))
+	return wait + jitter()
 }
 
-// retryAfter parses the Retry-After header, adding up to 1s of jitter. It
-// reports false when the header is missing or unusable; the caller then
-// falls back to exponential backoff.
+// jitter is the up to 1s that the retry adds to each of its waits.
+func jitter() time.Duration {
+	return time.Duration(rand.Int63n(int64(time.Second)))
+}
+
+// retryAfter parses the Retry-After header: the wait it asks for, to which
+// the caller adds jitter. It reports false when the header is missing or
+// unusable; the caller then falls back to exponential backoff.
 func retryAfter(resp *http.Response) (time.Duration, bool) {
 	if v := resp.Header.Get("Retry-After"); v != "" {
 		if secs, err := strconv.Atoi(v); err == nil && secs > 0 {
-			return time.Duration(secs)*time.Second + time.Duration(rand.Int63n(int64(time.Second))), true
+			return time.Duration(secs) * time.Second, true
 		}
 	}
 	return 0, false

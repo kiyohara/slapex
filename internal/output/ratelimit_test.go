@@ -238,6 +238,77 @@ func TestAssetsFetchWaitsOutRateLimitByOrigin(t *testing.T) {
 	})
 }
 
+// TestAssetsFetchWaitsUpToTheLimitOfThirdParty: the limit on how long a
+// download of a third-party host may wait holds the seconds its Retry-After
+// asks for, not the jitter the wait adds to them. A 429 that asks for 60s is
+// waited out, by the download that got it and by the downloads of its origin
+// that start while the lane waits; one that asks for 61s fails them all.
+func TestAssetsFetchWaitsUpToTheLimitOfThirdParty(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		retryAfter string
+		waited     bool
+	}{
+		{retryAfter: "60", waited: true},
+		{retryAfter: "61", waited: false},
+	} {
+		t.Run(tt.retryAfter, func(t *testing.T) {
+			t.Parallel()
+
+			synctest.Test(t, func(t *testing.T) {
+				// The first request to c.example gets the 429. The lane sends
+				// 6 requests at 0s (HTTP/1.1); its other 2 downloads start
+				// while it waits, once the 5 other requests are answered, at 1s.
+				limited := false
+				h := &rateLimitedHandler{start: time.Now(), retryAfter: tt.retryAfter, limit: func(string, time.Duration) bool {
+					first := !limited
+					limited = true
+					return first
+				}}
+				plan := plannedOn(KindOGImage, "https://c.example", 8)
+				a, out := fetchRateLimited(t, h, plan)
+
+				saved := 0
+				for _, p := range plan {
+					if _, ok := a.Save(p.Kind, p.SourceURL, AssetMeta{}); ok {
+						saved++
+					}
+				}
+				requests := h.requests()["c.example"]
+				if tt.waited {
+					// The 429 came at 0.5s and asked to wait until 60.5s.
+					if len(requests) != 9 || saved != 8 {
+						t.Errorf("requests at %v and %d assets saved, want 9 requests (a retry) and all 8 saved", requests, saved)
+					}
+					for _, at := range requests {
+						if at > 0 && at < 60*time.Second+time.Second/2 {
+							t.Errorf("a request at %s, while the lane waits out the 429", at)
+						}
+					}
+					re := regexp.MustCompile(`^notice: rate limited on download, waiting 1m[01]s as instructed by Slack$`)
+					if len(out.lines) != 1 || !re.MatchString(out.lines[0]) {
+						t.Errorf("passed on = %q, want one line matching %s", out.lines, re)
+					}
+					return
+				}
+				if len(requests) != 6 || slices.Max(requests) != 0 || saved != 5 {
+					t.Errorf("requests at %v and %d assets saved, want the lane's 6 at 0s and 5 saved", requests, saved)
+				}
+				re := regexp.MustCompile(`^warning: asset failed \(og_image\): rate limited \(429\): the server asks to wait 1m1s, over the 1m0s limit$`)
+				if len(out.lines) != 3 {
+					t.Fatalf("passed on = %q, want 3 warnings", out.lines)
+				}
+				for i, line := range out.lines {
+					if !re.MatchString(line) {
+						t.Errorf("line %d = %q, want it to match %s", i, line, re)
+					}
+				}
+			})
+		})
+	}
+}
+
 // TestAssetsFetchFailsLongRateLimitOfThirdParty: a third-party host whose 429
 // asks to wait longer than a download of it may wait fails that download at
 // once, and the rest of its downloads too, for as long as its wait lasts,
@@ -268,7 +339,7 @@ func TestAssetsFetchFailsLongRateLimitOfThirdParty(t *testing.T) {
 			t.Errorf("requests to files.slack.com at %v, want 3, the retry after the 120s wait", got)
 		}
 
-		failure := regexp.MustCompile(`^warning: asset failed \(og_image\): rate limited \(429\): the server asks to wait 2m[01]s, over the 1m0s limit$`)
+		failure := regexp.MustCompile(`^warning: asset failed \(og_image\): rate limited \(429\): the server asks to wait 2m0s, over the 1m0s limit$`)
 		waited := regexp.MustCompile(`^notice: rate limited on download, waiting 2m[01]s as instructed by Slack$`)
 		if len(out.lines) != 11 {
 			t.Fatalf("passed on = %q, want 10 warnings and a notice", out.lines)

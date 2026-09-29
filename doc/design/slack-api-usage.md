@@ -63,7 +63,7 @@ token type による主な違い:
 ## rate limit とリトライ
 
 - 一次情報は HTTP 429 と `Retry-After` ヘッダとする。`Retry-After` の指定秒数に小さな jitter を加えて待機し、再試行する。
-- ただし、Slack の file(`files.slack.com`)以外の asset の download は、`Retry-After` が 60 秒を超える 429 を待たず、その asset の失敗とする。Slack の Web API と `files.slack.com` の `Retry-After` は、長さによらず待つ(`decision-log/0068-lane-wide-rate-limit-wait.md`)。
+- ただし、Slack の file(`files.slack.com`)以外の asset の download は、`Retry-After` が 60 秒を超える 429 を待たず、その asset の失敗とする。判定は `Retry-After` の秒数で行い、待ちに加える jitter を含めない(60 秒は待つ)。Slack の Web API と `files.slack.com` の `Retry-After` は、長さによらず待つ(`decision-log/0068-lane-wide-rate-limit-wait.md`)。
 - `Retry-After` の無い 429、一時的な 5xx、ネットワークエラーは指数バックオフ(初回 1 秒、上限 60 秒、jitter 付き)で再試行する。
 - 同一リクエストの再試行は最大 5 回とする。超過した場合、メッセージ取得系は exit code `4` で失敗し、個別 asset は失敗として記録して継続する(`cli-interface.md`)。
 - 通常時も同一 method の呼び出しは 1 req/sec を目安に自主的に平準化する(公式推奨に従う)。
@@ -118,7 +118,7 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
   - 429 を受けた lane は、`Retry-After` の間(429 を受けた download が待つのと同じ、jitter を加えた時間)、新しい request を出さない。既に出ている request はそのまま続け、後から来た 429 がより長い待ちを求めたら延ばす。`Retry-After` の無い 429 では、lane は待たない(`decision-log/0068-lane-wide-rate-limit-wait.md`)。
   - 429 を受けると、lane の同時数の上限を半分(1 未満にはしない)にする。上限を半分にする前に枠を得ていた download の 429 では、重ねて半分にしない。半分にした後に枠を得た download が 200 の応答を 4 件受け取るごとに、上限を 1 戻す(lane が開いたときの上限まで)。
   - retry を待つ download は、待つ間は lane の枠を使わず、次の request の前に枠を取り直す。枠を取り直す download は、まだ始まっていない download より先に枠を得る。5xx とネットワークエラーでは、lane の上限を変えない。
-  - Slack の file 以外の asset で、lane が 60 秒を超えて待つ間に request を出そうとした download は、request を出さずにその asset の失敗とする(「rate limit とリトライ」)。
+  - Slack の file 以外の asset で、lane が待つ 429 の `Retry-After` の残り(jitter を除く)が 60 秒を超える間に request を出そうとした download は、request を出さずにその asset の失敗とする(「rate limit とリトライ」)。
 - download の試行は、request を送り終えてから最終の応答 header まで 30 秒(1xx の中間応答では待ちを止めない)、body が 1 byte も進まないまま 30 秒経つと打ち切る。Slack の file(`files.slack.com`)は、全体の所要時間では打ち切らない。それ以外の asset(URL preview 画像、アイコン、avatar、emoji など)は、1 試行が、接続と応答 header の待ちを含めて 5 分を超えると打ち切る。応答 header の前の打ち切りは、ネットワークエラーと同じく再試行する。body の途中の失敗は、5 分の打ち切りを含めて再試行せず、その asset の失敗とする(`decision-log/0068-lane-wide-rate-limit-wait.md`)。Web API の呼び出しは、従来どおり 1 回 120 秒で打ち切る。
 - 並列に取得しても、retry と rate limit 待機の通知、asset の警告は、計画の順(直列に取得した場合と同じ順)に stderr へ出す。そのため、後ろの asset の通知は、前の asset の取得が終わるまで出ないことがある。
 - export の実行中に SIGINT(Ctrl-C)または SIGTERM を受けると、新しい download を始めず、進行中の download を止めて一時ファイルを消す(`cli-interface.md` の「exit code」)。

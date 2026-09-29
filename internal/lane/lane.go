@@ -163,9 +163,12 @@ type lane struct {
 	// has a connection or ends.
 	probing bool
 	// paused is set while the lane waits out a 429, until resume, which the
-	// timer calls at until.
+	// timer calls at until. asked is when the 429s asked to wait until,
+	// without the jitter that until adds, which Wait holds a job's maxWait
+	// to.
 	paused bool
 	until  time.Time
+	asked  time.Time
 	timer  *time.Timer
 	// gen counts the 429s that halved limit: a job's 429 halves it only when
 	// no other 429 has halved it since the job got its place, and a job's
@@ -372,15 +375,16 @@ func (s *scheduler) openLocked(l *lane, limit int) {
 	l.opened = limit
 }
 
-// TooLongError is Wait's error when the job's lane waits out a 429 for longer
-// than the job may wait.
+// TooLongError is Wait's error when the 429s that the job's lane waits out
+// ask it to wait longer than the job may wait.
 type TooLongError struct {
-	// Wait is how much longer the lane waits.
+	// Wait is how much longer the 429s ask the lane to wait, without the
+	// jitter it waits on top of that.
 	Wait time.Duration
 }
 
 func (e *TooLongError) Error() string {
-	return fmt.Sprintf("the lane waits out a 429 for %s more", e.Wait)
+	return fmt.Sprintf("the lane waits out a 429 that asks for %s more", e.Wait)
 }
 
 // Wait waits until the job ctx is for may send its next request: until the
@@ -388,11 +392,13 @@ func (e *TooLongError) Error() string {
 // that holds a place in a lane that waits gives the place up to wait. Wait
 // returns how long it waited, which is 0 when it did not.
 //
-// When the lane waits out a 429 for longer than maxWait (a maxWait of 0
-// allows any wait), Wait returns a TooLongError at once, and so does a Wait
-// under way when a later 429 makes the lane wait that long. It returns ctx's
-// error once ctx is done. A context that Run did not give (or that Detach
-// returned) waits for nothing.
+// When the 429s that the lane waits out ask it to wait longer than maxWait
+// from now (a maxWait of 0 allows any wait), Wait returns a TooLongError at
+// once, and so does a Wait under way when a later 429 asks for that long.
+// What it holds to maxWait is the wait the 429s asked for, without the jitter
+// that the lane waits on top of it (RateLimited), so that a job that may wait
+// what a 429 asks waits it out. It returns ctx's error once ctx is done. A
+// context that Run did not give (or that Detach returned) waits for nothing.
 func Wait(ctx context.Context, maxWait time.Duration) (time.Duration, error) {
 	j := jobOf(ctx)
 	if j == nil {
@@ -438,10 +444,10 @@ func Wait(ctx context.Context, maxWait time.Duration) (time.Duration, error) {
 }
 
 // tooLong returns the TooLongError of a job of l that may wait maxWait, or
-// nil.
+// nil. It holds the wait the 429s asked for to maxWait.
 func tooLong(l *lane, maxWait time.Duration) error {
 	if maxWait > 0 && l.paused {
-		if rest := time.Until(l.until); rest > maxWait {
+		if rest := time.Until(l.asked); rest > maxWait {
 			return &TooLongError{Wait: rest}
 		}
 	}
@@ -474,12 +480,14 @@ func Yield(ctx context.Context) {
 }
 
 // RateLimited tells the lane of the job ctx is for that its origin answered
-// the job's request with 429, which asks to wait wait before the next request
-// (0 when the answer asks for no time). The lane halves its limit, unless
-// another 429 has halved it since the job got its place, and gives no job a
-// place until wait has passed; a later 429 that asks for longer makes it wait
-// longer. It does nothing for a context that Run did not give.
-func RateLimited(ctx context.Context, wait time.Duration) {
+// the job's request with 429, which asks to wait asked before the next
+// request (0 when the answer asks for no time), and which the job waits out
+// for wait: asked and the jitter the job adds to it. The lane halves its
+// limit, unless another 429 has halved it since the job got its place, and
+// gives no job a place until wait has passed, as the job waits; a later 429
+// that asks for longer makes it wait longer. It does nothing for a context
+// that Run did not give.
+func RateLimited(ctx context.Context, asked, wait time.Duration) {
 	j := jobOf(ctx)
 	if j == nil {
 		return
@@ -498,11 +506,13 @@ func RateLimited(ctx context.Context, wait time.Duration) {
 	if wait <= 0 {
 		return
 	}
-	until := time.Now().Add(wait)
-	if l.paused && !until.After(l.until) {
-		return
+	now := time.Now()
+	if a := now.Add(asked); !l.paused || a.After(l.asked) {
+		l.asked = a
 	}
-	l.until = until
+	if u := now.Add(wait); !l.paused || u.After(l.until) {
+		l.until = u
+	}
 	if !l.paused {
 		l.paused = true
 		if l.timer == nil {

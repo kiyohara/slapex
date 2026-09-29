@@ -19,7 +19,9 @@ import (
 // TestRetryAfterOverTheLimit: a 429 that asks to wait longer than
 // downloadPublicMaxWait fails a download of an asset that is not a Slack file
 // at once, without the wait or a notice; within the limit, or for a Slack
-// file or a Web API call, the wait is waited out and the request retried.
+// file or a Web API call, the wait is waited out and the request retried. The
+// limit holds the seconds the Retry-After asks for, not the jitter the wait
+// adds to them: 60s is within it, and 61s over it.
 func TestRetryAfterOverTheLimit(t *testing.T) {
 	t.Parallel()
 
@@ -43,7 +45,19 @@ func TestRetryAfterOverTheLimit(t *testing.T) {
 			name:       "public asset over the limit",
 			run:        download(publicURL),
 			retryAfter: "120",
-			wantErr:    `^rate limited \(429\): the server asks to wait 2m[01]s, over the 1m0s limit$`,
+			wantErr:    `^rate limited \(429\): the server asks to wait 2m0s, over the 1m0s limit$`,
+		},
+		{
+			name:       "public asset just over the limit",
+			run:        download(publicURL),
+			retryAfter: "61",
+			wantErr:    `^rate limited \(429\): the server asks to wait 1m1s, over the 1m0s limit$`,
+		},
+		{
+			name:       "public asset at the limit",
+			run:        download(publicURL),
+			retryAfter: "60",
+			wait:       60 * time.Second,
 		},
 		{
 			name:       "public asset within the limit",

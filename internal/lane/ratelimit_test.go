@@ -135,9 +135,14 @@ func send(maxWait time.Duration) step {
 
 // limited is a 429 that asks to wait wait: the job tells its lane, and gives
 // its place up to wait before it retries.
-func limited(wait time.Duration) step {
+func limited(wait time.Duration) step { return jittered(wait, 0) }
+
+// jittered is a 429 that asks to wait asked, which the job waits out with
+// jitter on top: the job tells its lane, and gives its place up to wait
+// before it retries.
+func jittered(asked, jitter time.Duration) step {
 	return func(ctx context.Context, _ *puppets, _ int) bool {
-		RateLimited(ctx, wait)
+		RateLimited(ctx, asked, asked+jitter)
 		Yield(ctx)
 		return false
 	}
@@ -346,6 +351,50 @@ func TestWaitTooLong(t *testing.T) {
 	})
 }
 
+// TestWaitTooLongHoldsWhatWasAsked: what a job's maxWait holds is the wait
+// that the 429s ask for, not the jitter the lane waits on top of it. A job
+// that may wait 60s waits out a 429 that asks for 60s, to the end of the
+// lane's wait with its jitter; a 429 that asks for 61s fails it at once,
+// until the time asked for is 60s away.
+func TestWaitTooLongHoldsWhatWasAsked(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		jobs := jobsOn("https://a.example.com", make([]int64, 5)...)
+		p := runPuppets(context.Background(), jobs, Limits{HTTP2: 8, HTTP1: 8, Total: 64})
+		defer p.finish()
+
+		jitter := 900 * time.Millisecond
+		p.tell(0, connect("h2"), send(0))
+		p.tell(0, jittered(60*time.Second, jitter))
+		p.tell(1, send(60*time.Second))
+		if _, err := p.waitOf(1); err != nil {
+			t.Errorf("job 1: Wait = %v, want it to wait out the 60s asked for", err)
+		}
+		time.Sleep(60*time.Second + jitter - time.Nanosecond)
+		synctest.Wait()
+		checkJobs(t, "sent until the wait with its jitter ends", p.sentJobs(), []int{0})
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		checkJobs(t, "sent once the wait ends", p.sentJobs(), []int{0, 1})
+
+		p.tell(2, send(0), jittered(61*time.Second, jitter))
+		p.tell(3, send(60*time.Second))
+		var tooLong *TooLongError
+		if _, err := p.waitOf(3); !errors.As(err, &tooLong) || tooLong.Wait != 61*time.Second {
+			t.Errorf("job 3: Wait = %v, want a TooLongError of the 61s asked for", err)
+		}
+		time.Sleep(time.Second)
+		p.tell(4, send(60*time.Second))
+		if _, err := p.waitOf(4); err != nil {
+			t.Errorf("job 4: Wait = %v, want it to wait out the 60s left of the time asked for", err)
+		}
+		time.Sleep(60*time.Second + jitter)
+		synctest.Wait()
+		checkJobs(t, "sent once the second wait ends", p.sentJobs(), []int{0, 1, 2, 4})
+	})
+}
+
 // TestYieldLendsThePlace: a job that gives its place up to wait lets a job of
 // another lane take it, and gets a place back before a job of its own lane
 // starts.
@@ -429,6 +478,6 @@ func TestOutsideRun(t *testing.T) {
 		t.Errorf("Wait = %s, %v, want 0, nil", waited, err)
 	}
 	Yield(ctx)
-	RateLimited(ctx, time.Hour)
+	RateLimited(ctx, time.Hour, time.Hour)
 	Succeeded(ctx)
 }
