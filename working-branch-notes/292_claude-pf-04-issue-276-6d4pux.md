@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/pf-04-issue-276-6d4pux`(cloud session が指定。Issue の推奨ブランチ名は `perf-lane-failure-control`)
-- PR: 未作成
+- PR: #292
 - 最終更新: 2026-09-29
 
 ## 目的
