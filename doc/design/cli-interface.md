@@ -150,6 +150,8 @@ stderr の進捗・診断表示には styled / plain の 2 モードがあり、
 
 部分失敗の扱い: 個別 asset(添付ファイル、絵文字画像など)の取得失敗は exit code `4` にせず、HTML 上の置換表示と `.cache/assets_manifest.json` への記録で export を継続する(`output-format.md`)。メッセージ本文の取得が完了できない場合は exit code `4` で失敗とする。
 
+並行取得の扱い: 取得を並行に進める場合(`slack-api-usage.md` の「取得の並行化」)も、exit code と、stderr に出す error と警告は、直列に取得した場合と同じとする。先に出した request の失敗は、その結果を使う工程に来たときに、直列の場合と同じく扱う(`decision-log/0069-api-method-lanes-and-prefetch.md`)。
+
 中断の扱い: export の実行中(token の対話入力の後から、export が終わるまで。channel の対話選択を含む。`--demo` も同じ)に SIGINT(Ctrl-C)または SIGTERM を受けると、Slack への request と asset の download を止め、download 中の一時ファイルを消してから、受けた signal で終了する。shell から見た終了は signal で止められた process と同じで(Ctrl-C なら終了状態 `130`)、上表の exit code は返さない。signal を受けた後は、進捗、警告、error を stderr に出さない。止まるまでに 5 秒を超えた場合と、2 回目の signal を受けた場合は、その時点で終了する。起動時から無視されている signal(shell script が background で起動した process の SIGINT など)は、無視したままにする。token の対話入力中の Ctrl-C は、従来どおりその場で終了する。channel の対話選択の画面で押した Ctrl-C は、signal ではなく選択の取り消しとして扱い、exit code `2` で終了する(`decision-log/0067-parallel-asset-lanes.md`)。
 
 ## 対象プラットフォーム

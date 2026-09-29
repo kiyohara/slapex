@@ -56,7 +56,7 @@ cache の schema に沿った object の組立は `export`、JSON の書き出�
 
 生成用入口は [tools/genemoji](../../tools/genemoji/main.go)(標準絵文字データ)、[tools/gensample](../../tools/gensample/main.go)(`demo` / `ui` を使う ja/en sample export)、[tools/genscreenshot](../../tools/genscreenshot/main.go)(同梱 sample の screenshot)、[tools/demo](../../tools/demo/record.sh)(terminal demo GIF)に置く。所要時間の計測用の開発 tool は、[tools/tracereport](../../tools/tracereport/main.go)(HTTP trace の集計)と [tools/assetbench](../../tools/assetbench/main.go)(fake origin に対する asset 取得方式の benchmark。pacing ありの直列、pacing なしの直列、lane による並列を比べる。429 を返す origin では、429 を受けた download だけが待つ #275 の lane とも比べる)に置く([計測の方針](decision-log/0063-http-trace-and-asset-benchmark.md)、[並列取得の方針](decision-log/0067-parallel-asset-lanes.md)、[429 の方針](decision-log/0068-lane-wide-rate-limit-wait.md))。
 
-将来の構成変更は [段階的リファクタリングの方針](decision-log/0056-incremental-refactoring-plan.md) と各 Issue で扱う。上表はその計画を先取りせず、構成変更を行う PR で該当箇所を同期する。
+将来の構成変更は [段階的リファクタリングの方針](decision-log/0056-incremental-refactoring-plan.md) と各 Issue で扱う。上表はその計画を先取りせず、構成変更を行う PR で該当箇所を同期する。export 全体の並行化(PF-06 #278、PF-07 #279)では、`internal/slack` に Web API の method ごとの lane を、`internal/export` に確定した request を先に出す表を置き、`internal/lane` を後から job を足せる形に変える([並行化の方針](decision-log/0069-api-method-lanes-and-prefetch.md)。振る舞いは [slack-api-usage.md](slack-api-usage.md#取得の並行化))。
 
 ## 開発環境
 

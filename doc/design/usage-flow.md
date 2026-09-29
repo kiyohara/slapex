@@ -130,6 +130,8 @@ OK: channel: #engineering (C012345..., public, active, member)
 OK: messages: 345 fetched since 2026-06-02 (threads 12, replies 40)
 ```
 
+取得を並行に進める場合(`slack-api-usage.md` の「取得の並行化」)も、フェーズ行は工程の順に 1 つずつ進める。裏で先に進む取得は別の行に出さず、先に取得が済んだ工程は待たずに完了の行を出す。retry と rate limit 待機の通知、警告、error の行は、直列に取得した場合と同じ内容と順序で出す(決定経緯は `decision-log/0069-api-method-lanes-and-prefetch.md`)。
+
 `team_id` は `auth.test` の戻り値や workspace URL にも現れる非機密情報である。進捗の繰り返し表示では上記のように短縮してよいが、workspace 確定直後、完了 summary、生成 HTML の冒頭では full の `team_id` を表示し、利用者が照合や将来の guard option のために正確な値をコピーできるようにする。
 
 画面表示用の channel label は、channel 名に加えて channel ID、public/private、archived 状態、token から見たアクセス可否を含める。bot token の場合、アクセス可否は bot / app が対象 channel の member かどうかで決まるため、member 状態として示す。
