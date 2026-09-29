@@ -66,3 +66,7 @@
 - Slack が internal App にも rate limit 強化を適用する方針変更を行った場合(その場合は default 値の再検討も必要)。
 - 多人数 channel で `users.info` の呼び出し回数が実行時間の支配項になった場合。
 - `blocks` の完全レンダリング対応などで必要 API が増えた場合。
+
+## 追記(2026-09-29): method ごとの lane
+
+「通常時は 1 req/sec 目安の平準化を行う」は method ごとの lane で行い、異なる method の呼び出しは並行してよいとした(`0069-api-method-lanes-and-prefetch.md`。PF-06 #278 で実装する)。同じ method の呼び出しは、今どおり同時に 1 件までとし、前の呼び出しの開始から 1 秒以上空ける。後から見直す条件の「多人数 channel で `users.info` の呼び出し回数が実行時間の支配項になった場合」は、0069 の見込みでは、asset の先行取得(PF-07 #279)の後に当たる(`index.md` の未決事項「user 解決の最適化」)。

@@ -123,6 +123,29 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
 - 並列に取得しても、retry と rate limit 待機の通知、asset の警告は、計画の順(直列に取得した場合と同じ順)に stderr へ出す。そのため、後ろの asset の通知は、前の asset の取得が終わるまで出ないことがある。
 - export の実行中に SIGINT(Ctrl-C)または SIGTERM を受けると、新しい download を始めず、進行中の download を止めて一時ファイルを消す(`cli-interface.md` の「exit code」)。
 
+## 取得の並行化
+
+この節の方針は PF-06(#278)と PF-07(#279)で実装する。実装されるまでは、Web API は 1 件ずつ直列に呼び、asset の download は Assets 工程で始まる(決定経緯は `decision-log/0069-api-method-lanes-and-prefetch.md`)。
+
+- export の工程(`usage-flow.md` の「処理対象の表示」のフェーズ行の順)は、今の順に 1 つずつ進める。後の工程が必ず出す request は、それが確定した時点で先に出し(先行取得)、工程は自分の番に来たときにその結果を使う。工程の処理(`--max-posts`、emoji filter による除外、truncated の判定、user と bot の解決、描画)は request の結果を直列の場合と同じ順に受け取るため、結果は直列に取得した場合と同じになる。
+- Web API は method ごとの lane で呼ぶ。同じ method の呼び出しは同時に 1 件までとし、来た順に、前の呼び出し(retry を含む)が終わってから、かつ前の呼び出しの開始から 1 秒以上空けて始める(「rate limit とリトライ」の平準化)。429 の `Retry-After` を待つ間は、同じ method の次の呼び出しも待つ。異なる method の呼び出しは並行する。
+- 先に出すのは、今の直列の処理がこの後必ず同じ request を出すと分かった request だけとする。後で除外され得る投稿や `--max-posts` の外になり得る投稿の分は、工程で必要になるまで出さない。同じ request は、先行取得と工程の取得を合わせて 1 回だけ出す。そのため、成功した export が出す request は直列の場合と同じになる。先行取得は、Messages 工程の開始から(対象の確定、`--reuse-cache` の検証、出力先の作成の後)行う。
+
+| request | 先に出す時点 |
+|---|---|
+| `auth.test`、`team.info`、`conversations.list`、`conversations.history` | 先に出さない。工程の順に呼ぶ |
+| `emoji.list` | Messages 工程の開始時。`--reuse-cache` の cache の custom emoji を使う場合は呼ばない |
+| `conversations.replies` | `conversations.history` の page で残った親投稿の thread を、その page を受け取った時点。emoji filter を指定した場合の `thread_broadcast` の thread は先に出さない |
+| `users.info`、`bots.info` | 確定した message に、「user 解決」と「bot 投稿の表示名と avatar」の規則で集める ID が現れた時点。`--reuse-cache` の cache にある ID は呼ばない |
+| asset の download | 確定した message の asset は、その URL が分かった時点(custom emoji の画像は custom emoji の一覧を得た後)。avatar は `users.info` / `bots.info`(または cache)の結果を得た時点、workspace icon は Messages 工程の開始時。`--reuse-cache` の copy で済むもの、file object の `size` がサイズの上限を超えるものは download しない |
+
+- 確定した message は次のとおりとする。
+  - emoji filter を指定しない場合: `conversations.history` が残した message(filter と `--max-posts` の内のもの)と、取得した thread の replies。
+  - emoji filter を指定した場合: thread に属さない message は、`conversations.history` が残した時点で確定する。thread に属する message(親、`thread_broadcast`、replies)は、Messages 工程の終わりに確定する。thread の除外は、`conversations.replies` で見た親や、後の page に来る親で決まることがあるためである(「pagination」)。
+- 先に出した request の成否と通知は、工程がその結果を受け取るまで出さない。工程は結果を直列の場合と同じ位置で同じように扱う(致命的な失敗は export を終え、`users.info` と `bots.info` の失敗は警告して続け、asset の失敗は置換表示にする)。retry と rate limit 待機の通知は、工程が結果を受け取るときにまとめて出し、その後の通知はそのまま出す。stderr の行の内容と順序、exit code は、直列に取得した場合と同じになる(`cli-interface.md` の「exit code」)。先に出した request の失敗を理由に、工程がそこに来る前に export を止めることはしない。
+- 先に download した asset は一時ファイルに置き、Assets 工程の取得(「file / asset の取得」の計画)が同じ URL を扱うときに、計画の kind と meta で決まる名前で `assets/` へ移す。計画の kind、サイズの上限、meta が先に download したときと食い違う場合は、先の結果を使わずに今どおり取得する。
+- export が終わるとき(成功、失敗、SIGINT / SIGTERM による中断)は、終わっていない先行取得を止め、止まるのを待つ。工程が受け取らなかった結果、通知、警告は捨て、`assets/` へ移さなかった一時ファイルは消す。失敗した export の出力先にも、直列の場合に無いファイルは残らない。
+
 ## 取得の整合性
 
 - export は単発実行であり、実行中に Slack 側で起きた更新との完全な整合は保証しない。取得開始時点のスナップショットとして扱う。

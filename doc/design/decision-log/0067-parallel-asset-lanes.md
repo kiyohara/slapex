@@ -140,6 +140,10 @@ files.slack.com の帯域だけを変えた `heavy`(大きいファイル 4 件�
 
 PF-04(#276)で、「429 を受けた lane 全体を止めるか」と「retry の扱いの見直し」を決めた(`0068-lane-wide-rate-limit-wait.md`)。429 を受けた lane は、`Retry-After` の間 request を出さず、同時数の上限を半分にし、その後の成功に応じて戻す。retry を待つ download は、待つ間は枠を手放し、次の request の前に取り直す。そのため、「上限値の根拠」の、1 件が lane の枠を持つ時間は、backoff の待ちを含まなくなった。body の途中の打ち切りは、今どおり retry しない。本 log の上限値は変えず、`lane.Defaults` に上限を戻す間隔(`RestoreAfter`)を足した。
 
+## 追記(2026-09-29): Assets 工程より前の取得
+
+PF-05(#277)で、確定した message の asset と、`users.info` / `bots.info` の結果の avatar の download を、Assets 工程より前に始めることにした(`0069-api-method-lanes-and-prefetch.md`。PF-07 #279 で実装する)。先に download した内容は一時ファイルに置き、`Fetch` が計画の順に同じ URL を扱うときに `assets/` へ移す。`internal/lane` は後から job を足せる形に変え、本 log の同時数の上限と 0068 の 429 の扱いは変えない。通知と警告を計画の順に出すこと、出力が直列の場合と同じであることも変えない。
+
 ## 後から見直す条件
 
 - ユーザーが merge 後に実 workspace で取り直す trace(#272)で、429、応答の遅れ、接続の失敗が増えた場合(上限値を下げるか、PF-04 で lane を止める)。
