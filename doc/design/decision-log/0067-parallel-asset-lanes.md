@@ -20,6 +20,7 @@ PF-02(#274、0064)で、download の前に取得リストが確定するよう�
 - lane の最初の接続: (A) 最初から lane の上限まで同時に出す。(B) 最初の 1 件(先導)が接続を得てから残りを出す。
 - HTTP/2 の接続で stream の上限に達したとき: (A) `http.HTTP2Config.StrictMaxConcurrentRequests` で stream の空きを待たせる(#275 の作業内容)。(B) Go の既定のまま、追加の接続を開かせる。
 - download の timeout: (A) 今の `http.Client` の `Timeout`(120 秒、body の読み取りを含む)。(B) 応答 header までの待ちと、body が進まない時間の打ち切り。
+- 少しずつ返し続けて終わらない download((B) の場合): (a) 打ち切らない(#275 の作業内容のまま)。(b) Slack の file 以外は、1 試行の上限で打ち切る。(c) すべての download を、1 試行の上限で打ち切る。
 - 並列にした download の retry の通知と警告: (A) 起きた順に出す。(B) 計画の順に並べ直して出す。
 - 実行中の SIGINT(Ctrl-C)と SIGTERM: (A) Go の既定のまま、その場で process を終わらせる。(B) 受けて export を止め、download 中の一時ファイルを消してから、同じ signal で終わる。
 
@@ -29,7 +30,8 @@ PF-02(#274、0064)で、download の前に取得リストが確定するよう�
 - 並列の単位: (A) は、1 つの origin に件数が偏ると、その origin への同時数が全体の上限まで膨らむ。HTTP/1.1 の origin では接続数がそのまま増え、第三者 host の負荷になる。(B) は、偏っても 1 origin への同時数を lane の上限で抑えられる。origin は HTTP client が接続を持つ単位で、host 名だけで分けると、scheme や port が違って接続を共有できないものを 1 つの lane に数えてしまう。
 - 最初の接続: Go の HTTP/2 client は、接続がまだない host へ同時に出た request に、それぞれ TCP + TLS を張らせ、余った接続を捨てる(#272)。(A) では、HTTP/2 の origin でも lane の同時数だけ接続を張る。(B) は、最初の接続が確立した時点(`net/http/httptrace` の `GotConn`)で残りを流し、残りはその接続を共有する。待つのは接続の確立(trace で 1 接続あたり 33〜100 ms)だけで、最初の download の応答は待たない。確立した接続が HTTP/2 か HTTP/1.1 かも、このとき分かる。
 - stream の上限に達したとき: (A) を実装したところ、fake server の test が止まった。Go の HTTP/2 client には、strict のときに `ClientConn.ReserveNewRequest` の予約が数えられたままになり、server の `MAX_CONCURRENT_STREAMS` を超える数の request が同じ接続を待つと、stream が空いても進まなくなる不具合がある(golang/go#70809、2026-09-29 の時点で open)。Go 1.26.8 の dev container で、server の `MAX_CONCURRENT_STREAMS` を 4、16、128 にし、それぞれ 2 倍の数の request を 1 本の接続へ同時に出すと、3 回とも 5 秒たっても終わらなかった(上限より 1 件多いだけのときは終わった)。strict にしなければ、どの場合も、上限を超えた分に追加の接続を開いて終わった。(B) の Go の既定は、stream の上限に達したときだけ追加の接続を開く。lane の上限(16)は Slack の host の上限(128)より小さいため、先導と合わせて接続は 1 本のままで、(A) で得たかったことは (B) でも保たれる。上限の小さい server では接続が増えるが、止まりはしない。
-- timeout: (A) は body の読み取りを含む。1 本の接続を多くの stream で分け合うと、大きいファイルがそろって 120 秒を超え、そろって retry する失敗が起こり得る(#275)。(B) は、応答しない server と、途中で止まった download だけを打ち切る。`http.Transport` の `ResponseHeaderTimeout` は transport を差し替える test(`slack.WithTransport`)で効かず、body が止まったことも測れないため、client 側の watchdog で測る。
+- timeout: (A) は body の読み取りを含む。1 本の接続を多くの stream で分け合うと、大きいファイルがそろって 120 秒を超え、そろって retry する失敗が起こり得る(#275)。(B) は、応答しない server と、途中で止まった download を打ち切る。`http.Transport` の `ResponseHeaderTimeout` は transport を差し替える test(`slack.WithTransport`)で効かず、body が止まったことも測れないため、client 側の watchdog で測る。応答 header の待ちは、最終の応答 header が揃うまで続ける。最初の byte(`httptrace` の `GotFirstResponseByte`)で待ちを外すと、1xx の中間応答(103 Early Hints など)や header の途中で止まった server を打ち切れない(PR #291 の review の指摘。test で再現した)。`Got1xxResponse` で待ちを張り直す方法もあるが、設定すると 1xx の header の合計の大きさを抑える `net/http` の制限が外れるため、使わない。redirect の次の request は、接続を得る時点(`GetConn`)で待ちを止め、送り終えてから測り直す。接続の確立は transport の timeout が抑える。
+- 少しずつ返し続けて終わらない download: (B) の body の待ちは 1 byte ごとに測り直すため、30 秒以内ごとに 1 byte でも届く download は打ち切られない(PR #291 の review の指摘)。(a) では、そうした host が 1 つあるだけで export が終わらない。URL preview の画像と service icon は、link 先の site が指す第三者 host から取り、量は 5 MiB の上限(`publicPreviewAssetLimit`)で抑えているが、時間は抑えていない。(c) は、上限を長くしても、#275 が全体の timeout をやめた理由(大きい Slack の file が接続を分け合って上限を超える)を消せない。(b) は、上限を Slack の file 以外に限り、大きい Slack の file には置かない。
 - 通知と警告の順: (A) では、stderr の行の並びが download の終わる順で変わり、実行ごとに異なる。(B) は、各 download の通知と警告を保持し、計画でそれより前の download がすべて出し終えてから出す。行と並びは、計画の順に直列で取得した場合と同じになる。代わりに、後ろの download の通知は、前の download が終わるまで表示が遅れる。
 - 中断: これまでは Ctrl-C で process がその場で終わり、download 中の一時ファイル(出力 directory の `asset-*`)が残り得た。(B) は #275 の「cancel(Ctrl-C)で全 lane が止まり、一時ファイルが残らない」を満たす。shell から見た終わり方は (A) と同じ(signal で終わる。Ctrl-C なら終了状態 130)に保つ。
 
@@ -44,7 +46,9 @@ PF-02(#274、0064)で、download の前に取得リストが確定するよう�
   - 上限値は `lane.Defaults`(HTTP/2 16、HTTP/1.1 6、全体 64、大きいファイル 4 件、閾値 4 MiB)に置く。根拠は下の benchmark である。
   - lane は計画の URL の origin で決まり、redirect 先の origin は数えない。redirect 先への同時の request は、redirect 元の lane の上限までになる。
 - download は Web API と別の `http.Client` と `http.Transport` で送る。transport は `http.DefaultTransport` の複製で、`MaxIdleConnsPerHost` を lane の上限(16)にする(`slack.NewDownloadTransport`)。`slack.WithTransport` は、Web API と download の両方に同じ transport を渡す。`StrictMaxConcurrentRequests` は有効にしない(#275 の作業内容から変えた点)。
-- download の client に全体の timeout は置かない。試行ごとに、request を送り終えてから応答 header まで 30 秒、body が 1 byte も進まない 30 秒で打ち切る。接続の確立は transport の dial と TLS handshake の timeout(30 秒と 10 秒)に任せる。打ち切りは timeout の失敗として扱い、応答 header の前なら network error と同じく retry し、body の途中なら今の body の失敗と同じく retry しない。retry の扱いの見直しは PF-04(#276)で行う。
+- download の client に全体の timeout は置かない。試行ごとに、request を送り終えてから最終の応答 header まで 30 秒、body が 1 byte も進まない 30 秒で打ち切る。応答 header の待ちは、1xx の中間応答や header の途中では止めない。redirect の次の request は、接続を得るまでの時間を数えず、送り終えてから 30 秒を測り直す。接続の確立は transport の dial と TLS handshake の timeout(30 秒と 10 秒)に任せる。
+- Slack の file(files.slack.com。認証 header を付ける送信先と同じ判定)以外の download は、1 試行を 5 分で打ち切る。Slack の file には上限を置かない。
+- 打ち切りは timeout の失敗として扱い、応答 header の前なら network error と同じく retry し、body の途中なら今の body の失敗と同じく retry しない。retry の扱いの見直しは PF-04(#276)で行う。
 - 認証 header の送信先は変えない。files.slack.com への request にだけ付ける(0040)。
 - 並列に取得する download の retry の通知(`slack.WithNotices` で受ける)と警告は、download ごとに保持し、計画の順に出す。export を止めた後は、保持している通知と警告を出さずに捨てる。
 - export の実行中(token の対話入力の後から `export.Run` が返るまで)に SIGINT または SIGTERM を受けると、stderr の出力を止め、export の context を cancel する。`Fetch` は新しい copy と download を始めず、進行中の download は止まって一時ファイルを消す。`export.Run` が返った後、受けた signal で process を終わらせる。止まるまでに 5 秒を超えた場合と、2 回目の signal を受けた場合は、その時点で終わらせる。起動時から無視されている signal は無視したままにする。
@@ -113,6 +117,7 @@ files.slack.com の帯域だけを変えた `heavy`(大きいファイル 4 件�
 - 全体 64: `traced` は同時に 45 request まで重なり、8 で 2.32 秒、16 で 1.50 秒、32 以上で 1.03〜1.05 秒だった。`heavy` は files.slack.com の lane(16 件)が律速で、全体 16 以上では差が無く(15.31〜15.47 秒)、8 では 24.00 秒だった。64 は、`traced` の倍の origin がある export にも余裕を残す。
 - 大きいファイル 4 件、閾値 4 MiB: 大きいファイルを同時に多く流すと、帯域を分け合って 1 件ずつが長くなるうえ、大きい順に始めるため小さいファイルが後ろに残り、最後に最初の byte を待つだけの区間ができる(閾値 1 MiB で 16 件は 18.80 秒。その trace では、原本と添付が 13.4 秒で終わった後に thumbnail 96 件のうち 81 件が始まり、終わりまで 5.4 秒かかった。既定値の trace では、thumbnail は原本と添付と並んで走り、最後の原本より前に終わった)。絞りすぎると、大きいファイルの最初の byte の待ちが隠れない(閾値 1 MiB で 1 件は 39.63 秒、2 件は 26.12 秒)。件数は、#275 の目安(origin あたり 2〜4)で最も速い 4 とした。閾値は、4 件のときに `heavy` で最も速い 4 MiB とし、files.slack.com の帯域を 1/4 と 4 倍にした場合も 4 MiB が最も速かった。閾値 1 MiB で 8 件は `heavy` で 14.69 秒とさらに速いが、目安の範囲を超え、帯域は仮定であり、`traced` では差が出ないため採らない。`traced` は 1 MiB 以上のファイルが 2 件だけで、1 MiB で 1 件にしたときだけ遅い(1.99 秒)。閾値を上げると、1 件の最も長い download は延びる(`heavy` で 1 MiB の 4.31 秒から 4 MiB の 7.66 秒、2.5 MiB/s では 15.3 秒から 29.2 秒)が、全体の timeout は置かず、body の待ちは途切れた時間で測るため、打ち切りには関わらない。
 - 応答 header と body の待ち 30 秒: trace の class ごとの平均で、最初の byte までが最も長いのは files.slack.com の原本の約 1.1 秒で、30 秒はその 28 倍ほどである。body の待ちは、応答 header の後に 1 byte も来ない時間で測り、download 全体の時間には関わらない。HTTP/2 の DATA frame(既定の最大 16 KiB)が 16 stream に順に回るとすると、30 秒の間に 1 frame も来ないのは、接続全体の速度が約 9 KiB/s を下回る場合に当たる。
+- Slack の file 以外の 1 試行 5 分: main の 1 試行の上限(120 秒)より長くし、並列で帯域を分け合っても、main で取れていた asset を打ち切りにくくした。URL preview 画像、service icon、workspace icon の上限 5 MiB を 5 分で運ぶのは、約 17 KiB/s にあたる。少しずつ返し続ける host があっても、1 件が lane の枠を持ち続けるのは、応答 header の待ち(30 秒)と合わせて 5 分半までになる。
 
 ## 理由
 
@@ -127,6 +132,7 @@ files.slack.com の帯域だけを変えた `heavy`(大きいファイル 4 件�
 - stderr の retry の通知は、download の終わりを待ってから出るため、表示の時点が遅れることがある。
 - HTTP trace では、download の pacing の待ちは 0 になり、request が時間的に重なる。`tools/tracereport` の class ごとの合計は、実行全体の時間を超え得る。
 - 認証 header の送信先は変わらない。`internal/output` の test が、lane で並列に取得したときも files.slack.com にだけ送り、他の host と redirect 先には送らないことを確かめる。
+- Slack の file 以外の asset を少しずつ返し続ける host や、1xx の中間応答だけを返す server があっても、その asset の失敗で済み、export は終わる。
 - 実行中の SIGINT と SIGTERM で、一時ファイルが残らなくなる。channel の対話選択の画面で押す Ctrl-C は、signal ではなく選択の取り消しとして、従来どおり exit code 2 で終わる。一方、選択の画面に `kill` などで SIGINT や SIGTERM が送られた場合は、これまでの exit code 2 ではなく、その signal で終わる。
 - `slack-api-usage.md` の「rate limit とリトライ」と「file / asset の取得」、`architecture.md`、`cli-interface.md` を更新した。0025、0063、0064 に追記した。
 
@@ -136,3 +142,4 @@ files.slack.com の帯域だけを変えた `heavy`(大きいファイル 4 件�
 - golang/go#70809 が直り、stream の空きを待たせる利点が生じた場合(上限の小さい server で接続を増やさずに済む)。
 - `MAX_CONCURRENT_STREAMS` が lane の上限より小さい server で、接続の増加が問題になった場合。
 - 大きいファイルの多い export で、帯域の分け合いや 30 秒の打ち切りが問題になった場合。
+- Slack の file 以外の asset が 5 分の打ち切りで失敗する場合(上限を延ばすか、最低の転送速度を下回ったら打ち切る方式にする)。Slack の file で、少しずつ返し続けて終わらない download が見られた場合(Slack の file にも上限を置く)。

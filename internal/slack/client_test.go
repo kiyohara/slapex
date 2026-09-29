@@ -102,9 +102,11 @@ func TestWithTransportKeepsTimeout(t *testing.T) {
 	if c.httpClient.Timeout != defaults.httpClient.Timeout || c.httpClient.Timeout == 0 {
 		t.Errorf("Web API Timeout = %v, want the default %v", c.httpClient.Timeout, defaults.httpClient.Timeout)
 	}
-	if c.dlClient.Timeout != 0 || c.headerWait != downloadHeaderWait || c.stallWait != downloadStallWait {
-		t.Errorf("download Timeout = %v, waits %v / %v; want none, and %v / %v",
-			c.dlClient.Timeout, c.headerWait, c.stallWait, downloadHeaderWait, downloadStallWait)
+	if c.dlClient.Timeout != 0 || c.headerWait != downloadHeaderWait || c.stallWait != downloadStallWait ||
+		c.publicTimeout != downloadPublicTimeout {
+		t.Errorf("download Timeout = %v, waits %v / %v / %v; want none, and %v / %v / %v",
+			c.dlClient.Timeout, c.headerWait, c.stallWait, c.publicTimeout,
+			downloadHeaderWait, downloadStallWait, downloadPublicTimeout)
 	}
 }
 

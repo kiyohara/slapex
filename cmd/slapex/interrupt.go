@@ -44,7 +44,9 @@ func watchInterrupts(p *ui.Printer) (context.Context, func()) {
 	if len(sigs) == 0 {
 		return ctx, cancel
 	}
-	ch := make(chan os.Signal, 1)
+	// Two signals fit: a second one that comes before the watch has reset
+	// the signals still ends the process (interruptWatch.run).
+	ch := make(chan os.Signal, 2)
 	signal.Notify(ch, sigs...)
 	w := startInterruptWatch(ch, interruptHooks{
 		cancel: cancel,
@@ -91,10 +93,15 @@ func (w *interruptWatch) run() {
 	select {
 	case sig := <-w.sigs:
 		w.caught = sig
+		// The reset comes first: muting may wait for a write to stderr, and
+		// the next signal must end the process all the same. A signal that
+		// came before the reset is read here.
+		w.hooks.reset()
 		w.hooks.mute()
 		w.hooks.cancel()
-		w.hooks.reset()
 		select {
+		case next := <-w.sigs:
+			w.hooks.die(next)
 		case <-time.After(w.hooks.grace):
 			w.hooks.die(sig)
 		case <-w.quit:

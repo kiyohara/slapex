@@ -40,10 +40,15 @@ const (
 // gone downloadStallWait without a byte (Issue #275, decision log 0067). They
 // take the place of an overall timeout, which a large file could outlast
 // while it shares its connection with others. The wait for a connection is
-// the transport's (its dial and TLS handshake timeouts).
+// the transport's (its dial and TLS handshake timeouts). An attempt at an
+// asset that is not a Slack file (downloadNeedsAuth), such as a URL preview's
+// image on a third-party host, also fails once it has taken
+// downloadPublicTimeout: a host that sends a byte now and then would pass the
+// stall wait for good.
 const (
-	downloadHeaderWait = 30 * time.Second
-	downloadStallWait  = 30 * time.Second
+	downloadHeaderWait    = 30 * time.Second
+	downloadStallWait     = 30 * time.Second
+	downloadPublicTimeout = 5 * time.Minute
 )
 
 // APIError is a Slack-level failure (HTTP 200 with ok: false).
@@ -66,10 +71,12 @@ type Client struct {
 	baseURL string
 	// httpClient sends the Web API calls, and dlClient the downloads, over a
 	// transport of their own (NewDownloadTransport) and with no overall
-	// timeout: headerWait and stallWait bound each attempt instead.
+	// timeout: headerWait and stallWait bound each attempt instead, and
+	// publicTimeout an attempt at an asset that is not a Slack file.
 	httpClient            *http.Client
 	dlClient              *http.Client
 	headerWait, stallWait time.Duration
+	publicTimeout         time.Duration
 	lastCall              map[string]time.Time
 	// sleep performs pacing and retry waits. Tests replace it with a fake
 	// that records the requested durations without sleeping.
@@ -133,15 +140,16 @@ func NewDownloadTransport() *http.Transport {
 // New creates a Slack Web API client for token.
 func New(token string, opts ...Option) *Client {
 	c := &Client{
-		token:      token,
-		baseURL:    apiBase,
-		httpClient: &http.Client{Timeout: 120 * time.Second},
-		dlClient:   &http.Client{Transport: NewDownloadTransport()},
-		headerWait: downloadHeaderWait,
-		stallWait:  downloadStallWait,
-		lastCall:   map[string]time.Time{},
-		sleep:      sleepCtx,
-		Logf:       func(string, ...any) {},
+		token:         token,
+		baseURL:       apiBase,
+		httpClient:    &http.Client{Timeout: 120 * time.Second},
+		dlClient:      &http.Client{Transport: NewDownloadTransport()},
+		headerWait:    downloadHeaderWait,
+		stallWait:     downloadStallWait,
+		publicTimeout: downloadPublicTimeout,
+		lastCall:      map[string]time.Time{},
+		sleep:         sleepCtx,
+		Logf:          func(string, ...any) {},
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -364,12 +372,16 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 	if err != nil {
 		return nil, "", withoutURL(err)
 	}
+	// A Slack file may be large and share its connection with others for
+	// long: its attempts have no overall timeout.
+	timeout := c.publicTimeout
 	if downloadNeedsAuth(srcURL) {
 		req.Header.Set("Authorization", "Bearer "+c.token)
+		timeout = 0
 	}
 	var resp *http.Response
 	err = c.withRetry(ctx, "download", func() (*http.Response, error) {
-		return c.sendDownload(req)
+		return c.sendDownload(req, timeout)
 	}, func(ok *http.Response) error {
 		resp = ok
 		return nil
@@ -382,18 +394,25 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 
 // sendDownload sends one attempt of the download req under a watchdog: the
 // attempt fails when its response headers have not come headerWait after the
-// request went out, and its body when it goes stallWait without a byte. The
+// request went out, its body when it goes stallWait without a byte, and the
+// whole of it, when timeout is not 0, once it has taken timeout. The
 // response's body ends the watch when it is closed.
-func (c *Client) sendDownload(req *http.Request) (*http.Response, error) {
+func (c *Client) sendDownload(req *http.Request, timeout time.Duration) (*http.Response, error) {
 	ctx, cancel := context.WithCancelCause(req.Context())
 	wd := &watchdog{cancel: cancel}
+	if timeout > 0 {
+		wd.limit(timeout, &downloadTimeout{fmt.Sprintf("download took longer than %s", timeout)})
+	}
 	noHeaders := &downloadTimeout{fmt.Sprintf("no response headers within %s", c.headerWait)}
 	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
-		// A redirect sends another request, which gets its own wait. The
-		// HTTP/2 transport may report a request written only after its
-		// response came: once the body's wait is on, arm leaves it alone.
-		WroteRequest:         func(httptrace.WroteRequestInfo) { wd.arm(c.headerWait, noHeaders) },
-		GotFirstResponseByte: wd.disarm,
+		// The wait for response headers lasts until the final response's
+		// headers are in, past any interim (1xx) response and headers that
+		// come slowly. A redirect's next request pauses it while that gets a
+		// connection, and has a wait of its own once written. The HTTP/2
+		// transport may report a request written only after its response
+		// came: once the body's wait is on, arm leaves it alone.
+		GetConn:      func(string) { wd.disarm() },
+		WroteRequest: func(httptrace.WroteRequestInfo) { wd.arm(c.headerWait, noHeaders) },
 	})
 	resp, err := c.dlClient.Do(req.WithContext(ctx))
 	if err == nil && wd.timedOut() != nil {
@@ -431,8 +450,9 @@ func (e *downloadTimeout) Timeout() bool   { return true }
 func (e *downloadTimeout) Temporary() bool { return true }
 
 // watchdog cancels a download attempt once the time it is armed for passes
-// without progress. An armed watchdog that expires cancels the attempt's
-// context with the cause it was armed with; stop ends the watch and tells
+// without progress, or once the attempt has taken its limit. An armed
+// watchdog that expires cancels the attempt's context with the cause it was
+// armed with, and the limit with its own; stop ends the watch and tells
 // whether it had.
 type watchdog struct {
 	cancel context.CancelCauseFunc
@@ -445,7 +465,25 @@ type watchdog struct {
 	cause    error
 	fired    error // the cause it canceled with
 	stopped  bool
-	body     bool // the body's wait is armed
+	body     bool        // the body's wait is armed
+	limiter  *time.Timer // the attempt's limit (limit)
+}
+
+// limit cancels the attempt with cause once it has taken wait, whatever its
+// progress.
+func (w *watchdog) limit(wait time.Duration, cause error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.limiter = time.AfterFunc(wait, func() {
+		w.mu.Lock()
+		if w.stopped || w.fired != nil {
+			w.mu.Unlock()
+			return
+		}
+		w.fired = cause
+		w.mu.Unlock()
+		w.cancel(cause)
+	})
 }
 
 // arm starts the wait for progress: the attempt is canceled with cause when
@@ -492,8 +530,8 @@ func (w *watchdog) progress() {
 	}
 }
 
-// disarm pauses the watch until the next arm, unless the body's wait is
-// armed.
+// disarm pauses the wait for progress until the next arm, unless the body's
+// wait is armed. It leaves the limit alone.
 func (w *watchdog) disarm() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -510,6 +548,9 @@ func (w *watchdog) stop() error {
 	w.stopped = true
 	if w.timer != nil {
 		w.timer.Stop()
+	}
+	if w.limiter != nil {
+		w.limiter.Stop()
 	}
 	return w.fired
 }

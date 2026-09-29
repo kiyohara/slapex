@@ -33,7 +33,7 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 |---|---|---|
 | [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、HTTP trace のファイル(`SLAPEX_HTTP_TRACE`)、export 中の SIGINT / SIGTERM の処理、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
 | [internal/export](../../internal/export/export.go) | `Run` が順に呼ぶ工程(workspace/channel 解決と対話選択、取得範囲・filter 付きの history/replies 取得、user/bot/emoji 解決、2 回の描画による asset の取得計画と表示用データ組立)、cache の組立・再利用・cleanup の判定 | datetime、emoji、lane、output、render、slack、ui |
-| [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、Web API の method ごとの平準化、retry、認証送信先を制限した download(Web API と別の client と transport、応答 header と body の待ち時間の打ち切り)、request ごとの HTTP trace([trace.go](../../internal/slack/trace.go)) | lane |
+| [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、Web API の method ごとの平準化、retry、認証送信先を制限した download(Web API と別の client と transport、応答 header と body の待ち時間の打ち切り、Slack の file 以外の 1 試行の上限)、request ごとの HTTP trace([trace.go](../../internal/slack/trace.go)) | lane |
 | [internal/output](../../internal/output/output.go) | 出力 root・label、asset の取得計画(planner)と計画の並列取得(通知と警告は計画の順)、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し、`.cache/` の削除 | lane、slack |
 | [internal/lane](../../internal/lane/lane.go) | asset の download を origin ごとの lane で並列に走らせる scheduler(先導 1 本、HTTP/2 と HTTP/1.1 の同時数、全体の同時数、大きいファイルの同時数、サイズの大きい順)と、その上限値 | なし |
 | [internal/render](../../internal/render/html.go) | 表示用データ型、mrkdwn 変換、HTML template、埋込み CSS/logo の書き出し | なし |

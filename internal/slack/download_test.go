@@ -85,9 +85,12 @@ func TestDownloadsAreNotPaced(t *testing.T) {
 	}
 }
 
-// watchServer serves /headers-never, which never answers, /body-stalls, which
-// sends its headers and part of its body and then nothing, and /trickle,
-// which sends its 20 bytes one every 10ms. It counts the requests.
+// watchServer serves /headers-never, which never answers, /interim-only,
+// which sends an interim response (103 Early Hints) and then nothing,
+// /headers-cut, which sends the start of its headers and then nothing
+// (HTTP/1.1 only), /body-stalls, which sends its headers and part of its body
+// and then nothing, and /trickle, which sends its 20 bytes one every 10ms. It
+// counts the requests.
 func watchServer(t *testing.T, http2 bool) (*httptest.Server, *atomic.Int32) {
 	t.Helper()
 	var requests atomic.Int32
@@ -96,6 +99,21 @@ func watchServer(t *testing.T, http2 bool) (*httptest.Server, *atomic.Int32) {
 		switch r.URL.Path {
 		case "/headers-never":
 			<-r.Context().Done()
+		case "/interim-only":
+			w.Header().Set("Link", "</style.css>; rel=preload; as=style")
+			w.WriteHeader(http.StatusEarlyHints)
+			<-r.Context().Done()
+		case "/headers-cut":
+			conn, buf, err := http.NewResponseController(w).Hijack()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer conn.Close()
+			buf.WriteString("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\n")
+			buf.Flush()
+			// Until the client closes the connection.
+			io.Copy(io.Discard, conn)
 		case "/body-stalls":
 			w.Header().Set("Content-Length", "10")
 			w.WriteHeader(http.StatusOK)
@@ -160,6 +178,73 @@ func TestDownloadHeaderWait(t *testing.T) {
 				t.Errorf("waits = %v, want a backoff before each retry", waits)
 			}
 		})
+	}
+}
+
+// TestDownloadHeaderWaitPastFirstByte: the wait for response headers lasts
+// until the final response's headers are in. An interim response, or the
+// start of the headers, does not end it.
+func TestDownloadHeaderWaitPastFirstByte(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		path  string
+		http2 bool
+	}{
+		{"/interim-only", false},
+		{"/interim-only", true},
+		{"/headers-cut", false},
+	} {
+		t.Run(fmt.Sprintf("%s,http2=%v", strings.TrimPrefix(tc.path, "/"), tc.http2), func(t *testing.T) {
+			t.Parallel()
+
+			srv, _ := watchServer(t, tc.http2)
+			c := New(testToken, WithSleeper((&sleepRecorder{}).sleep), WithTransport(srv.Client().Transport))
+			c.headerWait = 20 * time.Millisecond
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, _, err := c.Download(ctx, srv.URL+tc.path, 0, io.Discard)
+			if want := "giving up after 5 retries: Get: no response headers within 20ms"; err == nil || err.Error() != want {
+				t.Fatalf("err = %v, want %q", err, want)
+			}
+		})
+	}
+}
+
+// TestDownloadHeaderWaitSkipsRedirectConnect: the time a redirect's next
+// request takes to get a connection does not count toward the wait for
+// response headers (the transport's dial timeout bounds it), and that request
+// has a wait of its own once written.
+func TestDownloadHeaderWaitSkipsRedirectConnect(t *testing.T) {
+	t.Parallel()
+
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "asset")
+	}))
+	defer target.Close()
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL+"/asset.png", http.StatusFound)
+	}))
+	defer origin.Close()
+
+	var dialer net.Dialer
+	slow := target.Listener.Addr().String()
+	tr := &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+		if addr == slow {
+			time.Sleep(time.Second)
+		}
+		return dialer.DialContext(ctx, network, addr)
+	}}
+	defer tr.CloseIdleConnections()
+	rec := &sleepRecorder{}
+	c := New(testToken, WithSleeper(rec.sleep), WithTransport(tr))
+	c.headerWait = 500 * time.Millisecond
+	written, _, err := c.Download(context.Background(), origin.URL+"/asset.png", 0, io.Discard)
+	if err != nil || written != 5 {
+		t.Fatalf("Download = %d, %v; want the 5 bytes", written, err)
+	}
+	if waits := rec.recorded(); len(waits) != 0 {
+		t.Errorf("waits = %v, want no retry", waits)
 	}
 }
 
@@ -237,7 +322,6 @@ func TestDownloadStallWaitAfterLateWroteRequest(t *testing.T) {
 
 	c := New(testToken, WithSleeper((&sleepRecorder{}).sleep), WithTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		trace := httptrace.ContextClientTrace(req.Context())
-		trace.GotFirstResponseByte()
 		body := &lateReportBody{ctx: req.Context(), report: func() { trace.WroteRequest(httptrace.WroteRequestInfo{}) }}
 		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, ContentLength: -1, Body: body, Request: req}, nil
 	})))
@@ -297,9 +381,80 @@ func TestDownloadSlowBodyIsNotStalled(t *testing.T) {
 	}
 }
 
+// TestDownloadPublicTimeout: an attempt at an asset that is not a Slack file
+// fails once it has taken the public timeout, however its body keeps coming,
+// and is not retried: part of it is written already. An attempt at a Slack
+// file has no such limit.
+func TestDownloadPublicTimeout(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name, url string
+		wantErr   string
+	}{
+		{"public asset", publicURL, "download took longer than 50ms"},
+		{"Slack file", slackFileURL, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var attempts atomic.Int32
+			c := New(testToken, WithSleeper((&sleepRecorder{}).sleep), WithTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				attempts.Add(1)
+				body := &trickleBody{ctx: req.Context(), n: 50, every: 10 * time.Millisecond}
+				return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, ContentLength: -1, Body: body, Request: req}, nil
+			})))
+			c.stallWait, c.publicTimeout = 5*time.Second, 50*time.Millisecond
+			written, _, err := c.Download(context.Background(), tc.url, 0, io.Discard)
+			if tc.wantErr == "" {
+				if err != nil || written != 50 {
+					t.Fatalf("Download = %d, %v; want all 50 bytes", written, err)
+				}
+				return
+			}
+			if err == nil || err.Error() != tc.wantErr {
+				t.Fatalf("err = %v, want %q", err, tc.wantErr)
+			}
+			var netErr net.Error
+			if !errors.As(err, &netErr) || !netErr.Timeout() {
+				t.Errorf("err = %#v, want a timeout", err)
+			}
+			if written >= 50 {
+				t.Errorf("written = %d, want less than the body", written)
+			}
+			if n := attempts.Load(); n != 1 {
+				t.Errorf("attempts = %d, want 1", n)
+			}
+		})
+	}
+}
+
+// trickleBody brings its n bytes one at a time, one every every, until its
+// request is canceled.
+type trickleBody struct {
+	ctx   context.Context
+	n     int
+	every time.Duration
+}
+
+func (b *trickleBody) Read(p []byte) (int, error) {
+	if b.n == 0 {
+		return 0, io.EOF
+	}
+	select {
+	case <-b.ctx.Done():
+		return 0, b.ctx.Err()
+	case <-time.After(b.every):
+	}
+	b.n--
+	return copy(p, "x"), nil
+}
+
+func (b *trickleBody) Close() error { return nil }
+
 // TestWatchdog covers the watchdog's own rules: progress moves the deadline
-// on, a disarmed watchdog does not fire, stop reports whether it fired, and
-// the body's wait stays once armed.
+// on, a disarmed watchdog does not fire, stop reports whether it fired, the
+// body's wait stays once armed, and the limit comes whatever the progress.
 func TestWatchdog(t *testing.T) {
 	t.Parallel()
 
@@ -356,6 +511,35 @@ func TestWatchdog(t *testing.T) {
 	}
 	if cause := context.Cause(ctx); cause != stalled {
 		t.Errorf("cause = %v, want the body's", cause)
+	}
+
+	// The limit fires despite progress and a disarm, and stop ends it.
+	tooLong := &downloadTimeout{"took too long"}
+	wd, ctx = newWatchdog()
+	wd.limit(50*time.Millisecond, tooLong)
+	wd.armBody(time.Hour, stalled)
+	wd.disarm()
+	giveUp := time.After(5 * time.Second)
+	for ctx.Err() == nil {
+		wd.progress()
+		select {
+		case <-ctx.Done():
+		case <-time.After(10 * time.Millisecond):
+		case <-giveUp:
+			t.Fatal("the limit did not fire")
+		}
+	}
+	if cause := context.Cause(ctx); cause != tooLong || wd.stop() != tooLong {
+		t.Errorf("cause = %v, stop = %v; want the limit's", cause, wd.stop())
+	}
+	wd, ctx = newWatchdog()
+	wd.limit(50*time.Millisecond, tooLong)
+	if err := wd.stop(); err != nil {
+		t.Errorf("stop = %v, want nil before the limit", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if ctx.Err() != nil {
+		t.Errorf("a stopped watchdog's limit fired: %v", context.Cause(ctx))
 	}
 }
 

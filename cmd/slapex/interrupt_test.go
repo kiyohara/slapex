@@ -84,6 +84,30 @@ func TestInterruptWatchOnSignal(t *testing.T) {
 	}
 }
 
+// TestInterruptWatchSecondSignal: the signals are reset before the printer is
+// muted, which may wait for a write to stderr, so the next signal ends the
+// process at once all the same; a second signal that came before the reset
+// ends it too.
+func TestInterruptWatchSecondSignal(t *testing.T) {
+	t.Parallel()
+
+	f, hooks := newFakeInterruptHooks(time.Hour)
+	unmute := make(chan struct{})
+	hooks.mute = func() { <-unmute; f.muted <- struct{}{} }
+	sigs := make(chan os.Signal, 2)
+	sigs <- os.Interrupt
+	sigs <- syscall.SIGTERM
+	w := startInterruptWatch(sigs, hooks)
+	defer w.stop()
+	release := sync.OnceFunc(func() { close(unmute) })
+	defer release()
+	within(t, f.resets, "the signals to be reset while muting waits")
+	release()
+	if sig := within(t, f.died, "the second signal to end the process"); sig != syscall.SIGTERM {
+		t.Fatalf("ended by %v, want the second signal", sig)
+	}
+}
+
 // within receives from ch, and fails the test when nothing comes.
 func within[T any](t *testing.T, ch <-chan T, what string) T {
 	t.Helper()
@@ -217,7 +241,8 @@ func TestInterruptEndsProcessBySignal(t *testing.T) {
 			start := time.Now()
 			for i := range tc.signals {
 				if i > 0 {
-					// The first signal has been handled by now.
+					// The Go runtime merges a signal into the same one still
+					// pending: the second goes once the first has arrived.
 					time.Sleep(200 * time.Millisecond)
 				}
 				if err := cmd.Process.Signal(tc.sig); err != nil {
