@@ -19,7 +19,9 @@ Issue #275(PF-03)。所要時間の最小化(#272)に向けて、asset の downl
 - 再確認(P5 の 1 周目)で、`[imo]` の 2 件は修正確認済み(resolve 可)、`[ask]` の 1 件は decision log 0067 の 1 文の誤りで未対応とされた。その 1 文を直した(P4 の 2 周目)。
 - `[ask]` の上限の置き方は、ユーザーが推奨の「5 分で打ち切る」を選んだ(2026-09-29 04:34Z、card)。実装は変えず、decision log 0067 に選択を記録した。
 - 再確認(P5 の 2 周目)で、指摘 3 件すべてが修正確認済み(resolve 可)になり、未対応は 0 件だった。review cycle `claude-code-a85f4c7-20260929031415` は完了した。
-- 終了時の状態(P6): head `cfb171f` の check runs は 5 件すべて success。この note だけの commit の push の後に、PR を Ready for review にする。残るのは人間の手番だけである(「次にやること」)。
+- 終了時の状態(P6): head `cfb171f` の check runs は 5 件すべて success。note だけの commit(`5c72634`)の push の後に、PR を Ready for review にした(2026-09-29 04:45Z)。
+- 第三者 host の 429 の `Retry-After` に上限が無い件は、ユーザーの判断(card、04:48Z)で PF-04(#276)にコメントで申し送った。
+- Codex のクロスレビュー(cycle `codex-5c72634-20260929044736`、04:54Z)の `[must]` 1 件(stderr への書き込みが詰まっていると、最初の signal で cancel と 5 秒の猶予が始まらない)を採用して直した(`c74dc9d`。「Codex の review の指摘への対応」)。Codex の cycle の再確認は Codex が行う。
 
 ## 決定事項
 
@@ -79,6 +81,19 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - 1 周目の後の commit(`4a762f1`、`292895f`、`cfb171f`)は、0067、`slack-api-usage.md`、この note だけを変え、Go の file は変えていないことも確かめられた。
 - follow-up 候補(429 の `Retry-After`)の記録先と、出力生成系 3 skill の判断は妥当とされた。
 
+### Codex の review の指摘への対応
+
+Codex のクロスレビュー(cycle `codex-5c72634-20260929044736`、`Reviewed head` `5c72634`)の `[must]` 1 件への対応(修正 `c74dc9d`)。
+
+- 指摘: 最初の SIGINT / SIGTERM で `ui.Printer.Mute` が printer の lock を待つ間、`cancel()` と 5 秒の猶予が始まらない。printer は lock を持ったまま stderr に書くため、stderr を読む側が止まると、最初の signal では export が止まらず、一時ファイルも残る。Issue の中断の条件と、`cli-interface.md` と 0067 の「5 秒を超えた場合は、その時点で終了する」を満たさない。
+- 確認: 指摘どおりだった。review(P2)も、2 回目の signal の指摘の再確認で、この区間が残ることを許容範囲としていた(次の signal でその場で終わるため)。stderr を読まない pipe にした子 process では、修正前のコードは signal で終わらず、子 process の 30 秒の待ちで終わった(下記の変異の確認)。
+- 修正: `Mute` は、書き込み中の呼び出しを待たずに返る(`atomic.Bool` を立て、lock が空いていれば spinner をその場で止める)。mute の後の呼び出しは lock を待たずに何もせず返り、mute の前から lock を待っていた呼び出しも、lock を得た後に書かない(`Printer.lock`)。spinner は、書き込み中でなければその場で、そうでなければ次の tick で止まる。書き込み中の呼び出しは、それ自体の書き込みを終えてから返る。`interruptWatch` は変えず、`mute` の hook は待たないものとした(comment)。
+- stderr が詰まった場合の挙動: signal を受けると、出力を止め、export を cancel し、猶予を始める。download は止まって一時ファイルを消し、mute の後の報告は lock を待たない。export の本体の goroutine が詰まった書き込みの中にいる場合は export が返らないため、猶予の 5 秒で signal により終わる。
+- 足した test: `TestMuteWithStuckWrite`(書き込みが止まったままの printer で、`Mute` と以後の呼び出しが返る。止まった書き込みが終わった後に何も書かず、書き込みを待っていた spinner も描かない)、`TestInterruptEndsProcessBySignal` の "SIGTERM with stderr full"(stderr を読まない pipe にし、pipe を満たして printer の書き込みを待たせた子 process に SIGTERM を送る。猶予より前に signal で終わり、一時ファイルを消し、signal の後の出力が無い)。既存の `TestMuteDropsLaterOutput` は、mute の時点で書き込み中だった spinner の描画が `Mute` の後に終わりうるため、それを待ってから比べる形にした。
+- 変異の確認: `Mute` が lock を待つ(修正前と同じ。`TestMuteWithStuckWrite` が止まり、子 process は signal で終わらず 30 秒の待ちで exit status 1)、mute の後の呼び出しが lock を待つ(`TestMuteWithStuckWrite` が止まり、子 process は猶予の 5.0 秒で終わる)、lock を待っていた呼び出しが mute の後に書く(`TestMuteWithStuckWrite` の styled で spinner が描く)。3 件とも test が落ちた。
+- E2E: 実バイナリを `gensample -serve -lang ja -asset-delay 3s` に向け、stderr を誰も読まない FIFO にし、asset の取得が始まった後に FIFO を満たした。slapex の thread が fd 2 への write で止まっている(`/proc/<pid>/task/*/syscall`)ことを確かめてから signal を送った。SIGTERM で終了状態 143、SIGINT(job control あり)で 130、どちらも猶予の約 5.0 秒で終わり、一時ファイルは残らず、stdout への出力も無かった。猶予で終わったのは export が返らなかったためで、止まっていた書き込みは export の本体の処理のものと見られる(推定。plain mode では asset の取得中の出力が無く、取得の後の表示で止まったと考えられる)。job control の無い shell の background job は SIGINT を無視した状態で始まり、slapex はそれを無視したままにする(設計どおり)ため、SIGINT はその形で試した。
+- 設計文書は変えていない。記載(`cli-interface.md` の「中断の扱い」、0067 の決定)に実装を合わせる修正である。出力生成系 3 skill の判断は変わらない(中断の後の出力を止める処理だけで、通常の出力、サンプル、画面は変わらない)。
+
 ### 上限値の決定(benchmark)
 
 `docker compose run --rm dev go run ./tools/assetbench`(cloud session の dev container、go1.26.8、linux/amd64、4 CPUs、2026-09-29)。origin は in-process のモデルで、実測ではない。上限を 1 つずつ変えた結果、大きいファイルの件数と閾値、帯域を変えた場合の表は、decision log 0067 の「上限値の根拠」にある。
@@ -127,10 +142,11 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - review(P2)と指摘への対応(P4)、再確認(P5 の 1 周目と 2 周目)と 2 周目の対応(P4)。(完了。未対応 0 件で review cycle を完了した)
-- 人間: resolve 可とした 3 thread を GitHub の UI で resolve する。
-- 人間: Codex の cross-review の後に PR を merge する。
+- Codex のクロスレビューの `[must]` 1 件への対応(`c74dc9d`)。(完了)
+- Codex: 対応した `[must]` の thread を再確認する(Codex の cycle は Codex が確かめる)。
+- 人間: resolve 可とした 3 thread(Claude の cycle)と、Codex が resolve 可とした thread を GitHub の UI で resolve する。
+- 人間: PR を merge する。
 - 人間: demo GIF をローカルで再生成する(`update-readme-demo-gif`。cloud session では録画できない)。
-- 人間: 第三者 host の 429 の `Retry-After` の扱いを、PF-04(#276)へ引き継ぐかを判断する。
 - merge 後: ユーザーが手元で PF-01 の trace を有効にして実 workspace を export し、集計を #272 にコメントする(手順は project の共有フォルダの `perf-trace/local-trace-prompt.md`)。
 
 ## 検証
@@ -151,6 +167,7 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - benchmark: 「上限値の決定(benchmark)」と decision log 0067。
 - 実施していないこと: 実 workspace での実行(実 token が要る。merge 後にユーザーが trace を取り直す)、demo GIF の再生成(「ローカルで要再生成」)。
 - review の指摘への対応(P4)の後に、上記の gofmt、vet、build、`go test -count=1 ./...`、`-race -count=1 ./...`、`-count=5 -shuffle=on`、`GOMAXPROCS=1 -count=3`、並列と直列の比較の `-count=20`、`-race -count=5`、cross compile、固定サンプルの比較をやり直し、すべて成功した。負荷をかけた反復(`internal/slack` と `cmd/slapex` の `-count=30` と、`internal/output` を加えた `-race -count=15` を同時に)も成功した。変異の確認は「review の指摘への対応(P4)」にある。E2E は、変更が打ち切りと中断の処理だけで出力の経路を変えないため、やり直していない。
+- Codex の review の指摘への対応(`c74dc9d`)の後に、gofmt、vet、build、`go test -count=1 ./...`、`-race -count=1 ./...`、`-count=5 -shuffle=on`、`GOMAXPROCS=1 -count=3`、並列と直列の比較の `-count=20`、`-race -count=5`、cross compile、固定サンプルの比較をやり直し、すべて成功した。`internal/ui` と `cmd/slapex` の `-count=30`(`-shuffle=on` を含む)、`internal/output` と `internal/export` を加えた `-race -count=15`、`GOMAXPROCS=1` の `-race -count=10` を同時に回し、すべて成功した。変異の確認と、stderr を詰まらせた E2E は「Codex の review の指摘への対応」にある。
 
 ## リスク・ブロッカー
 
@@ -172,3 +189,5 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - 2026-09-29: ユーザーが `[ask]` の card で推奨の「5 分で打ち切る」を選んだ(04:34Z)。実装は変えず、0067 の検討内容に選択を記録した。
 - 2026-09-29: 再確認(P5 の 2 周目)を P2 と同じ subagent に委譲した。修正確認済み 3 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 0 件。`gh` への fallback は無し。訂正できなかった metadata の誤りは無し。review cycle を完了し、P6 に進んだ。
 - 2026-09-29: 終了時の状態(P6): head `cfb171f` の check runs は 5 件すべて success。note だけの commit を push した後に、PR を Ready for review にする。
+- 2026-09-29: ユーザーが card で、第三者 host の 429 の `Retry-After` の件を PF-04(#276)へ引き継ぐことを選んだ(04:48Z)。#276 にコメントで申し送った。
+- 2026-09-29: Codex のクロスレビュー(04:54Z、cycle `codex-5c72634-20260929044736`)の `[must]` 1 件(stderr が詰まると最初の signal で cancel と猶予が始まらない)を採用して直した(`c74dc9d`)。Codex の見張りの予約は、review が付いたため取り消した。
