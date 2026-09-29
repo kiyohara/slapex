@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/term"
@@ -103,6 +104,7 @@ type Printer struct {
 	mu     sync.Mutex
 	w      io.Writer
 	styled bool
+	muted  atomic.Bool // set by Mute; read without mu
 
 	phase   *phaseState
 	frame   int
@@ -124,7 +126,9 @@ func NewPrinter(w io.Writer, styled bool) *Printer {
 // is redrawn in place until EndPhase or StopPhase; plain mode prints one
 // "INFO: <label>: <text>" line.
 func (p *Printer) StartPhase(label, text string) {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	defer p.mu.Unlock()
 	if !p.styled {
 		p.phase = &phaseState{label: label, text: text}
@@ -141,7 +145,9 @@ func (p *Printer) StartPhase(label, text string) {
 // mode prints the update as its own INFO line so long waits remain visible
 // in CI logs.
 func (p *Printer) UpdatePhase(text string) {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	defer p.mu.Unlock()
 	if p.phase == nil {
 		return
@@ -159,7 +165,9 @@ func (p *Printer) UpdatePhase(text string) {
 // and parenthesized in plain mode; pass "" for none. EndPhase also works
 // without a preceding StartPhase (e.g. results that came from cache).
 func (p *Printer) EndPhase(status Status, label, text, meta string) {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	defer p.mu.Unlock()
 	p.stopSpinnerLocked()
 	if !p.styled {
@@ -185,7 +193,9 @@ func (p *Printer) EndPhase(status Status, label, text, meta string) {
 // and the styled line is erased. Used before interactive prompts and before
 // error reporting, so the spinner never fights other terminal output.
 func (p *Printer) StopPhase() {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	defer p.mu.Unlock()
 	p.stopSpinnerLocked()
 	p.clearPhaseLocked()
@@ -196,18 +206,42 @@ func (p *Printer) StopPhase() {
 // stops the spinner where it stands. slapex mutes its printer when it is
 // interrupted (Ctrl-C): the export stops, and nothing it reports on the way out
 // is shown, as when the process ended at once (cmd/slapex interrupt.go).
+//
+// Mute does not wait for a call that is writing, which a stderr nobody reads
+// can hold up for good, as the export must stop all the same. That call ends
+// in its own time, and nothing is written after it; calls made after Mute
+// return at once, without waiting for it.
 func (p *Printer) Mute() {
+	p.muted.Store(true)
+	// With no write in progress, the spinner stops here; otherwise it stops
+	// at its next tick.
+	if p.mu.TryLock() {
+		p.stopSpinnerLocked()
+		p.mu.Unlock()
+	}
+}
+
+// lock takes mu to write, and reports false, without waiting for mu, once the
+// printer is muted.
+func (p *Printer) lock() bool {
+	if p.muted.Load() {
+		return false
+	}
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.stopSpinnerLocked()
-	p.w = io.Discard
+	if p.muted.Load() {
+		p.mu.Unlock()
+		return false
+	}
+	return true
 }
 
 // Noticef reports a transient client-level event (rate limit wait, retry).
 // While a phase is live it replaces the spinner text until the next update;
 // otherwise it behaves like Infof. Plain mode always prints an INFO line.
 func (p *Printer) Noticef(format string, args ...any) {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	if p.phase != nil {
 		p.mu.Unlock()
 		p.UpdatePhase(fmt.Sprintf(format, args...))
@@ -241,7 +275,9 @@ func (p *Printer) Successf(format string, args ...any) {
 // Used for usage guidance blocks and summary detail lines whose content must
 // stay copy-pasteable.
 func (p *Printer) Plainf(format string, args ...any) {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	defer p.mu.Unlock()
 	line := fmt.Sprintf(format, args...)
 	if p.styled && p.phase != nil {
@@ -256,7 +292,9 @@ func (p *Printer) Plainf(format string, args ...any) {
 // standalone prints a status-prefixed line, keeping a live spinner line
 // intact by printing above it.
 func (p *Printer) standalone(status Status, text string) {
-	p.mu.Lock()
+	if !p.lock() {
+		return
+	}
 	defer p.mu.Unlock()
 	var line string
 	if p.styled {
@@ -305,7 +343,9 @@ func (p *Printer) startSpinnerLocked() {
 			case <-stop:
 				return
 			case <-ticker.C:
-				p.mu.Lock()
+				if !p.lock() {
+					return
+				}
 				if p.phase != nil {
 					p.frame++
 					p.drawPhaseLocked()

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -84,10 +85,9 @@ func TestInterruptWatchOnSignal(t *testing.T) {
 	}
 }
 
-// TestInterruptWatchSecondSignal: the signals are reset before the printer is
-// muted, which may wait for a write to stderr, so the next signal ends the
-// process at once all the same; a second signal that came before the reset
-// ends it too.
+// TestInterruptWatchSecondSignal: the signals are reset before anything else,
+// so the next signal ends the process at once whatever comes after (here, a
+// mute that waits); a second signal that came before the reset ends it too.
 func TestInterruptWatchSecondSignal(t *testing.T) {
 	t.Parallel()
 
@@ -165,13 +165,16 @@ const interruptHelperEnv = "SLAPEX_TEST_INTERRUPT_HELPER"
 // TestInterruptHelperProcess is the child process. In mode "stop", it stands
 // in for an export that stops when its context is canceled: it keeps a
 // temporary file until then, removes it, reports something through the
-// printer and returns. In mode "stuck", the export does not stop.
+// printer and returns. In mode "stuck", the export does not stop. In mode
+// "stderr-full", it stops as in "stop", but nothing reads stderr, and a write
+// to it through the printer waits from before the signal.
 func TestInterruptHelperProcess(t *testing.T) {
 	mode, dir, ok := strings.Cut(os.Getenv(interruptHelperEnv), ":")
 	if !ok {
 		t.Skip("run by TestInterruptEndsProcessBySignal only")
 	}
-	printer := ui.NewPrinter(os.Stderr, false)
+	stuck := make(chan struct{})
+	printer := ui.NewPrinter(&markWriter{w: os.Stderr, mark: "stuck", seen: stuck}, false)
 	ctx, endWatch := watchInterrupts(printer)
 	tmp := filepath.Join(dir, "asset-123")
 	if err := os.WriteFile(tmp, []byte("part"), 0o600); err != nil {
@@ -179,6 +182,19 @@ func TestInterruptHelperProcess(t *testing.T) {
 		os.Exit(exitOther)
 	}
 	printer.StartPhase("Assets", "downloading assets ...")
+	if mode == "stderr-full" {
+		if err := fillStderr(); err != nil {
+			fmt.Println("filling stderr:", err)
+			os.Exit(exitOther)
+		}
+		go printer.Infof("stuck")
+		select {
+		case <-stuck:
+		case <-time.After(10 * time.Second):
+			fmt.Println("the printer did not write")
+			os.Exit(exitOther)
+		}
+	}
 	fmt.Println("ready")
 	select {
 	case <-ctx.Done():
@@ -200,7 +216,9 @@ func TestInterruptHelperProcess(t *testing.T) {
 // export (TestInterruptHelperProcess) SIGINT or SIGTERM. The export stops and
 // removes its temporary file, nothing more is printed, and the process ends
 // by the signal, as one that does not catch it would. A second signal ends a
-// process whose export does not stop, well within the grace.
+// process whose export does not stop, well within the grace. A process whose
+// stderr nobody reads, with a write to it waiting, stops all the same, well
+// within the grace.
 func TestInterruptEndsProcessBySignal(t *testing.T) {
 	t.Parallel()
 
@@ -213,6 +231,7 @@ func TestInterruptEndsProcessBySignal(t *testing.T) {
 		{"SIGINT", syscall.SIGINT, "stop", 1},
 		{"SIGTERM", syscall.SIGTERM, "stop", 1},
 		{"second SIGINT", syscall.SIGINT, "stuck", 2},
+		{"SIGTERM with stderr full", syscall.SIGTERM, "stderr-full", 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -225,12 +244,28 @@ func TestInterruptEndsProcessBySignal(t *testing.T) {
 			cmd.Env = append(os.Environ(), interruptHelperEnv+"="+tc.mode+":"+dir)
 			var stderr syncBuffer
 			cmd.Stderr = &stderr
+			// In mode "stderr-full", stderr is a pipe read only once the
+			// child has ended.
+			var stderrPipe, stderrEnd *os.File
+			if tc.mode == "stderr-full" {
+				r, w, err := os.Pipe()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer r.Close()
+				defer w.Close()
+				stderrPipe, stderrEnd = r, w
+				cmd.Stderr = w
+			}
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				t.Fatal(err)
 			}
 			if err := cmd.Start(); err != nil {
 				t.Fatal(err)
+			}
+			if stderrEnd != nil {
+				stderrEnd.Close()
 			}
 			lines := bufio.NewScanner(stdout)
 			if !lines.Scan() || lines.Text() != "ready" {
@@ -255,6 +290,15 @@ func TestInterruptEndsProcessBySignal(t *testing.T) {
 			}
 			err = cmd.Wait()
 			took := time.Since(start)
+			printed := stderr.String()
+			if stderrPipe != nil {
+				out, err := io.ReadAll(stderrPipe)
+				if err != nil {
+					t.Fatal(err)
+				}
+				// What filled the pipe is not the child's output.
+				printed = strings.TrimRight(string(out), "x")
+			}
 
 			var exitErr *exec.ExitError
 			if !errors.As(err, &exitErr) {
@@ -262,20 +306,21 @@ func TestInterruptEndsProcessBySignal(t *testing.T) {
 			}
 			status, ok := exitErr.Sys().(syscall.WaitStatus)
 			if !ok || !status.Signaled() || status.Signal() != tc.sig {
-				t.Fatalf("the child ended with %v, want it ended by %v\nstderr:\n%s", err, tc.sig, stderr.String())
+				t.Fatalf("the child ended with %v, want it ended by %v\nstdout: %q\nstderr:\n%s", err, tc.sig, rest, printed)
 			}
 			if len(rest) != 0 {
 				t.Errorf("the child went on after the signal: %q", rest)
 			}
-			if got, want := stderr.String(), "INFO: assets: downloading assets ...\n"; got != want {
+			if got, want := printed, "INFO: assets: downloading assets ...\n"; got != want {
 				t.Errorf("the child printed %q, want only %q from before the signal", got, want)
 			}
-			if tc.mode == "stop" {
+			if tc.mode != "stuck" {
 				if _, err := os.Stat(filepath.Join(dir, "asset-123")); !errors.Is(err, os.ErrNotExist) {
 					t.Errorf("the temporary file was left: %v", err)
 				}
-			} else if took >= interruptGrace {
-				t.Errorf("the second signal ended the child after %v, want it at once", took)
+			}
+			if tc.mode != "stop" && took >= interruptGrace {
+				t.Errorf("the child ended after %v, want it at once", took)
 			}
 		})
 	}
@@ -298,4 +343,41 @@ func (b *syncBuffer) String() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.buf.String()
+}
+
+// markWriter closes seen when a write that contains mark starts.
+type markWriter struct {
+	w    io.Writer
+	mark string
+	seen chan struct{}
+}
+
+func (m *markWriter) Write(b []byte) (int, error) {
+	if bytes.Contains(b, []byte(m.mark)) {
+		close(m.seen)
+	}
+	return m.w.Write(b)
+}
+
+// fillStderr writes to stderr, a pipe nobody reads, until the pipe is full:
+// the next write to it waits.
+func fillStderr() error {
+	fd := syscall.Stderr
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		return err
+	}
+	defer syscall.SetNonblock(fd, false)
+	for _, size := range []int{4096, 1} {
+		chunk := bytes.Repeat([]byte("x"), size)
+		for {
+			_, err := syscall.Write(fd, chunk)
+			if errors.Is(err, syscall.EAGAIN) {
+				break
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

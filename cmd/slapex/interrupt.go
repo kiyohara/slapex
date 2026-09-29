@@ -66,7 +66,7 @@ func watchInterrupts(p *ui.Printer) (context.Context, func()) {
 // interruptHooks are what an interruptWatch does when a signal comes.
 type interruptHooks struct {
 	cancel context.CancelFunc
-	mute   func()
+	mute   func() // must not wait: canceling and the grace come after it
 	reset  func()
 	die    func(os.Signal) // ends the process by the signal
 	grace  time.Duration
@@ -93,9 +93,9 @@ func (w *interruptWatch) run() {
 	select {
 	case sig := <-w.sigs:
 		w.caught = sig
-		// The reset comes first: muting may wait for a write to stderr, and
-		// the next signal must end the process all the same. A signal that
-		// came before the reset is read here.
+		// The reset comes first, so that the next signal ends the process
+		// whatever comes after. A signal that came before the reset is read
+		// here.
 		w.hooks.reset()
 		w.hooks.mute()
 		w.hooks.cancel()
