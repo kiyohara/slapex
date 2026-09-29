@@ -15,12 +15,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/kiyohara/slapex/internal/lane"
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
 // Downloader is the asset fetch dependency (implemented by *slack.Client).
+// Fetch calls Download on several goroutines at once.
 type Downloader interface {
 	Download(ctx context.Context, srcURL string, limit int64, w io.Writer) (int64, string, error)
 }
@@ -112,9 +115,10 @@ type AssetMeta struct {
 //
 // The export asks for its assets while it renders the page, and renders twice
 // (Issue #274): a Planner records what the first render asks for, Fetch
-// acquires that plan, and the second render's Save and SkipTooLarge record the
-// results in the order it asks. A Save for a URL no Fetch acquired — outside
-// the plan, or with no plan at all — acquires it then.
+// acquires that plan, downloading in parallel (Issue #275), and the second
+// render's Save and SkipTooLarge record the results in the order it asks. A
+// Save for a URL no Fetch acquired — outside the plan, or with no plan at all
+// — acquires it then.
 type Assets struct {
 	ctx     context.Context
 	dl      Downloader
@@ -132,14 +136,22 @@ type Assets struct {
 	// fetched holds what Fetch acquired, by source URL, for Save to record when
 	// the render asks for it.
 	fetched map[string]ManifestEntry
+	// Lanes bounds the downloads Fetch runs at a time (internal/lane).
+	Lanes lane.Limits
 	// Logf receives a warning for each download that did not complete, worded
 	// after its manifest status: a failure, or a download the size limit
 	// stopped. SkipTooLarge warns of nothing: a file its pre-check keeps out
 	// is the limit working as configured, and the Assets counts report it
-	// (doc/design/output-format.md). The warning comes when the download ends,
-	// so after a Fetch it follows the plan's order, which is the order the
-	// render asks in.
+	// (doc/design/output-format.md). The warning comes when the download ends;
+	// after a Fetch, once the downloads before it in the plan have ended too,
+	// so it follows the plan's order, which is the order the render asks in.
 	Logf func(format string, args ...any)
+	// Notef receives the progress notices of the downloads Fetch runs — the
+	// Downloader's retries and waits, which *slack.Client reports through
+	// slack.WithNotices — each download's before its warning, in the plan's
+	// order like the warnings. The downloads Save runs report theirs as the
+	// Downloader does by default.
+	Notef func(format string, args ...any)
 }
 
 // PlannedAsset is one asset a planning render asked for (Assets.Planner): the
@@ -173,7 +185,9 @@ func NewAssets(ctx context.Context, dl Downloader, dir string, limit int64) *Ass
 		limit:  limit,
 		known:  map[string]string{},
 		status: map[string]string{},
+		Lanes:  lane.Defaults,
 		Logf:   func(string, ...any) {},
+		Notef:  func(string, ...any) {},
 	}
 }
 
@@ -225,18 +239,34 @@ func (a *Assets) Planner() *Assets {
 // in the order first requested.
 func (a *Assets) Plan() []PlannedAsset { return a.plan }
 
-// Fetch acquires the planned assets in plan order, each the way Save would at
-// the first request for it: a copy from the reuse source when that has the
-// asset, a download otherwise, with the same warning for a download that did
-// not complete. It records nothing in the manifest: Save records each result
-// when the render asks for it, so the manifest follows the order of the
-// render's requests. A file SkipTooLarge planned has nothing to fetch.
+// Fetch acquires the planned assets, each the way Save would at the first
+// request for it: a copy from the reuse source when that has the asset, a
+// download otherwise, with the same warning for a download that did not
+// complete. The copies come first, in plan order. The downloads then run in
+// parallel, in one lane per origin within a.Lanes (internal/lane, Issue
+// #275), and each download's notices and warning are held until the
+// downloads before it in the plan have passed theirs on, so they come in the
+// order a serial fetch in plan order gives them (heldNotices). Fetch records
+// nothing in the manifest: Save records each result when the render asks for
+// it, so the manifest follows the order of the render's requests, whatever
+// order the downloads end in. A file SkipTooLarge planned has nothing to
+// fetch.
+//
+// Once a's context is done, Fetch starts no more copies or downloads, and
+// returns when the downloads under way have stopped, each having removed its
+// temporary file. The assets it did not get stay unfetched, and the notices
+// not passed on by then are dropped.
 func (a *Assets) Fetch(plan []PlannedAsset) {
 	if a.fetched == nil {
 		a.fetched = map[string]ManifestEntry{}
 	}
+	var downloads []PlannedAsset
+	queued := map[string]bool{}
 	for _, p := range plan {
-		if p.SkipSize || p.SourceURL == "" {
+		if a.ctx.Err() != nil {
+			break
+		}
+		if p.SkipSize || p.SourceURL == "" || queued[p.SourceURL] {
 			continue
 		}
 		if _, done := a.fetched[p.SourceURL]; done {
@@ -245,7 +275,88 @@ func (a *Assets) Fetch(plan []PlannedAsset) {
 		if _, seen := a.known[p.SourceURL]; seen {
 			continue
 		}
-		a.fetched[p.SourceURL] = a.acquire(p.Kind, p.SourceURL, p.Limit, p.Meta)
+		if a.reuse != nil {
+			if e, ok := a.copyFromReuse(p.Kind, p.SourceURL, p.Limit, p.Meta); ok {
+				a.fetched[p.SourceURL] = e
+				continue
+			}
+		}
+		queued[p.SourceURL] = true
+		downloads = append(downloads, p)
+	}
+
+	jobs := make([]lane.Job, len(downloads))
+	for i, p := range downloads {
+		jobs[i] = lane.Job{URL: p.SourceURL, Size: p.Meta.SizeBytes}
+	}
+	results := make([]*ManifestEntry, len(downloads))
+	held := newHeldNotices(a, len(downloads))
+	lane.Run(a.ctx, jobs, a.Lanes, func(ctx context.Context, i int) {
+		p := downloads[i]
+		e := a.download(slack.WithNotices(ctx, held.notef(i)), p.Kind, p.SourceURL, p.Limit, p.Meta, held.warnf(i))
+		results[i] = &e
+		held.done(i)
+	})
+	for i, e := range results {
+		if e != nil {
+			a.fetched[downloads[i].SourceURL] = *e
+		}
+	}
+}
+
+// heldNotices holds what the downloads of one Fetch report — the notices
+// through Notef and the warnings through Logf — and passes each download's on
+// once the downloads before it in the plan have passed theirs on. Each
+// download adds to its own lines only, before done.
+type heldNotices struct {
+	a *Assets
+
+	mu    sync.Mutex
+	lines [][]heldLine // by download
+	ended []bool
+	next  int // the first download whose lines are not passed on
+}
+
+type heldLine struct {
+	warning bool
+	format  string
+	args    []any
+}
+
+func newHeldNotices(a *Assets, n int) *heldNotices {
+	return &heldNotices{a: a, lines: make([][]heldLine, n), ended: make([]bool, n)}
+}
+
+func (h *heldNotices) notef(i int) func(string, ...any) {
+	return func(format string, args ...any) {
+		h.lines[i] = append(h.lines[i], heldLine{format: format, args: args})
+	}
+}
+
+func (h *heldNotices) warnf(i int) func(string, ...any) {
+	return func(format string, args ...any) {
+		h.lines[i] = append(h.lines[i], heldLine{warning: true, format: format, args: args})
+	}
+}
+
+// done marks download i ended, and passes on the lines of the downloads that
+// have nothing before them in the plan left to wait for. Once the context is
+// done, it drops them instead: the run is stopping.
+func (h *heldNotices) done(i int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.ended[i] = true
+	for ; h.next < len(h.ended) && h.ended[h.next]; h.next++ {
+		if h.a.ctx.Err() == nil {
+			for _, l := range h.lines[h.next] {
+				if l.warning {
+					h.a.Logf(l.format, l.args...)
+				} else {
+					h.a.Notef(l.format, l.args...)
+				}
+			}
+		}
+		h.lines[h.next] = nil
 	}
 }
 
@@ -330,12 +441,14 @@ func (a *Assets) acquire(kind, srcURL string, limit int64, meta AssetMeta) Manif
 			return e
 		}
 	}
-	return a.download(kind, srcURL, limit, meta)
+	return a.download(a.ctx, kind, srcURL, limit, meta, a.Logf)
 }
 
-// download fetches srcURL into kind's directory under its content hash and
-// returns the manifest entry, warning of a download that did not complete.
-func (a *Assets) download(kind, srcURL string, limit int64, meta AssetMeta) ManifestEntry {
+// download fetches srcURL with ctx into kind's directory under its content
+// hash and returns the manifest entry, warning of a download that did not
+// complete through warnf. Fetch runs it on several goroutines at once: it
+// changes nothing in a, and its temporary file has a name of its own.
+func (a *Assets) download(ctx context.Context, kind, srcURL string, limit int64, meta AssetMeta, warnf func(string, ...any)) ManifestEntry {
 	tmp, err := os.CreateTemp(a.dir, "asset-*")
 	if err != nil {
 		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
@@ -352,7 +465,7 @@ func (a *Assets) download(kind, srcURL string, limit int64, meta AssetMeta) Mani
 	h := sha256.New()
 	var head headBuffer
 	// The kind labels the download in the HTTP trace (Issue #273).
-	ctx := slack.WithAssetKind(a.ctx, kind)
+	ctx = slack.WithAssetKind(ctx, kind)
 	size, contentType, err := a.dl.Download(ctx, srcURL, limit, io.MultiWriter(tmp, h, &head))
 	tmp.Close()
 	if err != nil {
@@ -362,7 +475,7 @@ func (a *Assets) download(kind, srcURL string, limit int64, meta AssetMeta) Mani
 			// in the warning as in the manifest and the counts (Issue #250).
 			status, warning = StatusSkippedSize, "asset skipped by size limit"
 		}
-		a.Logf("%s (%s): %s", warning, kind, err)
+		warnf("%s (%s): %s", warning, kind, err)
 		return newEntry(kind, srcURL, meta, "", status, err.Error())
 	}
 

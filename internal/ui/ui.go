@@ -192,6 +192,17 @@ func (p *Printer) StopPhase() {
 	p.phase = nil
 }
 
+// Mute makes the printer drop everything it would write from now on, and
+// stops the spinner where it stands. slapex mutes its printer when it is
+// interrupted (Ctrl-C): the export stops, and nothing it reports on the way out
+// is shown, as when the process ended at once (cmd/slapex interrupt.go).
+func (p *Printer) Mute() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.stopSpinnerLocked()
+	p.w = io.Discard
+}
+
 // Noticef reports a transient client-level event (rate limit wait, retry).
 // While a phase is live it replaces the spinner text until the next update;
 // otherwise it behaves like Infof. Plain mode always prints an INFO line.

@@ -2,7 +2,10 @@
 // slapex needs (doc/design/slack-api-usage.md). It implements the rate limit
 // policy from decision log 0025: honour 429 + Retry-After, exponential
 // backoff for transient failures, at most 5 retries per request, and
-// self-pacing of roughly 1 request/sec per method.
+// self-pacing of roughly 1 request/sec per Web API method. Asset downloads
+// are not paced: they go through a client of their own, which the parallel
+// fetch of the assets bounds by origin instead (internal/lane, decision log
+// 0067).
 package slack
 
 import (
@@ -13,10 +16,14 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/kiyohara/slapex/internal/lane"
 )
 
 const apiBase = "https://slack.com/api/"
@@ -26,6 +33,17 @@ const (
 	maxBackoff = 60 * time.Second
 	methodPace = 1 * time.Second
 	pageLimit  = 200
+)
+
+// A download attempt fails when its response headers have not come
+// downloadHeaderWait after the request went out, and its body when it has
+// gone downloadStallWait without a byte (Issue #275, decision log 0067). They
+// take the place of an overall timeout, which a large file could outlast
+// while it shares its connection with others. The wait for a connection is
+// the transport's (its dial and TLS handshake timeouts).
+const (
+	downloadHeaderWait = 30 * time.Second
+	downloadStallWait  = 30 * time.Second
 )
 
 // APIError is a Slack-level failure (HTTP 200 with ok: false).
@@ -41,11 +59,18 @@ func (e *APIError) Error() string {
 // ErrTooLarge is returned by Download when the body exceeds the given limit.
 var ErrTooLarge = errors.New("download exceeds size limit")
 
+// Client is a Slack Web API client. Its Web API calls run one at a time;
+// Download may run on several goroutines at once (the parallel asset fetch).
 type Client struct {
-	token      string
-	baseURL    string
-	httpClient *http.Client
-	lastCall   map[string]time.Time
+	token   string
+	baseURL string
+	// httpClient sends the Web API calls, and dlClient the downloads, over a
+	// transport of their own (NewDownloadTransport) and with no overall
+	// timeout: headerWait and stallWait bound each attempt instead.
+	httpClient            *http.Client
+	dlClient              *http.Client
+	headerWait, stallWait time.Duration
+	lastCall              map[string]time.Time
 	// sleep performs pacing and retry waits. Tests replace it with a fake
 	// that records the requested durations without sleeping.
 	sleep func(context.Context, time.Duration) error
@@ -68,22 +93,41 @@ func WithBaseURL(baseURL string) Option {
 	}
 }
 
-// WithSleeper replaces request pacing and retry sleeps.
+// WithSleeper replaces the Web API pacing and the retry sleeps.
 func WithSleeper(sleep func(context.Context, time.Duration) error) Option {
 	return func(c *Client) {
 		c.sleep = sleep
 	}
 }
 
-// WithTransport sends requests through rt instead of http.DefaultTransport,
-// keeping the client's timeout. Tests pass their fake server's own transport:
-// every httptest.Server.Close closes the idle connections of
-// http.DefaultTransport, which can break a response a client of a parallel
-// test is about to receive (Issue #254).
+// WithTransport sends every request, the Web API calls and the downloads
+// alike, through rt instead of the client's own transports, keeping the
+// client's timeouts. Tests pass their fake server's own transport: every
+// httptest.Server.Close closes the idle connections of http.DefaultTransport,
+// which can break a response a client of a parallel test is about to receive
+// (Issue #254).
 func WithTransport(rt http.RoundTripper) Option {
 	return func(c *Client) {
 		c.httpClient.Transport = rt
+		c.dlClient.Transport = rt
 	}
+}
+
+// NewDownloadTransport returns the transport New gives the downloads (Issue
+// #275): a copy of http.DefaultTransport, which the Web API calls use, that
+// keeps as many idle connections per host as a lane runs downloads
+// (internal/lane). The downloads of an HTTP/2 origin share the connection its
+// lane's first download opened, as long as the server allows as many streams
+// at a time as the lane runs downloads (Slack's hosts allow 128); past that,
+// net/http opens another connection. It does not make the requests wait for a
+// free stream instead (http.HTTP2Config.StrictMaxConcurrentRequests): with
+// that, net/http stalls for good once more requests wait for the connection
+// than the server allows streams (golang/go#70809, decision log 0067).
+// tools/assetbench downloads through a copy of it.
+func NewDownloadTransport() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConnsPerHost = lane.Defaults.PerOrigin()
+	return t
 }
 
 // New creates a Slack Web API client for token.
@@ -92,6 +136,9 @@ func New(token string, opts ...Option) *Client {
 		token:      token,
 		baseURL:    apiBase,
 		httpClient: &http.Client{Timeout: 120 * time.Second},
+		dlClient:   &http.Client{Transport: NewDownloadTransport()},
+		headerWait: downloadHeaderWait,
+		stallWait:  downloadStallWait,
 		lastCall:   map[string]time.Time{},
 		sleep:      sleepCtx,
 		Logf:       func(string, ...any) {},
@@ -168,11 +215,30 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 	return env.ResponseMetadata.NextCursor, nil
 }
 
+// noticesKey is the context key of WithNotices.
+type noticesKey struct{}
+
+// WithNotices sends the progress notices of the requests made with ctx — the
+// retries and the rate limit waits — to logf instead of Client.Logf. The
+// parallel asset fetch holds each download's notices with it, to pass them on
+// in plan order (output.Assets.Fetch, Issue #275).
+func WithNotices(ctx context.Context, logf func(format string, args ...any)) context.Context {
+	return context.WithValue(ctx, noticesKey{}, logf)
+}
+
+// noticef returns where the notices of a request made with ctx go.
+func (c *Client) noticef(ctx context.Context) func(format string, args ...any) {
+	if logf, ok := ctx.Value(noticesKey{}).(func(string, ...any)); ok {
+		return logf
+	}
+	return c.Logf
+}
+
 // withRetry sends a request until it gets a 200 response that accept takes,
 // honouring 429 + Retry-After and retrying transient failures (5xx, network
 // errors) with exponential backoff and jitter, at most maxRetries times. The
 // Web API calls and Download share it; what names the request in the
-// progress lines.
+// progress lines, which go where noticef says.
 //
 // send builds and sends one request, and its error is retried. withRetry
 // closes every response it does not pass to accept. accept owns the body of
@@ -180,6 +246,7 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 // is retried like a network error.
 func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.Response, error), accept func(*http.Response) error) error {
 	var lastErr error
+	logf := c.noticef(ctx)
 	// skipBackoff is set when a 429 already waited out Retry-After; the wait
 	// happens at detection so it is honoured even when retries are exhausted.
 	skipBackoff := false
@@ -189,7 +256,7 @@ func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.
 		}
 		if attempt > 0 && !skipBackoff {
 			wait := backoffWait(attempt)
-			c.Logf("retrying %s in %s (%s)", what, wait.Round(time.Second), lastErr)
+			logf("retrying %s in %s (%s)", what, wait.Round(time.Second), lastErr)
 			if err := c.sleep(ctx, wait); err != nil {
 				return err
 			}
@@ -205,7 +272,7 @@ func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
 			if wait, ok := retryAfter(resp); ok {
-				c.Logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
+				logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
 				if err := c.sleep(ctx, wait); err != nil {
 					return err
 				}
@@ -262,12 +329,11 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 // OAuth token; public third-party assets such as unfurl images and service
 // icons do not.
 // When limit > 0 and the body exceeds it, ErrTooLarge is returned.
+// Downloads are not paced (decision log 0067): the parallel asset fetch
+// bounds them by origin (internal/lane).
 func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.Writer) (written int64, contentType string, err error) {
 	ctx, endTrace := c.traceRequest(ctx, TraceDownload, assetKind(ctx))
 	defer endTrace()
-	if err := c.pace(ctx, "download"); err != nil {
-		return 0, "", err
-	}
 	body, ct, err := c.downloadRetry(ctx, srcURL)
 	if err != nil {
 		return 0, "", err
@@ -291,8 +357,9 @@ func (c *Client) Download(ctx context.Context, srcURL string, limit int64, w io.
 // response's body unread, for the caller to stream and close. A failure while
 // streaming is therefore not retried: part of the body may already be written.
 func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadCloser, string, error) {
-	// Every attempt sends this one request: a GET has no body to use up, and
-	// withRetry closes each response it rejects before it sends again.
+	// Every attempt sends this one request, under a watchdog of its own
+	// (sendDownload): a GET has no body to use up, and withRetry closes each
+	// response it rejects before it sends again.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srcURL, nil)
 	if err != nil {
 		return nil, "", withoutURL(err)
@@ -302,11 +369,7 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 	}
 	var resp *http.Response
 	err = c.withRetry(ctx, "download", func() (*http.Response, error) {
-		r, err := c.httpClient.Do(req)
-		if err != nil {
-			return nil, withoutURL(err)
-		}
-		return r, nil
+		return c.sendDownload(req)
 	}, func(ok *http.Response) error {
 		resp = ok
 		return nil
@@ -315,6 +378,193 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 		return nil, "", err
 	}
 	return resp.Body, resp.Header.Get("Content-Type"), nil
+}
+
+// sendDownload sends one attempt of the download req under a watchdog: the
+// attempt fails when its response headers have not come headerWait after the
+// request went out, and its body when it goes stallWait without a byte. The
+// response's body ends the watch when it is closed.
+func (c *Client) sendDownload(req *http.Request) (*http.Response, error) {
+	ctx, cancel := context.WithCancelCause(req.Context())
+	wd := &watchdog{cancel: cancel}
+	noHeaders := &downloadTimeout{fmt.Sprintf("no response headers within %s", c.headerWait)}
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		// A redirect sends another request, which gets its own wait. The
+		// HTTP/2 transport may report a request written only after its
+		// response came: once the body's wait is on, arm leaves it alone.
+		WroteRequest:         func(httptrace.WroteRequestInfo) { wd.arm(c.headerWait, noHeaders) },
+		GotFirstResponseByte: wd.disarm,
+	})
+	resp, err := c.dlClient.Do(req.WithContext(ctx))
+	if err == nil && wd.timedOut() != nil {
+		// The response came after the watchdog canceled the attempt, which
+		// has timed out all the same: net/http passes on a response that
+		// raced the cancellation, and a server may answer the cancellation
+		// itself.
+		resp.Body.Close()
+		err = &url.Error{Op: "Get", URL: req.URL.String(), Err: context.Canceled}
+	}
+	if err != nil {
+		timeout := wd.stop()
+		cancel(nil)
+		if timeout != nil {
+			// The transport may name the cancellation instead of its cause.
+			var urlErr *url.Error
+			if errors.As(err, &urlErr) {
+				return nil, fmt.Errorf("%s: %w", urlErr.Op, timeout)
+			}
+			return nil, timeout
+		}
+		return nil, withoutURL(err)
+	}
+	wd.armBody(c.stallWait, &downloadTimeout{fmt.Sprintf("download stalled: no data for %s", c.stallWait)})
+	resp.Body = &watchedBody{ReadCloser: resp.Body, wd: wd, cancel: cancel}
+	return resp, nil
+}
+
+// downloadTimeout is the error of a download attempt its watchdog stopped. It
+// is a timeout (net.Error), which the HTTP trace records as such.
+type downloadTimeout struct{ msg string }
+
+func (e *downloadTimeout) Error() string   { return e.msg }
+func (e *downloadTimeout) Timeout() bool   { return true }
+func (e *downloadTimeout) Temporary() bool { return true }
+
+// watchdog cancels a download attempt once the time it is armed for passes
+// without progress. An armed watchdog that expires cancels the attempt's
+// context with the cause it was armed with; stop ends the watch and tells
+// whether it had.
+type watchdog struct {
+	cancel context.CancelCauseFunc
+
+	mu       sync.Mutex
+	timer    *time.Timer
+	armed    bool
+	wait     time.Duration
+	deadline time.Time
+	cause    error
+	fired    error // the cause it canceled with
+	stopped  bool
+	body     bool // the body's wait is armed
+}
+
+// arm starts the wait for progress: the attempt is canceled with cause when
+// wait passes without progress. Once armBody has armed the body's wait, arm
+// does nothing.
+func (w *watchdog) arm(wait time.Duration, cause error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.body {
+		w.armLocked(wait, cause)
+	}
+}
+
+// armBody arms the wait for the body's data, the attempt's last wait: from
+// then on, arm and disarm do nothing.
+func (w *watchdog) armBody(wait time.Duration, cause error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.body = true
+	w.armLocked(wait, cause)
+}
+
+func (w *watchdog) armLocked(wait time.Duration, cause error) {
+	if w.stopped || w.fired != nil {
+		return
+	}
+	w.armed, w.wait, w.cause = true, wait, cause
+	w.deadline = time.Now().Add(wait)
+	if w.timer == nil {
+		w.timer = time.AfterFunc(wait, w.expire)
+	} else {
+		w.timer.Reset(wait)
+	}
+}
+
+// progress starts the wait of an armed watchdog again.
+func (w *watchdog) progress() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.armed {
+		// The timer is not moved: expire finds the later deadline and waits
+		// for the rest, which keeps a read from touching the timer.
+		w.deadline = time.Now().Add(w.wait)
+	}
+}
+
+// disarm pauses the watch until the next arm, unless the body's wait is
+// armed.
+func (w *watchdog) disarm() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.body {
+		w.armed = false
+	}
+}
+
+// stop ends the watch and returns the cause the watchdog canceled with, or
+// nil when it had not.
+func (w *watchdog) stop() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.stopped = true
+	if w.timer != nil {
+		w.timer.Stop()
+	}
+	return w.fired
+}
+
+// timedOut returns the cause the watchdog canceled with, or nil.
+func (w *watchdog) timedOut() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.fired
+}
+
+func (w *watchdog) expire() {
+	w.mu.Lock()
+	if w.stopped || !w.armed || w.fired != nil {
+		w.mu.Unlock()
+		return
+	}
+	if rest := time.Until(w.deadline); rest > 0 {
+		w.timer.Reset(rest)
+		w.mu.Unlock()
+		return
+	}
+	cause := w.cause
+	w.fired = cause
+	w.mu.Unlock()
+	w.cancel(cause)
+}
+
+// watchedBody is the body of a watched download attempt: each read that
+// brings data restarts the watchdog's wait, a read that fails once the
+// watchdog fired fails with its timeout, and Close ends the watch.
+type watchedBody struct {
+	io.ReadCloser
+	wd     *watchdog
+	cancel context.CancelCauseFunc
+}
+
+func (b *watchedBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if n > 0 {
+		b.wd.progress()
+	}
+	if err != nil && err != io.EOF {
+		if timeout := b.wd.timedOut(); timeout != nil {
+			err = timeout
+		}
+	}
+	return n, err
+}
+
+func (b *watchedBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.wd.stop()
+	b.cancel(nil)
+	return err
 }
 
 // withoutURL drops the URL that net/http puts in the text of a failed

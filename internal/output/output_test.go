@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -584,11 +585,12 @@ func TestAssetsPlannerRecordsFirstRequests(t *testing.T) {
 
 // TestAssetsFetchThenSaveMatchesSave covers the two renders of the export
 // (Issue #274): a render planned, fetched and rendered again must end as the
-// same render asking Save directly does — the same answers, manifest, files,
-// warnings, counts and downloads, in the same order — for each way a request
-// ends: saved, saved under the content hash of another URL, failed, stopped by
-// the size limit, kept out by the pre-check, copied from the reuse source,
-// and a reused file over the limit downloaded instead.
+// same render asking Save directly does — the same answers, manifest and
+// warnings, in the same order, and the same files, counts and downloads, the
+// downloads in parallel and so in any order (Issue #275) — for each way a
+// request ends: saved, saved under the content hash of another URL, failed,
+// stopped by the size limit, kept out by the pre-check, copied from the reuse
+// source, and a reused file over the limit downloaded instead.
 func TestAssetsFetchThenSaveMatchesSave(t *testing.T) {
 	t.Parallel()
 
@@ -694,8 +696,8 @@ func TestAssetsFetchThenSaveMatchesSave(t *testing.T) {
 	if !slices.Equal(planned.warnings, direct.warnings) {
 		t.Fatalf("planned warnings = %q\ndirect warnings  = %q", planned.warnings, direct.warnings)
 	}
-	if !slices.Equal(planned.dl.calls, direct.dl.calls) {
-		t.Fatalf("planned downloads = %q\ndirect downloads  = %q", planned.dl.calls, direct.dl.calls)
+	if got, want := slices.Sorted(slices.Values(planned.dl.calls)), slices.Sorted(slices.Values(direct.dl.calls)); !slices.Equal(got, want) {
+		t.Fatalf("planned downloads = %q\ndirect downloads  = %q", got, want)
 	}
 	if !maps.Equal(planned.files, direct.files) {
 		t.Fatalf("planned files = %q\ndirect files  = %q", planned.files, direct.files)
@@ -1075,11 +1077,15 @@ type fakeDownload struct {
 
 type fakeDownloader struct {
 	content map[string]fakeDownload
-	calls   []string // each Download's URL and limit, in call order
+
+	mu    sync.Mutex
+	calls []string // each Download's URL and limit, in call order
 }
 
 func (f *fakeDownloader) Download(_ context.Context, srcURL string, limit int64, w io.Writer) (int64, string, error) {
+	f.mu.Lock()
 	f.calls = append(f.calls, fmt.Sprintf("%s (limit %d)", srcURL, limit))
+	f.mu.Unlock()
 	item, ok := f.content[srcURL]
 	if !ok {
 		return 0, "", errors.New("unexpected url")

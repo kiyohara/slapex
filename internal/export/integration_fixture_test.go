@@ -16,6 +16,8 @@ package export
 //   - integration_assert_test.go:     generic HTML / manifest / log helpers
 
 import (
+	"net/http"
+
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
@@ -41,6 +43,11 @@ type exportScenario struct {
 	// keeps the happy behaviour, so v1-07 / v1-08 fixtures are unaffected.
 	APIFaults   map[string]*endpointFault
 	AssetFaults map[string]*endpointFault
+
+	// BeforeAsset, when set, runs on each asset request before the server
+	// answers it, for the cases that hold the parallel downloads (Issue
+	// #275). It runs on the request's own goroutine.
+	BeforeAsset func(r *http.Request)
 }
 
 type fakeAsset struct {

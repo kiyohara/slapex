@@ -2,7 +2,8 @@ package main
 
 // Fake origins: one httptest server over TLS per workload origin. Each serves
 // /<id>/<bytes> with bytes of content, after the origin's handshake and
-// first-byte delays, at the origin's bandwidth, with its HTTP/2 stream limit.
+// first-byte delays, at the origin's bandwidth, with its HTTP/2 stream limit,
+// and redirects /redirect?to=<URL> to the URL after its first-byte delay.
 
 import (
 	"context"
@@ -14,10 +15,13 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/kiyohara/slapex/internal/slack"
 )
 
 // chunkSize is how much of a body the origin sends at a time.
@@ -63,14 +67,26 @@ func (o *fakeOrigin) url(id int, n int64) string {
 	return fmt.Sprintf("%s/%d/%d", o.srv.URL, id, n)
 }
 
+// redirect is where the origin redirects to target.
+func (o *fakeOrigin) redirect(target string) string {
+	return o.srv.URL + "/redirect?to=" + url.QueryEscape(target)
+}
+
 func (o *fakeOrigin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	firstByte := time.Duration(o.cfg.FirstByteMS) * time.Millisecond
+	if r.URL.Path == "/redirect" {
+		if sleep(r.Context(), firstByte) {
+			http.Redirect(w, r, r.URL.Query().Get("to"), http.StatusFound)
+		}
+		return
+	}
 	var id int
 	var n int64
 	if _, err := fmt.Sscanf(r.URL.Path, "/%d/%d", &id, &n); err != nil || n < 0 {
 		http.NotFound(w, r)
 		return
 	}
-	if !sleep(r.Context(), time.Duration(o.cfg.FirstByteMS)*time.Millisecond) {
+	if !sleep(r.Context(), firstByte) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
@@ -146,11 +162,11 @@ func certPool(origins []*fakeOrigin) *x509.CertPool {
 	return pool
 }
 
-// newTransport is a fresh copy of the transport slapex uses
-// (http.DefaultTransport), which trusts the fake origins and never goes
+// newTransport is a fresh copy of the transport slapex downloads with
+// (slack.NewDownloadTransport), which trusts the fake origins and never goes
 // through a proxy.
 func newTransport(pool *x509.CertPool) *http.Transport {
-	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr := slack.NewDownloadTransport()
 	tr.Proxy = nil
 	tr.TLSClientConfig = &tls.Config{RootCAs: pool}
 	return tr

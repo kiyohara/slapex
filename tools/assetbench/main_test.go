@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kiyohara/slapex/internal/lane"
 	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/slack"
 )
@@ -56,6 +57,16 @@ func us(p *int64) time.Duration {
 	return time.Duration(*p) * time.Microsecond
 }
 
+// strategyNamed is the strategy of that name.
+func strategyNamed(t *testing.T, name string) strategy {
+	t.Helper()
+	chosen, err := pickStrategies(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return chosen[0]
+}
+
 // TestUnpacedRun: the origins serve what the workload says, with its HTTP
 // versions, delays and bandwidth, and the unpaced strategy does not wait.
 func TestUnpacedRun(t *testing.T) {
@@ -63,12 +74,14 @@ func TestUnpacedRun(t *testing.T) {
 
 	b := startBench(tinyWorkload())
 	defer b.close()
-	res, trace, err := b.run(context.Background(), strategies[1], 1)
+	res, trace, err := b.run(context.Background(), strategyNamed(t, "unpaced"), 1, lane.Defaults)
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if res.saved != 3 || res.notSaved != 0 || res.requests != 3 || res.times.PacingWait != 0 {
-		t.Fatalf("result = %+v, want 3 assets saved with 3 requests and no pacing", res)
+	// The trace times the requests with the clock, so a pacing wait of no
+	// time can come out as a few microseconds.
+	if res.saved != 3 || res.notSaved != 0 || res.requests != 3 || res.peak != 1 || res.times.PacingWait >= time.Millisecond {
+		t.Fatalf("result = %+v, want 3 assets saved with 3 requests, one at a time, and no pacing", res)
 	}
 	recs := records(t, trace)
 	if len(recs) != 3 {
@@ -98,27 +111,74 @@ func TestUnpacedRun(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	writeReport(&out, b.w, []result{res})
-	for _, want := range []string{"Workload \"tiny\": 3 assets (0.4 MB) from 2 origins (Slack CDN 2 on 1, other 1 on 1); HTTP/2 origins 1, HTTP/1.1 origins 1.",
-		"| unpaced (serial, no pacing) | 1 |", "| 3 | 2 | 0 | 1.0× |"} {
+	writeReport(&out, b.w, lane.Defaults, []result{res})
+	for _, want := range []string{"Workload \"tiny\": 3 assets (0.4 MB) in 3 requests to 2 origins (Slack CDN 2 on 1, other 1 on 1); HTTP/2 origins 1, HTTP/1.1 origins 1.",
+		"| unpaced (serial, no pacing) | 1 |", "| 3 | 2 | 1 | ", " | 0 | 1.0× |"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("report misses %q:\n%s", want, out.String())
 		}
 	}
+	if strings.Contains(out.String(), "Lanes:") {
+		t.Errorf("report of a serial run tells the lane limits:\n%s", out.String())
+	}
 }
 
-// TestCurrentRunPaces: the current strategy starts the downloads 1 s apart.
-func TestCurrentRunPaces(t *testing.T) {
+// TestPacedRun: the paced strategy starts the downloads 1 s apart.
+func TestPacedRun(t *testing.T) {
 	t.Parallel()
 
 	b := startBench(tinyWorkload())
 	defer b.close()
-	res, _, err := b.run(context.Background(), strategies[0], 1)
+	res, _, err := b.run(context.Background(), strategyNamed(t, "paced"), 1, lane.Defaults)
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if res.saved != 3 || res.wall < 2*time.Second || res.times.PacingWait < time.Second {
-		t.Fatalf("result = %+v, want 3 assets over at least 2s, most of it pacing", res)
+	if res.saved != 3 || res.peak != 1 || res.wall < 2*time.Second || res.times.PacingWait < time.Second {
+		t.Fatalf("result = %+v, want 3 assets one at a time over at least 2s, most of it pacing", res)
+	}
+}
+
+// TestParallelRun: the parallel strategy downloads from the origins at the
+// same time, without pacing; the downloads of the HTTP/2 origin share one
+// connection, and a redirected asset is saved from where it was redirected
+// to.
+func TestParallelRun(t *testing.T) {
+	t.Parallel()
+
+	w := tinyWorkload()
+	gravatar := len(w.Origins)
+	w.Origins = append(w.Origins, Origin{Class: "gravatar", HTTP2: true})
+	w.Assets = append(w.Assets, Asset{Origin: 1, Kind: output.KindAvatar, Bytes: 9 * kib, Via: &gravatar})
+	b := startBench(w)
+	defer b.close()
+	res, trace, err := b.run(context.Background(), strategyNamed(t, "parallel"), 1, lane.Defaults)
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.saved != 4 || res.notSaved != 0 || res.requests != 5 || res.peak < 2 || res.times.PacingWait >= time.Millisecond {
+		t.Fatalf("result = %+v, want 4 assets saved with 5 requests, some at the same time, and no pacing", res)
+	}
+	if got := b.origins[0].conns.Load(); got != 1 {
+		t.Errorf("the HTTP/2 origin got %d connections, want 1", got)
+	}
+	var statuses []int
+	for _, rec := range records(t, trace) {
+		if rec.Kind == output.KindAvatar && rec.Bytes < 100*kib {
+			statuses = append(statuses, rec.Status)
+		}
+	}
+	if !slices.Equal(statuses, []int{http.StatusFound, http.StatusOK}) {
+		t.Errorf("the redirected avatar's requests got %v, want a redirect and 200", statuses)
+	}
+
+	var out bytes.Buffer
+	writeReport(&out, b.w, lane.Defaults, []result{res})
+	for _, want := range []string{"in 5 requests to 3 origins (Slack CDN 2 on 1, gravatar 1 on 1, other 2 on 1)",
+		"Lanes: 16 downloads at a time from an HTTP/2 origin, 6 from an HTTP/1.1 origin, 64 in all; 4 of 4 MiB or more from one origin.",
+		"| parallel (origin lanes, from #275) | 1 |"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("report misses %q:\n%s", want, out.String())
+		}
 	}
 }
 
@@ -159,6 +219,61 @@ func TestMaxStreams(t *testing.T) {
 	}
 }
 
+// TestTracedWorkload pins the preset to the trace of #272: its requests per
+// class and origin, HTTP versions and asset kinds.
+func TestTracedWorkload(t *testing.T) {
+	w := tracedWorkload()
+	if err := w.validate(); err != nil {
+		t.Fatal(err)
+	}
+	type class struct{ requests, origins int }
+	perClass := map[string]class{}
+	perOrigin := map[int]int{}
+	perKind := map[string]int{}
+	request := func(origin int) {
+		c := perClass[w.Origins[origin].Class]
+		if perOrigin[origin] == 0 {
+			c.origins++
+		}
+		c.requests++
+		perClass[w.Origins[origin].Class] = c
+		perOrigin[origin]++
+	}
+	for _, a := range w.Assets {
+		if a.Via != nil {
+			request(*a.Via)
+		}
+		request(a.Origin)
+		perKind[a.Kind]++
+	}
+	wantClass := map[string]class{"files.slack.com": {4, 1}, "Slack CDN": {15, 2}, "gravatar": {4, 1}, "other": {36, 23}}
+	if len(w.Assets) != 56 || len(w.Origins) != 27 || !maps.Equal(perClass, wantClass) {
+		t.Errorf("traced = %d assets from %d origins, per class %v; want 56 from 27, %v",
+			len(w.Assets), len(w.Origins), perClass, wantClass)
+	}
+	others := map[int]int{} // origins by their requests
+	http1 := 0
+	for i, o := range w.Origins {
+		if o.Class == "other" {
+			others[perOrigin[i]]++
+		}
+		if !o.HTTP2 {
+			http1++
+		}
+	}
+	if want := map[int]int{4: 1, 2: 10, 1: 12}; !maps.Equal(others, want) || http1 != 3 {
+		t.Errorf("third-party origins by requests = %v, HTTP/1.1 origins %d; want %v and 3", others, http1, want)
+	}
+	wantKind := map[string]int{output.KindOGImage: 19, output.KindAvatar: 13, output.KindServiceIcon: 14,
+		output.KindUploadThumb: 2, output.KindEmoji: 5, output.KindUploadOriginal: 2, output.KindWorkspaceIcon: 1}
+	if !maps.Equal(perKind, wantKind) {
+		t.Errorf("traced assets per kind = %v, want %v", perKind, wantKind)
+	}
+	if err := heavyWorkload().validate(); err != nil {
+		t.Errorf("heavy: %v", err)
+	}
+}
+
 // TestRecentWorkload pins the preset to the export measured for #272.
 func TestRecentWorkload(t *testing.T) {
 	w := recentWorkload()
@@ -188,7 +303,7 @@ func TestRecentWorkload(t *testing.T) {
 func TestWorkloadFile(t *testing.T) {
 	dir := t.TempDir()
 	var out bytes.Buffer
-	if err := run(&out, "small", true, "", 1, ""); err != nil {
+	if err := run(&out, "small", true, "", 1, "", lane.Defaults); err != nil {
 		t.Fatalf("print: %v", err)
 	}
 	path := filepath.Join(dir, "small.json")
@@ -204,6 +319,7 @@ func TestWorkloadFile(t *testing.T) {
 		"no-assets.json": `{"origins":[{"class":"other"}],"assets":[]}`,
 		"no-origin.json": `{"origins":[],"assets":[{"origin":0,"kind":"avatar","bytes":1}]}`,
 		"bad-kind.json":  `{"origins":[{"class":"other"}],"assets":[{"origin":0,"kind":"video","bytes":1}]}`,
+		"self-via.json":  `{"origins":[{"class":"other"}],"assets":[{"origin":0,"kind":"avatar","bytes":1,"via":0}]}`,
 		"not-json.json":  `origins: []`,
 	} {
 		path := filepath.Join(dir, name)
@@ -217,7 +333,7 @@ func TestWorkloadFile(t *testing.T) {
 	if _, err := loadWorkload("no-such-preset"); err == nil {
 		t.Error("loadWorkload(no-such-preset) succeeded")
 	}
-	if _, err := pickStrategies("current,parallel"); err == nil {
+	if _, err := pickStrategies("paced,current"); err == nil {
 		t.Error("pickStrategies accepted an unknown strategy")
 	}
 }

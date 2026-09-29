@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func envOf(m map[string]string) func(string) string {
@@ -176,5 +177,32 @@ func TestStopPhaseErasesLine(t *testing.T) {
 	p.StopPhase()
 	if !strings.HasSuffix(buf.String(), clearLine) {
 		t.Errorf("StopPhase did not erase the live line: %q", buf.String())
+	}
+}
+
+// TestMuteDropsLaterOutput: a muted printer writes nothing more, in either
+// mode, and its spinner stops.
+func TestMuteDropsLaterOutput(t *testing.T) {
+	for _, styled := range []bool{false, true} {
+		var buf bytes.Buffer
+		p := NewPrinter(&buf, styled)
+		p.StartPhase("Assets", "downloading assets ...")
+		p.Mute()
+		before := buf.String()
+
+		p.UpdatePhase("downloading assets ... 3")
+		p.Noticef("retrying download in 1s")
+		p.Infof("info")
+		p.Warnf("asset failed")
+		p.Errorf("slapex: context canceled")
+		p.Successf("done")
+		p.Plainf("plain")
+		p.EndPhase(StatusSuccess, "Assets", "3 saved", "")
+		p.StartPhase("Done", "writing ...")
+		time.Sleep(3 * spinnerInterval)
+		p.StopPhase()
+		if got := buf.String(); got != before {
+			t.Errorf("styled=%v: wrote %q after Mute", styled, strings.TrimPrefix(got, before))
+		}
 	}
 }

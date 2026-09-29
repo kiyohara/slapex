@@ -71,12 +71,18 @@ func TestNewDefaults(t *testing.T) {
 	}
 }
 
+// TestWithTransportKeepsTimeout: WithTransport sends the Web API calls and the
+// downloads through the given transport, and keeps the timeouts: the Web API
+// client's overall one, and the download watchdog's waits in place of one.
 func TestWithTransportKeepsTimeout(t *testing.T) {
 	t.Parallel()
 
-	calls := 0
+	var mu sync.Mutex
+	var calls []string
 	c := New(testToken, WithTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		calls++
+		mu.Lock()
+		calls = append(calls, req.URL.Host)
+		mu.Unlock()
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(authTestOK)),
@@ -86,11 +92,19 @@ func TestWithTransportKeepsTimeout(t *testing.T) {
 	if _, err := c.AuthTest(context.Background()); err != nil {
 		t.Fatalf("AuthTest: %v", err)
 	}
-	if calls != 1 {
-		t.Errorf("transport calls = %d, want 1", calls)
+	if _, _, err := c.Download(context.Background(), publicURL, 0, io.Discard); err != nil {
+		t.Fatalf("Download: %v", err)
 	}
-	if want := New(testToken).httpClient.Timeout; c.httpClient.Timeout != want {
-		t.Errorf("Timeout = %v, want the default %v", c.httpClient.Timeout, want)
+	if want := []string{"slack.com", "example.com"}; !slices.Equal(calls, want) {
+		t.Errorf("transport calls = %q, want %q", calls, want)
+	}
+	defaults := New(testToken)
+	if c.httpClient.Timeout != defaults.httpClient.Timeout || c.httpClient.Timeout == 0 {
+		t.Errorf("Web API Timeout = %v, want the default %v", c.httpClient.Timeout, defaults.httpClient.Timeout)
+	}
+	if c.dlClient.Timeout != 0 || c.headerWait != downloadHeaderWait || c.stallWait != downloadStallWait {
+		t.Errorf("download Timeout = %v, waits %v / %v; want none, and %v / %v",
+			c.dlClient.Timeout, c.headerWait, c.stallWait, downloadHeaderWait, downloadStallWait)
 	}
 }
 
@@ -910,7 +924,7 @@ func TestDownloadSendsAuthForSlackFiles(t *testing.T) {
 
 	var auth string
 	c := New(testToken)
-	c.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	c.dlClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		auth = req.Header.Get("Authorization")
 		return &http.Response{
 			StatusCode: http.StatusOK,
