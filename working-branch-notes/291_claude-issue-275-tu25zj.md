@@ -14,7 +14,8 @@ Issue #275(PF-03)。所要時間の最小化(#272)に向けて、asset の downl
 
 - 依存の #273(PF-01、PR #281)と #274(PF-02、PR #286)は merge 済み。推奨の前提の #245(PR #287)も merge 済み。main `7b22e92`(PR #290 の merge)から作業した。
 - 実装、test、benchmark、設計文書、decision log 0067 を済ませ、Issue の「検証」を実行した(「検証」)。反復実行で見つかった test の不安定さ 5 件の原因を直した(コード 2 件、test の前提 3 件。「反復実行で見つかった不安定さ」)。
-- 次は PR の作成(draft)と採番。
+- PR #291 を draft で作り、note を採番した。`progress.md` の PR 欄を反映した(P1)。
+- 次は CI を確かめてから review を subagent に委譲する(P2)。
 
 ## 決定事項
 
@@ -94,7 +95,7 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 
 ## 次にやること
 
-- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。
+- PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - CI を確かめてから review を subagent に委譲する(P2)。
 - merge 後: ユーザーが手元で PF-01 の trace を有効にして実 workspace を export し、集計を #272 にコメントする(手順は project の共有フォルダの `perf-trace/local-trace-prompt.md`)。
 
@@ -126,3 +127,6 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 - 2026-09-29: Issue #275 と #275 のコメント(PR #288 からの申し送り)、#272 の trace の集計、`progress.md`、関連コードを読んだ。依存は merge 済み。
 - 2026-09-29: pacing の撤去、`internal/lane`、並列の `Fetch` と通知の保持、download の client と watchdog、中断の処理、`tools/assetbench` の方式と workload を実装し、test、benchmark、設計文書、decision log 0067 を足した。Issue の「検証」を実行した(「検証」)。
 - 2026-09-29: 検証の反復実行で見つかった不安定さ 5 件(コード 2 件、test の前提 3 件)の原因を直し、決定的な test と変異の確認を足した。検証、E2E、中断の確認をやり直した。
+- 2026-09-29: PR #291 を draft で作成し(03:10Z)、note を採番した(`d09ae90`)。`progress.md` の PF-03 の PR 欄を `#291` にした(P1)。検証は「検証」のとおり。出力生成系 3 skill は、`update-sample-exports` と `update-readme-preview-screenshots` を適用せず、`update-readme-demo-gif` は該当するが cloud session では実行できないため「ローカルで要再生成」とした(「出力生成系 3 skill の適用判断」)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#291`)、PR description の note のファイル名参照 1 行(`draft_` → `291_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(複合行。`progress.md` の反映は同 skill で完了しない)。どちらも採番の後、`progress.md` の反映と合わせて書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(`update-sample-exports` と `update-readme-preview-screenshots` は「いつ使うか」に当たらない。`update-readme-demo-gif` は当たるが、cloud session では実行しない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。GitHub の操作はすべて組み込みの GitHub MCP tool で行い、`gh` は使っていない。
