@@ -5,7 +5,8 @@
 // self-pacing of roughly 1 request/sec per Web API method. Asset downloads
 // are not paced: they go through a client of their own, which the parallel
 // fetch of the assets bounds by origin instead (internal/lane, decision log
-// 0067).
+// 0067), and a 429 of one holds back the downloads of its origin (decision log
+// 0068).
 package slack
 
 import (
@@ -51,6 +52,14 @@ const (
 	downloadPublicTimeout = 5 * time.Minute
 )
 
+// A download of an asset that is not a Slack file fails at once when a 429
+// asks it to wait longer than downloadPublicMaxWait, the longest backoff
+// slapex waits of its own accord (maxBackoff), instead of waiting it out
+// (Issue #276, decision log 0068): a third-party host that asks for hours
+// would otherwise hold the export up for as long. The Web API calls and the
+// Slack files wait as long as Slack asks (decision log 0025).
+const downloadPublicMaxWait = maxBackoff
+
 // APIError is a Slack-level failure (HTTP 200 with ok: false).
 type APIError struct {
 	Method string
@@ -81,6 +90,9 @@ type Client struct {
 	// sleep performs pacing and retry waits. Tests replace it with a fake
 	// that records the requested durations without sleeping.
 	sleep func(context.Context, time.Duration) error
+	// waitLane waits, before each request of a download that the parallel
+	// asset fetch runs, until the download's lane lets it send (lane.Wait).
+	waitLane func(context.Context, time.Duration) (time.Duration, error)
 	// trace writes the HTTP trace (WithTrace, trace.go); nil when off.
 	trace *tracer
 	// Logf reports progress such as rate limit waits. Defaults to a no-op.
@@ -149,6 +161,7 @@ func New(token string, opts ...Option) *Client {
 		publicTimeout: downloadPublicTimeout,
 		lastCall:      map[string]time.Time{},
 		sleep:         sleepCtx,
+		waitLane:      lane.Wait,
 		Logf:          func(string, ...any) {},
 	}
 	for _, opt := range opts {
@@ -188,7 +201,7 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, out
 		return "", fmt.Errorf("slack api %s: %w", method, err)
 	}
 	var body []byte
-	err := c.withRetry(ctx, "api "+method, func() (*http.Response, error) {
+	err := c.withRetry(ctx, "api "+method, 0, func() (*http.Response, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+method,
 			strings.NewReader(params.Encode()))
 		if err != nil {
@@ -248,11 +261,21 @@ func (c *Client) noticef(ctx context.Context) func(format string, args ...any) {
 // Web API calls and Download share it; what names the request in the
 // progress lines, which go where noticef says.
 //
+// A download that the parallel asset fetch runs also answers to the lane of
+// its origin (lane.Run, Issue #276): it waits for the lane before each
+// request, gives its place in the lane up while it waits to retry, and tells
+// the lane of each 429 and each 200 response. A request that no lane runs,
+// such as a Web API call, waits for no lane and tells none.
+//
+// maxWait, when it is not 0, bounds the wait a 429 may ask for, not counting
+// the jitter added to it: a 429 whose Retry-After asks for longer, or a lane
+// whose 429s ask it to wait longer from now, fails the request at once.
+//
 // send builds and sends one request, and its error is retried. withRetry
 // closes every response it does not pass to accept. accept owns the body of
 // the 200 response it gets: it closes the body or hands it on, and its error
 // is retried like a network error.
-func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.Response, error), accept func(*http.Response) error) error {
+func (c *Client) withRetry(ctx context.Context, what string, maxWait time.Duration, send func() (*http.Response, error), accept func(*http.Response) error) error {
 	var lastErr error
 	logf := c.noticef(ctx)
 	// skipBackoff is set when a 429 already waited out Retry-After; the wait
@@ -270,16 +293,37 @@ func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.
 			}
 		}
 		skipBackoff = false
+		if _, err := c.waitLane(ctx, maxWait); err != nil {
+			var tooLong *lane.TooLongError
+			if errors.As(err, &tooLong) {
+				return waitTooLong(tooLong.Wait, maxWait)
+			}
+			return err
+		}
 		resp, err := send()
 		if err != nil {
 			lastErr = err
+			lane.Yield(ctx)
 			continue
 		}
 		switch {
 		case resp.StatusCode == http.StatusTooManyRequests:
 			resp.Body.Close()
 			lastErr = fmt.Errorf("rate limited (429)")
-			if wait, ok := retryAfter(resp); ok {
+			// asked is 0 without a usable Retry-After: the lane then halves
+			// its limit and waits for nothing. maxWait holds asked, so that
+			// a Retry-After of maxWait is waited out whatever its jitter.
+			asked, ok := retryAfter(resp)
+			wait := asked
+			if ok {
+				wait += jitter()
+			}
+			lane.RateLimited(ctx, asked, wait)
+			lane.Yield(ctx)
+			if ok {
+				if maxWait > 0 && asked > maxWait {
+					return waitTooLong(asked, maxWait)
+				}
 				logf("rate limited on %s, waiting %s as instructed by Slack", what, wait.Round(time.Second))
 				if err := c.sleep(ctx, wait); err != nil {
 					return err
@@ -290,6 +334,7 @@ func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.
 		case resp.StatusCode >= 500:
 			resp.Body.Close()
 			lastErr = fmt.Errorf("server error: HTTP %d", resp.StatusCode)
+			lane.Yield(ctx)
 			continue
 		case resp.StatusCode != http.StatusOK:
 			resp.Body.Close()
@@ -297,26 +342,41 @@ func (c *Client) withRetry(ctx context.Context, what string, send func() (*http.
 		}
 		if err := accept(resp); err != nil {
 			lastErr = err
+			lane.Yield(ctx)
 			continue
 		}
+		lane.Succeeded(ctx)
 		return nil
 	}
+}
+
+// waitTooLong is the error of a request that a 429 asks to wait for wait,
+// longer than maxWait. It rounds wait up to whole seconds, which a
+// Retry-After counts in, so that it never reads as maxWait itself.
+func waitTooLong(wait, maxWait time.Duration) error {
+	wait = (wait + time.Second - 1).Truncate(time.Second)
+	return fmt.Errorf("rate limited (429): the server asks to wait %s, over the %s limit", wait, maxWait)
 }
 
 // backoffWait is the exponential backoff before the given retry attempt
 // (1-based): 1s, 2s, 4s, ... capped at maxBackoff, plus up to 1s of jitter.
 func backoffWait(attempt int) time.Duration {
 	wait := min(time.Duration(1<<(attempt-1))*time.Second, maxBackoff)
-	return wait + time.Duration(rand.Int63n(int64(time.Second)))
+	return wait + jitter()
 }
 
-// retryAfter parses the Retry-After header, adding up to 1s of jitter. It
-// reports false when the header is missing or unusable; the caller then
-// falls back to exponential backoff.
+// jitter is the up to 1s that the retry adds to each of its waits.
+func jitter() time.Duration {
+	return time.Duration(rand.Int63n(int64(time.Second)))
+}
+
+// retryAfter parses the Retry-After header: the wait it asks for, to which
+// the caller adds jitter. It reports false when the header is missing or
+// unusable; the caller then falls back to exponential backoff.
 func retryAfter(resp *http.Response) (time.Duration, bool) {
 	if v := resp.Header.Get("Retry-After"); v != "" {
 		if secs, err := strconv.Atoi(v); err == nil && secs > 0 {
-			return time.Duration(secs)*time.Second + time.Duration(rand.Int63n(int64(time.Second))), true
+			return time.Duration(secs) * time.Second, true
 		}
 	}
 	return 0, false
@@ -373,14 +433,15 @@ func (c *Client) downloadRetry(ctx context.Context, srcURL string) (io.ReadClose
 		return nil, "", withoutURL(err)
 	}
 	// A Slack file may be large and share its connection with others for
-	// long: its attempts have no overall timeout.
-	timeout := c.publicTimeout
+	// long: its attempts have no overall timeout. It waits out any 429 as
+	// Slack asks.
+	timeout, maxWait := c.publicTimeout, downloadPublicMaxWait
 	if downloadNeedsAuth(srcURL) {
 		req.Header.Set("Authorization", "Bearer "+c.token)
-		timeout = 0
+		timeout, maxWait = 0, 0
 	}
 	var resp *http.Response
-	err = c.withRetry(ctx, "download", func() (*http.Response, error) {
+	err = c.withRetry(ctx, "download", maxWait, func() (*http.Response, error) {
 		return c.sendDownload(req, timeout)
 	}, func(ok *http.Response) error {
 		resp = ok

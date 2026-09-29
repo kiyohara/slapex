@@ -41,7 +41,22 @@ type Origin struct {
 	// MaxStreams is the HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS; 0 leaves
 	// Go's default.
 	MaxStreams int `json:"max_streams,omitempty"`
+	// LimitPerSec, when not 0, is a rate limit the origin keeps (Issue
+	// #276): a token bucket of LimitBurst requests, at least 1, that
+	// refills at LimitPerSec requests a second. RefuseForMS, when not 0, is
+	// a passing one: the origin refuses the requests that come in the
+	// RefuseForMS from RefuseAfterMS after a run starts. A refused request
+	// gets a 429 after the first-byte delay, with a Retry-After of
+	// RetryAfterS seconds when that is not 0.
+	LimitPerSec   float64 `json:"limit_per_sec,omitempty"`
+	LimitBurst    int     `json:"limit_burst,omitempty"`
+	RefuseAfterMS int     `json:"refuse_after_ms,omitempty"`
+	RefuseForMS   int     `json:"refuse_for_ms,omitempty"`
+	RetryAfterS   int     `json:"retry_after_s,omitempty"`
 }
+
+// rateLimited reports whether the origin refuses any request.
+func (o Origin) rateLimited() bool { return o.LimitPerSec > 0 || o.RefuseForMS > 0 }
 
 // Asset is one download.
 type Asset struct {
@@ -59,10 +74,12 @@ const (
 )
 
 var presets = map[string]func() Workload{
-	"traced": tracedWorkload,
-	"heavy":  heavyWorkload,
-	"recent": recentWorkload,
-	"small":  smallWorkload,
+	"traced":  tracedWorkload,
+	"heavy":   heavyWorkload,
+	"recent":  recentWorkload,
+	"small":   smallWorkload,
+	"limited": limitedWorkload,
+	"spike":   spikeWorkload,
 }
 
 var assetKinds = []string{
@@ -94,7 +111,8 @@ func (w Workload) validate() error {
 		return errors.New("the workload has no assets")
 	}
 	for i, o := range w.Origins {
-		if o.HandshakeMS < 0 || o.FirstByteMS < 0 || o.BytesPerSec < 0 || o.MaxStreams < 0 {
+		if o.HandshakeMS < 0 || o.FirstByteMS < 0 || o.BytesPerSec < 0 || o.MaxStreams < 0 ||
+			o.LimitPerSec < 0 || o.LimitBurst < 0 || o.RefuseAfterMS < 0 || o.RefuseForMS < 0 || o.RetryAfterS < 0 {
 			return fmt.Errorf("origin %d has a negative value", i)
 		}
 	}
@@ -330,6 +348,42 @@ func smallWorkload() Workload {
 	add(4, output.KindOGImage, 120*kib)
 	shuffle(small.Assets)
 	return small
+}
+
+// limitedWorkload is 160 thumbnails (20 to 76 KiB) from a files.slack.com
+// that keeps a rate limit (Issue #276): 8 requests a second, with a burst of
+// 8, over which it answers 429 with Retry-After: 1. It is the traced
+// workload's files.slack.com otherwise, whose 890 ms to the first byte lets
+// a lane of 16 downloads send about 18 requests a second. Slack does not
+// publish a rate limit of its file host: the limit and the Retry-After are
+// assumptions, to weigh how a lane gives its places back after a 429
+// (lane.Limits.RestoreAfter).
+func limitedWorkload() Workload {
+	w := thumbnailWorkload("limited")
+	w.Origins[0].LimitPerSec, w.Origins[0].LimitBurst, w.Origins[0].RetryAfterS = 8, 8, 1
+	return w
+}
+
+// spikeWorkload is the thumbnails of limitedWorkload from a files.slack.com
+// that keeps no rate limit but for a passing one: it refuses the requests
+// that come from 1.5 s to 3.5 s into the run with a 429 of Retry-After: 2. A
+// lane of 16 downloads sends its third 16 then.
+func spikeWorkload() Workload {
+	w := thumbnailWorkload("spike")
+	w.Origins[0].RefuseAfterMS, w.Origins[0].RefuseForMS, w.Origins[0].RetryAfterS = 1500, 2000, 2
+	return w
+}
+
+// thumbnailWorkload is 160 thumbnails from the traced workload's
+// files.slack.com.
+func thumbnailWorkload(name string) Workload {
+	w := Workload{Name: name}
+	b := builder{&w}
+	files := b.origin(tracedWorkload().Origins[0])
+	for i := range 160 {
+		b.add(files, output.KindUploadThumb, int64(20+(i*29)%57)*kib)
+	}
+	return w
 }
 
 // shuffle mixes the assets as an export meets them, the same way every time.

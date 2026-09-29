@@ -9,10 +9,14 @@
 //     as slapex downloaded before #275. The client no longer paces the
 //     downloads, so the benchmark waits in its place.
 //   - unpaced: one at a time, in the same order, without the pacing.
-//   - parallel: as slapex downloads from #275 (PF-03): the page's assets are
+//   - parallel: as slapex downloads from #276 (PF-04): the page's assets are
 //     planned, then fetched in parallel, in one lane per origin within the
-//     lane limits (internal/lane), which the -h2, -h1, -total, -large and
-//     -large-size flags set.
+//     lane limits (internal/lane), which the -h2, -h1, -total, -large,
+//     -large-size and -restore-after flags set. A 429 makes the lane of its
+//     origin wait out its Retry-After and halves the lane's limit.
+//   - parallel-275: as slapex downloaded from #275 (PF-03) until #276: the
+//     same lanes, but each download waits out its own 429s, in its place in
+//     the lane (lane.Detach).
 //
 // Every run traces its requests (slack.WithTrace), and the report splits each
 // run's wall time the way tools/tracereport does. The origins are models, not
@@ -23,9 +27,9 @@
 //
 //	docker compose run --rm dev go run ./tools/assetbench [-workload traced] [-strategies paced,unpaced,parallel] [-runs 1]
 //
-// -workload takes a preset (traced, heavy, recent, small) or a JSON file, and
-// -print-workload prints the workload as JSON to start a file from.
-// -trace-dir keeps the trace of every run, for tools/tracereport.
+// -workload takes a preset (traced, heavy, recent, small, limited, spike) or a
+// JSON file, and -print-workload prints the workload as JSON to start a file
+// from. -trace-dir keeps the trace of every run, for tools/tracereport.
 package main
 
 import (
@@ -38,6 +42,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -63,18 +68,21 @@ type strategy struct {
 	// (output.Assets.Fetch); otherwise each asset is downloaded when the page
 	// asks for it, one at a time.
 	parallel bool
+	// detach keeps the lanes out of the downloads' 429s (lane.Detach).
+	detach bool
 }
 
 var strategies = []strategy{
 	{name: "paced", about: "serial, 1 s pacing, before #275", pace: time.Second},
 	{name: "unpaced", about: "serial, no pacing"},
-	{name: "parallel", about: "origin lanes, from #275", parallel: true},
+	{name: "parallel", about: "origin lanes that wait out 429s, from #276", parallel: true},
+	{name: "parallel-275", about: "origin lanes, 429s per download, #275", parallel: true, detach: true},
 }
 
 func main() {
-	workload := flag.String("workload", "traced", "workload: a preset (traced, heavy, recent, small) or a JSON file")
+	workload := flag.String("workload", "traced", "workload: a preset (traced, heavy, recent, small, limited, spike) or a JSON file")
 	printWorkload := flag.Bool("print-workload", false, "print the workload as JSON and exit")
-	names := flag.String("strategies", "paced,unpaced,parallel", "comma-separated strategies to run: paced, unpaced, parallel")
+	names := flag.String("strategies", "paced,unpaced,parallel", "comma-separated strategies to run: paced, unpaced, parallel, parallel-275")
 	runs := flag.Int("runs", 1, "runs of each strategy")
 	traceDir := flag.String("trace-dir", "", "keep the HTTP trace of every run in this directory, for tools/tracereport")
 	limits := lane.Defaults
@@ -83,6 +91,7 @@ func main() {
 	flag.IntVar(&limits.Total, "total", limits.Total, "parallel: downloads at a time in all")
 	flag.IntVar(&limits.Large, "large", limits.Large, "parallel: large downloads at a time from one origin")
 	flag.Int64Var(&limits.LargeSize, "large-size", limits.LargeSize, "parallel: bytes from which a download of known size is large; 0 for none")
+	flag.IntVar(&limits.RestoreAfter, "restore-after", limits.RestoreAfter, "parallel: responses after a 429 that give an origin back a place of those the 429 took; 0 for none")
 	flag.Parse()
 	if err := run(os.Stdout, *workload, *printWorkload, *names, *runs, *traceDir, limits); err != nil {
 		fmt.Fprintln(os.Stderr, "assetbench:", err)
@@ -179,6 +188,7 @@ type result struct {
 	wall     time.Duration
 	times    slack.TraceTimes
 	requests int
+	limited  int // requests that got a 429
 	newConns int
 	peak     int           // the most requests at a time
 	longest  time.Duration // the longest request
@@ -194,6 +204,9 @@ func (b *bench) run(ctx context.Context, s strategy, n int, limits lane.Limits) 
 		return result{}, nil, err
 	}
 	defer os.RemoveAll(dir)
+	for _, o := range b.origins {
+		o.limiter.reset()
+	}
 	tr := newTransport(certPool(b.origins))
 	defer tr.CloseIdleConnections()
 	var trace bytes.Buffer
@@ -201,8 +214,11 @@ func (b *bench) run(ctx context.Context, s strategy, n int, limits lane.Limits) 
 	client := slack.New("", slack.WithTransport(tr), slack.WithTrace(&trace))
 	var dl output.Downloader = client
 	paced := &pacedDownloader{Downloader: client, pace: s.pace}
-	if s.pace > 0 {
+	switch {
+	case s.pace > 0:
 		dl = paced
+	case s.detach:
+		dl = detachedDownloader{client}
 	}
 	assets := output.NewAssets(ctx, dl, dir, maxAttachment)
 	assets.Lanes = limits
@@ -230,6 +246,9 @@ func (b *bench) run(ctx context.Context, s strategy, n int, limits lane.Limits) 
 			return result{}, nil, fmt.Errorf("trace: %w", err)
 		}
 		res.requests++
+		if rec.Status == http.StatusTooManyRequests {
+			res.limited++
+		}
 		if rec.GotConnUS != nil && !rec.ConnReused {
 			res.newConns++
 		}
@@ -288,6 +307,15 @@ func (d *pacedDownloader) Download(ctx context.Context, srcURL string, limit int
 	return d.Downloader.Download(ctx, srcURL, limit, w)
 }
 
+// detachedDownloader downloads with the context of each download detached from
+// its lane (lane.Detach): the download keeps its place in the lane while it
+// waits to retry, and its 429s leave the lane alone, as in #275.
+type detachedDownloader struct{ output.Downloader }
+
+func (d detachedDownloader) Download(ctx context.Context, srcURL string, limit int64, w io.Writer) (int64, string, error) {
+	return d.Downloader.Download(lane.Detach(ctx), srcURL, limit, w)
+}
+
 // peak is the most spans that overlap at one time.
 func peak(spans [][2]time.Time) int {
 	type edge struct {
@@ -315,26 +343,36 @@ func writeReport(w io.Writer, wl Workload, limits lane.Limits, results []result)
 		runtime.NumCPU(), wl.Name, describe(wl))
 	if slices.ContainsFunc(results, func(r result) bool { return r.strategy.parallel }) {
 		fmt.Fprintf(w, "Lanes: %d downloads at a time from an HTTP/2 origin, %d from an HTTP/1.1 origin, %d in all; "+
-			"%d of %s or more from one origin.\n", limits.HTTP2, limits.HTTP1, limits.Total, limits.Large, size(limits.LargeSize))
+			"%d of %s or more from one origin.", limits.HTTP2, limits.HTTP1, limits.Total, limits.Large, size(limits.LargeSize))
+		if slices.ContainsFunc(results, func(r result) bool { return r.strategy.parallel && !r.strategy.detach }) {
+			if limits.RestoreAfter > 0 {
+				fmt.Fprintf(w, " With parallel, a 429 halves its origin's limit, and every %d responses after it give a place back.",
+					limits.RestoreAfter)
+			} else {
+				fmt.Fprint(w, " With parallel, a 429 halves its origin's limit for good.")
+			}
+		}
+		fmt.Fprintln(w)
 	}
 	fmt.Fprintln(w, "The origins are in-process models (tools/assetbench), not measurements.")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "| Strategy | Run | Wall | Pacing wait | Retry wait | Connect | First byte | Transfer | Other | Requests | New conns | Peak | Longest | Not saved | Speedup |")
-	fmt.Fprintln(w, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+	fmt.Fprintln(w, "| Strategy | Run | Wall | Pacing wait | Retry wait | Connect | First byte | Transfer | Other | Requests | 429s | New conns | Peak | Longest | Not saved | Speedup |")
+	fmt.Fprintln(w, "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
 	base := results[0].wall
 	if i := slices.IndexFunc(results, func(r result) bool { return r.strategy.name == "paced" }); i >= 0 {
 		base = results[i].wall
 	}
 	for _, r := range results {
 		t := r.times
-		fmt.Fprintf(w, "| %s (%s) | %d | %s | %s | %s | %s | %s | %s | %s | %d | %d | %d | %s | %d | %.1f× |\n",
+		fmt.Fprintf(w, "| %s (%s) | %d | %s | %s | %s | %s | %s | %s | %s | %d | %d | %d | %d | %s | %d | %.1f× |\n",
 			r.strategy.name, r.strategy.about, r.run, seconds(r.wall), seconds(t.PacingWait), seconds(t.RetryWait),
 			seconds(t.Connect), seconds(t.FirstByte), seconds(t.Transfer), seconds(max(r.wall-t.Total(), 0)),
-			r.requests, r.newConns, r.peak, seconds(r.longest), r.notSaved, base.Seconds()/r.wall.Seconds())
+			r.requests, r.limited, r.newConns, r.peak, seconds(r.longest), r.notSaved, base.Seconds()/r.wall.Seconds())
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "\"Other\" is the wall time outside the requests: writing and hashing the files, and the client's own work. "+
-		"The requests of the parallel strategy overlap, so its parts add up to more than its wall time. "+
+		"The requests of the parallel strategies overlap, so their parts add up to more than their wall time. "+
+		"\"429s\" counts the requests an origin refused with 429. "+
 		"\"Peak\" is the most requests at a time, and \"Longest\" the longest request.")
 }
 
@@ -382,14 +420,21 @@ func describe(wl Workload) string {
 		parts = append(parts, fmt.Sprintf("%s %d on %d", class, g.requests, len(g.origins)))
 		maps.Copy(used, g.origins)
 	}
-	h2 := 0
+	h2, limited := 0, 0
 	for i := range used {
 		if wl.Origins[i].HTTP2 {
 			h2++
 		}
+		if wl.Origins[i].rateLimited() {
+			limited++
+		}
 	}
-	return fmt.Sprintf("%d assets (%.1f MB) in %d requests to %d origins (%s); HTTP/2 origins %d, HTTP/1.1 origins %d",
+	about := fmt.Sprintf("%d assets (%.1f MB) in %d requests to %d origins (%s); HTTP/2 origins %d, HTTP/1.1 origins %d",
 		len(wl.Assets), float64(total)/mib, requests, len(used), strings.Join(parts, ", "), h2, len(used)-h2)
+	if limited > 0 {
+		about += fmt.Sprintf("; rate-limited origins %d", limited)
+	}
+	return about
 }
 
 // classRank orders the classes as tools/tracereport does.

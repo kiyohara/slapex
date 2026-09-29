@@ -113,7 +113,7 @@ func TestUnpacedRun(t *testing.T) {
 	var out bytes.Buffer
 	writeReport(&out, b.w, lane.Defaults, []result{res})
 	for _, want := range []string{"Workload \"tiny\": 3 assets (0.4 MB) in 3 requests to 2 origins (Slack CDN 2 on 1, other 1 on 1); HTTP/2 origins 1, HTTP/1.1 origins 1.",
-		"| unpaced (serial, no pacing) | 1 |", "| 3 | 2 | 1 | ", " | 0 | 1.0× |"} {
+		"| unpaced (serial, no pacing) | 1 |", "| 3 | 0 | 2 | 1 | ", " | 0 | 1.0× |"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("report misses %q:\n%s", want, out.String())
 		}
@@ -175,7 +175,7 @@ func TestParallelRun(t *testing.T) {
 	writeReport(&out, b.w, lane.Defaults, []result{res})
 	for _, want := range []string{"in 5 requests to 3 origins (Slack CDN 2 on 1, gravatar 1 on 1, other 2 on 1)",
 		"Lanes: 16 downloads at a time from an HTTP/2 origin, 6 from an HTTP/1.1 origin, 64 in all; 4 of 4 MiB or more from one origin.",
-		"| parallel (origin lanes, from #275) | 1 |"} {
+		"| parallel (origin lanes that wait out 429s, from #276) | 1 |"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("report misses %q:\n%s", want, out.String())
 		}
@@ -319,6 +319,8 @@ func TestWorkloadFile(t *testing.T) {
 		"no-assets.json": `{"origins":[{"class":"other"}],"assets":[]}`,
 		"no-origin.json": `{"origins":[],"assets":[{"origin":0,"kind":"avatar","bytes":1}]}`,
 		"bad-kind.json":  `{"origins":[{"class":"other"}],"assets":[{"origin":0,"kind":"video","bytes":1}]}`,
+		"bad-limit.json": `{"origins":[{"class":"other","limit_per_sec":-1}],"assets":[{"origin":0,"kind":"avatar","bytes":1}]}`,
+		"bad-retry.json": `{"origins":[{"class":"other","refuse_for_ms":10,"retry_after_s":-1}],"assets":[{"origin":0,"kind":"avatar","bytes":1}]}`,
 		"self-via.json":  `{"origins":[{"class":"other"}],"assets":[{"origin":0,"kind":"avatar","bytes":1,"via":0}]}`,
 		"not-json.json":  `origins: []`,
 	} {
