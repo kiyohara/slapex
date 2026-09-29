@@ -17,7 +17,8 @@ Issue #275(PF-03)。所要時間の最小化(#272)に向けて、asset の downl
 - PR #291 を draft で作り、note を採番した。`progress.md` の PR 欄を反映した(P1)。
 - review(P2)の指摘 3 件(`[ask]` 1、`[imo]` 2)にすべて対応した(P4。「review の指摘への対応」)。`[ask]` はユーザーに判断を仰ぎ、回答を待つ間は推奨の案で進めた。
 - 再確認(P5 の 1 周目)で、`[imo]` の 2 件は修正確認済み(resolve 可)、`[ask]` の 1 件は decision log 0067 の 1 文の誤りで未対応とされた。その 1 文を直した(P4 の 2 周目)。
-- 次は、`[ask]` の上限の置き方へのユーザーの回答を待ち、回答に合わせて(別の案なら直してから)再確認を subagent に委譲する(P5 の 2 周目。reviewer も回答の後の再確認を求めている)。
+- `[ask]` の上限の置き方は、ユーザーが推奨の「5 分で打ち切る」を選んだ(2026-09-29 04:34Z、card)。実装は変えず、decision log 0067 に選択を記録した。
+- 次は CI を確かめてから、再確認を subagent に委譲する(P5 の 2 周目。反復の上限の最後の周)。
 
 ## 決定事項
 
@@ -56,7 +57,7 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 
 review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inline)に対応した。3 件とも採用して修正した(修正 commit `ffb9337`)。
 
-- `[ask]` 全体の timeout が無くなり、少しずつ返し続ける download(特に第三者 host の URL preview)が止まらない: ユーザーに判断を仰ぐ card を出した(2026-09-29 03:45Z。選択肢は「5 分で打ち切る」(推奨)、「記録だけ」、「全部に上限」)。回答を待つ間は推奨の案で進め、Slack の file(`downloadNeedsAuth`。認証 header を付ける判定と同じ)以外の download は、1 試行を 5 分(`downloadPublicTimeout`)で打ち切るようにした。watchdog に試行の上限(`limit`)を足した。5 分は main の 1 試行の上限(120 秒)より長く、5 MiB(URL preview 画像などの上限)を 5 分で運ぶのは約 17 KiB/s にあたる。ユーザーが別の案を選んだ場合は、その案に合わせて直す。
+- `[ask]` 全体の timeout が無くなり、少しずつ返し続ける download(特に第三者 host の URL preview)が止まらない: ユーザーに判断を仰ぐ card を出した(2026-09-29 03:45Z。選択肢は「5 分で打ち切る」(推奨)、「記録だけ」、「全部に上限」)。回答を待つ間は推奨の案で進め、Slack の file(`downloadNeedsAuth`。認証 header を付ける判定と同じ)以外の download は、1 試行を 5 分(`downloadPublicTimeout`)で打ち切るようにした。watchdog に試行の上限(`limit`)を足した。5 分は main の 1 試行の上限(120 秒)より長く、5 MiB(URL preview 画像などの上限)を 5 分で運ぶのは約 17 KiB/s にあたる。ユーザーは 04:34Z に推奨の案を選んだ。
 - `[imo]` 1xx の中間応答で応答 header の待ちが外れる: 提案の `Got1xxResponse` で張り直す方法ではなく、最初の byte(`GotFirstResponseByte`)で待ちを外すのをやめた。応答 header の待ちは、`Do` が返る(最終の応答 header が揃う)まで続く。1xx の header の合計の大きさを抑える `net/http` の制限は、`Got1xxResponse` を設定しないため外れない。header の途中で止まる server も同じく打ち切れる。redirect の次の request が接続を得るまでの時間を数えないよう、`GetConn` で待ちを止め、送り終えた時点(`WroteRequest`)で測り直す。
 - `[imo]` 1 回目の signal から `reset()` までに届いた 2 回目の signal が読まれない: 提案どおり、`reset()` を `mute()` より先に呼び、内側の select で 2 回目の signal を読んで終わるようにした。signal の channel の容量も 2 にし、watch が 1 回目を読む前に 2 回目が届いても落とさない。`TestInterruptEndsProcessBySignal` の 2 回の SIGINT の間の sleep は残した。Go の runtime は、届いて未処理の同じ signal に次の同じ signal をまとめるため(`runtime/sigqueue.go` の `sigsend`)、1 回目が届く前に 2 回目を送ると 1 回に数えられうる。これは watch の側では直せない。
 - 足した test: `TestInterruptWatchSecondSignal`(`mute()` が止まっていても `reset()` が先に済むこと、`reset()` の前に届いた 2 回目の signal で終わること)、`TestDownloadHeaderWaitPastFirstByte`(103 の後に何も返さない server を HTTP/1.1 と HTTP/2 で、header の途中で止まる server を HTTP/1.1 で打ち切る)、`TestDownloadHeaderWaitSkipsRedirectConnect`(redirect 先への接続に header の待ちより長くかかっても retry しない)、`TestDownloadPublicTimeout`(Slack の file 以外は少しずつ返し続けても 5 分の上限(test では 50 ms)で打ち切り、retry しない。Slack の file は打ち切らない)、`TestWatchdog` の試行の上限の規則。既定値の検査(`TestWithTransportKeepsTimeout`)に `publicTimeout` を足した。
@@ -119,7 +120,7 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
 - review(P2)と指摘への対応(P4)、再確認(P5 の 1 周目)と 2 周目の対応(P4)。(完了)
-- `[ask]` への回答(Slack 以外の download の時間の上限)を受けたら、その案に合わせ、CI を確かめてから再確認を subagent に委譲する(P5 の 2 周目。反復の上限の最後の周)。
+- CI を確かめてから、再確認を subagent に委譲する(P5 の 2 周目。反復の上限の最後の周)。
 - merge 後: ユーザーが手元で PF-01 の trace を有効にして実 workspace を export し、集計を #272 にコメントする(手順は project の共有フォルダの `perf-trace/local-trace-prompt.md`)。
 
 ## 検証
@@ -158,3 +159,4 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - 2026-09-29: 指摘 3 件を採用して修正した(P4、`ffb9337`。「review の指摘への対応(P4)」)。処置の内訳は、採用し修正した 3 件(`[ask]` はユーザーに確認中で、推奨の案で進めた。1xx は提案と別の方法で直した)。スコープ外とした指摘と follow-up 候補は無い。出力生成系 3 skill の判断は変わらない。検証は「検証」の末尾のとおり。
 - 2026-09-29: 再確認(P5 の 1 周目)を P2 と同じ subagent に委譲した。修正確認済み 2 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 1 件(`[ask]`。0067 の 1 文の誤り。reviewer は、ユーザーの回答の後に再確認するとした)。`gh` への fallback は無し。完了要約の fyi から follow-up 候補 1 件(第三者 host の 429 の `Retry-After` に上限が無い。PF-04 の候補)。
 - 2026-09-29: 未対応の 1 件を採用して修正した(P4 の 2 周目、`4a762f1`。0067 と `slack-api-usage.md` の記載だけで、コードは変えていない)。出力生成系 3 skill の判断は変わらない。
+- 2026-09-29: ユーザーが `[ask]` の card で推奨の「5 分で打ち切る」を選んだ(04:34Z)。実装は変えず、0067 の検討内容に選択を記録した。
