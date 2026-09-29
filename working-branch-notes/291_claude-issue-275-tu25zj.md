@@ -18,7 +18,8 @@ Issue #275(PF-03)。所要時間の最小化(#272)に向けて、asset の downl
 - review(P2)の指摘 3 件(`[ask]` 1、`[imo]` 2)にすべて対応した(P4。「review の指摘への対応」)。`[ask]` はユーザーに判断を仰ぎ、回答を待つ間は推奨の案で進めた。
 - 再確認(P5 の 1 周目)で、`[imo]` の 2 件は修正確認済み(resolve 可)、`[ask]` の 1 件は decision log 0067 の 1 文の誤りで未対応とされた。その 1 文を直した(P4 の 2 周目)。
 - `[ask]` の上限の置き方は、ユーザーが推奨の「5 分で打ち切る」を選んだ(2026-09-29 04:34Z、card)。実装は変えず、decision log 0067 に選択を記録した。
-- 次は CI を確かめてから、再確認を subagent に委譲する(P5 の 2 周目。反復の上限の最後の周)。
+- 再確認(P5 の 2 周目)で、指摘 3 件すべてが修正確認済み(resolve 可)になり、未対応は 0 件だった。review cycle `claude-code-a85f4c7-20260929031415` は完了した。
+- 終了時の状態(P6): head `cfb171f` の check runs は 5 件すべて success。この note だけの commit の push の後に、PR を Ready for review にする。残るのは人間の手番だけである(「次にやること」)。
 
 ## 決定事項
 
@@ -72,6 +73,12 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - 未対応 1 件: `[ask]`。実装と test は推奨の案どおりと確認された。decision log 0067 の「上限値の根拠」の「応答 header の待ち(30 秒)と合わせて 5 分半まで」が実装と合わない(5 分は応答 header の待ちを含む 1 試行全体の上限で、応答 header の前の打ち切りは retry するため、1 件で約 8 分になりうる)と指摘された。指摘どおりで、「5 分は接続、応答 header の待ち、body を含む 1 試行全体の上限」「1 件の時間は、429 の `Retry-After` の待ちを除いて、6 試行(各 5 分まで)と backoff(計約 31〜36 秒)まで」「少しずつ返し続ける host では、応答 header の待ちの失敗 5 回の後で約 8 分」に直した(`4a762f1`)。0067 の決定と `slack-api-usage.md` にも「接続と応答 header の待ちを含めて」を足した。reviewer は、上限の置き方へのユーザーの回答の後にこの thread を再確認するとしている。
 - follow-up 候補(この cycle の外。完了要約の fyi): download の retry は、第三者 host の 429 の `Retry-After` にも上限なく従う(main と同じ)。1 つの host が export を長く止めうるため、PF-04(#276)で扱う候補とする。#276 へのコメントや起票はユーザーの判断による。
 
+再確認(P5 の 2 周目、完了要約 https://github.com/kiyohara/slapex/pull/291#issuecomment-5883782167 、`Reviewed head` `cfb171f4e9e2f47c74c00a202ea74ae77c0a08e6`)の結果。
+
+- 修正確認済み 3 件(resolve 可): `[ask]` 少しずつ返し続ける download の時間の上限(この周で確認。0067 の記載の直しと、ユーザーの選択の記録)、`[imo]` 1xx の中間応答と `[imo]` 2 回目の signal(1 周目で確認済み)。スコープ外として確認済み 0、対応不要として確認済み 0、未対応 0。
+- 1 周目の後の commit(`4a762f1`、`292895f`、`cfb171f`)は、0067、`slack-api-usage.md`、この note だけを変え、Go の file は変えていないことも確かめられた。
+- follow-up 候補(429 の `Retry-After`)の記録先と、出力生成系 3 skill の判断は妥当とされた。
+
 ### 上限値の決定(benchmark)
 
 `docker compose run --rm dev go run ./tools/assetbench`(cloud session の dev container、go1.26.8、linux/amd64、4 CPUs、2026-09-29)。origin は in-process のモデルで、実測ではない。上限を 1 つずつ変えた結果、大きいファイルの件数と閾値、帯域を変えた場合の表は、decision log 0067 の「上限値の根拠」にある。
@@ -119,8 +126,11 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- review(P2)と指摘への対応(P4)、再確認(P5 の 1 周目)と 2 周目の対応(P4)。(完了)
-- CI を確かめてから、再確認を subagent に委譲する(P5 の 2 周目。反復の上限の最後の周)。
+- review(P2)と指摘への対応(P4)、再確認(P5 の 1 周目と 2 周目)と 2 周目の対応(P4)。(完了。未対応 0 件で review cycle を完了した)
+- 人間: resolve 可とした 3 thread を GitHub の UI で resolve する。
+- 人間: Codex の cross-review の後に PR を merge する。
+- 人間: demo GIF をローカルで再生成する(`update-readme-demo-gif`。cloud session では録画できない)。
+- 人間: 第三者 host の 429 の `Retry-After` の扱いを、PF-04(#276)へ引き継ぐかを判断する。
 - merge 後: ユーザーが手元で PF-01 の trace を有効にして実 workspace を export し、集計を #272 にコメントする(手順は project の共有フォルダの `perf-trace/local-trace-prompt.md`)。
 
 ## 検証
@@ -160,3 +170,5 @@ review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inli
 - 2026-09-29: 再確認(P5 の 1 周目)を P2 と同じ subagent に委譲した。修正確認済み 2 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 1 件(`[ask]`。0067 の 1 文の誤り。reviewer は、ユーザーの回答の後に再確認するとした)。`gh` への fallback は無し。完了要約の fyi から follow-up 候補 1 件(第三者 host の 429 の `Retry-After` に上限が無い。PF-04 の候補)。
 - 2026-09-29: 未対応の 1 件を採用して修正した(P4 の 2 周目、`4a762f1`。0067 と `slack-api-usage.md` の記載だけで、コードは変えていない)。出力生成系 3 skill の判断は変わらない。
 - 2026-09-29: ユーザーが `[ask]` の card で推奨の「5 分で打ち切る」を選んだ(04:34Z)。実装は変えず、0067 の検討内容に選択を記録した。
+- 2026-09-29: 再確認(P5 の 2 周目)を P2 と同じ subagent に委譲した。修正確認済み 3 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 0 件。`gh` への fallback は無し。訂正できなかった metadata の誤りは無し。review cycle を完了し、P6 に進んだ。
+- 2026-09-29: 終了時の状態(P6): head `cfb171f` の check runs は 5 件すべて success。note だけの commit を push した後に、PR を Ready for review にする。
