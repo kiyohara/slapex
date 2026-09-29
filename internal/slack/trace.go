@@ -12,14 +12,17 @@ package slack
 // scheme and host and by a hash of its URL keyed per client, which tells the
 // URLs of one trace apart but cannot be matched against a known URL.
 //
-// The tracing wraps the client's transport and sleeper and leaves withRetry
-// alone. call and Download put a requestTrace for the call or download in the
-// context (traceRequest); the transport starts a record for each request it is
-// handed, and the sleeper adds each wait to the call or download it belongs
-// to. A wait before the first request is its pacing wait; a later one is the
-// retry wait that the latest request's failure caused (a backoff or a
-// Retry-After). A record is therefore written when the next request starts or
-// when the call or download ends.
+// The tracing wraps the client's transport, its sleeper and its wait for a
+// download's lane (internal/lane), and leaves withRetry alone. call and
+// Download put a requestTrace for the call or download in the context
+// (traceRequest); the transport starts a record for each request it is handed,
+// and the sleeper and the wait for the lane add each wait to the call or
+// download it belongs to. A wait before the first request is its pacing wait:
+// a Web API method's pacing, or the wait for a download's lane while the lane
+// waits out another download's 429. A later wait is the retry wait that the
+// latest request's failure caused: a backoff or a Retry-After, and for a
+// download the wait for its lane after it. A record is therefore written when
+// the next request starts or when the call or download ends.
 //
 // slapex ends the trace with the run line (TraceRun, Client.TraceRun): when the
 // export started and how long it ran, which a summary sets the requests
@@ -74,7 +77,8 @@ type TraceRecord struct {
 	// Redirect counts the redirect hops before it within its attempt.
 	Attempt  int `json:"attempt"`
 	Redirect int `json:"redirect,omitempty"`
-	// PacingWaitUS is the pacing wait before the first attempt.
+	// PacingWaitUS is the pacing wait before the first attempt: a Web API
+	// method's pacing, or a download's wait for its lane (internal/lane).
 	PacingWaitUS int64 `json:"pacing_wait_us,omitempty"`
 	// Proto and Status come from the response. Error classes a failure of the
 	// request or of reading its body (errorClass, or timeout once the
@@ -100,7 +104,8 @@ type TraceRecord struct {
 	// transparent gzip decoding.
 	Bytes int64 `json:"bytes"`
 	// RetryWaitUS is the wait after this request failed, before the next
-	// attempt or before giving up: a backoff or a Retry-After.
+	// attempt or before giving up: a backoff or a Retry-After, and for a
+	// download the wait for its lane.
 	RetryWaitUS int64 `json:"retry_wait_us,omitempty"`
 }
 
@@ -197,8 +202,9 @@ func newTracer(w io.Writer) *tracer {
 	return &tracer{key: key, w: w}
 }
 
-// install wraps c's transports — the Web API calls' and the downloads' —
-// and its sleeper, once the options have set them.
+// install wraps c's transports — the Web API calls' and the downloads' —,
+// its sleeper and its wait for a download's lane, once the options have set
+// them.
 func (t *tracer) install(c *Client) {
 	for _, hc := range []*http.Client{c.httpClient, c.dlClient} {
 		next := hc.Transport
@@ -215,6 +221,14 @@ func (t *tracer) install(c *Client) {
 			r.waited(time.Since(start))
 		}
 		return err
+	}
+	waitLane := c.waitLane
+	c.waitLane = func(ctx context.Context, maxWait time.Duration) (time.Duration, error) {
+		waited, err := waitLane(ctx, maxWait)
+		if r, ok := ctx.Value(requestTraceKey{}).(*requestTrace); ok && waited > 0 {
+			r.waited(waited)
+		}
+		return waited, err
 	}
 }
 

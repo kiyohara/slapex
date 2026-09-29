@@ -3,7 +3,8 @@ package main
 // Fake origins: one httptest server over TLS per workload origin. Each serves
 // /<id>/<bytes> with bytes of content, after the origin's handshake and
 // first-byte delays, at the origin's bandwidth, with its HTTP/2 stream limit,
-// and redirects /redirect?to=<URL> to the URL after its first-byte delay.
+// and redirects /redirect?to=<URL> to the URL after its first-byte delay. An
+// origin with a rate limit answers the requests it refuses with 429 instead.
 
 import (
 	"context"
@@ -28,14 +29,16 @@ import (
 const chunkSize = 32 * kib
 
 type fakeOrigin struct {
-	cfg   Origin
-	srv   *httptest.Server
-	link  *link
-	conns atomic.Int64 // connections accepted
+	cfg     Origin
+	srv     *httptest.Server
+	link    *link
+	limiter *limiter
+	conns   atomic.Int64 // connections accepted
 }
 
 func startOrigin(cfg Origin) *fakeOrigin {
-	o := &fakeOrigin{cfg: cfg, link: &link{bytesPerSec: cfg.BytesPerSec}}
+	o := &fakeOrigin{cfg: cfg, link: &link{bytesPerSec: cfg.BytesPerSec}, limiter: &limiter{cfg: cfg}}
+	o.limiter.reset()
 	srv := httptest.NewUnstartedServer(o)
 	srv.EnableHTTP2 = cfg.HTTP2
 	handshake := time.Duration(cfg.HandshakeMS) * time.Millisecond
@@ -74,6 +77,15 @@ func (o *fakeOrigin) redirect(target string) string {
 
 func (o *fakeOrigin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	firstByte := time.Duration(o.cfg.FirstByteMS) * time.Millisecond
+	if !o.limiter.allow() {
+		if sleep(r.Context(), firstByte) {
+			if o.cfg.RetryAfterS > 0 {
+				w.Header().Set("Retry-After", strconv.Itoa(o.cfg.RetryAfterS))
+			}
+			w.WriteHeader(http.StatusTooManyRequests)
+		}
+		return
+	}
 	if r.URL.Path == "/redirect" {
 		if sleep(r.Context(), firstByte) {
 			http.Redirect(w, r, r.URL.Query().Get("to"), http.StatusFound)
@@ -110,6 +122,46 @@ func (o *fakeOrigin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rc.Flush()
 		sent += size
 	}
+}
+
+// limiter is an origin's rate limit (Origin.LimitPerSec and RefuseForMS). It
+// starts afresh at reset, which each run starts with.
+type limiter struct {
+	cfg Origin
+
+	mu      sync.Mutex
+	started time.Time // the reset
+	tokens  float64
+	filled  time.Time // when tokens was last refilled
+}
+
+func (l *limiter) reset() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.started = time.Now()
+	l.tokens = float64(max(l.cfg.LimitBurst, 1))
+	l.filled = l.started
+}
+
+// allow reports whether the origin serves a request that comes now.
+func (l *limiter) allow() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	since := now.Sub(l.started)
+	refuseFrom := time.Duration(l.cfg.RefuseAfterMS) * time.Millisecond
+	if l.cfg.RefuseForMS > 0 && since >= refuseFrom && since < refuseFrom+time.Duration(l.cfg.RefuseForMS)*time.Millisecond {
+		return false
+	}
+	if l.cfg.LimitPerSec > 0 {
+		l.tokens = min(float64(max(l.cfg.LimitBurst, 1)), l.tokens+now.Sub(l.filled).Seconds()*l.cfg.LimitPerSec)
+		l.filled = now
+		if l.tokens < 1 {
+			return false
+		}
+		l.tokens--
+	}
+	return true
 }
 
 // link is an origin's bandwidth. The chunks of all its responses take turns,
