@@ -66,6 +66,7 @@ token type による主な違い:
 - `Retry-After` の無い 429、一時的な 5xx、ネットワークエラーは指数バックオフ(初回 1 秒、上限 60 秒、jitter 付き)で再試行する。
 - 同一リクエストの再試行は最大 5 回とする。超過した場合、メッセージ取得系は exit code `4` で失敗し、個別 asset は失敗として記録して継続する(`cli-interface.md`)。
 - 通常時も同一 method の呼び出しは 1 req/sec を目安に自主的に平準化する(公式推奨に従う)。
+- asset の download は平準化しない。同時に取得する数を origin ごとに抑える(「file / asset の取得」、`decision-log/0067-parallel-asset-lanes.md`)。
 - rate limit 待機中は、待機理由とおおよその待機時間を進捗表示する(`usage-flow.md` の「処理対象の表示」と同じく stderr)。
 
 ## user 解決
@@ -108,6 +109,13 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
 - 削除済みと Free plan の制限で非表示のファイルを除き、外部サービス連携のファイル(`is_external` が true)と、download URL(`url_private_download` / `url_private`)を持たないファイルは、ファイル本体(画像では original)を download せず、サイズ上限の判定もせず、`.cache/assets_manifest.json` にも記録しない。外部サービス連携のファイルの `url_private` / `url_private_download` は Slack ではなく外部サービスを指し、download すると外部サービスが返す page(ログイン画面など)を保存しうるためである(`decision-log/0017-uploaded-image-assets.md` の 2026-09-27 の追記)。ただし、thumbnail のある画像は、thumbnail を他の画像と同じく保存し、`upload_thumb` として記録する(取得に失敗した場合の status は `failed`)。
 - これらのファイルの表示は、`html-rendering.md` の「画像と添付ファイルの表示」の、ファイル本体を download しないファイルの表とその下の注記を参照する。
 - asset の download にも上記のリトライ方針を適用する。失敗した asset は HTML 上で置換表示にし、export 全体は継続する。
+- asset は、描画から求めた取得の計画(`decision-log/0064-two-pass-asset-planning.md`)を並列に取得する。`--reuse-cache` の copy で済むものを計画の順に先に済ませ、残りを origin(scheme + host + port)ごとの lane で download する(`decision-log/0067-parallel-asset-lanes.md`)。
+  - 各 lane は最初の 1 件だけを先に出し、その download が接続を得てから残りを出す。残りはその接続を共有する(HTTP/2 の場合)。
+  - 同時に download する数は、接続が HTTP/2 の origin で 16 件、それ以外の origin で 6 件、全体で 64 件までとする。
+  - lane の中は、サイズが分かるもの(Slack の file の原本と添付)を大きい順に始め、サイズの分からないものをその後に計画の順に始める。4 MiB 以上のものは、lane あたり同時 4 件までとする。
+- download の試行は、request を送り終えてから最終の応答 header まで 30 秒(1xx の中間応答では待ちを止めない)、body が 1 byte も進まないまま 30 秒経つと打ち切る。Slack の file(`files.slack.com`)は、全体の所要時間では打ち切らない。それ以外の asset(URL preview 画像、アイコン、avatar、emoji など)は、1 試行が、接続と応答 header の待ちを含めて 5 分を超えると打ち切る。応答 header の前の打ち切りは、ネットワークエラーと同じく再試行する。body の途中の失敗は、5 分の打ち切りを含めて再試行せず、その asset の失敗とする。Web API の呼び出しは、従来どおり 1 回 120 秒で打ち切る。
+- 並列に取得しても、retry と rate limit 待機の通知、asset の警告は、計画の順(直列に取得した場合と同じ順)に stderr へ出す。そのため、後ろの asset の通知は、前の asset の取得が終わるまで出ないことがある。
+- export の実行中に SIGINT(Ctrl-C)または SIGTERM を受けると、新しい download を始めず、進行中の download を止めて一時ファイルを消す(`cli-interface.md` の「exit code」)。
 
 ## 取得の整合性
 

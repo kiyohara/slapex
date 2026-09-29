@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"os"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func envOf(m map[string]string) func(string) string {
@@ -176,5 +178,127 @@ func TestStopPhaseErasesLine(t *testing.T) {
 	p.StopPhase()
 	if !strings.HasSuffix(buf.String(), clearLine) {
 		t.Errorf("StopPhase did not erase the live line: %q", buf.String())
+	}
+}
+
+// TestMuteDropsLaterOutput: a muted printer writes nothing more, in either
+// mode, and its spinner stops.
+func TestMuteDropsLaterOutput(t *testing.T) {
+	for _, styled := range []bool{false, true} {
+		w := &gateWriter{}
+		p := NewPrinter(w, styled)
+		p.StartPhase("Assets", "downloading assets ...")
+		p.Mute()
+
+		p.UpdatePhase("downloading assets ... 3")
+		p.Noticef("retrying download in 1s")
+		p.Infof("info")
+		p.Warnf("asset failed")
+		p.Errorf("slapex: context canceled")
+		p.Successf("done")
+		p.Plainf("plain")
+		p.EndPhase(StatusSuccess, "Assets", "3 saved", "")
+		p.StartPhase("Done", "writing ...")
+		// A spinner frame that was being drawn as Mute came has ended by now.
+		time.Sleep(spinnerInterval / 2)
+		before := w.writes()
+		time.Sleep(3 * spinnerInterval)
+		p.StopPhase()
+		got := w.writes()
+		if len(got) != len(before) {
+			t.Errorf("styled=%v: went on writing %q after Mute", styled, got[len(before):])
+		}
+		// Only the phase started before Mute was drawn.
+		for _, s := range got {
+			if !strings.Contains(s, "downloading assets ...") || strings.Contains(s, "... 3") {
+				t.Errorf("styled=%v: wrote %q after Mute", styled, s)
+			}
+		}
+	}
+}
+
+// TestMuteWithStuckWrite: Mute does not wait for a write that cannot go on,
+// as one to a stderr nobody reads, and what comes after it returns at once
+// too. The stuck write ends in its own time, and nothing is written after it:
+// the spinner, which came to draw while the write was stuck, draws no more.
+func TestMuteWithStuckWrite(t *testing.T) {
+	for _, styled := range []bool{false, true} {
+		w := &gateWriter{hold: "stuck", held: make(chan struct{}), release: make(chan struct{})}
+		release := sync.OnceFunc(func() { close(w.release) })
+		defer release()
+		p := NewPrinter(w, styled)
+		p.StartPhase("Assets", "downloading assets ...")
+		warned := make(chan struct{})
+		go func() {
+			p.Warnf("stuck")
+			close(warned)
+		}()
+		waitFor(t, w.held, "the write to get stuck")
+		time.Sleep(2 * spinnerInterval)
+		muted := make(chan struct{})
+		go func() {
+			p.Mute()
+			p.UpdatePhase("downloading assets ... 3")
+			p.Noticef("retrying download in 1s")
+			p.Warnf("asset failed")
+			p.Plainf("plain")
+			p.EndPhase(StatusSuccess, "Assets", "3 saved", "")
+			p.StartPhase("Done", "writing ...")
+			p.StopPhase()
+			close(muted)
+		}()
+		waitFor(t, muted, "Mute and what comes after it to return while a write is stuck")
+		release()
+		waitFor(t, warned, "the stuck write to end")
+		time.Sleep(3 * spinnerInterval)
+
+		writes := w.writes()
+		n := len(writes)
+		ok := n >= 1 && strings.Contains(writes[n-1], "stuck")
+		if styled {
+			// The phase line is drawn again under the warning.
+			ok = n >= 2 && strings.Contains(writes[n-2], "stuck") && strings.Contains(writes[n-1], "downloading assets ...")
+		}
+		if !ok {
+			t.Errorf("styled=%v: wrote %q, want the stuck warning last", styled, writes)
+		}
+	}
+}
+
+// gateWriter records the writes to it. With hold set, the write that contains
+// hold waits until release is closed, as one to a stderr nobody reads does.
+type gateWriter struct {
+	hold    string
+	held    chan struct{} // closed when the write with hold starts
+	release chan struct{}
+
+	mu   sync.Mutex
+	done []string
+}
+
+func (w *gateWriter) Write(b []byte) (int, error) {
+	if w.hold != "" && bytes.Contains(b, []byte(w.hold)) {
+		close(w.held)
+		<-w.release
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.done = append(w.done, string(b))
+	return len(b), nil
+}
+
+func (w *gateWriter) writes() []string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return append([]string(nil), w.done...)
+}
+
+// waitFor fails the test when ch is not closed in time.
+func waitFor(t *testing.T, ch <-chan struct{}, what string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("timed out waiting for %s", what)
 	}
 }

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -29,7 +28,10 @@ func runDemo(opts export.Options, printer *ui.Printer, getenv func(string) strin
 	sc := demoScenario(getenv)
 	printer.Noticef("Running the bundled demo fixture (#%s, fictional data, no Slack token used).", sc.ChannelName)
 
-	dir, err := demo.Run(context.Background(), sc, opts, printer)
+	// Ctrl-C stops the demo's export as it does a normal run's (interrupt.go).
+	ctx, endWatch := watchInterrupts(printer)
+	dir, err := demo.Run(ctx, sc, opts, printer)
+	endWatch()
 	if err != nil {
 		printer.StopPhase()
 		return reportRunError(printer, err)

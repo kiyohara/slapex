@@ -3,7 +3,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -80,11 +79,15 @@ func run() int {
 	client := newSlackClient(token, os.Getenv, httpTrace.clientOptions()...)
 	client.Logf = printer.Noticef
 
+	// Ctrl-C from here on stops the export and ends the process by the
+	// signal (interrupt.go).
+	ctx, endWatch := watchInterrupts(printer)
 	// The trace ends with the run line, the export's start and duration, which
 	// its summary sets the requests against (tools/tracereport).
 	runStart := time.Now()
-	dir, err := export.Run(context.Background(), client, exportOpts, printer)
+	dir, err := export.Run(ctx, client, exportOpts, printer)
 	client.TraceRun(runStart)
+	endWatch()
 	if err != nil {
 		// A phase may still be live when Run fails; clear its spinner line so
 		// the error report starts on a clean line.

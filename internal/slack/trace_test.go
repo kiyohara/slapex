@@ -408,48 +408,72 @@ func TestTraceRun(t *testing.T) {
 	}
 }
 
-// TestTraceTimeoutClass: a request that runs out the client's timeout is a
-// timeout, whether it was waiting for the headers or reading the body. With
-// the trace on, http.Client cancels a request both through its context and
-// through Request.Cancel (it does not know traceTransport), and the transport
-// reports whichever it notices first.
+// TestTraceTimeoutClass: a request that runs out of time is a timeout,
+// whether it was waiting for the headers or reading the body. A Web API call
+// runs out of the client's timeout: with the trace on, http.Client cancels a
+// request both through its context and through Request.Cancel (it does not
+// know traceTransport), and the transport reports whichever it notices first.
+// A download runs out of its watchdog's waits (sendDownload), which cancel its
+// context: over HTTP/1.1 the transport names the timeout, over HTTP/2 the
+// cancellation.
 func TestTraceTimeoutClass(t *testing.T) {
 	t.Parallel()
 
-	release := make(chan struct{})
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/stalled-body" {
-			w.Header().Set("Content-Length", "10")
-			w.WriteHeader(http.StatusOK)
-			w.(http.Flusher).Flush()
-		}
-		select {
-		case <-r.Context().Done():
-		case <-release:
-		}
-	}))
-	defer srv.Close()
-	defer close(release)
+	for _, http2 := range []bool{false, true} {
+		t.Run(fmt.Sprintf("http2=%v", http2), func(t *testing.T) {
+			t.Parallel()
 
-	w := &traceWriter{}
-	c := New(testToken, WithSleeper(shortSleep), WithTransport(srv.Client().Transport), WithTrace(w))
-	c.httpClient.Timeout = 20 * time.Millisecond
-	// Each download waiting for the headers makes 6 attempts; a download
-	// whose body stalls makes 1.
-	for _, path := range []string{"/stalled", "/stalled", "/stalled", "/stalled-body", "/stalled-body", "/stalled-body",
-		"/stalled-body", "/stalled-body", "/stalled-body", "/stalled-body", "/stalled-body", "/stalled-body"} {
-		if _, _, err := c.Download(context.Background(), srv.URL+path, 0, io.Discard); err == nil {
-			t.Fatalf("Download(%s) succeeded, want a timeout", path)
-		}
-	}
-	recs := w.records(t)
-	if len(recs) != 3*(maxRetries+1)+9 {
-		t.Fatalf("trace has %d lines, want %d", len(recs), 3*(maxRetries+1)+9)
-	}
-	for i, rec := range recs {
-		if rec.Error != "timeout" {
-			t.Errorf("line %d (status %d) error = %q, want timeout", i, rec.Status, rec.Error)
-		}
+			release := make(chan struct{})
+			srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/stalled-body" {
+					w.Header().Set("Content-Length", "10")
+					w.WriteHeader(http.StatusOK)
+					w.(http.Flusher).Flush()
+				}
+				select {
+				case <-r.Context().Done():
+				case <-release:
+				}
+			}))
+			srv.EnableHTTP2 = http2
+			srv.StartTLS()
+			defer srv.Close()
+			defer close(release)
+
+			w := &traceWriter{}
+			newClient := func(headerWait time.Duration) *Client {
+				c := New(testToken, WithBaseURL(srv.URL+"/api/"), WithSleeper(shortSleep),
+					WithTransport(srv.Client().Transport), WithTrace(w))
+				c.httpClient.Timeout = 20 * time.Millisecond
+				c.headerWait, c.stallWait = headerWait, 20*time.Millisecond
+				return c
+			}
+			// A call or a download waiting for the headers makes 6 attempts;
+			// a download whose body stalls makes 1. Those downloads wait long
+			// for the headers, which a busy machine may be slow to bring.
+			c := newClient(20 * time.Millisecond)
+			if _, err := c.AuthTest(context.Background()); err == nil {
+				t.Fatal("AuthTest succeeded, want a timeout")
+			}
+			if _, _, err := c.Download(context.Background(), srv.URL+"/stalled", 0, io.Discard); err == nil {
+				t.Fatal("Download(/stalled) succeeded, want a timeout")
+			}
+			c = newClient(10 * time.Second)
+			for range 6 {
+				if _, _, err := c.Download(context.Background(), srv.URL+"/stalled-body", 0, io.Discard); err == nil {
+					t.Fatal("Download(/stalled-body) succeeded, want a timeout")
+				}
+			}
+			recs := w.records(t)
+			if want := 2*(maxRetries+1) + 6; len(recs) != want {
+				t.Fatalf("trace has %d lines, want %d", len(recs), want)
+			}
+			for i, rec := range recs {
+				if rec.Error != "timeout" {
+					t.Errorf("line %d (%s, status %d) error = %q, want timeout", i, rec.Type, rec.Status, rec.Error)
+				}
+			}
+		})
 	}
 }
 

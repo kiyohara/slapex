@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-10
-- 最終更新日: 2026-09-28
+- 最終更新日: 2026-09-29
 - 関連: `doc/design/slack-api-usage.md`, `doc/design/output-format.md`, `doc/design/decision-log/0009-user-managed-slack-app.md`
 
 ## 背景
@@ -52,6 +52,10 @@
 ## 追記(2026-09-28)
 
 「file は message 内 file object を正とし、`files.info` は欠損時の補完のみ」のうち、`files.info` による補完は仕様から外した(`0066-no-files-info-fallback.md`)。Slack Connect channel のファイルでも `conversations.history` / `conversations.replies` は完全な file object を返し、情報を省いた file object(`"file_access": "check_file_info"`)が届くのは Events API / RTM API で file の event が push される場合だけであることを、Slack の文書で確かめたためである。file の情報は message 内 file object だけから得る。使用 API の一覧と必要な scope は変わらない。
+
+## 追記(2026-09-29)
+
+「通常時は 1 req/sec 目安の平準化を行う」は、Web API の method ごとの呼び出しに限る。asset の download は平準化せず、origin ごとの同時数で抑えて並列に取得する(`0067-parallel-asset-lanes.md`)。download の平準化は、この方針を PoC(PR #11)で download にも当てたものだったが、Slack は file の download と CDN の制限を公表しておらず、第三者 host には Slack の制限が関係しないためである。429 + `Retry-After` の遵守と指数バックオフは、download にもそのまま適用する。
 
 ## 後から見直す条件
 

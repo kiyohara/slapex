@@ -5,7 +5,8 @@ package export
 // endpoints the exporter calls, plus the asset paths the scenario declares. It
 // records a per-path request count (Count) and the asset paths in request order
 // (AssetRequests) that the cases assert on, injects the scenario's APIFaults /
-// AssetFaults ahead of the normal handlers, and returns conversations.history
+// AssetFaults ahead of the normal handlers, runs its BeforeAsset hook on each
+// asset request, and returns conversations.history
 // unfiltered — the range narrowing is the client's job, so the tests exercise
 // it against raw responses.
 //
@@ -193,6 +194,9 @@ func (f *fakeSlackServer) handleAsset(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	f.assets = append(f.assets, r.URL.Path)
 	f.mu.Unlock()
+	if f.sc.BeforeAsset != nil {
+		f.sc.BeforeAsset(r)
+	}
 	if resp := f.nextFault(f.sc.AssetFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
 		return
 	}

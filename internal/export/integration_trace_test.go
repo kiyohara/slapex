@@ -84,18 +84,26 @@ func TestRunIntegrationHTTPTrace(t *testing.T) {
 	}
 
 	// The trace changes nothing else.
-	a, b := exportFiles(t, plain), exportFiles(t, traced)
+	assertSameExport(t, "the run with the trace", plain, traced)
+}
+
+// assertSameExport checks that the run named what wrote the same files and
+// the same log as want, apart from what differs between any two runs
+// (exportFiles, normalizedLogs).
+func assertSameExport(t *testing.T, what string, want, got exportRunResult) {
+	t.Helper()
+	a, b := exportFiles(t, want), exportFiles(t, got)
 	if !slices.Equal(slices.Sorted(maps.Keys(a)), slices.Sorted(maps.Keys(b))) {
-		t.Errorf("files with the trace differ:\nwithout: %v\nwith:    %v",
+		t.Errorf("files of %s differ:\nwant: %v\ngot:  %v", what,
 			slices.Sorted(maps.Keys(a)), slices.Sorted(maps.Keys(b)))
 	}
 	for name, content := range a {
 		if other, ok := b[name]; ok && other != content {
-			t.Errorf("%s differs with the trace:\nwithout:\n%s\nwith:\n%s", name, content, other)
+			t.Errorf("%s of %s differs:\nwant:\n%s\ngot:\n%s", name, what, content, other)
 		}
 	}
-	if a, b := normalizedLogs(plain), normalizedLogs(traced); !slices.Equal(a, b) {
-		t.Errorf("logs with the trace differ:\nwithout:\n%s\nwith:\n%s", strings.Join(a, "\n"), strings.Join(b, "\n"))
+	if a, b := normalizedLogs(want), normalizedLogs(got); !slices.Equal(a, b) {
+		t.Errorf("log of %s differs:\nwant:\n%s\ngot:\n%s", what, strings.Join(a, "\n"), strings.Join(b, "\n"))
 	}
 }
 

@@ -1,8 +1,9 @@
 package main
 
 // Workloads: the assets a benchmark run downloads, and the origins they come
-// from. The presets are modeled on the exports measured for #272; a JSON file
-// of the same shape (-print-workload prints one) can describe another export.
+// from. The presets traced and recent are modeled on the exports measured for
+// #272, and heavy on an export with many more uploads; a JSON file of the same
+// shape (-print-workload prints one) can describe another export.
 
 import (
 	"encoding/json"
@@ -47,6 +48,9 @@ type Asset struct {
 	Origin int    `json:"origin"` // index into Workload.Origins
 	Kind   string `json:"kind"`   // an output.Kind* value
 	Bytes  int64  `json:"bytes"`
+	// Via, when set, is the origin the page links the asset at, which
+	// redirects to Origin.
+	Via *int `json:"via,omitempty"`
 }
 
 const (
@@ -55,6 +59,8 @@ const (
 )
 
 var presets = map[string]func() Workload{
+	"traced": tracedWorkload,
+	"heavy":  heavyWorkload,
 	"recent": recentWorkload,
 	"small":  smallWorkload,
 }
@@ -100,17 +106,150 @@ func (w Workload) validate() error {
 			return fmt.Errorf("asset %d: unknown kind %q", i, a.Kind)
 		case a.Bytes < 0:
 			return fmt.Errorf("asset %d has a negative size", i)
+		case a.Via != nil && (*a.Via < 0 || *a.Via >= len(w.Origins) || *a.Via == a.Origin):
+			return fmt.Errorf("asset %d: origin %d cannot redirect to it", i, *a.Via)
 		}
 	}
 	return nil
 }
 
-// recentWorkload is modeled on the latest export measured for #272: 56 assets
-// from 25 origins. files.slack.com has 4, the Slack CDN 14 on 4 hosts (9 on
-// one of them), gravatar 5, and 19 third-party origins 33, with 1 to 3 each.
-// The Slack hosts and gravatar spoke HTTP/2 with 128 streams and took 30 to
-// 56 ms to connect. The sizes, and the latency, bandwidth and HTTP version of
-// the third-party origins, are assumptions.
+// builder adds origins and assets to a workload.
+type builder struct{ w *Workload }
+
+func (b builder) origin(o Origin) int {
+	b.w.Origins = append(b.w.Origins, o)
+	return len(b.w.Origins) - 1
+}
+
+// add adds an asset of kind on origin for each size.
+func (b builder) add(origin int, kind string, sizes ...int64) {
+	for _, n := range sizes {
+		b.w.Assets = append(b.w.Assets, Asset{Origin: origin, Kind: kind, Bytes: n})
+	}
+}
+
+// redirected adds an asset of kind on origin that the page links at via.
+func (b builder) redirected(via, origin int, kind string, n int64) {
+	b.w.Assets = append(b.w.Assets, Asset{Origin: origin, Kind: kind, Bytes: n, Via: &via})
+}
+
+// tracedWorkload is modeled on the export traced for #272 before PF-03
+// (2026-09-29): 56 assets in 59 requests to 27 origins. files.slack.com has 2
+// thumbnails and 2 originals of 3.9 MB together; the Slack CDN 15 on 2 hosts
+// (9 avatars and the workspace icon; 5 emoji); gravatar 4 requests, 2 of them
+// redirects of avatars to third-party hosts; and 23 third-party origins 36
+// requests (one with 4, ten with 2, twelve with 1; 3 of them HTTP/1.1), for 19
+// OG images, 14 service icons (one of them redirected) and the 2 avatars. The
+// delays follow the trace's averages per class: to connect, 45 ms to
+// files.slack.com, 50 and 60 ms to the CDN hosts, 33 ms to gravatar, 100 ms to
+// a third-party host (35 to 164 ms); to the first byte, 890 ms from
+// files.slack.com, 220 ms (avatars) and 12 ms (emoji) from the CDN, 7 ms from
+// gravatar, 150 ms from a third-party host (40 to 299 ms). The sizes of the
+// assets of a kind vary around the trace's average; the bandwidths are
+// assumptions, 48 MiB/s from files.slack.com after the trace's transfers.
+func tracedWorkload() Workload {
+	w := Workload{Name: "traced"}
+	b := builder{&w}
+	// The Slack hosts and gravatar speak HTTP/2 with 128 streams.
+	slackOrigin := func(class string, handshakeMS, firstByteMS int, bytesPerSec int64) int {
+		return b.origin(Origin{Class: class, HTTP2: true, HandshakeMS: handshakeMS, FirstByteMS: firstByteMS,
+			BytesPerSec: bytesPerSec, MaxStreams: 128})
+	}
+
+	files := slackOrigin("files.slack.com", 45, 890, 48*mib)
+	b.add(files, output.KindUploadThumb, 24*kib, 20*kib)
+	b.add(files, output.KindUploadOriginal, 2200*kib, 1790*kib)
+	avatars := slackOrigin("Slack CDN", 60, 220, 16*mib)
+	b.add(avatars, output.KindAvatar, 6*kib, 4*kib, 7*kib, 5*kib, 8*kib, 5*kib, 6*kib, 4*kib, 6*kib)
+	b.add(avatars, output.KindWorkspaceIcon, 6*kib)
+	emoji := slackOrigin("Slack CDN", 50, 12, 16*mib)
+	b.add(emoji, output.KindEmoji, 4*kib, 5*kib, 3*kib, 6*kib, 4*kib)
+	gravatar := slackOrigin("gravatar", 33, 7, 16*mib)
+	b.add(gravatar, output.KindAvatar, 7*kib, 8*kib)
+
+	others := make([]int, 23)
+	for i := range others {
+		o := Origin{Class: "other", HTTP2: i%8 != 5, HandshakeMS: 35 + i*37%130, FirstByteMS: 40 + i*53%260,
+			BytesPerSec: int64(2+i%4) * mib}
+		if o.HTTP2 {
+			o.MaxStreams = 100
+		}
+		others[i] = b.origin(o)
+	}
+	b.add(others[0], output.KindOGImage, ogImageSize(0), ogImageSize(1))
+	b.add(others[0], output.KindServiceIcon, serviceIconSize(0), serviceIconSize(1))
+	for i := 1; i <= 10; i++ {
+		b.add(others[i], output.KindOGImage, ogImageSize(i+1))
+		b.add(others[i], output.KindServiceIcon, serviceIconSize(i+1))
+	}
+	for i := 11; i <= 17; i++ {
+		b.add(others[i], output.KindOGImage, ogImageSize(i+1))
+	}
+	b.add(others[18], output.KindServiceIcon, serviceIconSize(12))
+	b.redirected(others[19], others[20], output.KindServiceIcon, serviceIconSize(13))
+	b.redirected(gravatar, others[21], output.KindAvatar, 5*kib)
+	b.redirected(gravatar, others[22], output.KindAvatar, 6*kib)
+	shuffle(w.Assets)
+	return w
+}
+
+// ogImageSize and serviceIconSize are the sizes of the i-th OG image (60 to
+// 559 KiB, 300 KB on average in the trace) and service icon (2 to 31 KiB, 16
+// KB on average).
+func ogImageSize(i int) int64     { return int64(60+i*137%500) * kib }
+func serviceIconSize(i int) int64 { return int64(2+i*11%30) * kib }
+
+// heavyWorkload is an export with many more uploads than the traced one, to
+// weigh the lane limits of a busy origin and the limit on large downloads:
+// 96 thumbnails (20 to 76 KiB), 24 originals (0.5 to 8 MiB) and 8
+// attachments (1 to 6 MiB) from files.slack.com; 40 avatars and the
+// workspace icon, and 20 emoji, from the Slack CDN; 6 avatars from gravatar;
+// and an OG image and a service icon from each of 12 third-party origins. The
+// origins are the traced workload's, but for a slower link to
+// files.slack.com, 10 MiB/s, over which the large downloads share the
+// bandwidth. The sizes and the bandwidth are assumptions.
+func heavyWorkload() Workload {
+	t := tracedWorkload()
+	w := Workload{Name: "heavy"}
+	b := builder{&w}
+	files := b.origin(t.Origins[0])
+	w.Origins[files].BytesPerSec = 10 * mib
+	avatars := b.origin(t.Origins[1])
+	emoji := b.origin(t.Origins[2])
+	gravatar := b.origin(t.Origins[3])
+	for i := range 96 {
+		b.add(files, output.KindUploadThumb, int64(20+(i*29)%57)*kib)
+	}
+	for i := range 24 {
+		b.add(files, output.KindUploadOriginal, int64(512+(i*1013)%7680)*kib)
+	}
+	for i := range 8 {
+		b.add(files, output.KindAttachment, int64(1024+(i*677)%5120)*kib)
+	}
+	for i := range 40 {
+		b.add(avatars, output.KindAvatar, int64(4+i%5)*kib)
+	}
+	b.add(avatars, output.KindWorkspaceIcon, 6*kib)
+	for i := range 20 {
+		b.add(emoji, output.KindEmoji, int64(3+i%4)*kib)
+	}
+	b.add(gravatar, output.KindAvatar, 7*kib, 8*kib, 6*kib, 7*kib, 9*kib, 5*kib)
+	for i := range 12 {
+		id := b.origin(t.Origins[4+i])
+		b.add(id, output.KindOGImage, ogImageSize(i))
+		b.add(id, output.KindServiceIcon, serviceIconSize(i))
+	}
+	shuffle(w.Assets)
+	return w
+}
+
+// recentWorkload is modeled on the export measured for #272 when it was filed
+// (2026-09-27), before the trace: 56 assets from 25 origins. files.slack.com
+// has 4, the Slack CDN 14 on 4 hosts (9 on one of them), gravatar 5, and 19
+// third-party origins 33, with 1 to 3 each. The Slack hosts and gravatar spoke
+// HTTP/2 with 128 streams and took 30 to 56 ms to connect. The sizes, and the
+// latency, bandwidth and HTTP version of the third-party origins, are
+// assumptions.
 func recentWorkload() Workload {
 	w := Workload{Name: "recent"}
 	origin := func(o Origin) int {

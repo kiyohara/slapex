@@ -31,27 +31,30 @@ Go を採用する。必要な Go version と直接・間接依存の version �
 
 | package / 入口 | 責務 | 直接依存する内部 package |
 |---|---|---|
-| [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、HTTP trace のファイル(`SLAPEX_HTTP_TRACE`)、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
-| [internal/export](../../internal/export/export.go) | `Run` が順に呼ぶ工程(workspace/channel 解決と対話選択、取得範囲・filter 付きの history/replies 取得、user/bot/emoji 解決、2 回の描画による asset の取得計画と表示用データ組立)、cache の組立・再利用・cleanup の判定 | datetime、emoji、output、render、slack、ui |
-| [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、method ごとの平準化、retry、認証送信先を制限した download、request ごとの HTTP trace([trace.go](../../internal/slack/trace.go)) | なし |
-| [internal/output](../../internal/output/output.go) | 出力 root・label、asset の取得計画(planner)と計画順の取得、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し、`.cache/` の削除 | slack |
+| [cmd/slapex](../../cmd/slapex/main.go) | flag parse・入力検証、token 入力、通常/demo の起動、HTTP trace のファイル(`SLAPEX_HTTP_TRACE`)、export 中の SIGINT / SIGTERM の処理、stdout の結果 path と exit code 制御 | datetime、demo、emoji、export、slack、ui |
+| [internal/export](../../internal/export/export.go) | `Run` が順に呼ぶ工程(workspace/channel 解決と対話選択、取得範囲・filter 付きの history/replies 取得、user/bot/emoji 解決、2 回の描画による asset の取得計画と表示用データ組立)、cache の組立・再利用・cleanup の判定 | datetime、emoji、lane、output、render、slack、ui |
+| [internal/slack](../../internal/slack/client.go) | API 型と thin client、pagination、Web API の method ごとの平準化、retry、認証送信先を制限した download(Web API と別の client と transport、応答 header と body の待ち時間の打ち切り、Slack の file 以外の 1 試行の上限)、request ごとの HTTP trace([trace.go](../../internal/slack/trace.go)) | lane |
+| [internal/output](../../internal/output/output.go) | 出力 root・label、asset の取得計画(planner)と計画の並列取得(通知と警告は計画の順)、asset 保存・内容 hash/extension 決定・再利用コピー、manifest entry、JSON 書き出し、`.cache/` の削除 | lane、slack |
+| [internal/lane](../../internal/lane/lane.go) | asset の download を origin ごとの lane で並列に走らせる scheduler(先導 1 本、HTTP/2 と HTTP/1.1 の同時数、全体の同時数、大きいファイルの同時数、サイズの大きい順)と、その上限値 | なし |
 | [internal/render](../../internal/render/html.go) | 表示用データ型、mrkdwn 変換、HTML template、埋込み CSS/logo の書き出し | なし |
 | [internal/emoji](../../internal/emoji/emoji.go) | 埋込み標準絵文字・渡された custom emoji map の解決、alias/skin tone 処理、除外名の正規化・照合 | なし |
 | [internal/datetime](../../internal/datetime/parse.go) | CLI の日時書式と timezone に基づく parse | なし |
-| [internal/ui](../../internal/ui/ui.go) | styled/plain 判定、進捗 phase・spinner・通知の出力 | なし |
+| [internal/ui](../../internal/ui/ui.go) | styled/plain 判定、進捗 phase・spinner・通知の出力、中断時の出力の停止 | なし |
 | [internal/demo](../../internal/demo/export.go) | 架空 scenario と local fake Slack server、通常の `export.Run` を使う demo/sample 共通 driver | export、slack、ui |
 
 通常実行は `cmd/slapex` が `slack.Client` と `ui.Printer` を用意して `export.Run` を呼ぶ。`--demo` は `demo.Run` を介して同じ工程を実行する。CLI option から `export.Options` への変換は `cmd/slapex` の `exportOptions` の 1 か所に置き、通常実行と `--demo` は同じ変換結果を使う。通常実行はそこへ controlling terminal を加え、`demo.Run` は fixture が決める channel と非対話の解決だけを差し替える。`export` が取得結果を `render` の表示用データへ変換し、asset の保存は `output` に委譲する。`emoji.list` の取得・cache 再利用は `export` と `slack` の責務であり、`emoji` 自体は API を呼ばない。
 
-`cmd/slapex` のファイルは責務で分ける。起動と通常実行の組立は [main.go](../../cmd/slapex/main.go)、option の定義・parse・検証は [options.go](../../cmd/slapex/options.go)、token と controlling terminal は [token.go](../../cmd/slapex/token.go)、`--demo` は [demo.go](../../cmd/slapex/demo.go)、exit code への対応づけと失敗の報告は [exitcode.go](../../cmd/slapex/exitcode.go)、HTTP trace のファイルは [httptrace.go](../../cmd/slapex/httptrace.go) に置く。
+`cmd/slapex` のファイルは責務で分ける。起動と通常実行の組立は [main.go](../../cmd/slapex/main.go)、option の定義・parse・検証は [options.go](../../cmd/slapex/options.go)、token と controlling terminal は [token.go](../../cmd/slapex/token.go)、`--demo` は [demo.go](../../cmd/slapex/demo.go)、exit code への対応づけと失敗の報告は [exitcode.go](../../cmd/slapex/exitcode.go)、HTTP trace のファイルは [httptrace.go](../../cmd/slapex/httptrace.go)、export 中の SIGINT / SIGTERM の処理は [interrupt.go](../../cmd/slapex/interrupt.go) に置く。
 
 `export.Run` は工程の順序と失敗時の処理だけを持ち、各工程は結果を値で次の工程へ渡す。Workspace・Channel(`resolveTarget`)、再利用する cache・出力先・取得範囲、Messages(`fetchMessages`。親の除外後の補充を含む history/replies の取得で、timeline・親が timeline にある thread の replies・打ち切りの有無・除外件数を返す。Messages 行・metadata.json・Done の件数はこの結果から数える)、Users(`resolveUsers`)、Emoji(`resolveCustomEmoji`)、Assets(`renderWithAssets`、`buildPage`、`writePage`。`endAssetsPhase` が asset の集計を返す)、cache の書き出しと cleanup(`writeCaches`、`output.RemoveCache`)、Done(`reportDone`)の順に進み、最初の error で止まる。
 
-Assets 工程の `renderWithAssets` は、workspace icon・avatar・timeline(`buildTimeline`)の描画を 2 回行う。1 回目は `output.Assets` の planner に描画し、asset の要求を最初に要求された順に計画として記録するだけで、取得も書き込みも警告もしない。`Assets.Fetch` がその計画を計画の順に取得し(`--reuse-cache` の copy か download)、2 回目の描画が取得結果を要求の順に manifest へ記録する。計画に無い URL が要求された場合は、その場で取得する([取得計画の方針](decision-log/0064-two-pass-asset-planning.md))。
+Assets 工程の `renderWithAssets` は、workspace icon・avatar・timeline(`buildTimeline`)の描画を 2 回行う。1 回目は `output.Assets` の planner に描画し、asset の要求を最初に要求された順に計画として記録するだけで、取得も書き込みも警告もしない。`Assets.Fetch` がその計画を取得し、2 回目の描画が取得結果を要求の順に manifest へ記録する。計画に無い URL が要求された場合は、その場で取得する([取得計画の方針](decision-log/0064-two-pass-asset-planning.md))。`Fetch` は `--reuse-cache` の copy を計画の順に先に済ませ、残りの download を `internal/lane` で origin ごとに並列に走らせる。各 download の retry の通知と警告は、計画でそれより前の download が出し終えるまで保持し、計画の順に出す([並列取得の方針](decision-log/0067-parallel-asset-lanes.md))。
+
+通常実行と `--demo` は、`export.Run` の間だけ SIGINT と SIGTERM を受ける(`watchInterrupts`)。受けると `ui.Printer` の出力を止め(`Mute`)、`export.Run` の context を cancel する。`Run` が返った後、受けた signal で process を終わらせる。
 
 cache の schema に沿った object の組立は `export`、JSON の書き出しと asset manifest entry は `output` に分かれる。`export` の組立([export/cache.go](../../internal/export/cache.go))は `Run` の各工程の結果をそのまま受け取る。ただし Messages の結果からは件数(`exportCounts`)だけを受け取り、メッセージ本文は受け取らない(cache はメッセージ本文を保持しない)。`slack_api_cache.json` の user / bot の entry の型と、書き出しと再利用の両方向の変換も同じファイルに置く。再利用の読込・検証は [export/reuse.go](../../internal/export/reuse.go)、保存済み asset のコピーは `output` が担う。確認済みの仕様差は [cache.md](cache.md#確認済みの仕様と実装の差) を参照する。
 
-生成用入口は [tools/genemoji](../../tools/genemoji/main.go)(標準絵文字データ)、[tools/gensample](../../tools/gensample/main.go)(`demo` / `ui` を使う ja/en sample export)、[tools/genscreenshot](../../tools/genscreenshot/main.go)(同梱 sample の screenshot)、[tools/demo](../../tools/demo/record.sh)(terminal demo GIF)に置く。所要時間の計測用の開発 tool は、[tools/tracereport](../../tools/tracereport/main.go)(HTTP trace の集計)と [tools/assetbench](../../tools/assetbench/main.go)(fake origin に対する asset 取得方式の benchmark)に置く([計測の方針](decision-log/0063-http-trace-and-asset-benchmark.md))。
+生成用入口は [tools/genemoji](../../tools/genemoji/main.go)(標準絵文字データ)、[tools/gensample](../../tools/gensample/main.go)(`demo` / `ui` を使う ja/en sample export)、[tools/genscreenshot](../../tools/genscreenshot/main.go)(同梱 sample の screenshot)、[tools/demo](../../tools/demo/record.sh)(terminal demo GIF)に置く。所要時間の計測用の開発 tool は、[tools/tracereport](../../tools/tracereport/main.go)(HTTP trace の集計)と [tools/assetbench](../../tools/assetbench/main.go)(fake origin に対する asset 取得方式の benchmark。pacing ありの直列、pacing なしの直列、lane による並列を比べる)に置く([計測の方針](decision-log/0063-http-trace-and-asset-benchmark.md)、[並列取得の方針](decision-log/0067-parallel-asset-lanes.md))。
 
 将来の構成変更は [段階的リファクタリングの方針](decision-log/0056-incremental-refactoring-plan.md) と各 Issue で扱う。上表はその計画を先取りせず、構成変更を行う PR で該当箇所を同期する。
 

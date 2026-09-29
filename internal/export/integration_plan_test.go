@@ -11,8 +11,9 @@ package export
 //   - the manifest lists the plan's assets, in the plan's order;
 //   - nothing was downloaded or copied into the output directory before the
 //     plan was fixed;
-//   - the downloads ran in the plan's order, and the warnings came in that
-//     order, each after its own download's retry notices.
+//   - every asset the plan acquires was downloaded, in parallel and so in any
+//     order (Issue #275), and the warnings came in the plan's order, each
+//     after its own download's retry notices.
 
 import (
 	"context"
@@ -42,13 +43,13 @@ func TestRunIntegrationAssetPlanMatchesRender(t *testing.T) {
 	assertPlan(t, obs)
 	assertManifestFollowsPlan(t, readManifestEntries(t, got.OutputDir), obs.plan)
 
-	// The downloads ran in the plan's order, the retries of a download right
-	// after its first request, and none for an asset the plan skips.
-	if downloads := slices.Compact(got.Server.AssetRequests()); !slices.Equal(downloads, downloadPaths(t, obs.plan)) {
-		t.Fatalf("downloads = %q, want the plan's order %q", downloads, downloadPaths(t, obs.plan))
+	// Each asset the plan acquires was downloaded, and none the plan skips.
+	if downloads := requestedPaths(got.Server.AssetRequests()); !slices.Equal(downloads, slices.Sorted(slices.Values(downloadPaths(t, obs.plan)))) {
+		t.Fatalf("downloads = %q, want the plan's %q", downloads, downloadPaths(t, obs.plan))
 	}
-	// Each warning came when its download ended: the skip of the diagram's
-	// original before the report's retries, the report's failure after them.
+	// Each warning came in the plan's order, whatever order the downloads
+	// ended in: the skip of the diagram's original before the report's
+	// retries, the report's failure after them.
 	assertAssetNotices(t, got.Logs,
 		"WARN: asset skipped by size limit (upload_original): download exceeds size limit",
 		retryNotice, retryNotice, retryNotice, retryNotice, retryNotice,
@@ -58,8 +59,8 @@ func TestRunIntegrationAssetPlanMatchesRender(t *testing.T) {
 
 // TestRunIntegrationAssetPlanWithReuseCache runs allAssetPathsScenario again
 // with --reuse-cache: the cache changes how the assets are acquired, not which
-// ones the page asks for, so run 2 plans the same assets and copies or
-// downloads them in the plan's order.
+// ones the page asks for, so run 2 plans the same assets, and copies the ones
+// the cache has and downloads the others.
 func TestRunIntegrationAssetPlanWithReuseCache(t *testing.T) {
 	t.Parallel()
 
@@ -72,9 +73,9 @@ func TestRunIntegrationAssetPlanWithReuseCache(t *testing.T) {
 	assertManifestFollowsPlan(t, readManifestEntries(t, r.dir2), obs.plan)
 
 	// Run 1 saved every asset but the two it could not, which run 2 downloads
-	// again, in the plan's order; it copies the rest from run 1.
+	// again; it copies the rest from run 1.
 	want := []string{"/files/diagram-original.png", "/files/missing-report.pdf"}
-	if downloads := slices.Compact(r.requests2); !slices.Equal(downloads, want) {
+	if downloads := requestedPaths(r.requests2); !slices.Equal(downloads, want) {
 		t.Fatalf("run 2 downloads = %q, want %q", downloads, want)
 	}
 	assertAssetsPhaseLine(t, r.logs2,
@@ -268,6 +269,11 @@ func downloadPaths(t *testing.T, plan []output.PlannedAsset) []string {
 		}
 	}
 	return paths
+}
+
+// requestedPaths is each path of requests once, sorted.
+func requestedPaths(requests []string) []string {
+	return slices.Compact(slices.Sorted(slices.Values(requests)))
 }
 
 func sourcePath(t *testing.T, sourceURL string) string {

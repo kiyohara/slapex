@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-09-27
-- 最終更新日: 2026-09-27
+- 最終更新日: 2026-09-29
 - 関連: `../cli-interface.md`、`../architecture.md`、`../../guidelines/credential-scope-guidelines.md`、[0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md)、[0033-go-dependency-policy.md](0033-go-dependency-policy.md)、[0046-api-base-url-override.md](0046-api-base-url-override.md)、Issue #272、Issue #273
 
 ## 背景
@@ -53,6 +53,10 @@ trace はユーザーが実 workspace の export で取り、集計を Issue に
 - trace は、request ごとの行の後に `run` の行を 1 行持つ。trace を読むものは、行を `type` で見分ける。
 - 実 workspace の計測は merge 後にユーザーが手元で行い、`tools/tracereport` の出力を #272 にコメントする。PF-03 の上限値と PF-05 の判断に使う。
 - 並列の取得(PF-03 以降)では request の時間が重なるため、集計の割合の合計が 100% を超え得る。
+
+## 追記(2026-09-29)
+
+PF-03(#275)で、`tools/assetbench` に並列の方式(`parallel`)を足した(`0067-parallel-asset-lanes.md`)。slapex の client が download の pacing をしなくなったため、pacing ありの直列は、benchmark の側で開始間隔 1 秒を待つ `paced` に改め、`current` を廃した。workload には、#272 の trace(2026-09-29)に合わせた `traced`(既定)と、files.slack.com に多数の file が並ぶ `heavy` を足し、fake origin が redirect を返せるようにした。報告には、同時に走った request の最大数と、最も長い request の時間を足した。
 
 ## 後から見直す条件
 

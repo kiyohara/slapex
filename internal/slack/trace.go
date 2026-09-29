@@ -197,13 +197,16 @@ func newTracer(w io.Writer) *tracer {
 	return &tracer{key: key, w: w}
 }
 
-// install wraps c's transport and sleeper, once the options have set them.
+// install wraps c's transports — the Web API calls' and the downloads' —
+// and its sleeper, once the options have set them.
 func (t *tracer) install(c *Client) {
-	next := c.httpClient.Transport
-	if next == nil {
-		next = http.DefaultTransport
+	for _, hc := range []*http.Client{c.httpClient, c.dlClient} {
+		next := hc.Transport
+		if next == nil {
+			next = http.DefaultTransport
+		}
+		hc.Transport = &traceTransport{t: t, next: next}
 	}
-	c.httpClient.Transport = &traceTransport{t: t, next: next}
 	sleep := c.sleep
 	c.sleep = func(ctx context.Context, d time.Duration) error {
 		start := time.Now()
@@ -310,7 +313,8 @@ func (r *requestTrace) start(req *http.Request) *traceLine {
 	r.last = &traceLine{rec: rec}
 	r.last.begin = time.Now()
 	r.last.rec.Start = r.last.begin.UTC()
-	r.last.deadline, _ = req.Context().Deadline()
+	r.last.ctx = req.Context()
+	r.last.deadline, _ = r.last.ctx.Deadline()
 	return r.last
 }
 
@@ -343,7 +347,8 @@ func (r *requestTrace) end() {
 type traceLine struct {
 	mu        sync.Mutex
 	begin     time.Time
-	deadline  time.Time // the request's, from the client's timeout or the caller
+	ctx       context.Context // the request's
+	deadline  time.Time       // the request's, from the client's timeout or the caller
 	rec       TraceRecord
 	retryWait time.Duration
 	finished  bool
@@ -397,6 +402,12 @@ func (l *traceLine) responded(resp *http.Response) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.rec.Proto, l.rec.Status = resp.Proto, resp.StatusCode
+	// A response that came after a timeout canceled its request is a
+	// timeout: net/http passes on a response that raced the cancellation,
+	// and a download's watchdog then discards it (sendDownload).
+	if cause := context.Cause(l.ctx); cause != nil && errorClass(cause) == "timeout" {
+		l.rec.Error = "timeout"
+	}
 }
 
 // failed records a failure of the request or of a body read, which ends it.
@@ -404,7 +415,9 @@ func (l *traceLine) responded(resp *http.Response) {
 // error says: http.Client stops a request it sends through a transport it does
 // not know, as traceTransport is, both by its context and by Request.Cancel,
 // and the transport reports whichever it notices first ("net/http: request
-// canceled" for the latter).
+// canceled" for the latter). So is a failure of a request whose context a
+// timeout canceled — a download's watchdog (sendDownload) — whether the
+// transport names the timeout or the cancellation.
 func (l *traceLine) failed(err error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -413,6 +426,9 @@ func (l *traceLine) failed(err error) {
 	}
 	l.rec.Error = errorClass(err)
 	if !l.deadline.IsZero() && !time.Now().Before(l.deadline) {
+		l.rec.Error = "timeout"
+	}
+	if cause := context.Cause(l.ctx); cause != nil && errorClass(cause) == "timeout" {
 		l.rec.Error = "timeout"
 	}
 	l.markLocked(&l.rec.DoneUS)
