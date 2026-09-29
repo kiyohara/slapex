@@ -15,7 +15,8 @@ Issue #275(PF-03)。所要時間の最小化(#272)に向けて、asset の downl
 - 依存の #273(PF-01、PR #281)と #274(PF-02、PR #286)は merge 済み。推奨の前提の #245(PR #287)も merge 済み。main `7b22e92`(PR #290 の merge)から作業した。
 - 実装、test、benchmark、設計文書、decision log 0067 を済ませ、Issue の「検証」を実行した(「検証」)。反復実行で見つかった test の不安定さ 5 件の原因を直した(コード 2 件、test の前提 3 件。「反復実行で見つかった不安定さ」)。
 - PR #291 を draft で作り、note を採番した。`progress.md` の PR 欄を反映した(P1)。
-- 次は CI を確かめてから review を subagent に委譲する(P2)。
+- review(P2)の指摘 3 件(`[ask]` 1、`[imo]` 2)にすべて対応した(P4。「review の指摘への対応」)。`[ask]` はユーザーに判断を仰ぎ、回答を待つ間は推奨の案で進めた。
+- 次は CI を確かめてから、再確認を subagent に委譲する(P5)。
 
 ## 決定事項
 
@@ -32,8 +33,8 @@ Issue の関数名は main `0a83bf7` 時点の記載で、main `7b22e92` でも�
 - download は pacing しない。Web API の method ごとの平準化は変えない(`internal/slack` の test が fake sleeper の記録で確かめる)。
 - `internal/lane`(新規): origin ごとの lane。先導 1 本が `GotConn` で接続を得てから残りを流し、接続が HTTP/2 なら 16、そうでなければ 6 まで。全体 64。サイズの分かるものは大きい順、4 MiB 以上は lane あたり 4 まで。値は `lane.Defaults`。
 - `output.Assets.Fetch`: reuse の copy を計画の順に先に済ませ、残りの download を lane で並列に走らせる。各 download の retry の通知(`slack.WithNotices`)と警告を保持し、計画の順に出す(`heldNotices`)。context が終わったら新しい download を始めず、保持した通知と警告は捨てる。
-- `internal/slack`: download 専用の `http.Client` と `http.Transport`(`NewDownloadTransport`、`MaxIdleConnsPerHost` を 16)。`WithTransport` は両方に渡す。全体の timeout をやめ、試行ごとの watchdog で、request を送り終えてから応答 header まで 30 秒、body が進まない 30 秒で打ち切る(timeout の `net.Error`)。watchdog が打ち切った後に届いた応答は使わず、打ち切りとして扱う(「反復実行で見つかった不安定さ」)。HTTP trace は download の client も包む。
-- `cmd/slapex`: export の実行中(token の入力の後から `export.Run` が返るまで。`--demo` も同じ)の SIGINT / SIGTERM で、printer を止め(`ui.Printer.Mute`)、context を cancel し、`Run` が返った後に同じ signal で終わる。猶予 5 秒、2 回目の signal で即座に終わる。起動時から無視されている signal は無視したまま。
+- `internal/slack`: download 専用の `http.Client` と `http.Transport`(`NewDownloadTransport`、`MaxIdleConnsPerHost` を 16)。`WithTransport` は両方に渡す。全体の timeout をやめ、試行ごとの watchdog で、request を送り終えてから最終の応答 header まで 30 秒、body が進まない 30 秒で打ち切る(timeout の `net.Error`)。Slack の file(files.slack.com)以外の download は、1 試行を 5 分で打ち切る(「review の指摘への対応」)。watchdog が打ち切った後に届いた応答は使わず、打ち切りとして扱う(「反復実行で見つかった不安定さ」)。HTTP trace は download の client も包む。
+- `cmd/slapex`: export の実行中(token の入力の後から `export.Run` が返るまで。`--demo` も同じ)の SIGINT / SIGTERM で、printer を止め(`ui.Printer.Mute`)、context を cancel し、`Run` が返った後に同じ signal で終わる。猶予 5 秒、2 回目の signal で即座に終わる(1 回目の処理の途中に届いた 2 回目も)。起動時から無視されている signal は無視したまま。
 - `tools/assetbench`: strategy を `paced`(benchmark の側で開始間隔 1 秒を待つ直列)、`unpaced`、`parallel` にし、lane の上限の flag(`-h2`、`-h1`、`-total`、`-large`、`-large-size`)、報告の Peak と Longest、fake origin の redirect、workload の `traced`(既定)と `heavy` を足した。Issue のコメント(PR #288 からの申し送り)に従い、`TestUnpacedRun` の pacing の検査を `>= time.Millisecond` で落ちるように緩め、`TestParallelRun` も同じ検査にした。
 
 ### Issue の作業内容から変えた点
@@ -49,6 +50,19 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 - HTTP/1.1 の origin の接続数が上限を超える(`TestAssetsFetchOverHTTP`、`TestRunOverHTTP`)。net/http は、空いた接続に追い越された dial も最後まで張り、idle の接続として残す。同時数(lane の上限)は守られており、接続数に上限を置いた test の前提が誤りだった。HTTP/1.1 の接続数の検査を外し、同時数の検査(上限以下かつ 2 以上)は残した。HTTP/2 の接続が 1 本であることの検査は変えていない。
 - `TestDownloadHeaderWait` の試行の数え方: server の側で数えると、最後の試行を server が受け取る前に client が諦めて返りうる。client の側(transport)で数えるようにした。
 - `TestTraceTimeoutClass` の trace の行数: body が止まる download にも応答 header の待ち 20 ms を掛けていたため、負荷の高いときに header の前の打ち切りと retry が起き、行が増えた。body が止まる download は、応答 header の待ちを 10 秒にした別の client で送るようにした。応答 header の待ちの打ち切りは、同じ test の header が来ない download で確かめている。
+
+### review の指摘への対応(P4)
+
+review cycle `claude-code-a85f4c7-20260929031415` の指摘 3 件(すべて inline)に対応した。3 件とも採用して修正した(修正 commit `ffb9337`)。
+
+- `[ask]` 全体の timeout が無くなり、少しずつ返し続ける download(特に第三者 host の URL preview)が止まらない: ユーザーに判断を仰ぐ card を出した(2026-09-29 03:45Z。選択肢は「5 分で打ち切る」(推奨)、「記録だけ」、「全部に上限」)。回答を待つ間は推奨の案で進め、Slack の file(`downloadNeedsAuth`。認証 header を付ける判定と同じ)以外の download は、1 試行を 5 分(`downloadPublicTimeout`)で打ち切るようにした。watchdog に試行の上限(`limit`)を足した。5 分は main の 1 試行の上限(120 秒)より長く、5 MiB(URL preview 画像などの上限)を 5 分で運ぶのは約 17 KiB/s にあたる。ユーザーが別の案を選んだ場合は、その案に合わせて直す。
+- `[imo]` 1xx の中間応答で応答 header の待ちが外れる: 提案の `Got1xxResponse` で張り直す方法ではなく、最初の byte(`GotFirstResponseByte`)で待ちを外すのをやめた。応答 header の待ちは、`Do` が返る(最終の応答 header が揃う)まで続く。1xx の header の合計の大きさを抑える `net/http` の制限は、`Got1xxResponse` を設定しないため外れない。header の途中で止まる server も同じく打ち切れる。redirect の次の request が接続を得るまでの時間を数えないよう、`GetConn` で待ちを止め、送り終えた時点(`WroteRequest`)で測り直す。
+- `[imo]` 1 回目の signal から `reset()` までに届いた 2 回目の signal が読まれない: 提案どおり、`reset()` を `mute()` より先に呼び、内側の select で 2 回目の signal を読んで終わるようにした。signal の channel の容量も 2 にし、watch が 1 回目を読む前に 2 回目が届いても落とさない。`TestInterruptEndsProcessBySignal` の 2 回の SIGINT の間の sleep は残した。Go の runtime は、届いて未処理の同じ signal に次の同じ signal をまとめるため(`runtime/sigqueue.go` の `sigsend`)、1 回目が届く前に 2 回目を送ると 1 回に数えられうる。これは watch の側では直せない。
+- 足した test: `TestInterruptWatchSecondSignal`(`mute()` が止まっていても `reset()` が先に済むこと、`reset()` の前に届いた 2 回目の signal で終わること)、`TestDownloadHeaderWaitPastFirstByte`(103 の後に何も返さない server を HTTP/1.1 と HTTP/2 で、header の途中で止まる server を HTTP/1.1 で打ち切る)、`TestDownloadHeaderWaitSkipsRedirectConnect`(redirect 先への接続に header の待ちより長くかかっても retry しない)、`TestDownloadPublicTimeout`(Slack の file 以外は少しずつ返し続けても 5 分の上限(test では 50 ms)で打ち切り、retry しない。Slack の file は打ち切らない)、`TestWatchdog` の試行の上限の規則。既定値の検査(`TestWithTransportKeepsTimeout`)に `publicTimeout` を足した。
+- 変異の確認: `reset()` を `mute()` の後に戻す、内側の select から 2 回目の signal を外す(どちらも `TestInterruptWatchSecondSignal` が落ちる)、最初の byte で待ちを外す(`TestDownloadHeaderWaitPastFirstByte` の 3 件が落ちる)、`GetConn` で待ちを止めない(`TestDownloadHeaderWaitSkipsRedirectConnect` が retry で落ちる)、試行の上限を外す、Slack の file にも上限を掛ける(`TestDownloadPublicTimeout` のそれぞれの場合が落ちる)。以前の変異(printer を止める、cancel、reset、止まった後の signal での終了のそれぞれを外す)も、順を変えた後のコードで落ちることを確かめ直した。
+- 設計文書: decision log 0067(候補、検討内容、決定、上限値の根拠、影響、後から見直す条件)、`index.md` の 0067 の行、`slack-api-usage.md` の「file / asset の取得」、`architecture.md` の `internal/slack` の行、`cli-interface.md` の `SLAPEX_HTTP_TRACE` の説明を更新した。
+- スコープ外とした指摘は無く、follow-up Issue の候補も無い。
+- 出力生成系 3 skill の再判断: 変わらない。変更は download の打ち切りと中断の処理だけで、出力、サンプル、画面は変わらない。`update-readme-demo-gif` は P1 の判断(該当するが「ローカルで要再生成」)のまま。
 
 ### 上限値の決定(benchmark)
 
@@ -77,6 +91,7 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 - `internal/ui`: `TestMuteDropsLaterOutput`。
 - `cmd/slapex/interrupt_test.go`(新規): 中断の watch の単体 test 4 件と、子 process に SIGINT / SIGTERM を送る `TestInterruptEndsProcessBySignal`(一時ファイルを消し、以後は何も出さず、signal で終わる。止まらない export は 2 回目の signal で終わる)。
 - `tools/assetbench`: `TestCurrentRunPaces` を `TestPacedRun` にし、`TestParallelRun`(先導で接続 1 本、redirect、Peak が 2 以上)と `TestTracedWorkload`(trace の件数と origin の内訳)を足した。
+- review の指摘への対応で足した test と変異の確認は「review の指摘への対応(P4)」にある。
 - 変異を入れて test が落ちることを確かめた: strict に戻す(`TestAssetsFetchOverHTTP` の stream を 1 に絞った場合が止まる)、通知の保持を外す(並列と直列の比較が落ちる)、中断の hook を 1 つずつ外す(printer を止める、cancel、signal の既定の扱いへの戻し、止まった後の signal での終了。どれも `TestInterruptEndsProcessBySignal` などが落ちる)、打ち切りの後の応答を使う(`TestDownloadHeaderWaitBeatsLateResponse` が `err = nil` で落ちる)、trace の分類を外す(同じ test が trace の行で落ちる)、body の待ちの後の `arm` または `disarm` を受け付ける(`TestDownloadStallWaitAfterLateWroteRequest` または `TestWatchdog` が落ちる)。
 
 ### 設計文書・decision log・progress.md
@@ -96,7 +111,9 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 ## 次にやること
 
 - PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。(完了)
-- CI を確かめてから review を subagent に委譲する(P2)。
+- review(P2)と指摘への対応(P4)。(完了)
+- CI を確かめてから、再確認を subagent に委譲する(P5)。未対応が残れば P4 に戻る。
+- `[ask]` への回答(Slack 以外の download の時間の上限)を受けたら、その案に合わせる。
 - merge 後: ユーザーが手元で PF-01 の trace を有効にして実 workspace を export し、集計を #272 にコメントする(手順は project の共有フォルダの `perf-trace/local-trace-prompt.md`)。
 
 ## 検証
@@ -116,6 +133,7 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 - E2E: main と本ブランチの実バイナリを、`gensample -serve -lang ja -asset-delay 250ms`(架空の fixture)に向けて export した。所要時間は 17.3 秒から 3.8 秒になった。出力は 21 ファイルで一覧が同じ、内容の差分は実行時刻(`generated_at` など)だけ、stderr の差分は完了表示の所要秒数だけだった。asset の取得中(1 件 3 秒の遅延)に SIGINT を送ると終了状態 130、SIGTERM では 143 で即座に終わり、一時ファイルは 6 件から 0 件になり、以後の出力は無かった。
 - benchmark: 「上限値の決定(benchmark)」と decision log 0067。
 - 実施していないこと: 実 workspace での実行(実 token が要る。merge 後にユーザーが trace を取り直す)、demo GIF の再生成(「ローカルで要再生成」)。
+- review の指摘への対応(P4)の後に、上記の gofmt、vet、build、`go test -count=1 ./...`、`-race -count=1 ./...`、`-count=5 -shuffle=on`、`GOMAXPROCS=1 -count=3`、並列と直列の比較の `-count=20`、`-race -count=5`、cross compile、固定サンプルの比較をやり直し、すべて成功した。負荷をかけた反復(`internal/slack` と `cmd/slapex` の `-count=30` と、`internal/output` を加えた `-race -count=15` を同時に)も成功した。変異の確認は「review の指摘への対応(P4)」にある。E2E は、変更が打ち切りと中断の処理だけで出力の経路を変えないため、やり直していない。
 
 ## リスク・ブロッカー
 
@@ -130,3 +148,5 @@ Issue の「検証」の反復実行(`-count=20`、`-race -count=5` など)で�
 - 2026-09-29: PR #291 を draft で作成し(03:10Z)、note を採番した(`d09ae90`)。`progress.md` の PF-03 の PR 欄を `#291` にした(P1)。検証は「検証」のとおり。出力生成系 3 skill は、`update-sample-exports` と `update-readme-preview-screenshots` を適用せず、`update-readme-demo-gif` は該当するが cloud session では実行できないため「ローカルで要再生成」とした(「出力生成系 3 skill の適用判断」)。
   - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#291`)、PR description の note のファイル名参照 1 行(`draft_` → `291_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「現在の状況」の「次は PR の作成(draft)と採番。」(定型に当てはまらない)と、「次にやること」の「PR を draft で作成し、note を採番する。`progress.md` の PR 欄を反映する。」(複合行。`progress.md` の反映は同 skill で完了しない)。どちらも採番の後、`progress.md` の反映と合わせて書き換えた。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(`update-sample-exports` と `update-readme-preview-screenshots` は「いつ使うか」に当たらない。`update-readme-demo-gif` は当たるが、cloud session では実行しない)。
   - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。GitHub の操作はすべて組み込みの GitHub MCP tool で行い、`gh` は使っていない。
+- 2026-09-29: review(P2)を subagent に委譲した。review cycle `claude-code-a85f4c7-20260929031415`、`Reviewed head` `a85f4c76b715927a7077e055fad200192754d16e`。指摘 3 件(inline 3、top-level 0)。prefix ごとに `[must]` 0、`[ask]` 1、`[imo]` 2、`[nits]` 0、`[fyi]` 0。`gh` への fallback は無し。完了要約の `Model` は、上位の指示で記載を控えたため `unknown`。指摘が 1 件以上のため P4 に進んだ(P3)。
+- 2026-09-29: 指摘 3 件を採用して修正した(P4、`ffb9337`。「review の指摘への対応(P4)」)。処置の内訳は、採用し修正した 3 件(`[ask]` はユーザーに確認中で、推奨の案で進めた。1xx は提案と別の方法で直した)。スコープ外とした指摘と follow-up 候補は無い。出力生成系 3 skill の判断は変わらない。検証は「検証」の末尾のとおり。
