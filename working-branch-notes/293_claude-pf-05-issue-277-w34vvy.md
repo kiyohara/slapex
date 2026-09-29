@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/pf-05-issue-277-w34vvy`(cloud session が指定。Issue の推奨ブランチ名は `perf-export-scheduler-design`)
-- PR: 未作成
+- PR: #293
 - 最終更新: 2026-09-29
 
 ## 目的
