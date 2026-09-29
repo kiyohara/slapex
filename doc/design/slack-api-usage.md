@@ -113,7 +113,7 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
   - 各 lane は最初の 1 件だけを先に出し、その download が接続を得てから残りを出す。残りはその接続を共有する(HTTP/2 の場合)。
   - 同時に download する数は、接続が HTTP/2 の origin で 16 件、それ以外の origin で 6 件、全体で 64 件までとする。
   - lane の中は、サイズが分かるもの(Slack の file の原本と添付)を大きい順に始め、サイズの分からないものをその後に計画の順に始める。4 MiB 以上のものは、lane あたり同時 4 件までとする。
-- download の試行は、request を送り終えてから最終の応答 header まで 30 秒(1xx の中間応答では待ちを止めない)、body が 1 byte も進まないまま 30 秒経つと打ち切る。Slack の file(`files.slack.com`)は、全体の所要時間では打ち切らない。それ以外の asset(URL preview 画像、アイコン、avatar、emoji など)は、1 試行が 5 分を超えると打ち切る。応答 header の前の打ち切りは、ネットワークエラーと同じく再試行する。body の途中の失敗は、5 分の打ち切りを含めて再試行せず、その asset の失敗とする。Web API の呼び出しは、従来どおり 1 回 120 秒で打ち切る。
+- download の試行は、request を送り終えてから最終の応答 header まで 30 秒(1xx の中間応答では待ちを止めない)、body が 1 byte も進まないまま 30 秒経つと打ち切る。Slack の file(`files.slack.com`)は、全体の所要時間では打ち切らない。それ以外の asset(URL preview 画像、アイコン、avatar、emoji など)は、1 試行が、接続と応答 header の待ちを含めて 5 分を超えると打ち切る。応答 header の前の打ち切りは、ネットワークエラーと同じく再試行する。body の途中の失敗は、5 分の打ち切りを含めて再試行せず、その asset の失敗とする。Web API の呼び出しは、従来どおり 1 回 120 秒で打ち切る。
 - 並列に取得しても、retry と rate limit 待機の通知、asset の警告は、計画の順(直列に取得した場合と同じ順)に stderr へ出す。そのため、後ろの asset の通知は、前の asset の取得が終わるまで出ないことがある。
 - export の実行中に SIGINT(Ctrl-C)または SIGTERM を受けると、新しい download を始めず、進行中の download を止めて一時ファイルを消す(`cli-interface.md` の「exit code」)。
 

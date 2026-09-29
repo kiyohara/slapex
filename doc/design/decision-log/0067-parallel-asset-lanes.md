@@ -47,7 +47,7 @@ PF-02(#274、0064)で、download の前に取得リストが確定するよう�
   - lane は計画の URL の origin で決まり、redirect 先の origin は数えない。redirect 先への同時の request は、redirect 元の lane の上限までになる。
 - download は Web API と別の `http.Client` と `http.Transport` で送る。transport は `http.DefaultTransport` の複製で、`MaxIdleConnsPerHost` を lane の上限(16)にする(`slack.NewDownloadTransport`)。`slack.WithTransport` は、Web API と download の両方に同じ transport を渡す。`StrictMaxConcurrentRequests` は有効にしない(#275 の作業内容から変えた点)。
 - download の client に全体の timeout は置かない。試行ごとに、request を送り終えてから最終の応答 header まで 30 秒、body が 1 byte も進まない 30 秒で打ち切る。応答 header の待ちは、1xx の中間応答や header の途中では止めない。redirect の次の request は、接続を得るまでの時間を数えず、送り終えてから 30 秒を測り直す。接続の確立は transport の dial と TLS handshake の timeout(30 秒と 10 秒)に任せる。
-- Slack の file(files.slack.com。認証 header を付ける送信先と同じ判定)以外の download は、1 試行を 5 分で打ち切る。Slack の file には上限を置かない。
+- Slack の file(files.slack.com。認証 header を付ける送信先と同じ判定)以外の download は、1 試行を、接続と応答 header の待ちを含めて 5 分で打ち切る。Slack の file には上限を置かない。
 - 打ち切りは timeout の失敗として扱い、応答 header の前なら network error と同じく retry し、body の途中なら今の body の失敗と同じく retry しない。retry の扱いの見直しは PF-04(#276)で行う。
 - 認証 header の送信先は変えない。files.slack.com への request にだけ付ける(0040)。
 - 並列に取得する download の retry の通知(`slack.WithNotices` で受ける)と警告は、download ごとに保持し、計画の順に出す。export を止めた後は、保持している通知と警告を出さずに捨てる。
@@ -117,7 +117,7 @@ files.slack.com の帯域だけを変えた `heavy`(大きいファイル 4 件�
 - 全体 64: `traced` は同時に 45 request まで重なり、8 で 2.32 秒、16 で 1.50 秒、32 以上で 1.03〜1.05 秒だった。`heavy` は files.slack.com の lane(16 件)が律速で、全体 16 以上では差が無く(15.31〜15.47 秒)、8 では 24.00 秒だった。64 は、`traced` の倍の origin がある export にも余裕を残す。
 - 大きいファイル 4 件、閾値 4 MiB: 大きいファイルを同時に多く流すと、帯域を分け合って 1 件ずつが長くなるうえ、大きい順に始めるため小さいファイルが後ろに残り、最後に最初の byte を待つだけの区間ができる(閾値 1 MiB で 16 件は 18.80 秒。その trace では、原本と添付が 13.4 秒で終わった後に thumbnail 96 件のうち 81 件が始まり、終わりまで 5.4 秒かかった。既定値の trace では、thumbnail は原本と添付と並んで走り、最後の原本より前に終わった)。絞りすぎると、大きいファイルの最初の byte の待ちが隠れない(閾値 1 MiB で 1 件は 39.63 秒、2 件は 26.12 秒)。件数は、#275 の目安(origin あたり 2〜4)で最も速い 4 とした。閾値は、4 件のときに `heavy` で最も速い 4 MiB とし、files.slack.com の帯域を 1/4 と 4 倍にした場合も 4 MiB が最も速かった。閾値 1 MiB で 8 件は `heavy` で 14.69 秒とさらに速いが、目安の範囲を超え、帯域は仮定であり、`traced` では差が出ないため採らない。`traced` は 1 MiB 以上のファイルが 2 件だけで、1 MiB で 1 件にしたときだけ遅い(1.99 秒)。閾値を上げると、1 件の最も長い download は延びる(`heavy` で 1 MiB の 4.31 秒から 4 MiB の 7.66 秒、2.5 MiB/s では 15.3 秒から 29.2 秒)が、全体の timeout は置かず、body の待ちは途切れた時間で測るため、打ち切りには関わらない。
 - 応答 header と body の待ち 30 秒: trace の class ごとの平均で、最初の byte までが最も長いのは files.slack.com の原本の約 1.1 秒で、30 秒はその 28 倍ほどである。body の待ちは、応答 header の後に 1 byte も来ない時間で測り、download 全体の時間には関わらない。HTTP/2 の DATA frame(既定の最大 16 KiB)が 16 stream に順に回るとすると、30 秒の間に 1 frame も来ないのは、接続全体の速度が約 9 KiB/s を下回る場合に当たる。
-- Slack の file 以外の 1 試行 5 分: main の 1 試行の上限(120 秒)より長くし、並列で帯域を分け合っても、main で取れていた asset を打ち切りにくくした。URL preview 画像、service icon、workspace icon の上限 5 MiB を 5 分で運ぶのは、約 17 KiB/s にあたる。少しずつ返し続ける host があっても、1 件が lane の枠を持ち続けるのは、応答 header の待ち(30 秒)と合わせて 5 分半までになる。
+- Slack の file 以外の 1 試行 5 分: 5 分は、接続、応答 header の待ち、body を含む 1 試行全体の上限である。main の 1 試行の上限(120 秒)より長くし、並列で帯域を分け合っても、main で取れていた asset を打ち切りにくくした。URL preview 画像、service icon、workspace icon の上限 5 MiB を 5 分で運ぶのは、約 17 KiB/s にあたる。応答 header の前の打ち切りは retry するため、1 件が lane の枠を持つ時間は、429 の `Retry-After` の待ちを除いて、6 試行(各 5 分まで)と backoff(計約 31〜36 秒)までになる。応答 header の後に少しずつ返し続ける host では、body の途中の打ち切りを retry しないため、その試行で終わる。その前に応答 header の待ちの失敗が 5 回続いた場合で、約 8 分(接続の時間は別)である。
 
 ## 理由
 
