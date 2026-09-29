@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-09-27
 - 最終更新日: 2026-09-29
-- 関連: `../cli-interface.md`、`../architecture.md`、`../../guidelines/credential-scope-guidelines.md`、[0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md)、[0033-go-dependency-policy.md](0033-go-dependency-policy.md)、[0046-api-base-url-override.md](0046-api-base-url-override.md)、Issue #272、Issue #273
+- 関連: `../cli-interface.md`、`../architecture.md`、`../../guidelines/credential-scope-guidelines.md`、[0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md)、[0033-go-dependency-policy.md](0033-go-dependency-policy.md)、[0046-api-base-url-override.md](0046-api-base-url-override.md)、[0068-lane-wide-rate-limit-wait.md](0068-lane-wide-rate-limit-wait.md)、Issue #272、Issue #273、Issue #276
 
 ## 背景
 
@@ -57,6 +57,10 @@ trace はユーザーが実 workspace の export で取り、集計を Issue に
 ## 追記(2026-09-29)
 
 PF-03(#275)で、`tools/assetbench` に並列の方式(`parallel`)を足した(`0067-parallel-asset-lanes.md`)。slapex の client が download の pacing をしなくなったため、pacing ありの直列は、benchmark の側で開始間隔 1 秒を待つ `paced` に改め、`current` を廃した。workload には、#272 の trace(2026-09-29)に合わせた `traced`(既定)と、files.slack.com に多数の file が並ぶ `heavy` を足し、fake origin が redirect を返せるようにした。報告には、同時に走った request の最大数と、最も長い request の時間を足した。
+
+## 追記(2026-09-29): lane の待ち
+
+PF-04(#276)で、asset の download は、各 request の前に origin の lane を待つようになった(`0068-lane-wide-rate-limit-wait.md`)。trace は、client の lane の待ちも sleeper と同じく包み、待った時間を、最初の request の前なら pacing の待ち、失敗した request の後ならその request の retry の待ちとして記録する。`withRetry` に計測の分岐は持ち込まない。`tools/assetbench` には、429 を返す origin、#275 の lane(`parallel-275`)、429 の件数の列を足した。
 
 ## 後から見直す条件
 

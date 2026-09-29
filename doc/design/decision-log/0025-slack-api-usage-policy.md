@@ -57,6 +57,10 @@
 
 「通常時は 1 req/sec 目安の平準化を行う」は、Web API の method ごとの呼び出しに限る。asset の download は平準化せず、origin ごとの同時数で抑えて並列に取得する(`0067-parallel-asset-lanes.md`)。download の平準化は、この方針を PoC(PR #11)で download にも当てたものだったが、Slack は file の download と CDN の制限を公表しておらず、第三者 host には Slack の制限が関係しないためである。429 + `Retry-After` の遵守と指数バックオフは、download にもそのまま適用する。
 
+## 追記(2026-09-29): asset の download の 429
+
+「429 + `Retry-After` 遵守」は、asset の download では origin ごとの lane の単位で行う。429 を受けた origin の download は、`Retry-After` の間どれも新しい request を出さず、その origin の同時数の上限を半分にする(`0068-lane-wide-rate-limit-wait.md`)。また、Slack の file(files.slack.com)以外の download は、`Retry-After` が 60 秒を超える 429 を待たずに、その asset の失敗とする。第三者 host の `Retry-After` は Slack の rate limit の指示ではなく、上限なく待つと 1 つの host が export を止め得るためである。Slack の Web API と files.slack.com の `Retry-After` は、今どおり長さによらず待つ。
+
 ## 後から見直す条件
 
 - Slack が internal App にも rate limit 強化を適用する方針変更を行った場合(その場合は default 値の再検討も必要)。

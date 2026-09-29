@@ -3,7 +3,7 @@
 - 状態: decided
 - 作成日: 2026-09-29
 - 最終更新日: 2026-09-29
-- 関連: `../slack-api-usage.md`、`../architecture.md`、`../cli-interface.md`、`../../guidelines/credential-scope-guidelines.md`、[0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md)、[0033-go-dependency-policy.md](0033-go-dependency-policy.md)、[0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md)、[0063-http-trace-and-asset-benchmark.md](0063-http-trace-and-asset-benchmark.md)、[0064-two-pass-asset-planning.md](0064-two-pass-asset-planning.md)、Issue #272、Issue #275、Issue #276
+- 関連: `../slack-api-usage.md`、`../architecture.md`、`../cli-interface.md`、`../../guidelines/credential-scope-guidelines.md`、[0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md)、[0033-go-dependency-policy.md](0033-go-dependency-policy.md)、[0040-credential-scope-for-asset-downloads.md](0040-credential-scope-for-asset-downloads.md)、[0063-http-trace-and-asset-benchmark.md](0063-http-trace-and-asset-benchmark.md)、[0064-two-pass-asset-planning.md](0064-two-pass-asset-planning.md)、[0068-lane-wide-rate-limit-wait.md](0068-lane-wide-rate-limit-wait.md)、Issue #272、Issue #275、Issue #276
 
 ## 背景
 
@@ -135,6 +135,10 @@ files.slack.com の帯域だけを変えた `heavy`(大きいファイル 4 件�
 - Slack の file 以外の asset を少しずつ返し続ける host や、1xx の中間応答だけを返す server があっても、その asset の失敗で済み、export は終わる。
 - 実行中の SIGINT と SIGTERM で、一時ファイルが残らなくなる。channel の対話選択の画面で押す Ctrl-C は、signal ではなく選択の取り消しとして、従来どおり exit code 2 で終わる。一方、選択の画面に `kill` などで SIGINT や SIGTERM が送られた場合は、これまでの exit code 2 ではなく、その signal で終わる。
 - `slack-api-usage.md` の「rate limit とリトライ」と「file / asset の取得」、`architecture.md`、`cli-interface.md` を更新した。0025、0063、0064 に追記した。
+
+## 追記(2026-09-29): 429 と retry の扱い
+
+PF-04(#276)で、「429 を受けた lane 全体を止めるか」と「retry の扱いの見直し」を決めた(`0068-lane-wide-rate-limit-wait.md`)。429 を受けた lane は、`Retry-After` の間 request を出さず、同時数の上限を半分にし、その後の成功に応じて戻す。retry を待つ download は、待つ間は枠を手放し、次の request の前に取り直す。そのため、「上限値の根拠」の、1 件が lane の枠を持つ時間は、backoff の待ちを含まなくなった。body の途中の打ち切りは、今どおり retry しない。本 log の上限値は変えず、`lane.Defaults` に上限を戻す間隔(`RestoreAfter`)を足した。
 
 ## 後から見直す条件
 
