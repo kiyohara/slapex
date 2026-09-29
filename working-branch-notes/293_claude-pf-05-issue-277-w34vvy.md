@@ -16,6 +16,7 @@ Issue #277(PF-05)。export 全体の並行化(#272 の段階 3)の設計を決�
 - ユーザーが手元で取った PF-03 の後の trace の集計(#272 のコメント、2026-09-29 13:33Z、main `fbd7cae`)を効果の見込みの材料にした。
 - decision log 0069 と設計文書を書いた(「決定事項」)。
 - PR #293 を draft で作り、note を採番した。Issue #278(PF-06)と #279(PF-07)の本文を、0069 に沿って具体化した。
+- review(cycle `claude-code-1fcabdc-20260929212208`)の指摘 3 件([must] 3)を受け、0069 と `slack-api-usage.md` の「取得の並行化」、#278 と #279 の本文を直した(P4)。
 
 ## 決定事項
 
@@ -36,9 +37,10 @@ main `fbd7cae` の run 19.064 秒の内訳: Web API 22 回が 15.693 秒の時�
 
 - 並行の形: 工程は今の順に 1 つずつ進め(driver)、後の工程が必ず出す request を確定した時点で先に出す(先行取得)。工程を同時に走らせる案は、所要時間が同じで、フェーズ行の型(0045)、plain の log の順、error の順を変えるため採らない。
 - 先行取得の範囲: 確定した request だけ。確定の規則は `slack-api-usage.md` の「取得の並行化」の表。filter を指定した場合、thread に属する message は Messages 工程の終わりに確定する。見込みで出す案は、`users.info` の lane を無駄に使い、除外した投稿の asset を取得するため採らない。
-- method ごとの lane: 同時 1 件、来た順、前の呼び出しの開始から 1 秒以上(今の `pace` と同じ)。429 の `Retry-After` は同じ method だけを待たせる。
+- method ごとの lane: 同時 1 件、来た順、前の呼び出しの開始から 1 秒以上(今の `pace` と同じ)。429 の `Retry-After` は同じ method だけを待たせる。HTTP trace の pacing の待ちは、lane の先頭に来た後の間隔の待ちだけとし、lane で前の呼び出しを待つ時間は記録しない(download の `lane.Run` が始めるまでの待ちと同じ扱い)。
 - 失敗: 先行取得の成否と通知は driver が結果を受け取るときに直列の順で出す。先行取得の失敗で早く止めない。`export.Run` が返るときに先行取得を止めて待つ。
-- 出力: 先に download した asset は一時ファイルに置き、`Fetch` が計画の順に扱うときに `assets/` へ移す。残りは消す。
+- 出力: 先に download した asset は一時ファイルに置き、`Fetch` が計画の順に扱うときに、保った結果と計画の kind・meta から名前と manifest の entry を作って `assets/` へ移す。meta の違い(custom emoji の alias など)では取り直さない。取り直すのは、先の download が計画の kind より小さい上限で止まった場合だけで、同じ URL を kind や file object のサイズが食い違う要求が求める場合に限り、request が直列より 1 件増えることがある。残りは消す。
+- 検証: 結合 test の request の件数の一致は成功する scenario に限る。失敗と cancel では、error、exit code、stderr、出力先のファイルと、request が失敗しない場合に出るものに含まれることを比べる。PF-07 の後の trace は、run の時間、Web API が終わる時点、download の区間、request の件数、method ごとの pacing の待ちで比べ、PF-06 で `tools/tracereport` に class ごとの区間を足す。
 - 進捗表示: 変えない。別 Issue に分けるものは無い。demo GIF は時間だけが変わり、PF-07 の後にユーザーが手元で再録画する。
 - 仕事の分け方: PF-06 は Web API、PF-07 は asset。PF-07 は PF-06 に依存する(`progress.md` の依存に #278 を足した)。
 
@@ -51,7 +53,9 @@ main `fbd7cae` の run 19.064 秒の内訳: Web API 22 回が 15.693 秒の時�
 - `git diff --check` と文体を確かめ、commit と push をする。(完了)
 - PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。(完了)
 - #278 と #279 の本文を、0069 に沿って具体化する。(完了)
-- review(P2)と指摘への対応(P4)、再確認(P5)。
+- review(P2)。(完了)
+- 指摘への対応(P4): 修正の push、#278 と #279 の本文の修正、各指摘への処置の返信。
+- 再確認(P5)。
 - review cycle を終えたら PR を Ready for review にする(P6)。
 
 ## 検証
@@ -61,6 +65,7 @@ main `fbd7cae` の run 19.064 秒の内訳: Web API 22 回が 15.693 秒の時�
 - 文体: 追加した行に「です」「ます」が無いことを確かめた(開発者向けの常体)。
 - 追加した decision log と設計文書のリンク先が存在することを確かめた。
 - code を変えないため、test と build は実行していない。
+- P4 の修正(`32d3058`): `git diff --check` は問題なし。変更は 0069 と `slack-api-usage.md` だけで、追加した行に「です」「ます」は無い。指摘の前提を code で確かめた(`Assets.addToPlan`、`download`、`extensionFor`、`limitFor`、`EmojiHTML` と `emoji.Resolver.Resolve`、`ErrTooLarge`、`lane.Run` と `lane.Wait` の説明、`internal/slack/trace.go` の説明、`tools/tracereport` の出力)。
 
 ## リスク・ブロッカー
 
@@ -72,3 +77,9 @@ main `fbd7cae` の run 19.064 秒の内訳: Web API 22 回が 15.693 秒の時�
 - 2026-09-29: P1。PR #293 を draft で作った(`Closes #277`)。reviewer に kiyohara を指定したが、PR の作成者のため GitHub が受け付けなかった(assignee は設定済み)。`number-working-branch-note` で note を採番し(`3caa0fa`)、`progress.md` の PF-05 の PR 欄を #293 にした。#278 と #279 の本文を具体化した。出力生成系 3 skill は使わない(「決定事項」)。
   - 採番の報告(確認経路): 書き換えた行は、note の `PR:` 欄(`未作成` → `#293`)と、PR description の note 参照(`draft_` → `293_`)の 2 行。状況を説明する stale 表現と完了タスク行の書き換えは 0 件。title は変えていない。
   - 採番の報告(残された事項): 触らずに残した行は、note の「次にやること」の「PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。」の 1 行(複合行。`progress.md` の反映は採番では完了しない)。PR description と title は 0 件。その後、`progress.md` を反映したため、この行は orchestrator が完了にした。
+- 2026-09-29: P2 / P3。review cycle `claude-code-1fcabdc-20260929212208`、Reviewed head `1fcabdc`。指摘 3 件(inline 3、top-level 0。[must] 3、[ask] 0、[imo] 0、[nits] 0、[fyi] 0)。review の途中で、25 件目の thread から届いた trace の読み解き(download の trace の lane の待ちは `lane.Wait` の分だけ)を、確かめる点として subagent に足した(3 件目の指摘になった)。1 件以上のため P4 へ進んだ。
+- 2026-09-29: P4。3 件とも「採用し修正した」(`32d3058`)。
+  - L106(決定性): 名前と manifest の entry を計画の kind・meta から作り、meta の違いでは取り直さない。取り直すのは、計画の kind より小さい上限で止まった場合だけ。request が直列より増える例外を 0069 と `slack-api-usage.md` に書き、#279 の作業内容 2 と完了条件を直した。
+  - L118(結合 test): request の件数の一致を成功する scenario に限り、失敗と cancel の比べ方を足した。#278 と #279 の完了条件を直した。
+  - L88(trace): pacing の待ちの範囲を決め、L119 に比べる値と `tools/tracereport` の区間を書いた。#278 の作業内容 1 と文書、完了条件を直した。`cli-interface.md` の `SLAPEX_HTTP_TRACE` の download の lane の待ちの記述(main の既存の文)は、#278 の作業内容で直す。
+  - follow-up 候補: なし。出力生成系 3 skill: 変更は decision log と設計文書だけで、使わない判断は変わらない。
