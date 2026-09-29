@@ -17,6 +17,8 @@ Issue #276(PF-04)。PF-03(#275)の origin ごとの lane の上で、download �
 - PR #292 を draft で作り、note を採番した。`progress.md` の PR 欄を反映した(P1)。
 - 第三者 host の `Retry-After` の上限は、ユーザーが推奨の「60 秒まで」を選んだ(2026-09-29 07:51Z、card)。実装は変えず、decision log 0068 に選択を記録した。
 - review(P2)の指摘 2 件(`[must]` 1、`[fyi]` 1)を採用して直した(P4。「review の指摘への対応(P4)」)。
+- 再確認(P5)で、指摘 2 件とも修正確認済み(resolve 可)になり、未対応は 0 件だった。review cycle `claude-code-e64f479-20260929075701` は完了した。
+- 終了時の状態(P6): head `8c6846a` の check runs は 5 件すべて success。note だけの commit の push の後に、PR を Ready for review にする。
 
 ## 決定事項
 
@@ -48,7 +50,7 @@ Issue の関数名は main `0a83bf7` と PR #271 の head 時点の記載で、m
 - `internal/output`(`ratelimit_test.go`): Issue の完了条件の「`testing/synctest` の仮想時間と fake server」。synctest の bubble の中で、`net.Pipe` の接続に `http.Server` を立て、Slack client と `net/http` の transport を通して取得する(socket は bubble の中で durably blocking にならないため)。429 は他の応答(1 秒)より先に(0.5 秒で)返す。同時に返すと、429 を処理する前に他の download が終わって次の request を出す、同じ時刻の順序が決まらなくなる(最初の版の test で起きた)。
 - `internal/output` には、第三者 host の 60 秒(待つ)と 61 秒(失敗する)の境界の test もある(P4)。
 - `internal/slack`(`ratelimit_test.go`): 第三者 host の 60 秒の上限(60 秒は待ち、61 秒は失敗する)と、Slack の file と Web API が上限なく待つこと、trace が lane の待ちを数えること。
-- 変異の確認(P4 の後): `withRetry` の `lane.RateLimited` を外すと `internal/output` の 3 件が落ちる。429 の 60 秒の判定を外すと `TestRetryAfterOverTheLimit`、`TestAssetsFetchFailsLongRateLimitOfThirdParty`、`TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が落ちる。429 の判定を jitter を足した待ちに戻すと `TestRetryAfterOverTheLimit` と `TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が、lane の判定を jitter を足した再開の時刻に戻すと `TestWaitTooLongHoldsWhatWasAsked` と `TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が落ちる。
+- 変異の確認(P4 の後): `withRetry` の `lane.RateLimited` を外すと `internal/output` の 3 件が落ちる。429 の 60 秒の判定を外すと `TestRetryAfterOverTheLimit`、`TestAssetsFetchFailsLongRateLimitOfThirdParty`、`TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が落ちる。429 の判定を jitter を足した待ちに戻すと `TestRetryAfterOverTheLimit` と `TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が、lane の判定を jitter を足した再開の時刻に戻すと `TestWaitTooLongHoldsWhatWasAsked` と `TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が落ちる。最後の変異では、`TestAssetsFetchFailsLongRateLimitOfThirdParty` も落ち(lane が断る download の待ちが `2m1s` と示される)、`TestAssetsFetchWaitsUpToTheLimitOfThirdParty` が落ちるかは jitter しだいである(再確認の reviewer の実行で 20 回中 16 回。`TestWaitTooLongHoldsWhatWasAsked` は jitter を固定しているため毎回落ちる)。
 
 ### review の指摘への対応(P4)
 
@@ -65,8 +67,11 @@ review cycle `claude-code-e64f479-20260929075701` の指摘 2 件を、どちら
 
 - PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。(完了)
 - review(P2)と指摘への対応(P4)。(完了)
-- 再確認(P5)を P2 と同じ subagent に委譲する。
-- review cycle を終えたら PR を Ready for review にする(P6)。
+- 再確認(P5)を P2 と同じ subagent に委譲する。(完了。未対応 0 件で review cycle を完了した)
+- review cycle を終えたら PR を Ready for review にする(P6)。(完了)
+- 人間: resolve 可とした 2 thread(Claude の cycle)を GitHub の UI で resolve する。
+- Codex: Ready for review の PR のクロスレビュー(ユーザーの Codex が行う)。
+- 人間: PR を merge する。
 
 ## 検証
 
@@ -102,3 +107,5 @@ cloud session の dev container(`docker compose run --rm dev ...`、go1.26.8)で
 - 2026-09-29: ユーザーが card で推奨の「60 秒まで」を選んだ(07:51Z)。実装は変えず、decision log 0068 の検討内容、note、PR description に選択を記録した。
 - 2026-09-29: review(P2)を subagent に委譲した。review cycle `claude-code-e64f479-20260929075701`、`Reviewed head` `e64f479f93c127fdb127002fdadb50b387f936d4`。指摘 2 件(inline 2、top-level 0)。prefix ごとに `[must]` 1、`[ask]` 0、`[imo]` 0、`[nits]` 0、`[fyi]` 1。`gh` への fallback は無し。完了要約の `Model` は、上位の指示で記載を控えたため `unknown`。指摘が 1 件以上のため P4 に進んだ(P3)。
 - 2026-09-29: 指摘 2 件を採用して修正した(P4、`cdd2b6f`。「review の指摘への対応(P4)」)。処置の内訳は、採用し修正した 2 件。スコープ外とした指摘と follow-up 候補は無い。出力生成系 3 skill の判断は変わらない。検証は「検証」の末尾のとおり。
+- 2026-09-29: 再確認(P5)を P2 と同じ subagent に委譲した。修正確認済み 2 件(resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0、未対応 0 件。`gh` への fallback は無し。訂正できなかった metadata の誤りは無し。reviewer は、note の変異の確認の記載に食い違いは無いとしたうえで、lane の判定の変異で落ちる test が記載より 1 件多いこと、取得の境界の test が jitter しだいで落ちることを示した。「test の作り」に書き足した。review cycle を完了し、P6 に進んだ。
+- 2026-09-29: 終了時の状態(P6): head `8c6846a` の check runs は 5 件すべて success。note だけの commit を push した後に、PR を Ready for review にする。
