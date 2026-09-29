@@ -14,6 +14,8 @@ Issue #276(PF-04)。PF-03(#275)の origin ごとの lane の上で、download �
 
 - 依存の #275(PF-03、PR #291)と #192(PR #271)は merge 済み。main `6f52108`(PR #291 の merge)から作業した。
 - 実装、test、benchmark、設計文書、decision log 0068 を済ませ、Issue の「検証」を実行した(「検証」)。
+- PR #292 を draft で作り、note を採番した。`progress.md` の PR 欄を反映した(P1)。
+- 第三者 host の `Retry-After` の上限は、ユーザーが推奨の「60 秒まで」を選んだ(2026-09-29 07:51Z、card)。実装は変えず、decision log 0068 に選択を記録した。
 
 ## 決定事項
 
@@ -23,7 +25,7 @@ Issue の関数名は main `0a83bf7` と PR #271 の head 時点の記載で、m
 
 ### 第三者 host の `Retry-After` の上限(ユーザーへの確認)
 
-#276 のコメント(PR #291 からの申し送り)の件は、ユーザーに card で判断を仰いだ(2026-09-29 06:53Z。選択肢は「60 秒まで」(推奨)、「5 分まで」、「上限なし」)。回答を待つ間は推奨の案で進め、Slack の file(`downloadNeedsAuth`)以外の download は、429 の `Retry-After` が 60 秒(`downloadPublicMaxWait` = `maxBackoff`)を超えると待たずに失敗にする。
+#276 のコメント(PR #291 からの申し送り)の件は、ユーザーに card で判断を仰いだ(2026-09-29 06:53Z。選択肢は「60 秒まで」(推奨)、「5 分まで」、「上限なし」)。回答を待つ間は推奨の案で進め、ユーザーはその「60 秒まで」を選んだ(07:51Z)。Slack の file(`downloadNeedsAuth`)以外の download は、429 の `Retry-After` が 60 秒(`downloadPublicMaxWait` = `maxBackoff`)を超えると待たずに失敗にする。
 
 ### 設計(decision log 0068)
 
@@ -48,7 +50,9 @@ Issue の関数名は main `0a83bf7` と PR #271 の head 時点の記載で、m
 
 ## 次にやること
 
-- PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。
+- PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。(完了)
+- review(P2)を subagent に委譲し、指摘があれば対応(P4)と再確認(P5)を回す。
+- review cycle を終えたら PR を Ready for review にする(P6)。
 
 ## 検証
 
@@ -72,8 +76,12 @@ cloud session の dev container(`docker compose run --rm dev ...`、go1.26.8)で
 
 ## リスク・ブロッカー
 
-- 第三者 host の `Retry-After` の上限は、ユーザーの回答待ち(推奨の 60 秒で進めている)。
+- なし。第三者 host の `Retry-After` の上限は、ユーザーが「60 秒まで」を選んで決まった(2026-09-29)。
 
 ## セッションログ
 
 - 2026-09-29: 着手。card でユーザーに上限を確認し、推奨の案で実装、test、benchmark、設計文書、decision log 0068 を書いた。
+- 2026-09-29: PR #292 を draft で作成し(07:50Z)、note を採番した(`015192e`)。`progress.md` の PF-04 の PR 欄を `#292` にした(P1)。検証は「検証」のとおり。出力生成系 3 skill は、3 つとも「いつ使うか」に当たらないため適用しなかった(「出力生成系 skill の適用判断」)。
+  - `run-issue-task` の報告から引き上げた項目。`number-working-branch-note` の報告の「書き換えた行の一覧」: note の `PR:` 欄(`未作成` → `#292`)、PR description の note のファイル名参照 1 行(`draft_` → `292_`)。title は書き換えていない。「触らずに残した行の一覧」: note の「次にやること」の「PR を draft で作り、note を採番し、`progress.md` の PR 欄を反映する。」(複合行。`progress.md` の反映は同 skill で完了しない)。採番の後、`progress.md` の反映と合わせて完了にした。PR description と title に触らずに残した行は無い。情報統制チェックで直した箇所は無い。出力生成系 3 skill は呼ばなかった(3 つとも「いつ使うか」に当たらない)。
+  - PR の assignee に kiyohara を設定した。review の依頼は、PR の作成者と同じ account のため GitHub に受け付けられなかった。GitHub の write 操作はすべて組み込みの GitHub MCP tool で行った。`gh` は、#272 のコメントの読み取り(`gh api`。trace の集計から status の行を絞るため)にだけ使った。
+- 2026-09-29: ユーザーが card で推奨の「60 秒まで」を選んだ(07:51Z)。実装は変えず、decision log 0068 の検討内容、note、PR description に選択を記録した。
