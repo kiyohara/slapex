@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `rerecord-demo-gif-after-pf07`
-- PR: (未採番)
+- PR: #297
 - 最終更新: 2026-09-30
 
 ## 目的
@@ -13,7 +13,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 ## 現在の状況
 
 - main `7591915`(PR #295 の merge)から作業している。
-- `bash tools/demo/record.sh` で録り直し、前の GIF と比べて目視で確かめた。commit 済み。push と PR の作成はユーザーの了承待ち。
+- `bash tools/demo/record.sh` で録り直し、前の GIF と比べて目視で確かめた。ユーザーの了承を得て push し、PR #297 を作った。確認用のファイルを片付けた後は、人間の手番(merge 前の GitHub 上の README の表示の確認と merge)である。
 
 ## 決定事項
 
@@ -22,7 +22,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 
 ## 次にやること
 
-- ユーザーの了承の後に push と PR の作成。
+- ユーザーの了承の後に push と PR の作成。(完了)
 
 ## 検証
 
@@ -52,4 +52,4 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 
 ## セッションログ
 
-- 2026-09-30: Issue #296 を作り、ブランチを作って録画を始めた。録画と確認を終えて commit した。
+- 2026-09-30: Issue #296 を作り、ブランチを作って録画を始めた。録画と確認を終えて commit した。ユーザーの了承を得て push し、PR #297 を作って note を採番した。
