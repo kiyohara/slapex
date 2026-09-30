@@ -13,7 +13,7 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 ## 現在の状況
 
 - main `d21b6fe` から作業している。
-- `.goreleaser.yaml` の変更と decision log 0041 の追記を済ませ、検証した。PR の作成前。
+- `.goreleaser.yaml` の変更と decision log 0041 の追記を済ませ、検証した。PR #299 を作り、note を採番した。次は P2(review)。
 
 ## 決定事項
 
@@ -55,6 +55,16 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 
 - Homebrew の sandbox の下で `run` が staged_path の属性を実際に外せるか。snapshot の cask の install は、ユーザーの Homebrew の状態を変えるため行っていない。次の release の後の確認で分かる。外せなかった場合、`run` の失敗で install が止まるか、Gatekeeper の警告が出る。
 
+## P1 の記録(drive-issue-to-reviewed-pr)
+
+- PR: #299。検証結果は「検証」、出力生成系 skill の判断は「出力生成系 skill の判断」のとおり。
+- `progress.md`: 更新しない(#239 は索引に無い単発 Issue)。
+- `run-issue-task` の手順で使った skill の報告から引き上げた項目:
+  - `number-working-branch-note`(commit `f06c139`、`draft_replace-cask-postflight-hook.md` → `299_replace-cask-postflight-hook.md`、push 成功。情報統制チェックで直した箇所は無い)。
+    - 書き換えた行の一覧: note の `- PR: (未採番)` → `- PR: #299`(`PR:` 欄の記入)。note の「次にやること」の「PR を作り、note を採番する。」の行末に `(完了)`(完了タスク行)。PR description の `working-branch-notes/draft_replace-cask-postflight-hook.md` → `working-branch-notes/299_replace-cask-postflight-hook.md`(ファイル名参照の置換)。title は無し。
+    - 触らずに残した行の一覧: note の「現在の状況」の「PR の作成前。」(状況を説明する stale 表現だが、定型の `PR 未作成` に当てはまらない)。skill の外で、orchestrator が P1 の記録と同じ commit で今の状態へ直した。
+  - 出力生成系 3 skill: 呼ばなかった(「出力生成系 skill の判断」)。
+
 ## リスク・ブロッカー
 
 - 次の release の後の確認で `run` が失敗した場合は、`must_succeed` や `writable_paths` の見直し、または hook を外す案へ戻る判断が要る(decision log 0041 の見直す条件)。
@@ -63,3 +73,4 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 ## セッションログ
 
 - 2026-10-01: Issue #239 を読み、GoReleaser v2.18.2 と Homebrew の source と文書で `*_steps` への対応を確かめた。GoReleaser は未対応。ユーザーに方針を確認し、`custom_block` で `postflight_steps` を出力する案に決めた。`.goreleaser.yaml` と decision log 0041(追記、見直す条件、index の行)を更新し、snapshot build と host の Homebrew での読み込みで確かめた。
+- 2026-10-01: PR #299 を作り、`number-working-branch-note` で note を採番した(`f06c139`)。P1 の記録を残した。
