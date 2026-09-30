@@ -2,7 +2,9 @@
 // slapex needs (doc/design/slack-api-usage.md). It implements the rate limit
 // policy from decision log 0025: honour 429 + Retry-After, exponential
 // backoff for transient failures, at most 5 retries per request, and
-// self-pacing of roughly 1 request/sec per Web API method. Asset downloads
+// self-pacing of roughly 1 request/sec per Web API method. The calls of a
+// method run one at a time in a lane of their own, and those of different
+// methods side by side (methodlane.go, decision log 0069). Asset downloads
 // are not paced: they go through a client of their own, which the parallel
 // fetch of the assets bounds by origin instead (internal/lane, decision log
 // 0067), and a 429 of one holds back the downloads of its origin (decision log
@@ -73,8 +75,11 @@ func (e *APIError) Error() string {
 // ErrTooLarge is returned by Download when the body exceeds the given limit.
 var ErrTooLarge = errors.New("download exceeds size limit")
 
-// Client is a Slack Web API client. Its Web API calls run one at a time;
-// Download may run on several goroutines at once (the parallel asset fetch).
+// Client is a Slack Web API client. Its methods may run on several goroutines
+// at once: the Web API calls of one method run one at a time, in the order
+// they come, and those of different methods side by side (methodlane.go);
+// Download runs as many at a time as it is called for (the parallel asset
+// fetch bounds them).
 type Client struct {
 	token   string
 	baseURL string
@@ -86,9 +91,11 @@ type Client struct {
 	dlClient              *http.Client
 	headerWait, stallWait time.Duration
 	publicTimeout         time.Duration
-	lastCall              map[string]time.Time
-	// sleep performs pacing and retry waits. Tests replace it with a fake
-	// that records the requested durations without sleeping.
+	// lanes run the Web API calls, a lane per method (methodlane.go).
+	lanes methodLanes
+	// sleep performs pacing and retry waits, on several goroutines at once
+	// when calls of different methods wait at the same time. Tests replace it
+	// with a fake that records the requested durations without sleeping.
 	sleep func(context.Context, time.Duration) error
 	// waitLane waits, before each request of a download that the parallel
 	// asset fetch runs, until the download's lane lets it send (lane.Wait).
@@ -112,7 +119,8 @@ func WithBaseURL(baseURL string) Option {
 	}
 }
 
-// WithSleeper replaces the Web API pacing and the retry sleeps.
+// WithSleeper replaces the Web API pacing and the retry sleeps. sleep may be
+// called on several goroutines at once.
 func WithSleeper(sleep func(context.Context, time.Duration) error) Option {
 	return func(c *Client) {
 		c.sleep = sleep
@@ -159,7 +167,6 @@ func New(token string, opts ...Option) *Client {
 		headerWait:    downloadHeaderWait,
 		stallWait:     downloadStallWait,
 		publicTimeout: downloadPublicTimeout,
-		lastCall:      map[string]time.Time{},
 		sleep:         sleepCtx,
 		waitLane:      lane.Wait,
 		Logf:          func(string, ...any) {},
@@ -181,27 +188,22 @@ type apiEnvelope struct {
 	} `json:"response_metadata"`
 }
 
-func (c *Client) pace(ctx context.Context, key string) error {
-	if last, ok := c.lastCall[key]; ok {
-		if wait := methodPace - time.Since(last); wait > 0 {
-			if err := c.sleep(ctx, wait); err != nil {
-				return err
-			}
-		}
-	}
-	c.lastCall[key] = time.Now()
-	return nil
-}
-
-// call POSTs a form-encoded Web API request and decodes the body into out.
+// call POSTs a form-encoded Web API request and decodes the body into out. It
+// runs in the lane of method (methodlane.go), which it holds until it
+// returns, its retries included.
 func (c *Client) call(ctx context.Context, method string, params url.Values, out any) (string, error) {
 	ctx, endTrace := c.traceRequest(ctx, TraceAPI, method)
 	defer endTrace()
-	if err := c.pace(ctx, method); err != nil {
+	l, err := c.lanes.enter(ctx, method)
+	if err != nil {
+		return "", fmt.Errorf("slack api %s: %w", method, err)
+	}
+	defer c.lanes.leave(l)
+	if err := c.pace(ctx, l); err != nil {
 		return "", fmt.Errorf("slack api %s: %w", method, err)
 	}
 	var body []byte
-	err := c.withRetry(ctx, "api "+method, 0, func() (*http.Response, error) {
+	err = c.withRetry(ctx, "api "+method, 0, func() (*http.Response, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+method,
 			strings.NewReader(params.Encode()))
 		if err != nil {
