@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/pf-06-issue-278-6lcyza`(cloud session が指定。Issue の推奨ブランチ名は `perf-api-method-lanes`)
-- PR: 未作成
+- PR: #294
 - 最終更新: 2026-09-30
 
 ## 目的
