@@ -13,7 +13,7 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 ## 現在の状況
 
 - main `d21b6fe` から作業している。
-- `.goreleaser.yaml` の変更と decision log 0041 の追記を済ませ、検証した。PR #299 を作り、note を採番した。P2 の review(指摘 3 件)に P4 で対応した。次は P5(再確認)。
+- `.goreleaser.yaml` の変更と decision log 0041 の追記を済ませ、検証した。PR #299 を作り、note を採番した。P2 の review(指摘 3 件)に P4 で対応し、P5 の再確認で未対応 0 件になった。残りは人間の手番である。
 
 ## 決定事項
 
@@ -38,6 +38,7 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 
 - PR を作り、note を採番する。(完了)
 - Homebrew が `postflight` を disabled にする前(早くても 2026-10-13 ごろ)に slapex を release する。release の時期はユーザーが決める(P2 の `[ask]`)。
+- 人間の手番: 3 thread(`[must]`、`[ask]`、`[imo]`。いずれも修正確認済み)の resolve、PR #299 の merge、release の時期の判断。
 - 次の release の後に、`brew update && brew upgrade --cask slapex` で非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことを確かめ、decision log 0041 に残す(release の作業で行う)。
 
 ## 検証
@@ -86,6 +87,17 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 - 修正 commit: 本 note の更新と同じ commit(返信に SHA を書く)。PR description の編集は push を伴わない。
 - 出力生成系 skill の再判断: decision log、note、PR description だけの変更のため、P1 の判断を変えない。
 
+## P5 の記録
+
+- verify-comments(P2 と同じ subagent を再開して委譲)。Reviewed head: `07fbfaf5ae34b5b12c8bf68a6f94174cee5fd5bf`。完了要約は PR conversation comment(issuecomment-5921349265)。
+- 区分ごとの確認済み件数: 修正確認済み 3(3 thread とも resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0。未対応 0(top-level の指摘は無い)。
+- Issue #300 への参照の追加も、PR の範囲と整合すると確かめられた。
+
+## P6 の記録
+
+- 終了時の状態: PR #299 は open。review cycle `claude-code-c236958-20260930225828` は未対応 0 件で完了。P5 が確かめた head は `07fbfaf`(check runs 5 件 success)。本 note の P5 / P6 の記録は、その後の note だけの commit である。
+- 人間に残る作業: 3 thread の resolve、merge、release の時期の判断(Homebrew が `postflight` を disabled にする前、早くても 2026-10-13 ごろ)。metadata の誤りを訂正できなかった投稿は無い。
+
 ## リスク・ブロッカー
 
 - 次の release の後の確認で `run` が失敗した場合は、`must_succeed` や `writable_paths` の見直し、または hook を外す案へ戻る判断が要る(decision log 0041 の見直す条件)。
@@ -97,3 +109,4 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 - 2026-10-01: Issue #239 を読み、GoReleaser v2.18.2 と Homebrew の source と文書で `*_steps` への対応を確かめた。GoReleaser は未対応。ユーザーに方針を確認し、`custom_block` で `postflight_steps` を出力する案に決めた。`.goreleaser.yaml` と decision log 0041(追記、見直す条件、index の行)を更新し、snapshot build と host の Homebrew での読み込みで確かめた。
 - 2026-10-01: PR #299 を作り、`number-working-branch-note` で note を採番した(`f06c139`)。P1 の記録を残した。
 - 2026-10-01: P2 の review(`claude-code-c236958-20260930225828`、指摘 3 件)を受け、P4 で 3 件とも採用して decision log 0041、note、PR description を直した。ユーザーの指示で follow-up の Issue #300 を起票した。
+- 2026-10-01: P5 の再確認で 3 件とも修正確認済み(未対応 0 件)。P6 の終了の状態を残した。
