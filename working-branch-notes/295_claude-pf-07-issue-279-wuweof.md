@@ -13,7 +13,7 @@ Issue #279(PF-07)。PF-05(#277、decision log 0069)で決めた export 全体の
 ## 現在の状況
 
 - 依存の #276(PF-04)、#277(PF-05)、#278(PF-06、PR #294)は merge 済み。main `417d253`(PR #294 の merge)から作業している。
-- 実装、test、文書の更新、Docker Compose での全体の検証まで済み、draft PR #295 を作った。note を採番し、`progress.md` の PR 欄を反映した。次は P2 の review。
+- 実装、test、文書の更新、Docker Compose での全体の検証まで済み、draft PR #295 を作った。note を採番し、`progress.md` の PR 欄を反映した。review cycle `claude-code-ca2a8e2-20260930042001` の指摘 1 件に対応した。次は P5 の再確認。
 
 ## 決定事項
 
@@ -35,7 +35,7 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 - `internal/lane/scheduler_test.go`: 後から足した job の順(`TestSchedulerAddOrder`)、全体の上限と lane の状態の共有(`TestSchedulerSharesLimits`)、`Group.Stop`、`Close`、context の終了。
 - `internal/output/prefetch_test.go`: 先行取得ありの `Fetch` が、なしの場合と同じ manifest、ファイル、警告、通知になること(`TestAssetsPrefetchMatchesFetch`)、download の途中で `Fetch` が始まる場合、サイズの上限(取り直しと、計画の上限の超過)、`--reuse-cache` の copy で済む URL、`Close`、cancel。
 - `internal/export/integration_asset_prefetch_test.go`(新規): 先行取得あり / なしを fake server の結合 test で比べる。成功する場面では、PF-06 の比較(`assertPrefetchMatchesSerial`)に加えて、直列の run が download した asset のすべてが、Assets 工程が計画を決める時点(`assetPlanObserverKey`)より前に fake server に来たことを確かめる(`runAhead`)。場面は、サイズの上限(file object の `size` による skip と、`size` が無く download が上限で止まるもの)、asset の失敗と 429(警告と通知の順)、同じ URL を複数の要求が求めるもの(custom emoji の alias と元の名前、同じ file の 2 回の投稿、URL preview の画像と file で上限の大きい方が先に download されるもの。`emoji.list` を page の計画の後まで止め、custom emoji の描画し直しも通す)、emoji filter で除外される message の file(fake server に request が来ない)。取り直しの場面(先の download が小さい上限で止まる)では、request が取り直しの 1 件だけ多く、出力と stderr が一致する。失敗と cancel の場面(先に download を始めた後の `conversations.replies` と `emoji.list` の失敗、先の download が途中の時点の cancel)では、error、exit code、正規化した stderr、出力先のファイル(一時ファイルが残らない)が一致し、request は失敗しない run の request に含まれる。
-- `internal/export/integration_prefetch_test.go`(PF-06 の比較): 成功する各場面で download が Assets 工程より先に来たことも確かめるようにし、`--reuse-cache` の場面に cache に無い asset(それだけを先に download する)の行を足した。`TestRunIntegrationPrefetchTiming` に asset も先に download する場合と、各 message に file がある場面を足した。
+- `internal/export/integration_prefetch_test.go`(PF-06 の比較): 成功する各場面で download が Assets 工程より先に来たことも確かめるようにし、`--reuse-cache` の場面に、cache に無い asset(それだけを先に download する)、cache にある user の avatar、cache にある bot の icon のファイルだけを cache から消す行を足した。user / bot の解決が遅れる場面(`peopleScenario`)の bot に、`bots.info` が返す icon を持たせた。`TestRunIntegrationPrefetchTiming` に asset も先に download する場合と、各 message に file がある場面を足した。
 - `internal/export/integration_plan_test.go`: 計画が決まった時点の出力先に、先に download した一時ファイル(`asset-*`)だけは有ってよいとした。
 - export 全体の所要時間(synctest、PF-06 の追記と同じ条件。各欄は Web API の最後の request が終わる時点 / run の時間): user 5 人が page に現れる場面は、先行取得なし 6.7 秒 / 6.8 秒、Web API だけ 4.5 秒 / 4.6 秒、asset も 4.5 秒 / 4.6 秒。user 1 人が page に、3 人が reply にだけ現れる場面は 5.7 / 5.8、3.5 / 3.6、3.5 / 3.6 秒。user 5 人が page に現れ、各 message に file(server で 1 秒)がある場面は 6.7 / 7.7、4.5 / 5.5、4.5 / 4.6 秒。decision log 0069 に追記した。
 
@@ -54,7 +54,7 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 
 ## 次にやること
 
-- CI の check runs の完了を確かめ、P2 の review を subagent に委譲する。
+- CI の check runs の完了を確かめ、P5 の再確認を subagent に委譲する。
 
 ## 検証
 
@@ -71,6 +71,7 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 
 - 追加の反復(2026-09-30): `internal/export` の先行取得、計画、Assets 工程の cancel、並行 download、HTTP trace の test の `-race -count=20 -shuffle=on`、`internal/lane` と `internal/output` の `-race -count=30 -shuffle=on`、`internal/export`、`internal/lane`、`internal/output` の `GOMAXPROCS=1 -count=5 -shuffle=on`、それに `tools/assetbench` を加えた `-count=10 -shuffle=on` は成功した。`go build ./...` と cross compile(`CGO_ENABLED=0`、darwin / linux × amd64 / arm64)も成功した。
 - 変異 test: 次の 11 の変異を 1 つずつ入れ、それぞれ対応する test が落ちることを確かめた(変異は戻した)。asset を先に download しない、小さい上限で止まった先の結果を取り直さない、計画の上限を超える先の結果を保存する、先の download の通知を保たずに出す、filter ありでも page の全 message を確定とする、`Close` で一時ファイルを消さない、`--reuse-cache` の copy で済む URL も先に download する、サイズの skip の entry も先に download する、Messages 工程の終わりに asset を渡さない、`users.info` の後に avatar を先に download しない、`emoji.list` の後に描画し直さない。
+- P4(2026-09-30): test を足した後、`gofmt -l .`(出力なし)、`go vet ./...`、`go build ./...`、`go test ./...`、`go test -race ./...`、`internal/export` の先行取得の test の `-race -count=20 -shuffle=on` と `GOMAXPROCS=1 -count=10 -shuffle=on`、`git diff --check` が成功した。avatar を先に download する 3 つの呼び出し(cache にある user、cache にある bot、`bots.info` の後)を 1 つずつ消す変異を入れ、足す前の test がすべて通ること(指摘の再現)と、足した後はそれぞれ対応する行が「downloads that did not go ahead of the Assets phase」で落ちることを確かめた(変異は戻した)。変異の確認はこれで 14 件になった。
 - 既存の `TestTraceTimeoutClass`(`internal/slack`)の不安定さ(負荷の下の `-race` で約 1/300、main でも起きる。PR #294 の follow-up 候補)は、この PR の範囲外のため直していない。
 
 ## P1 の記録(drive-issue-to-reviewed-pr)
@@ -82,6 +83,20 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
     - 触らずに残した行の一覧: note の「現在の状況」の「実装、test、文書の更新、Docker Compose での全体の検証まで済んだ。次は draft PR の作成。」(定型に当てはまらない)、note の「次にやること」の「draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。」(複合行。`progress.md` は同 skill の対象外)、PR description の note 参照の後の「(採番後に rename する)」(置換後の文脈が不自然)、PR description の「(PR 欄は採番後に反映する)」(定型に当てはまらない)。これらは skill の後に、`progress.md` の PR 欄の反映と合わせて orchestrator が更新した。
   - 出力生成系 3 skill: 呼ばなかった(`update-sample-exports` と `update-readme-preview-screenshots` は「いつ使うか」に当たらない。`update-readme-demo-gif` は cloud session で実行できないため、ローカルで要再生成として未検証事項に残した)。
 
+## P2 / P3 の記録
+
+- review cycle: `claude-code-ca2a8e2-20260930042001`。Reviewed head: `ca2a8e2f1b21e6d4595ffeb612da8fdec7a50d91`。
+- 指摘 1 件(inline 1、top-level 0)。prefix ごとでは `[must]` 0、`[ask]` 0、`[imo]` 1、`[nits]` 0、`[fyi]` 0。
+  - `[imo]` `internal/export/prefetch.go`: avatar を先に download する 4 つの呼び出しのうち、cache にある user、cache にある bot、`bots.info` の後の 3 つを確かめる test が無い。
+- subagent の報告: `gh` への fallback なし、停止理由なし、訂正できなかった誤りなし。check runs は 5 件とも success。
+- P3: 指摘が 1 件のため P4 へ進んだ。
+
+## P4 の記録
+
+- 処置: 採用し修正した 1 件(上の `[imo]`)。スコープ外とした指摘は無く、follow-up 候補は増えていない。
+- 修正 commit: `bb0635b`。`peopleScenario` の bot に `bots.info` が返す icon を持たせ、`--reuse-cache` の比較に、cache にある user の avatar と cache にある bot の icon(`botReuseScenario`)のファイルだけを cache から消す行を足した。`removeCachedAsset` は、消す asset を source URL の path で指定するようにした。PR description の「主な変更」の test の項と「検証」にも足した。
+- 出力生成系 skill の再判断: test だけの変更のため、P1 の判断(sample と screenshot は使わない、demo GIF はローカルで要再生成)を変えない。
+
 ## リスク・ブロッカー
 
 - なし。
@@ -92,3 +107,5 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 - 2026-09-30: `internal/lane` の `Scheduler`、`output.Assets.Prefetch` と `Close`、`internal/export` の `assetPrefetcher` と、その test を実装した。
 - 2026-09-30: 先行取得あり / なしを比べる結合 test、所要時間の比較、文書と decision log 0069 の追記を足し、Docker Compose で全体を検証した。
 - 2026-09-30: P1 を終えた。draft PR #295 を作り、note を採番し(`0b19f71`)、`progress.md` の PR 欄を反映した。
+- 2026-09-30: P2 の review を subagent に委譲した(指摘 1 件、`[imo]`)。P3 で P4 へ進んだ。
+- 2026-09-30: P4 で、avatar の先行取得の 3 つの経路の test を足した(`bb0635b`)。
