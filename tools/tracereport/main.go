@@ -352,7 +352,11 @@ func writeReport(w io.Writer, s summary) {
 	if !s.downloads.start.IsZero() {
 		spanRow("All downloads", s.downloads)
 	}
-	spanRow("All", s.requests)
+	// A run that failed before its first request has only the run line, and
+	// no span.
+	if !s.requests.start.IsZero() {
+		spanRow("All", s.requests)
+	}
 	fmt.Fprintln(w)
 
 	fmt.Fprintln(w, "In \"Requests per origin\", `n ×k` is k origins with n requests each.")

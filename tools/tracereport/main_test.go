@@ -141,6 +141,32 @@ func TestReportRun(t *testing.T) {
 	}
 }
 
+// TestReportRunWithoutRequests: a run that failed before its first request
+// leaves the run line alone. The whole run is outside requests, and the
+// table of spans has no row, since no request started or ended.
+func TestReportRunWithoutRequests(t *testing.T) {
+	run := `{"start":"2026-09-27T12:00:00Z","type":"run","done_us":1500000}`
+	recs, skipped, err := readTrace(strings.NewReader(run + "\n"))
+	if err != nil || skipped != 0 || len(recs) != 1 {
+		t.Fatalf("readTrace = %d records, %d skipped, %v; want 1", len(recs), skipped, err)
+	}
+	var out bytes.Buffer
+	writeReport(&out, summarize(recs))
+	report := out.String()
+	for _, want := range []string{
+		"0 requests in a run of 1.500 s: 0 Web API calls, and 0 downloads from 0 origins.",
+		"| Outside requests | | | | | | | | | | | 1.500 s | 100.0% |",
+		"| Class | First request starts | Last request ends | Span |\n|---|---:|---:|---:|\n\n",
+	} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report misses %q:\n%s", want, report)
+		}
+	}
+	if strings.Contains(report, "| -") {
+		t.Errorf("report has a negative time:\n%s", report)
+	}
+}
+
 // TestReportSpans: the spans of a run whose requests overlap, as they do
 // once the Web API calls of different methods run side by side and the
 // downloads run in parallel (Issue #278). Each class's span runs from the
