@@ -9,8 +9,10 @@ package export
 // second render asks for:
 //
 //   - the manifest lists the plan's assets, in the plan's order;
-//   - nothing was downloaded or copied into the output directory before the
-//     plan was fixed;
+//   - nothing was saved or copied into the output directory before the plan
+//     was fixed: the downloads sent ahead of the Assets phase keep what they
+//     get in temporary files until the fetch of the plan takes it (Issue
+//     #279);
 //   - every asset the plan acquires was downloaded, in parallel and so in any
 //     order (Issue #275), and the warnings came in the plan's order, each
 //     after its own download's retry notices.
@@ -20,6 +22,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -218,8 +221,9 @@ func (o *planObservation) context(t *testing.T, root string) context.Context {
 }
 
 // assertPlan checks that the observer saw allAssetPathsPlan, and nothing under
-// the output root yet: the plan was fixed before any asset was downloaded or
-// copied.
+// the output root yet but the temporary files of the downloads sent ahead,
+// next to where index.html goes: the plan was fixed before any asset was
+// saved or copied.
 func assertPlan(t *testing.T, obs *planObservation) {
 	t.Helper()
 	if obs.plan == nil {
@@ -232,8 +236,11 @@ func assertPlan(t *testing.T, obs *planObservation) {
 	if want := allAssetPathsPlan(); !slices.Equal(got, want) {
 		t.Fatalf("plan = %v\nwant   %v", got, want)
 	}
-	if len(obs.files) != 0 {
-		t.Fatalf("files under the output root when the plan was fixed = %q, want none", obs.files)
+	saved := slices.DeleteFunc(slices.Clone(obs.files), func(rel string) bool {
+		return strings.HasPrefix(path.Base(rel), "asset-") && !slices.Contains(strings.Split(path.Dir(rel), "/"), "assets")
+	})
+	if len(saved) != 0 {
+		t.Fatalf("files under the output root when the plan was fixed = %q, want none but the temporary files of the downloads sent ahead", obs.files)
 	}
 }
 

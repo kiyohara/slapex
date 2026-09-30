@@ -221,6 +221,7 @@ func (b *bench) run(ctx context.Context, s strategy, n int, limits lane.Limits) 
 		dl = detachedDownloader{client}
 	}
 	assets := output.NewAssets(ctx, dl, dir, maxAttachment)
+	defer assets.Close()
 	assets.Lanes = limits
 	// save asks a for the workload's assets, as a render of the page does.
 	save := func(a *output.Assets) {

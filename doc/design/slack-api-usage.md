@@ -111,10 +111,10 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
 - 削除済みと Free plan の制限で非表示のファイルを除き、外部サービス連携のファイル(`is_external` が true)と、download URL(`url_private_download` / `url_private`)を持たないファイルは、ファイル本体(画像では original)を download せず、サイズ上限の判定もせず、`.cache/assets_manifest.json` にも記録しない。外部サービス連携のファイルの `url_private` / `url_private_download` は Slack ではなく外部サービスを指し、download すると外部サービスが返す page(ログイン画面など)を保存しうるためである(`decision-log/0017-uploaded-image-assets.md` の 2026-09-27 の追記)。ただし、thumbnail のある画像は、thumbnail を他の画像と同じく保存し、`upload_thumb` として記録する(取得に失敗した場合の status は `failed`)。
 - これらのファイルの表示は、`html-rendering.md` の「画像と添付ファイルの表示」の、ファイル本体を download しないファイルの表とその下の注記を参照する。
 - asset の download にも上記のリトライ方針を適用する。失敗した asset は HTML 上で置換表示にし、export 全体は継続する。
-- asset は、描画から求めた取得の計画(`decision-log/0064-two-pass-asset-planning.md`)を並列に取得する。`--reuse-cache` の copy で済むものを計画の順に先に済ませ、残りを origin(scheme + host + port)ごとの lane で download する(`decision-log/0067-parallel-asset-lanes.md`)。
+- asset は、描画から求めた取得の計画(`decision-log/0064-two-pass-asset-planning.md`)を並列に取得する。`--reuse-cache` の copy で済むものを計画の順に先に済ませ、残りを origin(scheme + host + port)ごとの lane で download する(`decision-log/0067-parallel-asset-lanes.md`)。Assets 工程より前に確定した asset は、確定した時点から同じ lane で先に download する(「取得の並行化」)。
   - 各 lane は最初の 1 件だけを先に出し、その download が接続を得てから残りを出す。残りはその接続を共有する(HTTP/2 の場合)。
   - 同時に download する数は、接続が HTTP/2 の origin で 16 件、それ以外の origin で 6 件、全体で 64 件までとする。
-  - lane の中は、サイズが分かるもの(Slack の file の原本と添付)を大きい順に始め、サイズの分からないものをその後に計画の順に始める。4 MiB 以上のものは、lane あたり同時 4 件までとする。
+  - lane の中は、サイズが分かるもの(Slack の file の原本と添付)を大きい順に始め、サイズの分からないものをその後に lane に足した順(先に download するものは確定した順、それ以外は計画の順)に始める。4 MiB 以上のものは、lane あたり同時 4 件までとする。
   - 429 を受けた lane は、`Retry-After` の間(429 を受けた download が待つのと同じ、jitter を加えた時間)、新しい request を出さない。既に出ている request はそのまま続け、後から来た 429 がより長い待ちを求めたら延ばす。`Retry-After` の無い 429 では、lane は待たない(`decision-log/0068-lane-wide-rate-limit-wait.md`)。
   - 429 を受けると、lane の同時数の上限を半分(1 未満にはしない)にする。上限を半分にする前に枠を得ていた download の 429 では、重ねて半分にしない。半分にした後に枠を得た download が 200 の応答を 4 件受け取るごとに、上限を 1 戻す(lane が開いたときの上限まで)。
   - retry を待つ download は、待つ間は lane の枠を使わず、次の request の前に枠を取り直す。枠を取り直す download は、まだ始まっていない download より先に枠を得る。5xx とネットワークエラーでは、lane の上限を変えない。
@@ -125,7 +125,7 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
 
 ## 取得の並行化
 
-この節の方針は PF-06(#278)と PF-07(#279)で実装する。Web API の部分(method ごとの lane と、`emoji.list`、`conversations.replies`、`users.info`、`bots.info` の先行取得)は PF-06 で実装した。asset の先行取得は PF-07 で実装し、実装されるまでは、asset の download は Assets 工程で始まる(決定経緯は `decision-log/0069-api-method-lanes-and-prefetch.md`)。
+この節の方針は、Web API の部分(method ごとの lane と、`emoji.list`、`conversations.replies`、`users.info`、`bots.info` の先行取得)を PF-06(#278)で、asset の download の先行取得を PF-07(#279)で実装した(決定経緯は `decision-log/0069-api-method-lanes-and-prefetch.md`)。
 
 - export の工程(`usage-flow.md` の「処理対象の表示」のフェーズ行の順)は、今の順に 1 つずつ進める。後の工程が必ず出す request は、それが確定した時点で先に出し(先行取得)、工程は自分の番に来たときにその結果を使う。工程の処理(`--max-posts`、emoji filter による除外、truncated の判定、user と bot の解決、描画)は request の結果を直列の場合と同じ順に受け取るため、結果は直列に取得した場合と同じになる。
 - Web API は method ごとの lane で呼ぶ。同じ method の呼び出しは同時に 1 件までとし、来た順に、前の呼び出し(retry を含む)が終わってから、かつ前の呼び出しの開始から 1 秒以上空けて始める(「rate limit とリトライ」の平準化)。429 の `Retry-After` を待つ間は、同じ method の次の呼び出しも待つ。異なる method の呼び出しは並行する。

@@ -16,6 +16,10 @@
 // handles it as the serial export does. When Run returns, the prefetcher
 // stops the requests still under way and waits for them; the results and
 // notices no stage took are dropped.
+//
+// The prefetcher also sends ahead the asset downloads that the messages, the
+// users and the bots it confirms make certain (asset_prefetch.go, Issue
+// #279).
 
 package export
 
@@ -23,13 +27,21 @@ import (
 	"context"
 	"sync"
 
+	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
 // prefetchOffKey is the context key of a bool that, when true, turns the
 // prefetch off: each request goes out when a stage asks for it, as in the
-// serial export. Only tests set it, to compare the two (Issue #278).
+// serial export, and each asset download when the Assets phase fetches its
+// plan. Only tests set it, to compare the two (Issues #278, #279).
 type prefetchOffKey struct{}
+
+// assetPrefetchOffKey is the context key of a bool that, when true, turns
+// the asset downloads' prefetch off and leaves the Web API requests' on, as
+// the export was after Issue #278. Only tests set it, to compare the export's
+// time with and without it (Issue #279).
+type assetPrefetchOffKey struct{}
 
 // requestTakenKey is the context key of a func(key requestKey, ahead bool)
 // that the prefetcher calls each time a stage has taken the result of a
@@ -58,6 +70,9 @@ type prefetcher struct {
 	off    bool                   // prefetchOffKey
 	taken  func(requestKey, bool) // requestTakenKey; nil unless a test set it
 	wg     sync.WaitGroup         // the prefetched requests under way
+	// assets sends the asset downloads ahead; nil until prefetchAssets, and
+	// with the prefetch off.
+	assets *assetPrefetcher
 
 	mu       sync.Mutex
 	stopped  bool
@@ -91,6 +106,21 @@ func newPrefetcher(ctx context.Context, client *slack.Client, reuse *reusableCac
 	f.off, _ = ctx.Value(prefetchOffKey{}).(bool)
 	f.taken, _ = ctx.Value(requestTakenKey{}).(func(requestKey, bool))
 	return f
+}
+
+// prefetchAssets makes the prefetcher send the asset downloads ahead
+// through assets, and sends the workspace icon of teamInfo ahead: the
+// page's header shows it. maxAttachmentBytes is the size limit of files.
+func (f *prefetcher) prefetchAssets(ctx context.Context, assets *output.Assets, maxAttachmentBytes int64, teamInfo *slack.TeamInfo) {
+	if off, _ := ctx.Value(assetPrefetchOffKey{}).(bool); f.off || off {
+		return
+	}
+	var customEmoji map[string]string
+	if f.reuse != nil {
+		customEmoji = f.reuse.emoji
+	}
+	f.assets = newAssetPrefetcher(assets, maxAttachmentBytes, customEmoji, f.reuse != nil)
+	f.assets.workspaceIcon(teamInfo)
 }
 
 // stop cancels the prefetched requests still under way, waits for them to
@@ -199,14 +229,15 @@ func (f *prefetcher) thread(ctx context.Context, channelID, threadTS string) (th
 
 // prefetchThread sends the thread's conversations.replies ahead. With shown,
 // every reply it returns is shown (no emoji filter is on), so the users.info
-// and bots.info of the people the replies show go ahead as soon as the
-// replies have come.
+// and bots.info of the people the replies show, and the assets the replies
+// show, go ahead as soon as the replies have come.
 func (f *prefetcher) prefetchThread(channelID, threadTS string, shown bool) {
 	fetch := f.fetchThread(channelID, threadTS)
 	prefetch(f, threadKey(channelID, threadTS), func(ctx context.Context) (threadResult, error) {
 		result, err := fetch(ctx)
 		if err == nil && shown {
 			f.prefetchPeople(nil, map[string][]slack.Message{threadTS: result.replies})
+			f.assets.messages(result.replies)
 		}
 		return result, err
 	})
@@ -225,31 +256,43 @@ func (f *prefetcher) botInfo(ctx context.Context, id string) (*slack.Bot, error)
 }
 
 // prefetchUsers sends ahead the users.info of the users the reuse cache does
-// not hold, as lookupUsers asks for them.
+// not hold, as lookupUsers asks for them, and the avatar of each user as soon
+// as the reuse cache or users.info has the user.
 func (f *prefetcher) prefetchUsers(ids []string) {
 	for _, id := range ids {
 		if f.reuse != nil {
-			if _, ok := f.reuse.users[id]; ok {
+			if cu, ok := f.reuse.users[id]; ok {
+				f.assets.avatar(avatarURL(cu.toUser(id)))
 				continue
 			}
 		}
 		prefetch(f, requestKey{method: "users.info", arg: id}, func(ctx context.Context) (*slack.User, error) {
-			return f.client.UserInfo(ctx, id)
+			u, err := f.client.UserInfo(ctx, id)
+			if err == nil && u != nil {
+				f.assets.avatar(avatarURL(u))
+			}
+			return u, err
 		})
 	}
 }
 
 // prefetchBots sends ahead the bots.info of the bots the reuse cache does not
-// hold, as lookupBots asks for them.
+// hold, as lookupBots asks for them, and the app icon of each bot as soon as
+// the reuse cache or bots.info has the bot.
 func (f *prefetcher) prefetchBots(ids []string) {
 	for _, id := range ids {
 		if f.reuse != nil {
-			if _, ok := f.reuse.bots[id]; ok {
+			if cb, ok := f.reuse.bots[id]; ok {
+				f.assets.avatar(cb.toBot(id).Icons.URL())
 				continue
 			}
 		}
 		prefetch(f, requestKey{method: "bots.info", arg: id}, func(ctx context.Context) (*slack.Bot, error) {
-			return f.client.BotInfo(ctx, id)
+			bot, err := f.client.BotInfo(ctx, id)
+			if err == nil && bot != nil {
+				f.assets.avatar(bot.Icons.URL())
+			}
+			return bot, err
 		})
 	}
 }
@@ -267,7 +310,14 @@ func (f *prefetcher) emojiList(ctx context.Context) (map[string]string, error) {
 	return take(ctx, f, emojiListKey, f.client.EmojiList)
 }
 
-// prefetchEmojiList sends the emoji.list ahead.
+// prefetchEmojiList sends the emoji.list ahead, and once it has returned,
+// the custom emoji images of the messages confirmed until then.
 func (f *prefetcher) prefetchEmojiList() {
-	prefetch(f, emojiListKey, f.client.EmojiList)
+	prefetch(f, emojiListKey, func(ctx context.Context) (map[string]string, error) {
+		customEmoji, err := f.client.EmojiList(ctx)
+		if err == nil {
+			f.assets.customEmoji(customEmoji)
+		}
+		return customEmoji, err
+	})
 }

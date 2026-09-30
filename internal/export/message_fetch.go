@@ -126,6 +126,10 @@ func fetchMessages(ctx context.Context, f *prefetcher, channelID string, fetchRa
 		truncated:        truncated,
 		excluded:         filter.ExcludedCount(),
 	}
+	// With the pages done, every message the page shows is certain: the
+	// assets of those the pages did not confirm — with a filter, the
+	// messages of threads — go ahead now, and those of the rest have.
+	f.assets.messages(shownMessages(result))
 	status, meta := messagesPhaseMeta(result, opts)
 	p.EndPhase(status, "Messages", fmt.Sprintf("%d fetched %s", len(timeline), fetchRange.progressLabel()), meta)
 	return result, nil
@@ -137,13 +141,13 @@ func fetchMessages(ctx context.Context, f *prefetcher, channelID string, fetchRa
 // History call returns (unfetchedThreadIDs), unless it has already, which
 // also sent the request: the thread of a broadcast, which a filter makes it
 // fetch too, is left to it, since a parent on a later page can exclude the
-// thread first. The Users stage resolves who the retained messages show,
-// unless a filter drops them from the timeline later: without a filter, it
-// drops none, and with one, only the messages of threads
-// (dropExcludedThreads), which stay uncertain until the Messages phase ends.
-// Without a filter, the Users stage also resolves who the replies of those
-// threads show, since it shows them all. The page callback runs on the
-// driver, before History returns.
+// thread first. The page shows the retained messages, unless a filter drops
+// them from the timeline later: without a filter, it drops none, and with
+// one, only the messages of threads (dropExcludedThreads), which stay
+// uncertain until the Messages phase ends. So the Users stage resolves who
+// the certain messages show, and the Assets phase saves what they show.
+// Without a filter, the page also shows all the replies of those threads.
+// The page callback runs on the driver, before History returns.
 func prefetchHistoryPage(f *prefetcher, channelID string, page []slack.Message, filter *messageFilter) {
 	certain := page
 	if filter.Enabled() {
@@ -160,6 +164,7 @@ func prefetchHistoryPage(f *prefetcher, channelID string, page []slack.Message, 
 		}
 	}
 	f.prefetchPeople(certain, nil)
+	f.assets.messages(certain)
 }
 
 // fetchThread fetches one thread through conversations.replies and reports
