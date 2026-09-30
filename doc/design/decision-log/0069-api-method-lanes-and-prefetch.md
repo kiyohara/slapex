@@ -188,6 +188,28 @@ export 全体の所要時間を、synctest の仮想時間で、先行取得な�
 
 先行取得ありの Web API の時間は、`conversations.history` の page を受け取るまで(4 request)と、`users.info` の回数 × 1 秒(最後の 1 件は 100 ms)で、「効果の見込み」の形に一致した。`emoji.list` は `conversations.history` と並び、`conversations.replies` は `users.info` と並ぶ。download の時間は両方で同じである(PF-07 の前のため)。
 
+## 追記(2026-09-30): PF-07 の実装
+
+PF-07(#279)で、本決定のうち asset の部分を実装した。これで本決定の全体を実装した。
+
+- `internal/lane` に、job を後から足せる scheduler(`Scheduler`)を足した。export は 1 つの scheduler で、先に始めた download と Assets 工程の `Fetch` の download を走らせ、全体の上限を共有する。足した job の組(`Group`)ごとに、終わるのを待つことと、並んでいる job を外して止めることができる。origin ごとの lane、先導 1 本、同時数の上限、サイズの大きい順(先に足した job との間でも保つ)、429 の lane 全体の待ちと上限の半減・回復は、0067 / 0068 のまま変えていない。`lane.Run` は、自分の scheduler で 1 組の job を走らせる形で残した。
+- `output.Assets.Prefetch` は、planner の計画の entry を受け取り、URL ごとに 1 回、download を scheduler に足す。download は計画の kind のサイズの上限で走り、内容を出力先の一時ファイルに置き、内容 hash、Content-Type、判別した形式、サイズ、または error と、retry と rate limit 待機の通知を保つ。`--reuse-cache` の copy で済む URL と、サイズの skip の entry は足さない。`Fetch` を始めた後と、context が終わった後も足さない。
+- `Fetch` は、計画の順に download する URL のうち先に始めたものは、その download が終わるのを待って結果を使う(`usePrefetched`)。保っていた通知と、計画の kind で組み立てた警告は、`Fetch` 自身の download と同じ保持(0067)で計画の順に出す。先の download が計画の kind より小さい上限で止まった場合と、止められて結果が無い場合は、同じ scheduler で download し直す。計画が copy する URL と、最初の要求がサイズの skip になる URL の先の download は、止めて一時ファイルを消す。`Assets.Close` は、どの `Fetch` も受け取らなかった download を止め、止まるのを待って一時ファイルを消す。`Run` は返るときに、先行取得の表を止めた後で `Close` する。
+- `internal/export` の `assetPrefetcher`(`asset_prefetch.go`)は、Assets 工程の 1 回目の描画と同じ view builder で、確定した message を自分の planner に描画し(計画だけを作る)、増えた計画を `Prefetch` に渡す。message は PF-06 の確定の規則のとおり、`History` の page の口、先に出した thread の replies が届いた時点(emoji filter を指定しない場合)、Messages 工程の終わり(工程の結果の timeline と replies。filter を指定した場合の thread の message がここで確定する)に渡す。avatar は `users.info` / `bots.info` の結果が届いた時点か、cache にある user / bot の ID が現れた時点、workspace icon は Messages 工程の開始時に計画する。custom emoji の一覧が届く前に描画した message は custom emoji を名前のまま描くため、一覧が届いた時点で描画し直して画像を計画する。
+- 先行取得の有無の切り替え(test だけの context の値)に、asset の先行取得だけを切るものを足した(synctest の時間の比較に使う)。利用者向けの option は足していない。
+- 結合 test は、PF-06 の scenario をすべて asset の先行取得ありで比べ、成功する scenario では、直列の run が download した asset のすべてを、Assets 工程が計画を決めた時点より前に先に download し始めていたことも確かめる。scenario は、「検証の方法」のものに加え、サイズの上限(file object の `size` による skip と、download が上限で止まるもの)、asset の失敗と 429(警告と通知の順)、`--reuse-cache` の copy(cache に無い asset だけを先に download する)、同じ URL を複数の要求が求める場合(custom emoji の alias と元の名前、同じ file の 2 回の投稿、URL preview の画像と file で、上限の大きい方が先に download されるもの)、emoji filter で除外される message の file(fake server に request が来ない)とした。同じ URL を、先の download が小さい上限で止まる順に求める scenario では、request が取り直しの 1 件だけ多く、出力と stderr は一致した。失敗と cancel の scenario(先に download を始めた後の `conversations.replies` と `emoji.list` の失敗、先の download が途中の時点の cancel)では、PF-06 と同じく、error、exit code、正規化した stderr、出力先のファイル(一時ファイルが残らないこと)が一致し、request は失敗しない場合の request に含まれ、`Run` が返った後に request は出ない。先に download した asset の通知は、Assets 工程に来ずに失敗した run では出ない。
+- 固定 sample は変わらない(demo mode でも出力が同じため)。demo GIF は、本ログのとおりユーザーが手元で再録画する。
+
+export 全体の所要時間を、PF-06 の追記と同じ synctest の条件で、先行取得なし、Web API だけの先行取得(PF-06 の後)、asset も含めた先行取得(PF-07 の後)の 3 つで比べた。3 つ目の場面では、page の各 message に file があり、その download は server で 1 秒かかる。各欄は、Web API の最後の request が終わる時点 / run の時間である。
+
+| 場面 | 先行取得なし | Web API だけ | asset も |
+|---|---:|---:|---:|
+| user 5 人が page に現れる | 6.7 秒 / 6.8 秒 | 4.5 秒 / 4.6 秒 | 4.5 秒 / 4.6 秒 |
+| user 1 人が page に、3 人が reply にだけ現れる | 5.7 秒 / 5.8 秒 | 3.5 秒 / 3.6 秒 | 3.5 秒 / 3.6 秒 |
+| user 5 人が page に現れ、各 message に file がある | 6.7 秒 / 7.7 秒 | 4.5 秒 / 5.5 秒 | 4.5 秒 / 4.6 秒 |
+
+asset も先に download すると、Web API の最後の request の後に残る download は、最後に `users.info` が返った user の avatar(100 ms)だけになる。file の download(1 秒)は `users.info` の待ちの裏に入り、run は 5.5 秒から 4.6 秒になった。file の無い場面では、Web API の後の download はもともと avatar の 1 件分(100 ms)で、Web API だけの先行取得と変わらない。手元の trace による比較は、merge の後にユーザーが行う(「検証の方法」)。
+
 ## 後から見直す条件
 
 - PF-07 の後の trace で、`users.info` の回数が所要時間の大半を占める場合(未決事項「user 解決の最適化」。#272 の「変えないもの」と 0025 の見直しを伴う)。

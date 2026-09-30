@@ -17,6 +17,11 @@
 // the lane waits for the lane before each request (Wait). The client that
 // sends the requests tells the lane what they got (Yield, RateLimited,
 // Succeeded) through the context Run gives each download.
+//
+// A Scheduler runs the lanes of a whole export (Issue #279, decision log
+// 0069): it takes downloads as they become known — those sent ahead of the
+// Assets phase, then that phase's own — and runs them all within one set of
+// limits. Run runs one set of downloads through a Scheduler of its own.
 package lane
 
 import (
@@ -94,29 +99,155 @@ func (l Limits) PerOrigin() int { return max(l.HTTP2, l.HTTP1, 1) }
 // Once ctx is done, Run starts no more jobs: a job it has not started gets no
 // call. do should return soon after ctx is done.
 func Run(ctx context.Context, jobs []Job, limits Limits, do func(ctx context.Context, i int)) {
-	s := &scheduler{ctx: ctx, jobs: jobs, limits: limits.normalized(), do: do}
-	byOrigin := map[string]*lane{}
+	s := NewScheduler(ctx, limits)
+	defer s.Close()
+	s.Add(jobs, do).Wait()
+}
+
+// Scheduler runs jobs the way Run does, and takes them over time: the jobs
+// that Add adds wait in their lanes with the jobs added before them, within
+// the same limits. A lane keeps what its first job found out — the limit its
+// connection allows, a 429's wait and halved limit — for the jobs added
+// after.
+type Scheduler struct {
+	ctx    context.Context // done once the scheduler's context is, or Close
+	cancel context.CancelFunc
+	limits Limits
+	wg     sync.WaitGroup // the calls under way
+
+	mu       sync.Mutex
+	closed   bool
+	byOrigin map[string]*lane
+	lanes    []*lane // in the order of their first job
+	next     int     // the lane that is offered a free place first
+	holding  int     // jobs that hold a place, over all the lanes
+	started  int     // jobs started, which numbers them in start order
+}
+
+// NewScheduler returns a Scheduler that runs its jobs within limits, until
+// ctx is done or Close. Close releases it.
+func NewScheduler(ctx context.Context, limits Limits) *Scheduler {
+	s := &Scheduler{limits: limits.normalized(), byOrigin: map[string]*lane{}}
+	s.ctx, s.cancel = context.WithCancel(ctx)
+	context.AfterFunc(s.ctx, s.drop)
+	return s
+}
+
+// Group is the jobs of one Add.
+type Group struct {
+	s      *Scheduler
+	ctx    context.Context // the context of the group's calls, which Stop cancels
+	cancel context.CancelFunc
+	do     func(context.Context, int)
+	done   chan struct{} // closed once no job of the group is under way or waits to start
+
+	pending int // guarded by s.mu: the jobs under way or waiting to start
+}
+
+// queued is a job that waits in its lane to start.
+type queued struct {
+	job   Job
+	g     *Group
+	i     int  // the job's index in the jobs its Add took
+	large bool // Size is LargeSize or more
+}
+
+// Add adds jobs to their lanes and returns them as a Group. Each job i is run
+// the way Run runs it, by a call of do(ctx, i) on a goroutine of its own, and
+// starts in its lane after the jobs added before it of the same size or
+// larger, before those smaller or of unknown size. Once the scheduler's
+// context is done or Close has been called, Add adds nothing.
+func (s *Scheduler) Add(jobs []Job, do func(ctx context.Context, i int)) *Group {
+	g := &Group{s: s, do: do, done: make(chan struct{})}
+	g.ctx, g.cancel = context.WithCancel(s.ctx)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.ctx.Err() != nil || len(jobs) == 0 {
+		g.endLocked(0)
+		return g
+	}
+	g.pending = len(jobs)
 	for i, j := range jobs {
 		key := origin(j.URL)
-		l := byOrigin[key]
+		l := s.byOrigin[key]
 		if l == nil {
 			l = &lane{limit: 1, probing: true}
-			byOrigin[key] = l
+			s.byOrigin[key] = l
 			s.lanes = append(s.lanes, l)
 		}
-		l.queue = append(l.queue, i)
+		// The queue is in order of size, the largest first: the job goes
+		// after those of its size, and the jobs of unknown size (0) stay
+		// last in the order they came.
+		at := slices.IndexFunc(l.queue, func(q *queued) bool { return q.job.Size < j.Size })
+		if at < 0 {
+			at = len(l.queue)
+		}
+		l.queue = slices.Insert(l.queue, at, &queued{job: j, g: g, i: i, large: s.isLarge(j.Size)})
 	}
-	for _, l := range s.lanes {
-		// A stable sort keeps the given order among equal sizes, and puts the
-		// jobs of unknown size (0) last.
-		slices.SortStableFunc(l.queue, func(a, b int) int { return cmp.Compare(jobs[b].Size, jobs[a].Size) })
-	}
-	s.mu.Lock()
 	s.dispatchLocked()
+	return g
+}
+
+// Wait waits until every job of g has ended: each call it made has returned,
+// and the jobs it did not start never will (Stop, or the scheduler's context
+// is done).
+func (g *Group) Wait() { <-g.done }
+
+// Stop drops the jobs of g that have not started, and cancels the context of
+// the calls under way, which should return soon.
+func (g *Group) Stop() {
+	s := g.s
+	s.mu.Lock()
+	for _, l := range s.lanes {
+		n := len(l.queue)
+		l.queue = slices.DeleteFunc(l.queue, func(q *queued) bool { return q.g == g })
+		g.endLocked(n - len(l.queue))
+	}
 	s.mu.Unlock()
-	// A job is under way as long as one waits to start, unless ctx is done:
-	// each job that ends lets the next one start, in a lane that waits out a
-	// 429 as well.
+	g.cancel()
+}
+
+// endLocked counts n more jobs of g ended, and marks g done once none is
+// left.
+func (g *Group) endLocked(n int) {
+	g.pending -= n
+	if g.pending == 0 && !g.ended() {
+		close(g.done)
+		g.cancel()
+	}
+}
+
+func (g *Group) ended() bool {
+	select {
+	case <-g.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// drop drops the jobs that wait to start, once the scheduler's context is
+// done: they will not start.
+func (s *Scheduler) drop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, l := range s.lanes {
+		for _, q := range l.queue {
+			q.g.endLocked(1)
+		}
+		l.queue = nil
+	}
+}
+
+// Close cancels the calls under way, drops the jobs that wait to start, and
+// returns once every call the scheduler made has returned. The scheduler
+// takes no jobs after it.
+func (s *Scheduler) Close() {
+	s.mu.Lock()
+	s.closed = true
+	s.mu.Unlock()
+	s.cancel()
+	s.drop()
 	s.wg.Wait()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -136,27 +267,13 @@ func (l Limits) normalized() Limits {
 	return l
 }
 
-type scheduler struct {
-	ctx    context.Context
-	jobs   []Job
-	limits Limits
-	do     func(context.Context, int)
-	wg     sync.WaitGroup
-
-	mu      sync.Mutex
-	lanes   []*lane // in the order of their first job
-	next    int     // the lane that is offered a free place first
-	holding int     // jobs that hold a place, over all the lanes
-	started int     // jobs started, which numbers them in start order
-}
-
 // lane is the jobs of one origin.
 type lane struct {
-	queue   []int  // the jobs not started, in the order they start
-	holding int    // jobs under way that hold a place
-	waiting int    // jobs under way that do not
-	ready   []*job // the waiting jobs that want their place back (Wait), in start order
-	large   int    // jobs of LargeSize or more that hold a place
+	queue   []*queued // the jobs not started, in the order they start
+	holding int       // jobs under way that hold a place
+	waiting int       // jobs under way that do not
+	ready   []*job    // the waiting jobs that want their place back (Wait), in start order
+	large   int       // jobs of LargeSize or more that hold a place
 	limit   int
 	opened  int // the limit the lane opened at, which RestoreAfter gives back
 	// probing is set while the lane runs its first job alone, until that job
@@ -182,9 +299,9 @@ type lane struct {
 // job is one job under way. The context Run gives do carries it (jobKey), for
 // Wait, Yield, RateLimited and Succeeded.
 type job struct {
-	s      *scheduler
+	s      *Scheduler
 	l      *lane
-	i      int
+	q      *queued
 	order  int  // its place in the start order
 	large  bool // Size is LargeSize or more
 	leader bool // started while its lane was probing
@@ -218,7 +335,7 @@ func Detach(ctx context.Context) context.Context {
 
 // dispatchLocked lets the jobs go on that the limits allow, one per lane in
 // turn.
-func (s *scheduler) dispatchLocked() {
+func (s *Scheduler) dispatchLocked() {
 	if s.ctx.Err() != nil {
 		return
 	}
@@ -241,7 +358,7 @@ func (s *scheduler) dispatchLocked() {
 // admitLocked lets the next job of l go on, when its limits let it — a job
 // that waits for its place back gets it before a job starts — and reports
 // whether it did.
-func (s *scheduler) admitLocked(l *lane) bool {
+func (s *Scheduler) admitLocked(l *lane) bool {
 	if !l.paused && l.holding < l.limit && s.holding < s.limits.Total {
 		for k, j := range l.ready {
 			if j.large && l.large >= s.limits.Large {
@@ -260,7 +377,7 @@ func (s *scheduler) admitLocked(l *lane) bool {
 // startLocked starts the next job of l, when its limits let it, and reports
 // whether it did. A job that starts in a lane that waits out a 429 starts
 // without a place, and waits for one (Wait).
-func (s *scheduler) startLocked(l *lane) bool {
+func (s *Scheduler) startLocked(l *lane) bool {
 	if len(l.queue) == 0 || l.holding+l.waiting >= l.limit {
 		return false
 	}
@@ -271,23 +388,23 @@ func (s *scheduler) startLocked(l *lane) bool {
 		}
 		// The large jobs come first in the queue: when l runs as many as it
 		// may, the first small one takes the place.
-		if s.isLarge(l.queue[0]) && l.large >= s.limits.Large {
-			k = slices.IndexFunc(l.queue, func(i int) bool { return !s.isLarge(i) })
+		if l.queue[0].large && l.large >= s.limits.Large {
+			k = slices.IndexFunc(l.queue, func(q *queued) bool { return !q.large })
 			if k < 0 {
 				return false
 			}
 		}
 	}
-	i := l.queue[k]
+	q := l.queue[k]
 	l.queue = slices.Delete(l.queue, k, k+1)
-	j := &job{s: s, l: l, i: i, order: s.started, large: s.isLarge(i), leader: l.probing}
+	j := &job{s: s, l: l, q: q, order: s.started, large: q.large, leader: l.probing}
 	s.started++
 	if l.paused {
 		l.waiting++
 	} else {
 		s.holdLocked(j)
 	}
-	ctx := context.WithValue(s.ctx, jobKey{}, j)
+	ctx := context.WithValue(q.g.ctx, jobKey{}, j)
 	if j.leader {
 		ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 			GotConn: func(info httptrace.GotConnInfo) { s.connected(l, info) },
@@ -298,12 +415,12 @@ func (s *scheduler) startLocked(l *lane) bool {
 	return true
 }
 
-func (s *scheduler) isLarge(i int) bool {
-	return s.limits.LargeSize > 0 && s.jobs[i].Size >= s.limits.LargeSize
+func (s *Scheduler) isLarge(size int64) bool {
+	return s.limits.LargeSize > 0 && size >= s.limits.LargeSize
 }
 
 // holdLocked gives j a place in its lane.
-func (s *scheduler) holdLocked(j *job) {
+func (s *Scheduler) holdLocked(j *job) {
 	j.holds = true
 	j.gen = j.l.gen
 	j.l.holding++
@@ -314,7 +431,7 @@ func (s *scheduler) holdLocked(j *job) {
 }
 
 // yieldLocked takes j's place, if it holds one, and leaves it waiting.
-func (s *scheduler) yieldLocked(j *job) {
+func (s *Scheduler) yieldLocked(j *job) {
 	if !j.holds {
 		return
 	}
@@ -328,9 +445,9 @@ func (s *scheduler) yieldLocked(j *job) {
 }
 
 // run runs job j and gives its place to the jobs waiting.
-func (s *scheduler) run(ctx context.Context, j *job) {
+func (s *Scheduler) run(ctx context.Context, j *job) {
 	defer s.wg.Done()
-	s.do(ctx, j.i)
+	j.q.g.do(ctx, j.q.i)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	l := j.l
@@ -349,13 +466,14 @@ func (s *scheduler) run(ctx context.Context, j *job) {
 	if j.leader && l.probing {
 		s.openLocked(l, s.limits.HTTP1)
 	}
+	j.q.g.endLocked(1)
 	s.dispatchLocked()
 }
 
 // connected opens l once the first job of l has a connection. The hook sees
 // every connection of that job — a retry's, a redirect's — and only the first
 // one, while the job runs, counts.
-func (s *scheduler) connected(l *lane, info httptrace.GotConnInfo) {
+func (s *Scheduler) connected(l *lane, info httptrace.GotConnInfo) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !l.probing {
@@ -369,7 +487,7 @@ func (s *scheduler) connected(l *lane, info httptrace.GotConnInfo) {
 	s.dispatchLocked()
 }
 
-func (s *scheduler) openLocked(l *lane, limit int) {
+func (s *Scheduler) openLocked(l *lane, limit int) {
 	l.probing = false
 	l.limit = limit
 	l.opened = limit
@@ -455,7 +573,7 @@ func tooLong(l *lane, maxWait time.Duration) error {
 }
 
 // unreadyLocked takes j out of its lane's ready jobs, if it is there.
-func (s *scheduler) unreadyLocked(j *job) {
+func (s *Scheduler) unreadyLocked(j *job) {
 	if k := slices.Index(j.l.ready, j); k >= 0 {
 		j.l.ready = slices.Delete(j.l.ready, k, k+1)
 	}
@@ -537,10 +655,10 @@ func RateLimited(ctx context.Context, asked, wait time.Duration) {
 // resume ends l's wait out of a 429 once its time has passed, and gives the
 // places to the jobs waiting. The timer calls it at the end of the wait; the
 // wait may have grown since it was set.
-func (s *scheduler) resume(l *lane) {
+func (s *Scheduler) resume(l *lane) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !l.paused {
+	if !l.paused || s.ctx.Err() != nil {
 		return
 	}
 	if rest := time.Until(l.until); rest > 0 {

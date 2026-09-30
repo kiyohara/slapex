@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/kiyohara/slapex/internal/emoji"
+	"github.com/kiyohara/slapex/internal/lane"
 	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/slack"
 	"github.com/kiyohara/slapex/internal/ui"
@@ -70,8 +71,9 @@ type Options struct {
 //     custom emoji the messages show;
 //   - the Assets phase: the workspace icon, the avatars and the timeline view
 //     rendered once to plan the assets they show, the fetch of that plan (in
-//     parallel lanes, Issue #275), the same render again with the fetched
-//     assets (renderWithAssets), and index.html;
+//     parallel lanes, Issue #275, taking the downloads the earlier stages
+//     sent ahead, Issue #279), the same render again with the fetched assets
+//     (renderWithAssets), and index.html;
 //   - writeCaches and the .cache/ cleanup, then reportDone (Done).
 func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer) (string, error) {
 	// start is the real clock for the Done elapsed time; now is the export
@@ -99,10 +101,29 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		return "", err
 	}
 
+	assets := output.NewAssets(ctx, client, out.path, opts.MaxAttachBytes)
+	// Run's end closes assets after it stops f (below): a download sent
+	// ahead that the Assets phase did not take is stopped, and leaves no
+	// temporary file.
+	defer assets.Close()
+	assets.Logf = p.Warnf
+	// The downloads' notices go where the client sends its own, once the
+	// parallel fetch has put them in plan order.
+	assets.Notef = client.Logf
+	if limits, ok := ctx.Value(assetLanesKey{}).(lane.Limits); ok {
+		assets.Lanes = limits
+	}
+	if reuse != nil {
+		assets.SetReuseSource(reuse.reuseSource())
+	}
+
 	// From the Messages phase on, the requests a later stage is certain to
-	// make go out ahead of it, until Run returns (prefetch.go).
+	// make go out ahead of it, and so do the downloads of the assets the page
+	// is certain to show, until Run returns (prefetch.go,
+	// asset_prefetch.go).
 	f := newPrefetcher(ctx, client, reuse)
 	defer f.stop()
+	f.prefetchAssets(ctx, assets, opts.MaxAttachBytes, target.teamInfo)
 	if reuse == nil {
 		// resolveCustomEmoji calls emoji.list unless the reuse cache has the
 		// custom emoji.
@@ -122,14 +143,6 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		return "", fmt.Errorf("load embedded emoji table: %w", err)
 	}
 
-	assets := output.NewAssets(ctx, client, out.path, opts.MaxAttachBytes)
-	assets.Logf = p.Warnf
-	// The downloads' notices go where the client sends its own, once the
-	// parallel fetch has put them in plan order.
-	assets.Notef = client.Logf
-	if reuse != nil {
-		assets.SetReuseSource(reuse.reuseSource())
-	}
 	p.StartPhase("Assets", "downloading assets and rendering HTML ...")
 	workspaceIcon, items, err := renderWithAssets(ctx, assets, target.teamInfo, resolved, emojiResolver, fetched, opts.MaxAttachBytes)
 	if err != nil {

@@ -118,7 +118,9 @@ type AssetMeta struct {
 // acquires that plan, downloading in parallel (Issue #275), and the second
 // render's Save and SkipTooLarge record the results in the order it asks. A
 // Save for a URL no Fetch acquired — outside the plan, or with no plan at all
-// — acquires it then.
+// — acquires it then. Before all that, while the export still fetches its
+// messages, Prefetch sends ahead the downloads the page is certain to show,
+// for Fetch to take (Issue #279). Close ends what Prefetch sent ahead.
 type Assets struct {
 	ctx     context.Context
 	dl      Downloader
@@ -136,7 +138,8 @@ type Assets struct {
 	// fetched holds what Fetch acquired, by source URL, for Save to record when
 	// the render asks for it.
 	fetched map[string]ManifestEntry
-	// Lanes bounds the downloads Fetch runs at a time (internal/lane).
+	// Lanes bounds the downloads Prefetch and Fetch run at a time, all
+	// together (internal/lane). The first Prefetch or Fetch takes it.
 	Lanes lane.Limits
 	// Logf receives a warning for each download that did not complete, worded
 	// after its manifest status: a failure, or a download the size limit
@@ -152,6 +155,14 @@ type Assets struct {
 	// order like the warnings. The downloads Save runs report theirs as the
 	// Downloader does by default.
 	Notef func(format string, args ...any)
+
+	// mu guards what Prefetch shares with Fetch and Close, which may run on
+	// other goroutines than Prefetch.
+	mu         sync.Mutex
+	sched      *lane.Scheduler             // runs the downloads of Prefetch and Fetch
+	prefetched map[string]*prefetchedAsset // the downloads sent ahead that Fetch has not taken, by source URL
+	fetching   bool                        // a Fetch has begun, after which Prefetch sends nothing
+	closed     bool
 }
 
 // PlannedAsset is one asset a planning render asked for (Assets.Planner): the
@@ -252,21 +263,37 @@ func (a *Assets) Plan() []PlannedAsset { return a.plan }
 // order the downloads end in. A file SkipTooLarge planned has nothing to
 // fetch.
 //
+// A planned download whose URL Prefetch sent ahead takes that download's
+// result once it has ended, in place of a download of its own, and gets the
+// same file, manifest entry, notices and warning (usePrefetched). A download
+// sent ahead that the plan does not take — the plan copies its URL from the
+// reuse source, or keeps it out by size — is stopped and its temporary file
+// removed.
+//
 // Once a's context is done, Fetch starts no more copies or downloads, and
-// returns when the downloads under way have stopped, each having removed its
-// temporary file. The assets it did not get stay unfetched, and the notices
-// not passed on by then are dropped.
+// returns when the downloads under way for the plan have stopped, each having
+// removed its temporary file. The assets it did not get stay unfetched, and
+// the notices not passed on by then are dropped.
 func (a *Assets) Fetch(plan []PlannedAsset) {
 	if a.fetched == nil {
 		a.fetched = map[string]ManifestEntry{}
 	}
+	a.mu.Lock()
+	a.fetching = true
+	a.mu.Unlock()
 	var downloads []PlannedAsset
 	queued := map[string]bool{}
 	for _, p := range plan {
 		if a.ctx.Err() != nil {
 			break
 		}
-		if p.SkipSize || p.SourceURL == "" || queued[p.SourceURL] {
+		if p.SourceURL == "" || queued[p.SourceURL] {
+			continue
+		}
+		if p.SkipSize {
+			// The first request for the URL kept it out by size: a download
+			// sent ahead for another request of it goes unused.
+			a.discard(p.SourceURL)
 			continue
 		}
 		if _, done := a.fetched[p.SourceURL]; done {
@@ -278,6 +305,7 @@ func (a *Assets) Fetch(plan []PlannedAsset) {
 		if a.reuse != nil {
 			if e, ok := a.copyFromReuse(p.Kind, p.SourceURL, p.Limit, p.Meta); ok {
 				a.fetched[p.SourceURL] = e
+				a.discard(p.SourceURL)
 				continue
 			}
 		}
@@ -285,22 +313,229 @@ func (a *Assets) Fetch(plan []PlannedAsset) {
 		downloads = append(downloads, p)
 	}
 
-	jobs := make([]lane.Job, len(downloads))
-	for i, p := range downloads {
-		jobs[i] = lane.Job{URL: p.SourceURL, Size: p.Meta.SizeBytes}
-	}
+	sched := a.scheduler()
 	results := make([]*ManifestEntry, len(downloads))
 	held := newHeldNotices(a, len(downloads))
-	lane.Run(a.ctx, jobs, a.Lanes, func(ctx context.Context, i int) {
+	get := func(ctx context.Context, i int) {
 		p := downloads[i]
 		e := a.download(slack.WithNotices(ctx, held.notef(i)), p.Kind, p.SourceURL, p.Limit, p.Meta, held.warnf(i))
 		results[i] = &e
 		held.done(i)
-	})
+	}
+	var jobs []lane.Job
+	var own []int // the downloads of jobs, by their index in downloads
+	var taking sync.WaitGroup
+	for i, p := range downloads {
+		pf := a.take(p.SourceURL)
+		if pf == nil {
+			jobs = append(jobs, lane.Job{URL: p.SourceURL, Size: p.Meta.SizeBytes})
+			own = append(own, i)
+			continue
+		}
+		taking.Add(1)
+		go func() {
+			defer taking.Done()
+			pf.group.Wait()
+			if e, ok := a.usePrefetched(pf, p, held.notef(i), held.warnf(i)); ok {
+				results[i] = &e
+				held.done(i)
+				return
+			}
+			sched.Add([]lane.Job{{URL: p.SourceURL, Size: p.Meta.SizeBytes}}, func(ctx context.Context, _ int) {
+				get(ctx, i)
+			}).Wait()
+		}()
+	}
+	sched.Add(jobs, func(ctx context.Context, k int) { get(ctx, own[k]) }).Wait()
+	taking.Wait()
 	for i, e := range results {
 		if e != nil {
 			a.fetched[downloads[i].SourceURL] = *e
 		}
+	}
+}
+
+// scheduler returns the lane scheduler of a's downloads, which it makes at
+// the first call, with a.Lanes.
+func (a *Assets) scheduler() *lane.Scheduler {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.schedulerLocked()
+}
+
+func (a *Assets) schedulerLocked() *lane.Scheduler {
+	if a.sched == nil {
+		a.sched = lane.NewScheduler(a.ctx, a.Lanes)
+	}
+	return a.sched
+}
+
+// prefetchedAsset is a download Prefetch sent ahead: the size limit it
+// downloads with, the lane group that runs it and, once group has ended,
+// what it got.
+type prefetchedAsset struct {
+	limit int64 // the per-file byte limit (0 = unlimited)
+	group *lane.Group
+	// result is set by the download, before group ends, when it ran to the
+	// end; it stays nil for one that was stopped, or never started.
+	result *prefetchResult
+}
+
+// prefetchResult is what a download sent ahead got, and the notices it gave
+// on the way — its retries and waits — which Fetch passes on in its turn.
+type prefetchResult struct {
+	downloaded
+	notices []heldLine
+}
+
+// remove removes the temporary file of pf's result, if it holds one.
+func (pf *prefetchedAsset) remove() {
+	if pf.result != nil && pf.result.tmp != "" {
+		os.Remove(pf.result.tmp)
+	}
+}
+
+// Prefetch sends ahead the downloads of plan, assets a planner (Planner)
+// recorded that the export is certain to ask for, so that they run while the
+// export does other work (Issue #279, decision log 0069). Each runs in a's
+// lanes with the downloads of Fetch, with the kind and limit of its planned
+// asset, and keeps what it gets for Fetch: the content in a temporary file
+// in the output directory, with its hash, Content-Type, sniffed format and
+// size, or the error it stopped with, along with its notices. Fetch takes the
+// download of a URL for the first planned asset of that URL; Prefetch sends
+// none for a URL it has sent ahead already, for a file the size pre-check
+// kept out (SkipSize), or for one the reuse source can copy, which Fetch
+// copies. It sends nothing once a Fetch has begun, a's context is done, or a
+// is closed.
+//
+// Prefetch warns of nothing and records nothing. It may be called from
+// several goroutines at once, and while a Fetch or a Close runs.
+func (a *Assets) Prefetch(plan []PlannedAsset) {
+	if a.planning {
+		return
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, p := range plan {
+		if a.closed || a.fetching || a.ctx.Err() != nil {
+			return
+		}
+		if p.SkipSize || p.SourceURL == "" || a.prefetched[p.SourceURL] != nil {
+			continue
+		}
+		if a.reuse != nil {
+			if _, _, _, ok := a.reuseFile(p.SourceURL, p.Limit); ok {
+				continue
+			}
+		}
+		if a.prefetched == nil {
+			a.prefetched = map[string]*prefetchedAsset{}
+		}
+		pf := &prefetchedAsset{limit: p.Limit}
+		a.prefetched[p.SourceURL] = pf
+		pf.group = a.schedulerLocked().Add([]lane.Job{{URL: p.SourceURL, Size: p.Meta.SizeBytes}}, func(ctx context.Context, _ int) {
+			pf.result = a.prefetchDownload(ctx, p.Kind, p.SourceURL, p.Limit)
+		})
+	}
+}
+
+// prefetchDownload downloads srcURL with ctx for Prefetch, holding its
+// notices, and returns what it got, or nil when it did not run to the end:
+// ctx ended it, or it had no temporary file to write to. Fetch then downloads
+// the asset itself, as it would without Prefetch.
+func (a *Assets) prefetchDownload(ctx context.Context, kind, srcURL string, limit int64) *prefetchResult {
+	r := &prefetchResult{}
+	ctx = slack.WithNotices(ctx, func(format string, args ...any) {
+		r.notices = append(r.notices, heldLine{format: format, args: args})
+	})
+	d, err := a.get(ctx, kind, srcURL, limit)
+	if err != nil || ctx.Err() != nil {
+		if d.tmp != "" {
+			os.Remove(d.tmp)
+		}
+		return nil
+	}
+	r.downloaded = d
+	return r
+}
+
+// take returns the download sent ahead for srcURL, if any, which the caller
+// then owns: a Close after it leaves it alone.
+func (a *Assets) take(srcURL string) *prefetchedAsset {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	pf := a.prefetched[srcURL]
+	delete(a.prefetched, srcURL)
+	return pf
+}
+
+// discard stops the download sent ahead for srcURL, if any, which goes
+// unused, and removes its temporary file once it has stopped.
+func (a *Assets) discard(srcURL string) {
+	if pf := a.take(srcURL); pf != nil {
+		pf.group.Stop()
+		pf.group.Wait()
+		pf.remove()
+	}
+}
+
+// usePrefetched returns, for the planned download p, the manifest entry the
+// download sent ahead for its URL gives it, passing its notices on to notef
+// and warning of it through warnf as p's own download would (place). ok is
+// false, with nothing passed on and pf's temporary file removed, when pf
+// cannot stand for p's download: it did not run to the end, it stopped at a
+// size limit smaller than p's, or a's context is done. The caller then
+// downloads p itself.
+//
+// The download's request depends on the URL alone; the kind only sets the
+// size limit, and words the warning and the trace. So pf stands for p's
+// download under p's kind and metadata, whichever request sent it ahead —
+// except for the size limit: content over p's limit is the download p's limit
+// would have stopped.
+func (a *Assets) usePrefetched(pf *prefetchedAsset, p PlannedAsset, notef, warnf func(string, ...any)) (ManifestEntry, bool) {
+	r := pf.result
+	if r == nil || a.ctx.Err() != nil {
+		pf.remove()
+		return ManifestEntry{}, false
+	}
+	d := r.downloaded
+	if pf.limit != p.Limit {
+		if errors.Is(d.err, slack.ErrTooLarge) && (p.Limit == 0 || pf.limit < p.Limit) {
+			// It stopped short of p's limit: the content may be within it.
+			return ManifestEntry{}, false
+		}
+		if p.Limit > 0 && d.size > p.Limit {
+			d.err = slack.ErrTooLarge
+		}
+	}
+	for _, n := range r.notices {
+		notef(n.format, n.args...)
+	}
+	return a.place(p.Kind, p.SourceURL, p.Meta, d, warnf), true
+}
+
+// Close stops the downloads sent ahead that no Fetch took, waits for them,
+// and removes their temporary files (Issue #279). The export closes a once it
+// is done with it, whether it succeeds, fails or is stopped, so that its
+// output directory keeps no file a serial export would not leave. After
+// Close, Prefetch sends nothing.
+func (a *Assets) Close() {
+	a.mu.Lock()
+	if a.closed {
+		a.mu.Unlock()
+		return
+	}
+	a.closed = true
+	left := a.prefetched
+	a.prefetched = nil
+	sched := a.sched
+	a.mu.Unlock()
+	if sched != nil {
+		sched.Close()
+	}
+	for _, pf := range left {
+		pf.group.Wait()
+		pf.remove()
 	}
 }
 
@@ -449,11 +684,34 @@ func (a *Assets) acquire(kind, srcURL string, limit int64, meta AssetMeta) Manif
 // complete through warnf. Fetch runs it on several goroutines at once: it
 // changes nothing in a, and its temporary file has a name of its own.
 func (a *Assets) download(ctx context.Context, kind, srcURL string, limit int64, meta AssetMeta, warnf func(string, ...any)) ManifestEntry {
-	tmp, err := os.CreateTemp(a.dir, "asset-*")
+	d, err := a.get(ctx, kind, srcURL, limit)
 	if err != nil {
 		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
 	}
-	defer os.Remove(tmp.Name())
+	return a.place(kind, srcURL, meta, d, warnf)
+}
+
+// downloaded is what a download got: its content in a temporary file, with
+// the content's hash and what place names the file by, or the error it
+// stopped with.
+type downloaded struct {
+	tmp         string // the temporary file; "" once err is set
+	hash        string // the hex SHA-256 of the content
+	contentType string // the response's Content-Type
+	sniffed     string // the format sniffed from the content (headBuffer.detect)
+	size        int64  // the bytes downloaded; with err, those before it stopped
+	err         error
+}
+
+// get downloads srcURL with ctx into a temporary file in a.dir, labelled kind
+// in the HTTP trace, with the per-file byte limit limit. It removes the file
+// again when the download fails. Its error is that of the temporary file;
+// the download's own is in the result.
+func (a *Assets) get(ctx context.Context, kind, srcURL string, limit int64) (downloaded, error) {
+	tmp, err := os.CreateTemp(a.dir, "asset-*")
+	if err != nil {
+		return downloaded{}, err
+	}
 
 	// Hash the downloaded bytes (not the source URL) so the saved file name is a
 	// content hash: identical content resolves to the same name, and regenerating
@@ -468,32 +726,49 @@ func (a *Assets) download(ctx context.Context, kind, srcURL string, limit int64,
 	ctx = slack.WithAssetKind(ctx, kind)
 	size, contentType, err := a.dl.Download(ctx, srcURL, limit, io.MultiWriter(tmp, h, &head))
 	tmp.Close()
+	d := downloaded{contentType: contentType, size: size, err: err}
 	if err != nil {
+		os.Remove(tmp.Name())
+		return d, nil
+	}
+	d.tmp, d.hash, d.sniffed = tmp.Name(), hex.EncodeToString(h.Sum(nil)), head.detect()
+	return d, nil
+}
+
+// place moves what a download of srcURL got into kind's directory under its
+// content hash, and returns the manifest entry for kind and meta. A download
+// that did not complete is warned of through warnf, and its temporary file
+// removed.
+func (a *Assets) place(kind, srcURL string, meta AssetMeta, d downloaded, warnf func(string, ...any)) ManifestEntry {
+	if d.err != nil {
+		if d.tmp != "" {
+			os.Remove(d.tmp)
+		}
 		status, warning := StatusFailed, "asset failed"
-		if errors.Is(err, slack.ErrTooLarge) {
+		if errors.Is(d.err, slack.ErrTooLarge) {
 			// A download the size limit stopped is a size skip, not a failure,
 			// in the warning as in the manifest and the counts (Issue #250).
 			status, warning = StatusSkippedSize, "asset skipped by size limit"
 		}
-		warnf("%s (%s): %s", warning, kind, err)
-		return newEntry(kind, srcURL, meta, "", status, err.Error())
+		warnf("%s (%s): %s", warning, kind, d.err)
+		return newEntry(kind, srcURL, meta, "", status, d.err.Error())
 	}
 
-	sniffed := head.detect()
-	base := hex.EncodeToString(h.Sum(nil))
-	rel := filepath.Join(kindDirs[kind], base+extensionFor(meta, srcURL, contentType, sniffed))
+	rel := filepath.Join(kindDirs[kind], d.hash+extensionFor(meta, srcURL, d.contentType, d.sniffed))
 	dst := filepath.Join(a.dir, rel)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		os.Remove(d.tmp)
 		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
 	}
-	if err := os.Rename(tmp.Name(), dst); err != nil {
+	if err := os.Rename(d.tmp, dst); err != nil {
+		os.Remove(d.tmp)
 		return newEntry(kind, srcURL, meta, "", StatusFailed, err.Error())
 	}
 	if meta.SizeBytes == 0 {
-		meta.SizeBytes = size
+		meta.SizeBytes = d.size
 	}
 	if meta.Mimetype == "" {
-		meta.Mimetype = mimetypeFor(contentType, sniffed)
+		meta.Mimetype = mimetypeFor(d.contentType, d.sniffed)
 	}
 	return newEntry(kind, srcURL, meta, filepath.ToSlash(rel), StatusSaved, "")
 }
@@ -527,28 +802,8 @@ func (a *Assets) record(e ManifestEntry) {
 // normal download — when srcURL was not a saved asset before or the previous
 // file is gone. limit is the per-file byte limit for kind.
 func (a *Assets) copyFromReuse(kind, srcURL string, limit int64, meta AssetMeta) (ManifestEntry, bool) {
-	entry, ok := a.reuse.Entries[srcURL]
-	if !ok || entry.LocalPath == "" {
-		return ManifestEntry{}, false
-	}
-	// LocalPath comes from a previous run's manifest. Reject anything that is not
-	// a contained relative path so a corrupted or untrusted cache cannot read or
-	// write outside the old / new output directories (path traversal); such an
-	// asset falls back to a normal download.
-	if !filepath.IsLocal(filepath.FromSlash(entry.LocalPath)) {
-		return ManifestEntry{}, false
-	}
-	src := filepath.Join(a.reuse.OldDir, filepath.FromSlash(entry.LocalPath))
-	info, err := os.Stat(src)
-	if err != nil || info.IsDir() {
-		return ManifestEntry{}, false
-	}
-	// A previous run may have saved this asset under a larger --max-attachment-size.
-	// If its real size now exceeds this run's limit, do not copy it: fall back to a
-	// normal download so it is enforced and recorded as skipped_size, exactly like a
-	// fresh run (the export messageViewBuilder pre-check uses Slack's file.size, which
-	// can be absent or understated).
-	if limit > 0 && info.Size() > limit {
+	entry, src, info, ok := a.reuseFile(srcURL, limit)
+	if !ok {
 		return ManifestEntry{}, false
 	}
 	dst := filepath.Join(a.dir, filepath.FromSlash(entry.LocalPath))
@@ -577,6 +832,39 @@ func (a *Assets) copyFromReuse(kind, srcURL string, limit int64, meta AssetMeta)
 	// so this matches both the copied file's directory and what a fresh download
 	// would record, keeping the reused manifest identical to a normal run.
 	return newEntry(kind, srcURL, meta, entry.LocalPath, StatusSaved, ""), true
+}
+
+// reuseFile returns the file of the reuse source that copyFromReuse copies
+// for srcURL under the per-file byte limit limit: its previous manifest
+// entry, its path and its FileInfo. ok is false when there is none to copy.
+// It changes nothing, so Prefetch uses it too, to leave out what Fetch will
+// copy.
+func (a *Assets) reuseFile(srcURL string, limit int64) (entry ManifestEntry, src string, info os.FileInfo, ok bool) {
+	entry, ok = a.reuse.Entries[srcURL]
+	if !ok || entry.LocalPath == "" {
+		return ManifestEntry{}, "", nil, false
+	}
+	// LocalPath comes from a previous run's manifest. Reject anything that is not
+	// a contained relative path so a corrupted or untrusted cache cannot read or
+	// write outside the old / new output directories (path traversal); such an
+	// asset falls back to a normal download.
+	if !filepath.IsLocal(filepath.FromSlash(entry.LocalPath)) {
+		return ManifestEntry{}, "", nil, false
+	}
+	src = filepath.Join(a.reuse.OldDir, filepath.FromSlash(entry.LocalPath))
+	info, err := os.Stat(src)
+	if err != nil || info.IsDir() {
+		return ManifestEntry{}, "", nil, false
+	}
+	// A previous run may have saved this asset under a larger --max-attachment-size.
+	// If its real size now exceeds this run's limit, do not copy it: fall back to a
+	// normal download so it is enforced and recorded as skipped_size, exactly like a
+	// fresh run (the export messageViewBuilder pre-check uses Slack's file.size, which
+	// can be absent or understated).
+	if limit > 0 && info.Size() > limit {
+		return ManifestEntry{}, "", nil, false
+	}
+	return entry, src, info, true
 }
 
 // sameFile reports whether dst is the same existing file as the one srcInfo

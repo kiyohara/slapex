@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/kiyohara/slapex/internal/emoji"
-	"github.com/kiyohara/slapex/internal/lane"
 	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/render"
 	"github.com/kiyohara/slapex/internal/slack"
@@ -29,16 +28,17 @@ import (
 // it, to compare the plan with what the second render asks for (Issue #274).
 type assetPlanObserverKey struct{}
 
-// assetLanesKey is the context key of the lane.Limits renderWithAssets
-// fetches the plan with in place of lane.Defaults. Only tests set it, to
-// compare a parallel fetch with a serial one (Issue #275).
+// assetLanesKey is the context key of the lane.Limits the export downloads
+// its assets with in place of lane.Defaults. Only tests set it, to compare a
+// parallel fetch with a serial one (Issue #275).
 type assetLanesKey struct{}
 
 // renderWithAssets renders the page's timeline twice over assets (Issue #274).
 // The first render goes to a planner, which records the assets the page asks
 // for, in the order it asks, and fetches nothing. assets then fetches that
-// plan, downloading in parallel (Issue #275), and the second render builds the
-// timeline from the results, so the manifest keeps the order of its requests.
+// plan, downloading in parallel (Issue #275) or taking the downloads sent
+// ahead (Issue #279), and the second render builds the timeline from the
+// results, so the manifest keeps the order of its requests.
 // Which assets a render asks for does not depend on whether they could be
 // saved, so the plan holds what the second render asks for; an asset outside
 // it would be fetched when asked for. It returns the workspace icon path and
@@ -51,9 +51,6 @@ func renderWithAssets(ctx context.Context, assets *output.Assets, teamInfo *slac
 	plan := planner.Plan()
 	if observe, ok := ctx.Value(assetPlanObserverKey{}).(func([]output.PlannedAsset)); ok {
 		observe(plan)
-	}
-	if limits, ok := ctx.Value(assetLanesKey{}).(lane.Limits); ok {
-		assets.Lanes = limits
 	}
 	assets.Fetch(plan)
 	if err := ctx.Err(); err != nil {

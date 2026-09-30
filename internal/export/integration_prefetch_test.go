@@ -10,6 +10,11 @@ package export
 // the same log and files, and it has sent ahead only requests that it makes
 // when nothing fails. A synctest case times a whole export with the prefetch
 // and without it, over in-memory connections.
+//
+// With the prefetch, the downloads of the assets the page is certain to show
+// go ahead too (Issue #279): each case that succeeds checks that every
+// download of the serial run went ahead of the Assets phase (runAhead,
+// integration_asset_prefetch_test.go, which holds the cases of the downloads).
 
 import (
 	"context"
@@ -28,6 +33,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
@@ -171,7 +177,7 @@ func TestRunIntegrationPrefetchMatchesSerial(t *testing.T) {
 			t.Parallel()
 
 			serial := runWithPrefetch(t, context.Background(), false, tc.scenario(), tc.options(t), nil)
-			prefetched := runWithPrefetch(t, context.Background(), true, tc.scenario(), tc.options(t), nil)
+			prefetched := runAhead(t, tc.scenario(), tc.options(t), downloadsOf(serial.requests))
 			assertPrefetchMatchesSerial(t, serial, prefetched, tc.repliesAhead)
 		})
 	}
@@ -179,25 +185,34 @@ func TestRunIntegrationPrefetchMatchesSerial(t *testing.T) {
 
 // TestRunIntegrationPrefetchMatchesSerialWithReuseCache: with --reuse-cache,
 // the users the cache holds are neither sent ahead nor asked for, and neither
-// is emoji.list; a user the cache lacks is.
+// is emoji.list; a user the cache lacks is. The assets the cache holds are
+// copied, and neither sent ahead nor asked for; an asset the cache lacks is
+// downloaded ahead (Issue #279).
 func TestRunIntegrationPrefetchMatchesSerialWithReuseCache(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name   string
-		tamper func(t *testing.T, cacheDir string)
+		name      string
+		tamper    func(t *testing.T, cacheDir string)
+		users     int      // the users.info requests
+		downloads []string // the assets the cache lacks
 	}{
 		{name: "cache holds every user"},
 		{name: "cache lacks a user", tamper: func(t *testing.T, cacheDir string) {
 			rewriteJSON(t, filepath.Join(cacheDir, "slack_api_cache.json"), func(m map[string]any) {
 				delete(m["users"].(map[string]any), "U02")
 			})
-		}},
+		}, users: 1},
+		{name: "cache lacks an asset", tamper: func(t *testing.T, cacheDir string) {
+			removeCachedAsset(t, cacheDir, output.KindAttachment)
+		}, downloads: []string{"/files/runbook.pdf"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			sc := happyPathScenario()
+			come := newArrivals(nil)
+			sc.BeforeAsset = come.record
 			fake := newFakeSlackServer(t, &sc)
 			t.Cleanup(fake.Close)
 			first, _, err := runExportOn(t, context.Background(), fake, reuseOptions(t, true))
@@ -214,17 +229,16 @@ func TestRunIntegrationPrefetchMatchesSerialWithReuseCache(t *testing.T) {
 				return opts
 			}
 			serial := runWithPrefetchOn(t, context.Background(), false, fake, reuse(), nil)
-			prefetched := runWithPrefetchOn(t, context.Background(), true, fake, reuse(), nil)
+			prefetched := runAheadOn(t, fake, come, reuse(), downloadsOf(serial.requests))
 			assertPrefetchMatchesSerial(t, serial, prefetched, 1)
 			if slices.Contains(prefetched.requests, "/api/emoji.list") {
 				t.Errorf("emoji.list went out with the reuse cache")
 			}
-			wantUsers := 0
-			if tc.tamper != nil {
-				wantUsers = 1
+			if n := countPrefix(prefetched.requests, "/api/users.info"); n != tc.users {
+				t.Errorf("users.info requests = %d, want %d", n, tc.users)
 			}
-			if n := countPrefix(prefetched.requests, "/api/users.info"); n != wantUsers {
-				t.Errorf("users.info requests = %d, want %d", n, wantUsers)
+			if got := downloadsOf(prefetched.requests); !slices.Equal(got, tc.downloads) {
+				t.Errorf("downloads = %q, want %q: the reuse cache holds the rest", got, tc.downloads)
 			}
 		})
 	}
@@ -478,23 +492,28 @@ func TestRunIntegrationPrefetchCanceledAsSerial(t *testing.T) {
 }
 
 // TestRunIntegrationPrefetchTiming times exports on the clock of a synctest
-// bubble, where each request takes delay at the server and nothing else takes
-// time, the pacing waits included. Without the prefetch, an export makes one
-// request at a time: auth.test, team.info, conversations.list,
-// conversations.history, each conversations.replies at least 1s after the
-// previous one started, then each users.info, then emoji.list, then the
-// downloads. With it, emoji.list runs alongside conversations.history, and
-// the replies and the users.info run alongside each other from the history
-// page on, the users.info of a user who shows only in a reply once the reply
-// has come. The users.info, one second apart, take longest, so the Web API
-// requests end with the last of them: the time to the end of the history page
-// (4 delays), then a second for each users.info but the last, which takes a
-// delay (the shape of decision log 0069's estimate). The downloads take the
-// same time in both exports.
+// bubble, where each request takes delay at the server — a message's file
+// fileDelay — and nothing else takes time, the pacing waits included. Without
+// the prefetch, an export makes one request at a time: auth.test, team.info,
+// conversations.list, conversations.history, each conversations.replies at
+// least 1s after the previous one started, then each users.info, then
+// emoji.list, then the downloads. With the Web API's (Issue #278),
+// emoji.list runs alongside conversations.history, and the replies and the
+// users.info run alongside each other from the history page on, the
+// users.info of a user who shows only in a reply once the reply has come.
+// The users.info, one second apart, take longest, so the Web API requests end
+// with the last of them: the time to the end of the history page (4 delays),
+// then a second for each users.info but the last, which takes a delay (the
+// shape of decision log 0069's estimate). The downloads start once the Web
+// API requests have ended, and take the longest of them, a file's or an
+// avatar's. With the assets' too (Issue #279), the files download from the
+// history page on, alongside the users.info, and each avatar once its
+// users.info has returned: only the avatar of the last is left once the Web
+// API requests have ended.
 func TestRunIntegrationPrefetchTiming(t *testing.T) {
 	t.Parallel()
 
-	const delay = 100 * time.Millisecond
+	const delay, fileDelay = 100 * time.Millisecond, time.Second
 	type timing struct {
 		api   time.Duration // until the last Web API request ended
 		total time.Duration // until Run returned
@@ -504,9 +523,11 @@ func TestRunIntegrationPrefetchTiming(t *testing.T) {
 		authors     int  // users who post on the page
 		threads     int  // thread parents on the page
 		newRepliers bool // whether the replies are by users who show nowhere else
+		files       bool // whether each message on the page carries a file
 	}{
 		{name: "users on the page", authors: 5, threads: 3},
 		{name: "users only in replies", authors: 1, threads: 3, newRepliers: true},
+		{name: "files on the page", authors: 5, threads: 3, files: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -515,12 +536,19 @@ func TestRunIntegrationPrefetchTiming(t *testing.T) {
 			if tc.newRepliers {
 				users += tc.threads
 			}
-			run := func(prefetched bool) timing {
+			// run times the export with the prefetch off, of the Web API
+			// requests only, or of the downloads too.
+			run := func(prefetched, assetsAhead bool) timing {
 				var got timing
 				synctest.Test(t, func(t *testing.T) {
-					sc := timingScenario(tc.authors, tc.threads, tc.newRepliers)
+					sc := timingScenario(tc.authors, tc.threads, tc.newRepliers, tc.files)
 					fake := newFakeSlackHandler(t, &sc)
-					h := &timedHandler{next: fake.mux, delay: delay}
+					h := &timedHandler{next: fake.mux, delay: delay, slow: map[string]time.Duration{}}
+					for path := range sc.Assets {
+						if strings.HasPrefix(path, "/files/doc-") {
+							h.slow[path] = fileDelay
+						}
+					}
 					srv := startPipeServer(h)
 					tr := srv.transport()
 					defer func() {
@@ -530,8 +558,9 @@ func TestRunIntegrationPrefetchTiming(t *testing.T) {
 					fake.base, fake.transport = "http://slack.test", tr
 					sc.replaceBaseURL(fake.base)
 
+					ctx := context.WithValue(context.Background(), assetPrefetchOffKey{}, !assetsAhead)
 					start := time.Now()
-					res := runWithPrefetchOn(t, context.Background(), prefetched, fake, integrationOptions(t, 10), nil, slack.WithSleeper(sleepFor))
+					res := runWithPrefetchOn(t, ctx, prefetched, fake, integrationOptions(t, 10), nil, slack.WithSleeper(sleepFor))
 					got.total = time.Since(start)
 					if res.err != nil {
 						t.Fatalf("Run() error = %v\nlogs:\n%s", res.err, strings.Join(res.Logs, "\n"))
@@ -543,19 +572,34 @@ func TestRunIntegrationPrefetchTiming(t *testing.T) {
 				})
 				return got
 			}
-			serial, prefetched := run(false), run(true)
-			t.Logf("serial: Web API %s, run %s; prefetched: Web API %s, run %s", serial.api, serial.total, prefetched.api, prefetched.total)
+			serial, apiAhead, prefetched := run(false, false), run(true, false), run(true, true)
+			t.Logf("serial: Web API %s, run %s; Web API ahead: Web API %s, run %s; downloads ahead too: Web API %s, run %s",
+				serial.api, serial.total, apiAhead.api, apiAhead.total, prefetched.api, prefetched.total)
 
 			usersInfo := time.Duration(users-1)*time.Second + delay
 			if want := 4*delay + time.Duration(tc.threads-1)*time.Second + delay + usersInfo + delay; serial.api != want {
 				t.Errorf("serial Web API time = %s, want %s", serial.api, want)
 			}
-			if want := 4*delay + usersInfo; prefetched.api != want {
-				t.Errorf("prefetched Web API time = %s, want %s", prefetched.api, want)
+			for name, r := range map[string]timing{"Web API ahead": apiAhead, "downloads ahead too": prefetched} {
+				if want := 4*delay + usersInfo; r.api != want {
+					t.Errorf("%s: Web API time = %s, want %s", name, r.api, want)
+				}
 			}
-			downloads := serial.total - serial.api
-			if downloads <= 0 || prefetched.total-prefetched.api != downloads {
-				t.Errorf("download time = %s serial, %s prefetched, want the same, over 0", downloads, prefetched.total-prefetched.api)
+			// The downloads after the Web API requests.
+			downloads := delay
+			if tc.files {
+				downloads = fileDelay
+			}
+			for name, r := range map[string]timing{"serial": serial, "Web API ahead": apiAhead} {
+				if got := r.total - r.api; got != downloads {
+					t.Errorf("%s: download time after the Web API = %s, want %s", name, got, downloads)
+				}
+			}
+			if got := prefetched.total - prefetched.api; got != delay {
+				t.Errorf("downloads ahead too: download time after the Web API = %s, want the last avatar's %s", got, delay)
+			}
+			if tc.files && prefetched.total >= apiAhead.total {
+				t.Errorf("run with the downloads ahead too = %s, want it shorter than with the Web API ahead, %s", prefetched.total, apiAhead.total)
 			}
 		})
 	}
@@ -565,8 +609,8 @@ func TestRunIntegrationPrefetchTiming(t *testing.T) {
 // one each or, with fewer authors than threads, one per thread. The oldest
 // threads of them are thread parents, each with a reply: by a user of the
 // page or, with newRepliers, by a user who shows nowhere else. Every user
-// has an avatar.
-func timingScenario(authors, threads int, newRepliers bool) exportScenario {
+// has an avatar, and with files, each message on the page a file.
+func timingScenario(authors, threads int, newRepliers, files bool) exportScenario {
 	sc := baseScenario()
 	sc.Users = map[string]slack.User{}
 	user := func(n int) string {
@@ -579,6 +623,12 @@ func timingScenario(authors, threads int, newRepliers bool) exportScenario {
 	for i := max(authors, threads); i >= 1; i-- { // newest first, as conversations.history returns them
 		ts := fmt.Sprintf("17000000%02d.000000", i)
 		m := slack.Message{Type: "message", TS: ts, User: user((i-1)%authors + 1), Text: fmt.Sprintf("message %d", i)}
+		if files {
+			doc := fmt.Sprintf("/files/doc-%d.pdf", i)
+			m.Files = []slack.File{{ID: fmt.Sprintf("F%02d", i), Name: fmt.Sprintf("doc-%d.pdf", i), Mimetype: "application/pdf",
+				Size: 5, URLPrivateDownload: "{{base}}" + doc}}
+			sc.Assets[doc] = fakeAsset{ContentType: "application/pdf", Body: fmt.Sprintf("doc %d", i)}
+		}
 		if i <= threads {
 			m.ThreadTS, m.ReplyCount = ts, 1
 			replier := user(i%authors + 1)
@@ -594,18 +644,24 @@ func timingScenario(authors, threads int, newRepliers bool) exportScenario {
 	return sc
 }
 
-// timedHandler answers each request through next once delay has passed, and
-// records when each Web API request came and when it was answered.
+// timedHandler answers each request through next once delay has passed, or
+// for a path in slow, the time slow gives it, and records when the last Web
+// API request was answered.
 type timedHandler struct {
 	next  http.Handler
 	delay time.Duration
+	slow  map[string]time.Duration
 
 	mu  sync.Mutex
 	end time.Time // when the last Web API request was answered
 }
 
 func (h *timedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	time.Sleep(h.delay)
+	d, ok := h.slow[r.URL.Path]
+	if !ok {
+		d = h.delay
+	}
+	time.Sleep(d)
 	h.next.ServeHTTP(w, r)
 	if strings.HasPrefix(r.URL.Path, "/api/") {
 		h.mu.Lock()
