@@ -13,7 +13,7 @@ Issue #278(PF-06)。PF-05(#277、decision log 0069)で決めた export 全体の
 ## 現在の状況
 
 - 依存の #277(PF-05、PR #293)は merge 済み。main `30f8192`(PR #293 の merge)から作業している。
-- 実装、test、`tools/tracereport` の区間、文書の更新、Docker Compose での全体の検証まで済み、draft PR #294 を作った。review(P2)の指摘 1 件に対応した(P4)。次は再確認(P5)。
+- 実装、test、`tools/tracereport` の区間、文書の更新、Docker Compose での全体の検証まで済み、PR #294 を作った。review cycle `claude-code-560e493-20260930004425` の指摘 1 件に対応し、再確認で修正確認済みになった。PR を Ready for review にした。残りは人間の手番である。
 
 ## 決定事項
 
@@ -47,11 +47,7 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 
 ## 次にやること
 
-- draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。(完了)
-- CI の完了を確かめ、review(P2)を subagent に委譲する。(完了)
-- 指摘への対応(P4)。(完了)
-- CI の完了を確かめ、再確認(P5)を P2 の subagent に委譲する。
-- review cycle を終えたら PR を Ready for review にする(P6)。
+- 人間: 指摘の thread(1 件、`**修正確認済み(resolve 可)**`)の resolve。
 - 人間: Codex のクロスレビューと PR の merge。
 
 ## 検証
@@ -95,6 +91,17 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 - 修正 commit: `7e8e4d3`。比較の表に、親が取得の範囲より古い置き方の行を足し、2 つの broadcast の行で scenario と option の組立を共有した。PR description の「検証」の scenario の列挙にも足した。
 - 出力生成系 skill の再判断: test だけの変更のため、P1 の判断(sample と screenshot は使わない、demo GIF はローカルで要再生成)を変えない。
 
+## P5 の記録
+
+- 再確認(review cycle `claude-code-560e493-20260930004425`、Reviewed head `b3cc2179a2087a2ef53d4898d0016011c3bc5a7b`): 修正確認済み 1 件、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可とした thread は 1 件(`internal/export/integration_prefetch_test.go` の `[imo]`)。
+- subagent の報告: `gh` への fallback なし、停止理由なし、訂正できなかった誤りなし。check runs は 5 件とも success。
+- P5 後の判断: 未対応が 0 件のため P6 へ進んだ。
+
+## P6 の記録
+
+- 終了時の状態: PR #294 を Ready for review にした。P5 が確かめた head `b3cc217` の check runs は 5 件とも success。この記録を足した note だけの commit が最新 head になる。
+- 人間に残る作業: 指摘の thread の resolve、Codex のクロスレビュー、PR の merge。metadata の誤りを訂正できなかった投稿は無い。
+
 ## リスク・ブロッカー
 
 - なし。
@@ -105,4 +112,6 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 - 2026-09-30: method の lane、`History` の page の口、先行取得とその test を実装し、途中の状態を push した。
 - 2026-09-30: reply にだけ現れる user の `users.info` を replies が届いた時点で先に出すよう改め、`tools/tracereport` の区間、文書、decision log 0069 の追記を足した。Docker Compose で全体を検証した。
 - 2026-09-30: P1 を終えた。draft PR #294 を作り、note を採番し(`270f70e`)、`progress.md` の PR 欄を反映した。既存の `TestTraceTimeoutClass` の不安定さを main でも再現し、follow-up 候補にした。
-- 2026-09-30: P2 の review(指摘 1 件、`[imo]`)を受け、比較の表に範囲外の除外された親の broadcast の行を足した(P4、`7e8e4d3`)。
+- 2026-09-30: P2 の review を subagent に委譲した(指摘 1 件、`[imo]`)。P3 で P4 へ進んだ。
+- 2026-09-30: P4 で、比較の表に範囲外の除外された親の broadcast の行を足した(`7e8e4d3`)。
+- 2026-09-30: P5 の再確認で修正確認済みになった(未対応 0 件)。P6 で PR を Ready for review にした。
