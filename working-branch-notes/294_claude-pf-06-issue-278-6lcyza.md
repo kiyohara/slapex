@@ -13,7 +13,7 @@ Issue #278(PF-06)。PF-05(#277、decision log 0069)で決めた export 全体の
 ## 現在の状況
 
 - 依存の #277(PF-05、PR #293)は merge 済み。main `30f8192`(PR #293 の merge)から作業している。
-- 実装、test、`tools/tracereport` の区間、文書の更新、Docker Compose での全体の検証まで済み、PR #294 を作った。review cycle `claude-code-560e493-20260930004425` の指摘 1 件に対応し、再確認で修正確認済みになった。PR を Ready for review にした。残りは人間の手番である。
+- 実装、test、`tools/tracereport` の区間、文書の更新、Docker Compose での全体の検証まで済み、PR #294 を作った。review cycle `claude-code-560e493-20260930004425` の指摘 1 件に対応し、再確認で修正確認済みになった。PR を Ready for review にした。Ready の後の Codex の review(cycle `codex-b5b1824-20260930015639`)の `[must]` 1 件に対応した。残りは人間の手番である。
 
 ## 決定事項
 
@@ -48,7 +48,8 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 ## 次にやること
 
 - 人間: 指摘の thread(1 件、`**修正確認済み(resolve 可)**`)の resolve。
-- 人間: Codex のクロスレビューと PR の merge。
+- 人間(Codex): Codex の cycle `codex-b5b1824-20260930015639` の `[must]` 1 件への対応の再確認と、thread の resolve。
+- 人間: PR の merge。
 
 ## 検証
 
@@ -102,6 +103,14 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 - 終了時の状態: PR #294 を Ready for review にした。P5 が確かめた head `b3cc217` の check runs は 5 件とも success。この記録を足した note だけの commit が最新 head になる。
 - 人間に残る作業: 指摘の thread の resolve、Codex のクロスレビュー、PR の merge。metadata の誤りを訂正できなかった投稿は無い。
 
+## Codex の review への対応
+
+- Codex の review(cycle `codex-b5b1824-20260930015639`、head `b5b1824`): 指摘 1 件(inline 1、`[must]` 1)。`tools/tracereport` の区間の表が、request の無い trace(run の行だけ)で `All` の行に巨大な負の時間を出す。
+- 処置: 採用し修正した。run の行だけの trace で `go run ./tools/tracereport` を実行し、`All` の行に `-9223372036.855 s` が出ることを確かめた。`All downloads` の行と同じく、区間がある場合だけ `All` の行を出すようにし、run の行だけの trace の test(`TestReportRunWithoutRequests`)を足した(`014427f`)。修正の前はこの test が落ちることも確かめた。PR description の「検証」の tracereport の test にも足した。
+- 検証: `gofmt -l .`(出力なし)、`go vet ./...`、`go build ./...`、`go test ./...`、`-race`(`tools/tracereport`、`internal/slack`、`internal/export`)、`tools/tracereport` の `-count=20 -shuffle=on`、`git diff --check` が成功した。
+- 出力生成系 skill の再判断: 開発用の tool だけの変更のため、P1 の判断を変えない。
+- この cycle の再確認は Codex(または人間)が行う(`drive-issue-to-reviewed-pr` の「他の review cycle の扱い」)。
+
 ## リスク・ブロッカー
 
 - なし。
@@ -115,3 +124,4 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 - 2026-09-30: P2 の review を subagent に委譲した(指摘 1 件、`[imo]`)。P3 で P4 へ進んだ。
 - 2026-09-30: P4 で、比較の表に範囲外の除外された親の broadcast の行を足した(`7e8e4d3`)。
 - 2026-09-30: P5 の再確認で修正確認済みになった(未対応 0 件)。P6 で PR を Ready for review にした。
+- 2026-09-30: Codex の review の `[must]` 1 件(request の無い trace の区間の表)を採用し、`014427f` で直した。
