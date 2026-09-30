@@ -29,7 +29,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 ## 次にやること
 
 - ユーザーの了承の後に push と PR の作成。(完了)
-- 人間の手番: 2 thread(`[nits]` と `[fyi]`)の resolve、GitHub のスタイルを当てた README の表示の確認、Codex の cross-review、merge。
+- 人間の手番: 2 thread(`[nits]` と `[fyi]`)の resolve、merge。
 
 ## 検証
 
@@ -51,7 +51,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
   - Users の行が約 3 秒回り、Assets の行は Users と同じ頃に終わる(前の GIF は約 14 秒回っていた)。PF-03 と PF-07 の効果で想定どおり。
   - 最後のフレームは前の GIF と同じ行を同じ順に映す。違いは Messages の行の日付(2026-08-04 → 2026-08-31)、output の行と最後の行の path の日時、Done の行の所要時間だけ。
 - `git diff --stat main`: 変更は GIF と本 note だけ。`git diff --check` は問題なし。
-- 未確認: GitHub のスタイルを当てた README の見た目。push の後に、P2 の review が GitHub 上の README の画像の読み込みと大きさ(取得した bytes が PR head の GIF と一致、1080x740、表示幅 760)を確かめた。スタイルを当てた見た目だけが、CSS の配信元へ接続できず残った。
+- GitHub 上の README の表示: push の後に、P2 の review が画像の読み込みと大きさ(取得した bytes が PR head の GIF と一致、1080x740、表示幅 760)を確かめた。P2 で残ったスタイルを当てた見た目は、Codex の cross-review(review cycle `codex-389e2cd-20260930105744`)が GitHub 上のブラウザで README を表示して確かめた(GIF の読み込み、表示幅 760、再生、caption と alt の一致、縮小した完了画面の文字の読みやすさ)。未確認の事項は無い。
 
 ## P1 の記録(drive-issue-to-reviewed-pr)
 
@@ -87,11 +87,12 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 
 - PR は Ready for review(project の thread が P5 の後に切り替えた)。
 - head `389e2cd` の check runs は 5 件(`check` と cross-compile 4 件)とも success。
+- Codex の cross-review(review cycle `codex-389e2cd-20260930105744`、Reviewed head `389e2cd`)は指摘なし(inline 0 件、top-level 0 件)。完了要約は PR の conversation comment にある。
 - この記録の commit は note だけで、P5 が確かめた head(`389e2cd`)より後になる。
 
 ## リスク・ブロッカー
 
-- GitHub のスタイルを当てた README の見た目は未確認(画像の読み込みと大きさは P2 の review が確かめた)。merge 前に人間が確かめる。
+- なし(GitHub 上の README の表示は P2 の review と Codex の cross-review で確かめた)。
 
 ## セッションログ
 
@@ -99,3 +100,4 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 - 2026-09-30: 別の session で P2 の review(指摘 2 件、`[nits]` 1、`[fyi]` 1)があり、P3 で P4 へ進んだ。
 - 2026-09-30: P4 で、2 件とも note と PR description の編集で対応した。
 - 2026-09-30: P5 の再確認で未対応 0 件(修正確認済み 2 件)になり、PR が Ready for review になった。P5 と P6 の記録を足した。
+- 2026-09-30: Codex の cross-review(指摘なし)が GitHub 上の README の表示を確かめていたため、ユーザーの指示で「次にやること」から Codex の cross-review とスタイルの確認を外し、未確認の事項を無しにした。
