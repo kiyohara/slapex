@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
-- ブランチ: `rerecord-demo-gif-after-pf07`
-- PR: #297
+- ブランチ: `claude/project-thread-8dgcm0`(cloud session が指定。Issue の推奨ブランチ名は `rerecord-demo-gif-after-pf07` で、PR #297 はその branch から作った)
+- PR: #298(#297 を引き継いだ)
 - 最終更新: 2026-09-30
 
 ## 目的
