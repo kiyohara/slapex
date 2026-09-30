@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/pf-07-issue-279-wuweof`(cloud session が指定。Issue の推奨ブランチ名は `perf-overlap-downloads-with-api`)
-- PR: 未作成
+- PR: #295
 - 最終更新: 2026-09-30
 
 ## 目的
