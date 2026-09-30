@@ -12,8 +12,10 @@ package export
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -63,18 +65,25 @@ func runExportScenarioRaw(t *testing.T, sc exportScenario, opts Options, clientO
 // for a case that hands Run a value through it (the asset plan observer).
 func runExportScenarioContext(t *testing.T, ctx context.Context, sc exportScenario, opts Options, clientOpts ...slack.Option) (exportRunResult, []time.Duration, error) {
 	t.Helper()
-	if opts.Now.IsZero() && len(sc.Messages) > 0 {
-		latest := tsTime(sc.Messages[0].TS)
-		for i := 1; i < len(sc.Messages); i++ {
-			if candidate := tsTime(sc.Messages[i].TS); candidate.After(latest) {
+	fake := newFakeSlackServer(t, &sc)
+	t.Cleanup(fake.Close)
+	return runExportOn(t, ctx, fake, opts, clientOpts...)
+}
+
+// runExportOn is runExportScenarioContext against a fake server the case
+// made, for the cases that run several exports against one server or serve
+// it themselves.
+func runExportOn(t *testing.T, ctx context.Context, fake *fakeSlackServer, opts Options, clientOpts ...slack.Option) (exportRunResult, []time.Duration, error) {
+	t.Helper()
+	if messages := fake.sc.Messages; opts.Now.IsZero() && len(messages) > 0 {
+		latest := tsTime(messages[0].TS)
+		for i := 1; i < len(messages); i++ {
+			if candidate := tsTime(messages[i].TS); candidate.After(latest) {
 				latest = candidate
 			}
 		}
 		opts.Now = latest.Add(time.Hour)
 	}
-
-	fake := newFakeSlackServer(t, &sc)
-	t.Cleanup(fake.Close)
 
 	var (
 		mu     sync.Mutex
@@ -86,6 +95,7 @@ func runExportScenarioContext(t *testing.T, ctx context.Context, sc exportScenar
 		logs = append(logs, line)
 		mu.Unlock()
 	})
+	guard := &afterRunGuard{t: t, next: fake.Transport()}
 	client := slack.New(integrationTestToken, append([]slack.Option{
 		slack.WithBaseURL(fake.URL() + "/api/"),
 		slack.WithSleeper(func(_ context.Context, d time.Duration) error {
@@ -94,16 +104,33 @@ func runExportScenarioContext(t *testing.T, ctx context.Context, sc exportScenar
 			mu.Unlock()
 			return nil
 		}),
-		slack.WithTransport(fake.Transport()),
+		slack.WithTransport(guard),
 	}, clientOpts...)...)
 	client.Logf = printer.Noticef
 
 	outDir, err := Run(ctx, client, opts, printer)
+	guard.returned.Store(true)
 
 	mu.Lock()
 	defer mu.Unlock()
 	return exportRunResult{OutputDir: outDir, Server: fake, Logs: append([]string(nil), logs...)},
 		append([]time.Duration(nil), sleeps...), err
+}
+
+// afterRunGuard sends the client's requests on to next, and fails the test
+// for a request sent once Run has returned: Run stops the requests it sent
+// ahead and waits for them before it returns (Issue #278).
+type afterRunGuard struct {
+	t        *testing.T
+	next     http.RoundTripper
+	returned atomic.Bool
+}
+
+func (g *afterRunGuard) RoundTrip(r *http.Request) (*http.Response, error) {
+	if g.returned.Load() {
+		g.t.Errorf("request to %s sent after Run returned", r.URL.Path)
+	}
+	return g.next.RoundTrip(r)
 }
 
 // integrationOptions returns the Options every integration scenario shares:

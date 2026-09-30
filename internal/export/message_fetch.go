@@ -67,7 +67,12 @@ type fetchedThread struct {
 // thread whose parent turns out to be excluded takes its timeline messages with
 // it, and the next page refills them. Once the pages are done, the threads
 // whose parent is on the timeline keep their replies.
-func fetchMessages(ctx context.Context, client *slack.Client, channelID string, fetchRange messageFetchRange, opts Options, p *ui.Printer) (fetchedMessages, error) {
+//
+// conversations.history goes out page by page, as the driver gets to it. The
+// requests each page makes certain go out ahead through f
+// (prefetchHistoryPage), and so do the users.info and bots.info of a fetched
+// thread's replies when no emoji filter is on, since they are all shown then.
+func fetchMessages(ctx context.Context, f *prefetcher, channelID string, fetchRange messageFetchRange, opts Options, p *ui.Printer) (fetchedMessages, error) {
 	filter := newMessageFilter(opts.ExcludeBodyEmoji, opts.ExcludeReactionEmoji)
 	p.StartPhase("Messages", fmt.Sprintf("fetching %s (--max-posts %d) ...", fetchRange.progressLabel(), opts.MaxPosts))
 	var timeline []slack.Message
@@ -76,7 +81,8 @@ func fetchMessages(ctx context.Context, client *slack.Client, channelID string, 
 	latest := fetchRange.latestTS()
 	truncated := false
 	for len(timeline) < opts.MaxPosts {
-		batch, more, err := client.History(ctx, channelID, fetchRange.oldestTS(), latest, opts.MaxPosts-len(timeline), filter.Include,
+		batch, more, err := f.client.History(ctx, channelID, fetchRange.oldestTS(), latest, opts.MaxPosts-len(timeline), filter.Include,
+			func(page []slack.Message) { prefetchHistoryPage(f, channelID, page, filter) },
 			func(n int) {
 				p.UpdatePhase(fmt.Sprintf("fetching %s ... %d fetched", fetchRange.progressLabel(), len(timeline)+n))
 			})
@@ -94,12 +100,17 @@ func fetchMessages(ctx context.Context, client *slack.Client, channelID string, 
 		for _, threadTS := range threadIDs {
 			fetched[threadTS] = struct{}{}
 			p.UpdatePhase(fmt.Sprintf("fetching thread replies ... %d/%d", len(fetched), threadTotal))
-			thread, included, err := fetchThread(ctx, client, channelID, threadTS, filter)
+			thread, included, err := fetchThread(ctx, f, channelID, threadTS, filter)
 			if err != nil {
 				return fetchedMessages{}, err
 			}
 			if included {
 				threads[threadTS] = thread
+				if !filter.Enabled() {
+					// Without a filter, a thread fetched is that of a parent on
+					// the timeline, and all its replies are shown.
+					f.prefetchPeople(nil, map[string][]slack.Message{threadTS: thread.kept})
+				}
 			}
 		}
 		timeline = dropExcludedThreads(timeline, threads, filter)
@@ -126,20 +137,50 @@ func fetchMessages(ctx context.Context, client *slack.Client, channelID string, 
 	return result, nil
 }
 
+// prefetchHistoryPage sends ahead the requests that a page of
+// conversations.history makes certain (slack-api-usage.md「取得の並行化」).
+// fetchMessages fetches the thread of each parent the page retained once the
+// History call returns (unfetchedThreadIDs), unless it has already, which
+// also sent the request: the thread of a broadcast, which a filter makes it
+// fetch too, is left to it, since a parent on a later page can exclude the
+// thread first. The Users stage resolves who the retained messages show,
+// unless a filter drops them from the timeline later: without a filter, it
+// drops none, and with one, only the messages of threads
+// (dropExcludedThreads), which stay uncertain until the Messages phase ends.
+// The page callback runs on the driver, before History returns.
+func prefetchHistoryPage(f *prefetcher, channelID string, page []slack.Message, filter *messageFilter) {
+	certain := page
+	if filter.Enabled() {
+		certain = nil
+		for i := range page {
+			if messageThreadTS(&page[i]) == "" {
+				certain = append(certain, page[i])
+			}
+		}
+	}
+	for i := range page {
+		if threadTS := messageThreadTS(&page[i]); page[i].IsThreadParent() && !filter.ThreadExcluded(threadTS) {
+			f.prefetchThread(channelID, threadTS)
+		}
+	}
+	f.prefetchPeople(certain, nil)
+}
+
 // fetchThread fetches one thread through conversations.replies and reports
 // whether it stays in the export (messageFilter.IncludeThread). It splits the
 // replies by the emoji filters right away, without counting the excluded ones:
 // timelineReplies counts them once it knows the thread's parent is on the
 // timeline.
-func fetchThread(ctx context.Context, client *slack.Client, channelID, threadTS string, filter *messageFilter) (fetchedThread, bool, error) {
-	parent, replies, truncated, err := client.Thread(ctx, channelID, threadTS, maxThreadReplies)
+func fetchThread(ctx context.Context, f *prefetcher, channelID, threadTS string, filter *messageFilter) (fetchedThread, bool, error) {
+	result, err := f.thread(ctx, channelID, threadTS)
 	if err != nil {
 		return fetchedThread{}, false, err
 	}
-	if !filter.IncludeThread(threadTS, parent) {
+	if !filter.IncludeThread(threadTS, result.parent) {
 		return fetchedThread{}, false, nil
 	}
-	thread := fetchedThread{truncated: truncated}
+	replies := result.replies
+	thread := fetchedThread{truncated: result.truncated}
 	for i := range replies {
 		if filter.matches(&replies[i]) {
 			thread.excludedTS = append(thread.excludedTS, replies[i].TS)

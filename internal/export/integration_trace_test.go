@@ -135,8 +135,9 @@ func exportFiles(t *testing.T, got exportRunResult) map[string]string {
 }
 
 // durationInLog matches the durations the logs round to the second: a retry
-// notice's wait has jitter, and the Done line reports the run's time.
-var durationInLog = regexp.MustCompile(`in [0-9hms.]+`)
+// notice's wait and a rate limit notice's wait have jitter, and the Done line
+// reports the run's time.
+var durationInLog = regexp.MustCompile(`(in|waiting) [0-9hms.]+`)
 
 // normalizedLogs is the run's log with what differs between two runs
 // replaced: the durations and the output directory.
@@ -144,7 +145,7 @@ func normalizedLogs(got exportRunResult) []string {
 	out := make([]string, len(got.Logs))
 	for i, line := range got.Logs {
 		line = strings.ReplaceAll(line, got.OutputDir, "<out>")
-		out[i] = durationInLog.ReplaceAllString(line, "in <d>")
+		out[i] = durationInLog.ReplaceAllString(line, "$1 <d>")
 	}
 	return out
 }

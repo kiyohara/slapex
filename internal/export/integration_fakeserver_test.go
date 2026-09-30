@@ -5,10 +5,13 @@ package export
 // endpoints the exporter calls, plus the asset paths the scenario declares. It
 // records a per-path request count (Count) and the asset paths in request order
 // (AssetRequests) that the cases assert on, injects the scenario's APIFaults /
-// AssetFaults ahead of the normal handlers, runs its BeforeAsset hook on each
-// asset request, and returns conversations.history
+// AssetFaults ahead of the normal handlers, runs its BeforeAPI / BeforeAsset
+// hooks on each request, and returns conversations.history
 // unfiltered — the range narrowing is the client's job, so the tests exercise
-// it against raw responses.
+// it against raw responses — on one page, or on pages of the scenario's
+// HistoryPageSize. newFakeSlackHandler builds the same server without
+// a socket, for a case that serves it over in-memory connections in a synctest
+// bubble (integration_prefetch_test.go).
 //
 // This server is deliberately separate from the production demo server
 // (internal/demo): fault injection and request counting are test-only concerns.
@@ -31,15 +34,34 @@ const integrationTestToken = "xoxb-integration-test-token"
 
 type fakeSlackServer struct {
 	t   *testing.T
-	srv *httptest.Server
 	sc  *exportScenario
+	mux *http.ServeMux
+	// srv serves mux over a socket (newFakeSlackServer); nil when the case
+	// serves it itself, which sets base and transport.
+	srv       *httptest.Server
+	base      string
+	transport http.RoundTripper
 
-	mu     sync.Mutex
-	counts map[string]int
-	assets []string // asset paths in request order
+	mu       sync.Mutex
+	counts   map[string]int
+	assets   []string // asset paths in request order
+	requests []string // every request's requestName, in request order
 }
 
 func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
+	t.Helper()
+
+	f := newFakeSlackHandler(t, sc)
+	f.srv = httptest.NewServer(f.mux)
+	f.base = f.srv.URL
+	f.transport = f.srv.Client().Transport
+	sc.replaceBaseURL(f.base)
+	return f
+}
+
+// newFakeSlackHandler builds the server of sc without serving it: the case
+// serves f.mux, sets f.base and f.transport, and replaces the base URL in sc.
+func newFakeSlackHandler(t *testing.T, sc *exportScenario) *fakeSlackServer {
 	t.Helper()
 
 	f := &fakeSlackServer{
@@ -70,12 +92,11 @@ func newFakeSlackServer(t *testing.T, sc *exportScenario) *fakeSlackServer {
 	} {
 		mux.HandleFunc(path, f.handleAPI)
 	}
-	f.srv = httptest.NewServer(mux)
-	sc.replaceBaseURL(f.srv.URL)
+	f.mux = mux
 	return f
 }
 
-func (f *fakeSlackServer) URL() string { return f.srv.URL }
+func (f *fakeSlackServer) URL() string { return f.base }
 
 // Transport is the server's own transport, for the Slack client under test
 // (slack.WithTransport). Every httptest.Server.Close closes the idle
@@ -84,10 +105,12 @@ func (f *fakeSlackServer) URL() string { return f.srv.URL }
 // 5xx fault here). A parallel test closing its server in between would turn a
 // 429 into a broken connection, retried with backoff instead of its
 // Retry-After (Issue #254, #192).
-func (f *fakeSlackServer) Transport() http.RoundTripper { return f.srv.Client().Transport }
+func (f *fakeSlackServer) Transport() http.RoundTripper { return f.transport }
 
 func (f *fakeSlackServer) Close() {
-	f.srv.Close()
+	if f.srv != nil {
+		f.srv.Close()
+	}
 }
 
 func (f *fakeSlackServer) Count(path string) int {
@@ -115,6 +138,31 @@ func (f *fakeSlackServer) AssetRequests() []string {
 	return slices.Clone(f.assets)
 }
 
+// Requests are the requestName of every request the server got, in request
+// order, retries included.
+func (f *fakeSlackServer) Requests() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.requests)
+}
+
+// requestName names a request by its path and, for a Web API call, the form
+// value that says what it asks for: "/api/users.info?user=U01",
+// "/api/conversations.replies?ts=...", "/api/conversations.history?latest=..."
+// (none on the first page of an unbounded range). APIFaults keyed by it apply
+// to that request only.
+func requestName(r *http.Request) string {
+	if !strings.HasPrefix(r.URL.Path, "/api/") {
+		return r.URL.Path
+	}
+	for _, key := range []string{"user", "bot", "ts", "latest"} {
+		if v := r.PostForm.Get(key); v != "" {
+			return r.URL.Path + "?" + key + "=" + v
+		}
+	}
+	return r.URL.Path
+}
+
 func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -129,7 +177,14 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.record(r)
-	if resp := f.nextFault(f.sc.APIFaults, r.URL.Path); resp != nil && f.writeFault(w, resp) {
+	if f.sc.BeforeAPI != nil {
+		f.sc.BeforeAPI(r)
+	}
+	key := requestName(r)
+	if _, ok := f.sc.APIFaults[key]; !ok {
+		key = r.URL.Path
+	}
+	if resp := f.nextFault(f.sc.APIFaults, key); resp != nil && f.writeFault(w, resp) {
 		return
 	}
 
@@ -154,7 +209,7 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 			writeSlackError(w, "channel_not_found")
 			return
 		}
-		writeSlackOK(w, map[string]any{"messages": f.sc.Messages})
+		writeSlackOK(w, f.historyPage(r.PostForm.Get("cursor")))
 	case "/api/conversations.replies":
 		replies, ok := f.sc.Replies[r.PostForm.Get("ts")]
 		if !ok {
@@ -181,6 +236,24 @@ func (f *fakeSlackServer) handleAPI(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// historyPage is the conversations.history page that starts at cursor: every
+// message, or, with HistoryPageSize, that many from the one the cursor
+// names, with the cursor of the next page while messages remain.
+func (f *fakeSlackServer) historyPage(cursor string) map[string]any {
+	messages := f.sc.Messages
+	size := f.sc.HistoryPageSize
+	if size <= 0 {
+		return map[string]any{"messages": messages}
+	}
+	start, _ := strconv.Atoi(cursor) // "" starts at the newest message
+	end := min(start+size, len(messages))
+	page := map[string]any{"messages": messages[start:end]}
+	if end < len(messages) {
+		page["response_metadata"] = map[string]any{"next_cursor": strconv.Itoa(end)}
+	}
+	return page
 }
 
 func (f *fakeSlackServer) hasChannel(id string) bool {
@@ -217,17 +290,18 @@ func (f *fakeSlackServer) record(r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.counts[r.URL.Path]++
+	f.requests = append(f.requests, requestName(r))
 }
 
-// nextFault returns the fault response the endpoint should emit for this call,
-// or nil to fall through to the normal handler. transient responses are
-// consumed first; once drained, the sticky response (if any) applies to every
-// later call.
-func (f *fakeSlackServer) nextFault(faults map[string]*endpointFault, path string) *faultResponse {
+// nextFault returns the fault response the endpoint (or, for faults keyed by
+// requestName, the request) should emit for this call, or nil to fall through
+// to the normal handler. transient responses are consumed first; once drained,
+// the sticky response (if any) applies to every later call.
+func (f *fakeSlackServer) nextFault(faults map[string]*endpointFault, key string) *faultResponse {
 	if faults == nil {
 		return nil
 	}
-	fault := faults[path]
+	fault := faults[key]
 	if fault == nil {
 		return nil
 	}

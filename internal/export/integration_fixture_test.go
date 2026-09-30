@@ -37,16 +37,26 @@ type exportScenario struct {
 	Emoji    map[string]string
 	Assets   map[string]fakeAsset
 
+	// HistoryPageSize, when set, splits conversations.history into pages of
+	// that many messages, which one History call pages through with the
+	// cursor. Zero serves every message on one page.
+	HistoryPageSize int
+
 	// APIFaults / AssetFaults inject error and rate-limit behaviour for the
 	// v1-09 error scenarios, keyed by request path (e.g.
-	// "/api/conversations.history" or "/files/flaky.pdf"). A nil/empty map
-	// keeps the happy behaviour, so v1-07 / v1-08 fixtures are unaffected.
+	// "/api/conversations.history" or "/files/flaky.pdf"). An API fault may
+	// be keyed by requestName instead ("/api/users.info?user=U02"), for that
+	// request only: the prefetch sends the requests of a method in an order
+	// of its own (Issue #278). A nil/empty map keeps the happy behaviour, so
+	// v1-07 / v1-08 fixtures are unaffected.
 	APIFaults   map[string]*endpointFault
 	AssetFaults map[string]*endpointFault
 
-	// BeforeAsset, when set, runs on each asset request before the server
-	// answers it, for the cases that hold the parallel downloads (Issue
-	// #275). It runs on the request's own goroutine.
+	// BeforeAPI and BeforeAsset, when set, run on each Web API or asset
+	// request before the server answers it, for the cases that hold requests
+	// under way (Issues #275 and #278). They run on the request's own
+	// goroutine.
+	BeforeAPI   func(r *http.Request)
 	BeforeAsset func(r *http.Request)
 }
 
