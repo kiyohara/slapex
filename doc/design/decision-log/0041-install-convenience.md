@@ -61,8 +61,8 @@
 
 2026-09-25、Homebrew 7.0.6 で同じ tap の別の Formula を install したとき、slapex の cask の `postflight` について「Calling `postflight` is deprecated! Use `postflight_steps` instead.」の警告が出た(Issue #239)。slapex の cask を操作していない場面でも出ており、Homebrew は tap への報告を求めていた。
 
-- Homebrew は 6.0.16(2026-08-10)から、cask の `preflight` / `postflight` / `uninstall_preflight` / `uninstall_postflight` を非推奨にしている。代わりの `*_steps` は、リテラル引数の step(`run`、`remove`、`on_macos` など)だけを並べる宣言的な DSL で、sandbox の中で実行される。
-- Homebrew の方針(Deprecating, Disabling and Removing)は、非推奨にした public API を次の minor または major release で disabled(全利用者に error)にするとしている。7.0.0 では disabled にならなかったが、時期は公表されていない。disabled になると、`brew install --cask slapex` と `brew upgrade --cask slapex` が失敗する。
+- Homebrew は 7.0.0(2026-09-13)から、cask の `preflight` / `postflight` / `uninstall_preflight` / `uninstall_postflight` を非推奨(警告。`HOMEBREW_DEVELOPER=1` の下では error)にしている。6.0.16(2026-08-10)で置いたコメントの placeholder を、7.0.0 で有効にした。代わりの `*_steps` は、リテラル引数の step(`run`、`remove`、`on_macos` など)だけを並べる宣言的な DSL で、sandbox の中で実行される。
+- Homebrew の方針(Deprecating, Disabling and Removing)は、非推奨にした public API を次の minor または major release で disabled(全利用者に error)にするとしており、7.0.0 の次の minor または major release(7.1.0 など)がこれに当たる。日付は公表されていないが、Homebrew は前の minor / major release から 1 か月未満では次の minor / major release を作らないため(`docs/Releases.md`)、早くても 2026-10-13 ごろになる。disabled になると、`brew install --cask slapex` と `brew upgrade --cask slapex` が失敗する。
 - GoReleaser は最新の v2.18.2(2026-09-17)でも `homebrew_casks.hooks` を `postflight do ... end` として出力し、`*_steps` を出力する設定を持たない。対応する PR(goreleaser/goreleaser#6873)は 2026-10-01 時点で merge されていない。
 
 候補:
@@ -82,6 +82,8 @@ postflight_steps do
 end
 ```
 
+この変更が tap の cask に届くのは、merge の後に slapex を release し、GoReleaser が `Casks/slapex.rb` を作り直したときである。それまで tap の cask は v1.2.1 の `postflight` のままで、Homebrew が disabled にした後は install と upgrade が失敗する。そのため、Homebrew が disabled にする前(早くても 2026-10-13 ごろ)に release する必要がある。release の時期は、本ログとは別に決める。
+
 理由:
 
 - 案1 は、GoReleaser の対応より先に Homebrew が disabled にすると install と upgrade が壊れ、その時期を slapex の側で制御できない。
@@ -93,6 +95,7 @@ end
 - `custom_block` は cask の先頭(`version` の前)に出力される。Homebrew の stanza の順序の規約から外れるが、規約を強制するのは公式 tap の audit と style であり、第三者 tap の install には影響しない。
 - 旧 hook は `Dir["#{staged_path}/slapex_darwin_*"]` で binary を探していたが、`run` は glob も shell も展開しない。staged_path には download した binary だけが置かれるため、`chdir: "."`(staged_path が基準になる)で staged_path の全体から属性を再帰的に外す。Homebrew の `{{staged_path}}` の token は、GoReleaser の template と区切りが衝突するため使わない。
 - 旧 hook の `system_command` は、失敗すると install を止めていた(`must_succeed: true`)。`run` の既定も同じため、`must_succeed` は指定しない。`xattr -dr` は、属性が無い場合も終了コード 0 を返す。
+- 新しい cask を読み込めるのは、Homebrew 6.0.13(2026-07-27)以降である。`postflight_steps` は 5.1.14、steps の `on_macos` は 6.0.12、`run`(`chdir:` を含む)は 6.0.13 で入った。それより前の Homebrew では cask の評価が失敗し、Homebrew を上げるまで install と upgrade ができない。旧 cask にはこの制約が無かった。`brew update` は Homebrew と tap を一緒に上げるため影響は小さいが、`HOMEBREW_NO_AUTO_UPDATE=1` のまま新しく tap を入れる場合などに起こりうる。
 - 確認: GoReleaser v2.18.2 の snapshot build で生成した cask は、`postflight do` を含まず `postflight_steps` を含む。Homebrew 7.0.6 に読み込ませると、旧 cask は非推奨の error(`HOMEBREW_DEVELOPER=1` の下)になり、新 cask は `PostflightSteps` の artifact として読み込まれる。Homebrew の sandbox の下で `run` が属性を実際に外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないことと合わせて本ログに残す。
 
 ## 後から見直す条件
@@ -100,5 +103,5 @@ end
 - install script の保守コストや利用実態から、`curl | sh` 経路を縮小・変更する必要が出た場合。
 - Homebrew cask の未署名 binary 体験や upgrade 経路に問題が出た場合。
 - Windows 対応（0031）など配布 target が増えた場合の install script 拡張。
-- GoReleaser が `*_steps` を出力する設定を提供した場合(`custom_block` からその設定へ移す)。
+- GoReleaser が `*_steps` を出力する設定を提供した場合(`custom_block` からその設定へ移す。Issue #300)。
 - `postflight_steps` の `run` が quarantine 属性を外せない(install が失敗する、または Gatekeeper の警告が出る)場合。
