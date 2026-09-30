@@ -33,7 +33,6 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/kiyohara/slapex/internal/output"
 	"github.com/kiyohara/slapex/internal/slack"
 )
 
@@ -187,30 +186,42 @@ func TestRunIntegrationPrefetchMatchesSerial(t *testing.T) {
 // the users the cache holds are neither sent ahead nor asked for, and neither
 // is emoji.list; a user the cache lacks is. The assets the cache holds are
 // copied, and neither sent ahead nor asked for; an asset the cache lacks is
-// downloaded ahead (Issue #279).
+// downloaded ahead (Issue #279), the avatar of a user or bot the cache holds
+// as soon as the Users stage has its ID.
 func TestRunIntegrationPrefetchMatchesSerialWithReuseCache(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name      string
-		tamper    func(t *testing.T, cacheDir string)
-		users     int      // the users.info requests
-		downloads []string // the assets the cache lacks
+		name         string
+		scenario     func() exportScenario // happyPathScenario when nil
+		repliesAhead int                   // the conversations.replies sent ahead
+		tamper       func(t *testing.T, cacheDir string)
+		users        int      // the users.info requests
+		downloads    []string // the assets the cache lacks
 	}{
-		{name: "cache holds every user"},
-		{name: "cache lacks a user", tamper: func(t *testing.T, cacheDir string) {
+		{name: "cache holds every user", repliesAhead: 1},
+		{name: "cache lacks a user", repliesAhead: 1, tamper: func(t *testing.T, cacheDir string) {
 			rewriteJSON(t, filepath.Join(cacheDir, "slack_api_cache.json"), func(m map[string]any) {
 				delete(m["users"].(map[string]any), "U02")
 			})
 		}, users: 1},
-		{name: "cache lacks an asset", tamper: func(t *testing.T, cacheDir string) {
-			removeCachedAsset(t, cacheDir, output.KindAttachment)
+		{name: "cache lacks an asset", repliesAhead: 1, tamper: func(t *testing.T, cacheDir string) {
+			removeCachedAsset(t, cacheDir, "/files/runbook.pdf")
 		}, downloads: []string{"/files/runbook.pdf"}},
+		{name: "cache lacks the avatar of a user it holds", repliesAhead: 1, tamper: func(t *testing.T, cacheDir string) {
+			removeCachedAsset(t, cacheDir, "/files/avatar-u01.png")
+		}, downloads: []string{"/files/avatar-u01.png"}},
+		{name: "cache lacks the icon of a bot it holds", scenario: botReuseScenario, tamper: func(t *testing.T, cacheDir string) {
+			removeCachedAsset(t, cacheDir, "/files/bot-icon.png")
+		}, downloads: []string{"/files/bot-icon.png"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			sc := happyPathScenario()
+			if tc.scenario != nil {
+				sc = tc.scenario()
+			}
 			come := newArrivals(nil)
 			sc.BeforeAsset = come.record
 			fake := newFakeSlackServer(t, &sc)
@@ -230,7 +241,7 @@ func TestRunIntegrationPrefetchMatchesSerialWithReuseCache(t *testing.T) {
 			}
 			serial := runWithPrefetchOn(t, context.Background(), false, fake, reuse(), nil)
 			prefetched := runAheadOn(t, fake, come, reuse(), downloadsOf(serial.requests))
-			assertPrefetchMatchesSerial(t, serial, prefetched, 1)
+			assertPrefetchMatchesSerial(t, serial, prefetched, tc.repliesAhead)
 			if slices.Contains(prefetched.requests, "/api/emoji.list") {
 				t.Errorf("emoji.list went out with the reuse cache")
 			}
@@ -888,7 +899,8 @@ func peopleScenario() exportScenario {
 	sc.Users["U03"] = testUser("U03", "carol", "Carol Example", "Carol", "")
 	sc.Users["U04"] = testUser("U04", "dave", "Dave Example", "Dave", "")
 	sc.Users["U05"] = testUser("U05", "erin", "Erin Example", "Erin", "")
-	sc.Bots = map[string]slack.Bot{"B01": {ID: "B01", Name: "Deploy Bot"}}
+	sc.Bots = map[string]slack.Bot{"B01": {ID: "B01", Name: "Deploy Bot", Icons: botIcons("{{base}}/files/bot-b01.png")}}
+	sc.Assets["/files/bot-b01.png"] = pngAsset("bot-b01")
 	sc.Messages = []slack.Message{
 		{Type: "message", TS: "1700000008.000000", User: "U01", Text: "hello <@U404> and <@U05>"},
 		{Type: "message", Subtype: "bot_message", TS: "1700000007.000000", BotID: "B404", Text: "bot unknown to bots.info"},

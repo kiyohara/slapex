@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -608,18 +609,19 @@ func filteredFilePath(ts string) string {
 }
 
 // removeCachedAsset removes, from the output of the run that kept the cache
-// in cacheDir, the file of the asset of kind that the manifest lists first:
-// the reuse cache cannot copy it.
-func removeCachedAsset(t *testing.T, cacheDir, kind string) {
+// in cacheDir, the saved file of the asset whose source URL has the path
+// path on the fake server: the reuse cache cannot copy it.
+func removeCachedAsset(t *testing.T, cacheDir, path string) {
 	t.Helper()
 	dir := filepath.Dir(cacheDir)
 	entry, ok := findManifest(readManifestEntries(t, dir), func(e manifestEntryFull) bool {
-		return e.Kind == kind && e.LocalPath != ""
+		u, err := url.Parse(e.SourceURL)
+		return err == nil && u.Path == path && e.LocalPath != ""
 	})
 	if !ok {
-		t.Fatalf("the kept manifest has no saved %s", kind)
+		t.Fatalf("the kept manifest has no saved asset of %s", path)
 	}
 	if err := os.Remove(filepath.Join(dir, filepath.FromSlash(entry.LocalPath))); err != nil {
-		t.Fatalf("remove the cached %s: %v", kind, err)
+		t.Fatalf("remove the cached %s: %v", path, err)
 	}
 }
