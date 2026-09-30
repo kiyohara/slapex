@@ -13,7 +13,7 @@ Issue #279(PF-07)。PF-05(#277、decision log 0069)で決めた export 全体の
 ## 現在の状況
 
 - 依存の #276(PF-04)、#277(PF-05)、#278(PF-06、PR #294)は merge 済み。main `417d253`(PR #294 の merge)から作業している。
-- 実装、test、文書の更新、Docker Compose での全体の検証まで済み、draft PR #295 を作った。note を採番し、`progress.md` の PR 欄を反映した。review cycle `claude-code-ca2a8e2-20260930042001` の指摘 1 件に対応した。次は P5 の再確認。
+- 実装、test、文書の更新、Docker Compose での全体の検証まで済み、PR #295 を作った。note を採番し、`progress.md` の PR 欄を反映した。review cycle `claude-code-ca2a8e2-20260930042001` の指摘 1 件に対応し、再確認で修正確認済みになった。PR を Ready for review にした。残りは人間の手番である。
 
 ## 決定事項
 
@@ -54,7 +54,9 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 
 ## 次にやること
 
-- CI の check runs の完了を確かめ、P5 の再確認を subagent に委譲する。
+- 人間: 指摘の thread(1 件、`**修正確認済み(resolve 可)**`)の resolve。
+- 人間(Codex): Codex のクロスレビュー。
+- 人間: PR の merge。merge の後、#272 の「ユーザーが行うこと」の 2(実 workspace での trace の取り直し)と、demo GIF の再録画。
 
 ## 検証
 
@@ -97,6 +99,17 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 - 修正 commit: `bb0635b`。`peopleScenario` の bot に `bots.info` が返す icon を持たせ、`--reuse-cache` の比較に、cache にある user の avatar と cache にある bot の icon(`botReuseScenario`)のファイルだけを cache から消す行を足した。`removeCachedAsset` は、消す asset を source URL の path で指定するようにした。PR description の「主な変更」の test の項と「検証」にも足した。
 - 出力生成系 skill の再判断: test だけの変更のため、P1 の判断(sample と screenshot は使わない、demo GIF はローカルで要再生成)を変えない。
 
+## P5 の記録
+
+- 再確認(review cycle `claude-code-ca2a8e2-20260930042001`、Reviewed head `74754c5191cc14797eb28d15850062b549ddf35a`): 修正確認済み 1 件、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可とした thread は 1 件(`internal/export/prefetch.go` の `[imo]`)。
+- subagent の報告: `gh` への fallback なし、停止理由なし、訂正できなかった誤りなし。check runs は 5 件とも success。
+- P5 後の判断: 未対応が 0 件のため P6 へ進んだ。
+
+## P6 の記録
+
+- 終了時の状態: PR #295 を Ready for review にした。P5 が確かめた head `74754c5` の check runs は 5 件とも success。この記録を足した note だけの commit が最新 head になる。
+- 人間に残る作業: 指摘の thread の resolve、Codex のクロスレビュー、PR の merge。metadata の誤りを訂正できなかった投稿は無い。
+
 ## リスク・ブロッカー
 
 - なし。
@@ -109,3 +122,4 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 - 2026-09-30: P1 を終えた。draft PR #295 を作り、note を採番し(`0b19f71`)、`progress.md` の PR 欄を反映した。
 - 2026-09-30: P2 の review を subagent に委譲した(指摘 1 件、`[imo]`)。P3 で P4 へ進んだ。
 - 2026-09-30: P4 で、avatar の先行取得の 3 つの経路の test を足した(`bb0635b`)。
+- 2026-09-30: P5 の再確認で修正確認済みになった(未対応 0 件)。P6 で PR を Ready for review にした。
