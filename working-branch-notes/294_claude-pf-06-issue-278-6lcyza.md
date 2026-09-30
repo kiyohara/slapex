@@ -13,7 +13,7 @@ Issue #278(PF-06)。PF-05(#277、decision log 0069)で決めた export 全体の
 ## 現在の状況
 
 - 依存の #277(PF-05、PR #293)は merge 済み。main `30f8192`(PR #293 の merge)から作業している。
-- 実装、test、`tools/tracereport` の区間、文書の更新、Docker Compose での全体の検証まで済んだ。次は draft PR の作成。
+- 実装、test、`tools/tracereport` の区間、文書の更新、Docker Compose での全体の検証まで済み、draft PR #294 を作った。次は review(P2)。
 
 ## 決定事項
 
@@ -47,8 +47,11 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 
 ## 次にやること
 
-- draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。
-- review(P2)以降。
+- draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。(完了)
+- CI の完了を確かめ、review(P2)を subagent に委譲する。
+- 指摘への対応(P4)と再確認(P5)。
+- review cycle を終えたら PR を Ready for review にする(P6)。
+- 人間: Codex のクロスレビューと PR の merge。
 
 ## 検証
 
@@ -63,7 +66,18 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 | 固定 sample の互換(`TZ=Asia/Tokyo`、`go run ./tools/gensample -time 2026-07-04T16:32:41+09:00 -out <gitignore 済みの一時 directory>`) | `doc/samples/ja` / `en` と `diff -r` で無差分(各 18 ファイル) |
 | `git diff --check` | 問題なし |
 
-- 変異 test: lane の同時 1 件を外す、FIFO を崩す、間隔を lane の前で待つ、先に出した request の通知をすぐ出す、`stop` で待たない、同じ request を 2 回出す、reply の ID を先に出さない、の各変異を入れ、対応する test が失敗することを確かめた(変異は戻した)。
+- 追加の反復(2026-09-30): `internal/slack`、`internal/export`、`tools/tracereport` の `-count=20 -shuffle=on` と `GOMAXPROCS=1 -count=5` は成功した。cross compile(`CGO_ENABLED=0`、darwin / linux × amd64 / arm64)も成功した。
+- `-race -count=15`(同じ 3 package)で、既存の `TestTraceTimeoutClass/http2=false` が 1 回落ちた(trace が 13 行で、18 行を期待)。この PR の test は落ちていない。main `30f8192` の worktree で、`internal/export` の `-race -count=15` を並行に走らせた負荷の下、`-race -count=300 -run TestTraceTimeoutClass` を回すと、main でも 1 回落ちた(この branch でも 300 回中 1 回)。落ちた回の記録では、`auth.test` のある試行が status 200 を受け取り、その後の試行が無かった。fake server の handler が server 側の request の context の終わりで普通に return して 200 の空の応答を返し、client がそれを timeout の間際に受け取ると、decode に失敗して retry せずに終わる、とみている(推定)。handler で context の終わりに `panic(http.ErrAbortHandler)` とする修正を main の worktree で試すと、同じ条件で 300 回落ちなかった(1/300 との比較のため確証は弱い)。この PR の範囲外のため直さず、follow-up 候補として PR description に書いた。
+- 変異 test: 次の 14 の変異を 1 つずつ入れ、それぞれ対応する test が落ちることを確かめた(変異は戻した)。先行取得: filter ありでも thread の message の ID を先に出す、broadcast の thread も先に出す、通知を保たずに出す、`stop` で待たない、reply の ID を届いた時点で出さない、保った通知を捨てる、filter ありでも reply の ID を先に出す。method の lane: 同時数を限らない、待つ順を逆にする、1 秒の間隔を空けない、cancel された呼び出しが渡された lane を次へ渡さない、cancel された呼び出しが lane を取る。tracereport: 区間の終わりを延ばさない、download の区間に request の終わりを使わない。
+
+## P1 の記録(drive-issue-to-reviewed-pr)
+
+- PR: #294(draft)。検証結果は「検証」、出力生成系 skill の判断は「出力生成系 skill の判断」のとおり。
+- `run-issue-task` の手順で使った skill の報告から引き上げた項目:
+  - `number-working-branch-note`(commit `270f70e`、`draft_claude-pf-06-issue-278-6lcyza.md` → `294_claude-pf-06-issue-278-6lcyza.md`、push 成功)。
+    - 書き換えた行の一覧: note の `- PR: 未作成` → `- PR: #294`(`PR:` 欄の記入)。PR description の `working-branch-notes/draft_claude-pf-06-issue-278-6lcyza.md` → `working-branch-notes/294_claude-pf-06-issue-278-6lcyza.md`(ファイル名参照の置換)。title は無し。
+    - 触らずに残した行の一覧: note の「現在の状況」の「次は draft PR の作成。」(定型に当てはまらない)、note の「次にやること」の「draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。」(複合行。`progress.md` は同 skill の対象外)、PR description の note 参照の後の「(採番後に rename する)」(置換後の文脈が不自然)、PR description の「(PR 欄は採番後に反映する)」(定型に当てはまらない)。これらは skill の後に、`progress.md` の PR 欄の反映と合わせて orchestrator が更新した。
+  - 出力生成系 3 skill: 呼ばなかった(`update-sample-exports` と `update-readme-preview-screenshots` は「いつ使うか」に当たらない。`update-readme-demo-gif` は cloud session で実行できないため、ローカルで要再生成として未検証事項に残した)。
 
 ## リスク・ブロッカー
 
@@ -74,3 +88,4 @@ Issue の関数名は main `30f8192` でも同じだった。`slack.Client` の 
 - 2026-09-29: 着手。Issue #278、handoff(`issue-277-pr-293-report.md`)、decision log 0069、`slack-api-usage.md` の「取得の並行化」を確認した。
 - 2026-09-30: method の lane、`History` の page の口、先行取得とその test を実装し、途中の状態を push した。
 - 2026-09-30: reply にだけ現れる user の `users.info` を replies が届いた時点で先に出すよう改め、`tools/tracereport` の区間、文書、decision log 0069 の追記を足した。Docker Compose で全体を検証した。
+- 2026-09-30: P1 を終えた。draft PR #294 を作り、note を採番し(`270f70e`)、`progress.md` の PR 欄を反映した。既存の `TestTraceTimeoutClass` の不安定さを main でも再現し、follow-up 候補にした。
