@@ -13,7 +13,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 ## 現在の状況
 
 - main `7591915`(PR #295 の merge)から作業している。
-- `bash tools/demo/record.sh` で録り直し、前の GIF と比べて目視で確かめた。ユーザーの了承を得て push し、PR #297 を作った。review cycle `claude-code-0b0ca3e-20260930102425` の指摘 2 件に P4 で対応した(note と PR description の編集だけ)。次は P5 の再確認である。
+- `bash tools/demo/record.sh` で録り直し、前の GIF と比べて目視で確かめた。ユーザーの了承を得て push し、PR #297 を作った。review cycle `claude-code-0b0ca3e-20260930102425` の指摘 2 件に P4 で対応した(note と PR description の編集だけ)。P5 の再確認で未対応 0 件になり、PR は Ready for review になった。残りは人間の手番である。
 
 ## 決定事項
 
@@ -29,8 +29,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 ## 次にやること
 
 - ユーザーの了承の後に push と PR の作成。(完了)
-- P5: 別の session の Claude Code(review cycle `claude-code-0b0ca3e-20260930102425` の Review 担当)が `verify-comments` で再確認する。
-- 人間の手番: thread の resolve、PR の Ready for review、GitHub のスタイルを当てた README の表示の確認、merge。
+- 人間の手番: 2 thread(`[nits]` と `[fyi]`)の resolve、GitHub のスタイルを当てた README の表示の確認、Codex の cross-review、merge。
 
 ## 検証
 
@@ -52,7 +51,7 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
   - Users の行が約 3 秒回り、Assets の行は Users と同じ頃に終わる(前の GIF は約 14 秒回っていた)。PF-03 と PF-07 の効果で想定どおり。
   - 最後のフレームは前の GIF と同じ行を同じ順に映す。違いは Messages の行の日付(2026-08-04 → 2026-08-31)、output の行と最後の行の path の日時、Done の行の所要時間だけ。
 - `git diff --stat main`: 変更は GIF と本 note だけ。`git diff --check` は問題なし。
-- 未確認: GitHub 上の README の表示(push の後でないと確かめられない。画像の参照と大きさは変わらない)。
+- 未確認: GitHub のスタイルを当てた README の見た目。push の後に、P2 の review が GitHub 上の README の画像の読み込みと大きさ(取得した bytes が PR head の GIF と一致、1080x740、表示幅 760)を確かめた。スタイルを当てた見た目だけが、CSS の配信元へ接続できず残った。
 
 ## P1 の記録(drive-issue-to-reviewed-pr)
 
@@ -80,12 +79,23 @@ Issue #296。README の「ターミナルでの実行例」の GIF(`assets/demo/
 - 修正 commit: 本 note の更新の commit(返信に SHA を書く)。PR description の編集は push を伴わない。
 - 出力生成系 skill の再判断: note と PR description の編集だけのため、P1 の判断を変えない。
 
+## P5 の記録
+
+- 再確認(review cycle `claude-code-0b0ca3e-20260930102425`、Reviewed head `389e2cd7158db9056f38ce57c24afe9b164133b5`): 修正確認済み 2 件、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。resolve 可とした thread は 2 件(`[nits]` と `[fyi]`)。`gh` への fallback は無し。完了要約は PR の conversation comment にある。
+
+## P6 の記録
+
+- PR は Ready for review(project の thread が P5 の後に切り替えた)。
+- head `389e2cd` の check runs は 5 件(`check` と cross-compile 4 件)とも success。
+- この記録の commit は note だけで、P5 が確かめた head(`389e2cd`)より後になる。
+
 ## リスク・ブロッカー
 
-- GitHub 上の README の表示は push の後でないと確かめられない。
+- GitHub のスタイルを当てた README の見た目は未確認(画像の読み込みと大きさは P2 の review が確かめた)。merge 前に人間が確かめる。
 
 ## セッションログ
 
 - 2026-09-30: Issue #296 を作り、ブランチを作って録画を始めた。録画と確認を終えて commit した。ユーザーの了承を得て push し、PR #297 を作って note を採番した。
 - 2026-09-30: 別の session で P2 の review(指摘 2 件、`[nits]` 1、`[fyi]` 1)があり、P3 で P4 へ進んだ。
 - 2026-09-30: P4 で、2 件とも note と PR description の編集で対応した。
+- 2026-09-30: P5 の再確認で未対応 0 件(修正確認済み 2 件)になり、PR が Ready for review になった。P5 と P6 の記録を足した。
