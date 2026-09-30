@@ -99,12 +99,21 @@ func Run(ctx context.Context, client *slack.Client, opts Options, p *ui.Printer)
 		return "", err
 	}
 
-	fetched, err := fetchMessages(ctx, client, target.channel.ID, fetchRange, opts, p)
+	// From the Messages phase on, the requests a later stage is certain to
+	// make go out ahead of it, until Run returns (prefetch.go).
+	f := newPrefetcher(ctx, client, reuse)
+	defer f.stop()
+	if reuse == nil {
+		// resolveCustomEmoji calls emoji.list unless the reuse cache has the
+		// custom emoji.
+		f.prefetchEmojiList()
+	}
+	fetched, err := fetchMessages(ctx, f, target.channel.ID, fetchRange, opts, p)
 	if err != nil {
 		return "", err
 	}
-	resolved := resolveUsers(ctx, client, fetched, reuse, p)
-	customEmoji, err := resolveCustomEmoji(ctx, client, reuse, p)
+	resolved := resolveUsers(ctx, f, fetched, reuse, p)
+	customEmoji, err := resolveCustomEmoji(ctx, f, reuse, p)
 	if err != nil {
 		return "", err
 	}
@@ -210,13 +219,13 @@ func createOutputDir(outputRoot string, now time.Time, target exportTarget) (out
 
 // resolveCustomEmoji runs the Emoji phase: the workspace's custom emoji from
 // emoji.list, or from the reuse cache without the call.
-func resolveCustomEmoji(ctx context.Context, client *slack.Client, reuse *reusableCache, p *ui.Printer) (map[string]string, error) {
+func resolveCustomEmoji(ctx context.Context, f *prefetcher, reuse *reusableCache, p *ui.Printer) (map[string]string, error) {
 	if reuse != nil {
 		p.EndPhase(ui.StatusSuccess, "Emoji", fmt.Sprintf("%d custom emoji", len(reuse.emoji)), "from cache, emoji.list skipped")
 		return reuse.emoji, nil
 	}
 	p.StartPhase("Emoji", "fetching custom emoji list ...")
-	customEmoji, err := client.EmojiList(ctx)
+	customEmoji, err := f.emojiList(ctx)
 	if err != nil {
 		return nil, err
 	}

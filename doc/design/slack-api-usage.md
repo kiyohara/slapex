@@ -125,7 +125,7 @@ slash command の `in_channel` 応答、incoming webhook、`response_url` 経由
 
 ## 取得の並行化
 
-この節の方針は PF-06(#278)と PF-07(#279)で実装する。実装されるまでは、Web API は 1 件ずつ直列に呼び、asset の download は Assets 工程で始まる(決定経緯は `decision-log/0069-api-method-lanes-and-prefetch.md`)。
+この節の方針は PF-06(#278)と PF-07(#279)で実装する。Web API の部分(method ごとの lane と、`emoji.list`、`conversations.replies`、`users.info`、`bots.info` の先行取得)は PF-06 で実装した。asset の先行取得は PF-07 で実装し、実装されるまでは、asset の download は Assets 工程で始まる(決定経緯は `decision-log/0069-api-method-lanes-and-prefetch.md`)。
 
 - export の工程(`usage-flow.md` の「処理対象の表示」のフェーズ行の順)は、今の順に 1 つずつ進める。後の工程が必ず出す request は、それが確定した時点で先に出し(先行取得)、工程は自分の番に来たときにその結果を使う。工程の処理(`--max-posts`、emoji filter による除外、truncated の判定、user と bot の解決、描画)は request の結果を直列の場合と同じ順に受け取るため、結果は直列に取得した場合と同じになる。
 - Web API は method ごとの lane で呼ぶ。同じ method の呼び出しは同時に 1 件までとし、来た順に、前の呼び出し(retry を含む)が終わってから、かつ前の呼び出しの開始から 1 秒以上空けて始める(「rate limit とリトライ」の平準化)。429 の `Retry-After` を待つ間は、同じ method の次の呼び出しも待つ。異なる method の呼び出しは並行する。

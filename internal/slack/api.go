@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"time"
 )
@@ -211,8 +212,13 @@ type MessagePredicate func(*Message) bool
 
 // History fetches timeline messages in [oldest, latest), up to maxMessages
 // retained messages. It reports whether the fetch stopped because maxMessages
-// was reached.
-func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, include MessagePredicate, progress func(fetched int)) ([]Message, bool, error) {
+// was reached. As each page is done, kept, when not nil, gets the messages the
+// page retained — up to maxMessages in all, so the page that reaches it may
+// hand over fewer than the predicate kept, or none — and progress, when not
+// nil, gets the number retained so far, unless the page reached maxMessages
+// with more messages to retain. kept must not change the messages: they are
+// the result's.
+func (c *Client) History(ctx context.Context, channelID, oldest, latest string, maxMessages int, include MessagePredicate, kept func(page []Message), progress func(fetched int)) ([]Message, bool, error) {
 	var messages []Message
 	cursor := ""
 	for {
@@ -235,6 +241,7 @@ func (c *Client) History(ctx context.Context, channelID, oldest, latest string, 
 		if err != nil {
 			return nil, false, err
 		}
+		pageStart := len(messages)
 		for _, m := range page.Messages {
 			if !timestampInRange(m.TS, oldest, latest) {
 				continue
@@ -246,9 +253,15 @@ func (c *Client) History(ctx context.Context, channelID, oldest, latest string, 
 				continue
 			}
 			if len(messages) >= maxMessages {
+				if kept != nil {
+					kept(slices.Clip(messages[pageStart:]))
+				}
 				return messages, true, nil
 			}
 			messages = append(messages, m)
+		}
+		if kept != nil {
+			kept(slices.Clip(messages[pageStart:]))
 		}
 		if progress != nil {
 			progress(len(messages))

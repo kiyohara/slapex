@@ -383,7 +383,7 @@ func TestHistoryPagination(t *testing.T) {
 
 	c, _ := newTestClient(srv)
 	const oldest = "1.000000"
-	messages, truncated, err := c.History(context.Background(), "C123", oldest, "", 100, nil, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", oldest, "", 100, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestHistoryRangeBoundariesAndMaxPosts(t *testing.T) {
 	defer srv.Close()
 
 	c, _ := newTestClient(srv)
-	messages, truncated, err := c.History(context.Background(), "C123", "200.000000", "400.000000", 2, nil, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", "200.000000", "400.000000", 2, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -470,7 +470,7 @@ func TestHistoryRangeBoundariesBelowOneSecond(t *testing.T) {
 	defer srv.Close()
 
 	c, _ := newTestClient(srv)
-	messages, truncated, err := c.History(context.Background(), "C123", "1783071000.200000", "1783071000.800000", 100, nil, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", "1783071000.200000", "1783071000.800000", 100, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -544,7 +544,7 @@ func TestHistoryAppliesPredicateBeforeMaxPosts(t *testing.T) {
 		}
 		return true
 	}
-	messages, truncated, err := c.History(context.Background(), "C123", "1.0", "", 2, include, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", "1.0", "", 2, include, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -577,7 +577,7 @@ func TestHistoryDoesNotTruncateWhenOnlyExcludedMessagesRemain(t *testing.T) {
 
 	c, _ := newTestClient(srv)
 	include := func(m *Message) bool { return m.Text != "exclude" }
-	messages, truncated, err := c.History(context.Background(), "C123", "1.0", "", 2, include, nil)
+	messages, truncated, err := c.History(context.Background(), "C123", "1.0", "", 2, include, nil, nil)
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
@@ -586,6 +586,73 @@ func TestHistoryDoesNotTruncateWhenOnlyExcludedMessagesRemain(t *testing.T) {
 	}
 	if len(messages) != 2 {
 		t.Fatalf("messages = %d, want 2", len(messages))
+	}
+}
+
+// TestHistoryHandsOverEachPage: kept gets the messages each page retained,
+// before progress gets the count, and the page that reaches maxMessages hands
+// over the ones within it, even none, without a progress count (Issue #278).
+func TestHistoryHandsOverEachPage(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		pages map[string]string
+		max   int
+		want  string // the calls of kept and progress, in order
+	}{
+		{
+			name: "cut within a page",
+			pages: map[string]string{
+				"":     `{"ok":true,"messages":[{"ts":"5.0","text":"exclude"},{"ts":"4.0","text":"keep 1"}],"response_metadata":{"next_cursor":"cur1"}}`,
+				"cur1": `{"ok":true,"messages":[{"ts":"3.0","text":"keep 2"},{"ts":"2.0","text":"exclude"}],"response_metadata":{"next_cursor":"cur2"}}`,
+				"cur2": `{"ok":true,"messages":[{"ts":"1.5","text":"keep 3"},{"ts":"1.2","text":"keep 4"}],"response_metadata":{"next_cursor":""}}`,
+			},
+			max:  3,
+			want: "kept[keep 1] progress 1 kept[keep 2] progress 2 kept[keep 3]",
+		},
+		{
+			name: "cut at a page's first message",
+			pages: map[string]string{
+				"":     `{"ok":true,"messages":[{"ts":"4.0","text":"keep 1"},{"ts":"3.0","text":"keep 2"}],"response_metadata":{"next_cursor":"cur1"}}`,
+				"cur1": `{"ok":true,"messages":[{"ts":"2.0","text":"exclude"},{"ts":"1.5","text":"keep 3"}],"response_metadata":{"next_cursor":""}}`,
+			},
+			max:  2,
+			want: "kept[keep 1,keep 2] progress 2 kept[]",
+		},
+		{
+			name: "no cut",
+			pages: map[string]string{
+				"": `{"ok":true,"messages":[{"ts":"4.0","text":"keep 1"},{"ts":"3.0","text":"exclude"}],"response_metadata":{"next_cursor":""}}`,
+			},
+			max:  5,
+			want: "kept[keep 1] progress 1",
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := httptest.NewServer(&pagedHandler{t: t, path: "/api/conversations.history", pages: tt.pages})
+			defer srv.Close()
+			c, _ := newTestClient(srv)
+			var calls []string
+			kept := func(page []Message) {
+				var texts []string
+				for _, m := range page {
+					texts = append(texts, m.Text)
+				}
+				calls = append(calls, "kept["+strings.Join(texts, ",")+"]")
+			}
+			progress := func(n int) { calls = append(calls, fmt.Sprintf("progress %d", n)) }
+			include := func(m *Message) bool { return m.Text != "exclude" }
+			if _, _, err := c.History(context.Background(), "C123", "1.0", "", tt.max, include, kept, progress); err != nil {
+				t.Fatalf("History: %v", err)
+			}
+			if got := strings.Join(calls, " "); got != tt.want {
+				t.Errorf("calls = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

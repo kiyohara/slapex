@@ -1,8 +1,9 @@
 // Command tracereport summarizes the HTTP trace of a slapex run
 // (SLAPEX_HTTP_TRACE, Issue #273) as Markdown, to paste into an Issue: per
 // class of origin (the Web API, files.slack.com, the Slack CDN, gravatar and
-// the rest), how many requests and bytes, and where their time went (pacing
-// wait, retry wait, connect, first byte, transfer) against the whole run.
+// the rest), how many requests and bytes, where their time went (pacing
+// wait, retry wait, connect, first byte, transfer) against the whole run,
+// and when in the run they went on (Issue #278).
 //
 // It prints no host of a third party, no URL hash and no time of day, only
 // how many origins there are and how the requests spread over them, so that
@@ -19,8 +20,15 @@
 // prompt adds the time the choice took). A trace without the run line, of a
 // run that was killed for one, is summarized over the span of its requests
 // instead: from the first request (with its pacing wait) to the end of the
-// last one (with its retry wait). Requests that overlap, as in parallel
-// downloads, can take more than 100% of the run between them.
+// last one (with its retry wait).
+//
+// Requests overlap: the downloads run in parallel lanes, and the Web API
+// calls of different methods side by side. Their Totals then add up to more
+// than the time they took, up to more than 100% of the run, and "Outside
+// requests" is less than the time no request took. The spans say when the
+// requests of each class went on instead: from the start of the run, when
+// the first of them started and when the last one ended. Compare those, and
+// the run's time, between two runs (decision log 0069).
 package main
 
 import (
@@ -174,10 +182,27 @@ func (s *stats) add(rec slack.TraceRecord) {
 	}
 }
 
+// interval is when a group of requests went on: from the start of the first
+// to the end of the last.
+type interval struct {
+	start, end time.Time
+}
+
+func (iv *interval) add(start, end time.Time) {
+	if iv.start.IsZero() || start.Before(iv.start) {
+		iv.start = start
+	}
+	if end.After(iv.end) {
+		iv.end = end
+	}
+}
+
 type summary struct {
 	// span is the run: from the run line, or, in a trace without one (run is
-	// false), from the first request to the end of the last one.
+	// false), from the first request to the end of the last one. It starts
+	// at begin.
 	span     time.Duration
+	begin    time.Time
 	run      bool
 	all      stats
 	classes  map[string]*stats
@@ -185,15 +210,22 @@ type summary struct {
 	kinds    map[string]*stats // downloads by asset kind
 	statuses map[int]int
 	errors   map[string]int
+
+	// intervals are when the requests of each class went on, and downloads
+	// and requests when those of all the downloads and all the requests did.
+	intervals map[string]*interval
+	downloads interval
+	requests  interval
 }
 
 func summarize(recs []slack.TraceRecord) summary {
 	s := summary{
-		classes:  map[string]*stats{},
-		methods:  map[string]*stats{},
-		kinds:    map[string]*stats{},
-		statuses: map[int]int{},
-		errors:   map[string]int{},
+		classes:   map[string]*stats{},
+		intervals: map[string]*interval{},
+		methods:   map[string]*stats{},
+		kinds:     map[string]*stats{},
+		statuses:  map[int]int{},
+		errors:    map[string]int{},
 	}
 	var first, last time.Time
 	seen := false
@@ -215,11 +247,19 @@ func summarize(recs []slack.TraceRecord) summary {
 		t := rec.Times()
 		extend(rec.Start.Add(-t.PacingWait), rec.Start.Add(lastOffset(rec)+t.RetryWait))
 		s.all.add(rec)
-		addTo(s.classes, classOf(rec), rec)
+		class := classOf(rec)
+		addTo(s.classes, class, rec)
+		end := rec.Start.Add(lastOffset(rec))
+		if s.intervals[class] == nil {
+			s.intervals[class] = &interval{}
+		}
+		s.intervals[class].add(rec.Start, end)
+		s.requests.add(rec.Start, end)
 		if rec.Type == slack.TraceAPI {
 			addTo(s.methods, rec.Method, rec)
 		} else {
 			addTo(s.kinds, cmp.Or(rec.Kind, "(none)"), rec)
+			s.downloads.add(rec.Start, end)
 		}
 		if rec.Status != 0 {
 			s.statuses[rec.Status]++
@@ -229,6 +269,7 @@ func summarize(recs []slack.TraceRecord) summary {
 		}
 	}
 	s.span = last.Sub(first)
+	s.begin = first
 	return s
 }
 
@@ -290,6 +331,33 @@ func writeReport(w io.Writer, s summary) {
 	row("All", &s.all)
 	outside := max(s.span-s.all.times.Total(), 0)
 	fmt.Fprintf(w, "| Outside requests | | | | | | | | | | | %s | %s |\n\n", seconds(outside), share(outside, s.span))
+
+	from := "the start of the run"
+	if !s.run {
+		from = "the start of the first request (with its pacing wait)"
+	}
+	fmt.Fprintf(w, "When the requests of each class went on, counted from %s. Requests that overlap, "+
+		"as the downloads and the Web API calls of different methods do, take less of the run than their Totals add up to.\n\n", from)
+	fmt.Fprintln(w, "| Class | First request starts | Last request ends | Span |")
+	fmt.Fprintln(w, "|---|---:|---:|---:|")
+	spanRow := func(name string, iv interval) {
+		fmt.Fprintf(w, "| %s | %s | %s | %s |\n", name,
+			seconds(iv.start.Sub(s.begin)), seconds(iv.end.Sub(s.begin)), seconds(iv.end.Sub(iv.start)))
+	}
+	for _, name := range classOrder {
+		if iv := s.intervals[name]; iv != nil {
+			spanRow(name, *iv)
+		}
+	}
+	if !s.downloads.start.IsZero() {
+		spanRow("All downloads", s.downloads)
+	}
+	// A run that failed before its first request has only the run line, and
+	// no span.
+	if !s.requests.start.IsZero() {
+		spanRow("All", s.requests)
+	}
+	fmt.Fprintln(w)
 
 	fmt.Fprintln(w, "In \"Requests per origin\", `n ×k` is k origins with n requests each.")
 	fmt.Fprintln(w)

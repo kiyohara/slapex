@@ -74,6 +74,15 @@ func TestReport(t *testing.T) {
 		"| Other | 3 | 0 | 0 | 2 | 204.0 KB | 2.700 s |",
 		"| All | 9 | 1 | 1 | 6 | 3.2 MB | 3.300 s | 1.000 s | 0.090 s | 0.180 s | 0.630 s | 5.200 s | 61.2% |",
 		"| Outside requests | | | | | | | | | | | 3.300 s | 38.8% |",
+		// The spans, from the first request.
+		"counted from the start of the first request (with its pacing wait).",
+		"| Web API | 0.000 s | 2.300 s | 2.300 s |",
+		"| files.slack.com | 3.300 s | 3.400 s | 0.100 s |",
+		"| Slack CDN | 5.000 s | 5.100 s | 0.100 s |",
+		"| gravatar | 5.100 s | 5.200 s | 0.100 s |",
+		"| Other | 6.200 s | 8.500 s | 2.300 s |",
+		"| All downloads | 3.300 s | 8.500 s | 5.200 s |",
+		"| All | 0.000 s | 8.500 s | 8.500 s |",
 		"| Other | 2 | 2 ×1, 1 ×1 | HTTP/1.1 ×1, HTTP/2.0 ×1 |",
 		"Statuses: 200 ×7, 302 ×1, 429 ×1. Failed requests: none.",
 		"| auth.test | 1 | 2 | 0 B | 0.000 s | 1.000 s |",
@@ -117,6 +126,7 @@ func TestReportRun(t *testing.T) {
 		"1 request in a run of 10.000 s: 1 Web API call, and 0 downloads from 0 origins.",
 		"| All | 1 | 0 | 0 | 1 | 0 B | 0.000 s | 0.000 s | 0.100 s | 0.800 s | 0.100 s | 1.000 s | 10.0% |",
 		"| Outside requests | | | | | | | | | | | 9.000 s | 90.0% |",
+		"| All | 0.200 s | 1.200 s | 1.000 s |",
 		"Statuses: 200 ×1. Failed requests: none.",
 	} {
 		if !strings.Contains(report, want) {
@@ -125,6 +135,98 @@ func TestReportRun(t *testing.T) {
 	}
 	if strings.Contains(report, "no run line") {
 		t.Errorf("report says the trace has no run line:\n%s", report)
+	}
+	if strings.Contains(report, "All downloads") {
+		t.Errorf("report has a span of downloads in a run without one:\n%s", report)
+	}
+}
+
+// TestReportRunWithoutRequests: a run that failed before its first request
+// leaves the run line alone. The whole run is outside requests, and the
+// table of spans has no row, since no request started or ended.
+func TestReportRunWithoutRequests(t *testing.T) {
+	run := `{"start":"2026-09-27T12:00:00Z","type":"run","done_us":1500000}`
+	recs, skipped, err := readTrace(strings.NewReader(run + "\n"))
+	if err != nil || skipped != 0 || len(recs) != 1 {
+		t.Fatalf("readTrace = %d records, %d skipped, %v; want 1", len(recs), skipped, err)
+	}
+	var out bytes.Buffer
+	writeReport(&out, summarize(recs))
+	report := out.String()
+	for _, want := range []string{
+		"0 requests in a run of 1.500 s: 0 Web API calls, and 0 downloads from 0 origins.",
+		"| Outside requests | | | | | | | | | | | 1.500 s | 100.0% |",
+		"| Class | First request starts | Last request ends | Span |\n|---|---:|---:|---:|\n\n",
+	} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report misses %q:\n%s", want, report)
+		}
+	}
+	if strings.Contains(report, "| -") {
+		t.Errorf("report has a negative time:\n%s", report)
+	}
+}
+
+// TestReportSpans: the spans of a run whose requests overlap, as they do
+// once the Web API calls of different methods run side by side and the
+// downloads run in parallel (Issue #278). Each class's span runs from the
+// start of its first request to the end of its last, from the start of the
+// run; the Totals add up to more than the spans.
+func TestReportSpans(t *testing.T) {
+	start := time.Date(2026, 9, 27, 12, 0, 0, 0, time.UTC)
+	us := func(v int64) *int64 { return &v }
+	// request starts at ms from the start of the run and takes took ms.
+	request := func(ms, took int, rec slack.TraceRecord) slack.TraceRecord {
+		rec.Start = start.Add(time.Duration(ms) * time.Millisecond)
+		rec.Scheme, rec.Status = "https", 200
+		rec.GotConnUS, rec.FirstByteUS, rec.DoneUS = us(0), us(0), us(int64(took)*1000)
+		return rec
+	}
+	api := func(method string) slack.TraceRecord {
+		return slack.TraceRecord{Type: slack.TraceAPI, Method: method, Host: "slack.com"}
+	}
+	download := func(host string) slack.TraceRecord {
+		return slack.TraceRecord{Type: slack.TraceDownload, Kind: "attachment", Host: host}
+	}
+	recs := []slack.TraceRecord{
+		request(200, 200, api("emoji.list")),
+		request(500, 1000, api("users.info")),
+		request(600, 500, api("conversations.replies")), // under way with the first users.info
+		request(1500, 1000, api("users.info")),
+		request(3000, 1000, download("files.slack.com")),
+		request(3500, 1500, download("files.slack.com")), // under way with the one before
+		request(4000, 200, download("secure.gravatar.com")),
+	}
+	var b strings.Builder
+	for _, rec := range recs {
+		line, err := json.Marshal(rec)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.Write(line)
+		b.WriteByte('\n')
+	}
+	b.WriteString(`{"start":"2026-09-27T12:00:00Z","type":"run","done_us":10000000}` + "\n")
+	parsed, _, err := readTrace(strings.NewReader(b.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	writeReport(&out, summarize(parsed))
+	report := out.String()
+	for _, want := range []string{
+		// The Web API calls took 2.7 s between them, in a span of 2.3 s.
+		"| Web API | 4 | 0 | 0 | 4 | 0 B | 0.000 s | 0.000 s | 0.000 s | 0.000 s | 2.700 s | 2.700 s | 27.0% |",
+		"counted from the start of the run.",
+		"| Web API | 0.200 s | 2.500 s | 2.300 s |",
+		"| files.slack.com | 3.000 s | 5.000 s | 2.000 s |",
+		"| gravatar | 4.000 s | 4.200 s | 0.200 s |",
+		"| All downloads | 3.000 s | 5.000 s | 2.000 s |",
+		"| All | 0.200 s | 5.000 s | 4.800 s |",
+	} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report misses %q:\n%s", want, report)
+		}
 	}
 }
 

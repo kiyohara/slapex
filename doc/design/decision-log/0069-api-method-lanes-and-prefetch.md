@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-09-29
-- 最終更新日: 2026-09-29
+- 最終更新日: 2026-09-30
 - 関連: `../slack-api-usage.md`、`../usage-flow.md`、`../cli-interface.md`、`../architecture.md`、[0025-slack-api-usage-policy.md](0025-slack-api-usage-policy.md)、[0033-go-dependency-policy.md](0033-go-dependency-policy.md)、[0045-cli-output-style.md](0045-cli-output-style.md)、[0052-content-hash-asset-filenames.md](0052-content-hash-asset-filenames.md)、[0063-http-trace-and-asset-benchmark.md](0063-http-trace-and-asset-benchmark.md)、[0064-two-pass-asset-planning.md](0064-two-pass-asset-planning.md)、[0067-parallel-asset-lanes.md](0067-parallel-asset-lanes.md)、[0068-lane-wide-rate-limit-wait.md](0068-lane-wide-rate-limit-wait.md)、Issue #272、Issue #277、Issue #278、Issue #279
 
 ## 背景
@@ -163,6 +163,30 @@ Web API は、method ごとの 1 秒 1 件の平準化(0025)の下で、method �
   - PF-06: `internal/slack`(method の lane、`Client` の説明の「Web API は 1 件ずつ」、`History` の page の口、HTTP trace の pacing の待ち)、`internal/export`(先行取得の表と確定の規則、`Run` の終わりの cancel と待ち)、`tools/tracereport`(class ごとの区間)、`cli-interface.md` の HTTP trace の説明(Web API の pacing の待ちの範囲と、download の lane の待ちが始まった download の待ちだけであること)、`architecture.md` の表。
   - PF-07: `internal/lane`(後から job を足せる scheduler。上限と 429 の扱いは 0067 / 0068 のまま)、`internal/output`(一時ファイルと download の結果の保持、`Fetch` で計画の kind と meta から名前と entry を作る移動、通知と警告の計画の順)、`internal/export`(確定した message の asset の計画)、`cli-interface.md` の中断の扱い(一時ファイル)、`architecture.md` の表。
 - 固定 sample と README の preview は変わらない(出力が同じため)。demo GIF は PF-07 の後に、ユーザーが手元で再録画する。
+
+## 追記(2026-09-30): PF-06 の実装
+
+PF-06(#278)で、本決定のうち Web API の部分を実装した。asset の先行取得は PF-07(#279)で実装する。
+
+- method の lane(`internal/slack/methodlane.go`)は、待つ呼び出しを来た順に並べ、呼び出しが終わると先頭の呼び出しへ lane を渡す。context が終わった呼び出しは lane を取らない。1 秒の間隔は、lane を取った後に今どおり client の sleeper で待つ。HTTP trace の pacing の待ちは「同じ method の pacing」のとおりで、lane を待った時間は入らない。
+- `History` の page の口は、`--max-posts` に達した page でも、その page で残した message を渡す。
+- 先行取得の表(`internal/export/prefetch.go`)は、request を method と引数の組で 1 回だけ出す。先に出した request は `Run` の context の子で走り、通知は `slack.WithNotices` で保ち、工程が結果を受け取るときに出す。`Run` の終わりに cancel し、止まるのを待つ。先行取得の有無は test だけの切り替え(context の値)で、利用者向けの option は足していない。
+- 確定の規則は次のように実装した。
+  - page の口で、残した親投稿のうち除外されていないものの thread を先に出す。ID は、emoji filter を指定しない場合は page の全 message、指定した場合は thread に属さない message から集める。
+  - filter を指定しない場合は、先に出した thread の replies が届いた時点で、replies に現れる ID も先に出す。driver が thread を受け取るまで待たないため、replies にしか現れない user の `users.info` が早く始まる。
+  - Users 工程の開始時に、残りの ID(filter を指定した場合の thread の message の ID など)をまとめて先に出す。`bots.info` が `users.info` と並行する。
+- `tools/tracereport` に、class ごとに request が続いた区間(run の開始から、最初の request が始まる時点と最後の request が終わる時点)の表を足した。class ごとの行のほかに、download のすべての class を合わせた行(`All downloads`)と、すべての request の行(`All`)を置く。`All downloads` の行が、「検証の方法」の比べる値のうち、download の最初の request が始まる時点と最後の request が終わる時点になる。run の行が無い trace では、最初の request(pacing の待ちを含む)を起点にする。
+- 結合 test は「検証の方法」の scenario を、先行取得なしとありで比べる。成功する scenario では、出力のファイル、正規化した stderr、request(method と、user・bot・thread などの引数の組)ごとの件数が一致し、工程は同じ request の結果を同じ順に受け取る。失敗と cancel の scenario(`conversations.replies`、補充の `conversations.history`、`emoji.list` の失敗と、先に出した `emoji.list` の途中の cancel)では、error、exit code、正規化した stderr、出力先のファイルが一致し、先行取得ありの request は失敗しない場合の request に含まれ、`Run` が返った後に request は出ない。
+- 固定 sample は変わらない(demo mode でも出力が同じため)。demo GIF は、本ログのとおり PF-07 の後にユーザーが手元で再録画する。
+
+export 全体の所要時間を、synctest の仮想時間で、先行取得なしとありで比べた(各 request は server で 100 ms かかり、それ以外の時間はかからない。thread 3 件、各 thread に reply 1 件)。
+
+| 場面 | 先行取得なし(Web API / run) | 先行取得あり(Web API / run) |
+|---|---:|---:|
+| user 5 人が page に現れる | 6.7 秒 / 6.8 秒 | 4.5 秒 / 4.6 秒 |
+| user 1 人が page に、3 人が reply にだけ現れる | 5.7 秒 / 5.8 秒 | 3.5 秒 / 3.6 秒 |
+
+先行取得ありの Web API の時間は、`conversations.history` の page を受け取るまで(4 request)と、`users.info` の回数 × 1 秒(最後の 1 件は 100 ms)で、「効果の見込み」の形に一致した。`emoji.list` は `conversations.history` と並び、`conversations.replies` は `users.info` と並ぶ。download の時間は両方で同じである(PF-07 の前のため)。
 
 ## 後から見直す条件
 

@@ -454,6 +454,43 @@ func TestRunIntegrationThreadProgressAdvancesWhenRepliesExcluded(t *testing.T) {
 func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 	t.Parallel()
 
+	got := runExportScenario(t, threadsAcrossPagesScenario(), threadsAcrossPagesOptions(t))
+
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 2,
+		"/api/conversations.replies": 3,
+		"/api/users.info":            2,
+	})
+	assertThreadProgress(t, got.Logs, "1/2", "2/2", "3/3")
+	assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 4 fetched ",
+		" (threads 2, replies 3, excluded by body emoji: 4, truncated by --max-posts 4)")
+	assertDoneSummary(t, got.Logs, "  messages: 4 (threads: 2, replies: 3)", "    excluded by body emoji: 4")
+	assertExcludedMetadata(t, got.OutputDir, 4, 2, 3, 4, []string{"shushing_face"}, nil)
+	assertCacheOmits(t, got.OutputDir, "U03")
+
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"hidden parent", "hidden broadcast", "reply hidden", "beyond max posts", "reply in the thread cut by max posts"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"parent on the first page", "reply kept on the first page", "parent on the second page", "reply in the thread across pages"} {
+		mustContain(t, body, retained)
+	}
+	for marker, want := range map[string]int{
+		`<div class="thread">`:                   2,
+		"broadcast ahead of its parent page":     2, // timeline and thread
+		"broadcast of a thread cut by max posts": 1, // timeline only
+	} {
+		if n := strings.Count(body, marker); n != want {
+			t.Fatalf("index.html has %d of %q, want %d", n, marker, want)
+		}
+	}
+	mustContain(t, body, `<div class="notice">取り扱える件数の上限に達しました。</div>`)
+}
+
+// threadsAcrossPagesScenario is the fixture of
+// TestRunIntegrationThreadsAcrossHistoryPages, run with
+// threadsAcrossPagesOptions.
+func threadsAcrossPagesScenario() exportScenario {
 	const (
 		hiddenTS = "1700000009.000000" // parent excluded by the body emoji
 		firstTS  = "1700000010.000000" // parent on page 1
@@ -516,40 +553,15 @@ func TestRunIntegrationThreadsAcrossHistoryPages(t *testing.T) {
 		threadMessage("1700000005.100000", cutTS, "U03", "reply in the thread cut by max posts"),
 		cutBroadcast,
 	}
+	return sc
+}
+
+// threadsAcrossPagesOptions: --max-posts 4 and the body emoji filter that
+// hides one of the threadsAcrossPagesScenario threads.
+func threadsAcrossPagesOptions(t *testing.T) Options {
 	opts := integrationOptions(t, 4)
 	opts.ExcludeBodyEmoji = []string{"shushing_face"}
-
-	got := runExportScenario(t, sc, opts)
-
-	assertEndpointCounts(t, got.Server, map[string]int{
-		"/api/conversations.history": 2,
-		"/api/conversations.replies": 3,
-		"/api/users.info":            2,
-	})
-	assertThreadProgress(t, got.Logs, "1/2", "2/2", "3/3")
-	assertMessagesPhaseLine(t, got.Logs, "WARN: messages: 4 fetched ",
-		" (threads 2, replies 3, excluded by body emoji: 4, truncated by --max-posts 4)")
-	assertDoneSummary(t, got.Logs, "  messages: 4 (threads: 2, replies: 3)", "    excluded by body emoji: 4")
-	assertExcludedMetadata(t, got.OutputDir, 4, 2, 3, 4, []string{"shushing_face"}, nil)
-	assertCacheOmits(t, got.OutputDir, "U03")
-
-	body := readIndexHTML(t, got.OutputDir)
-	for _, excluded := range []string{"hidden parent", "hidden broadcast", "reply hidden", "beyond max posts", "reply in the thread cut by max posts"} {
-		mustNotContain(t, body, excluded)
-	}
-	for _, retained := range []string{"parent on the first page", "reply kept on the first page", "parent on the second page", "reply in the thread across pages"} {
-		mustContain(t, body, retained)
-	}
-	for marker, want := range map[string]int{
-		`<div class="thread">`:                   2,
-		"broadcast ahead of its parent page":     2, // timeline and thread
-		"broadcast of a thread cut by max posts": 1, // timeline only
-	} {
-		if n := strings.Count(body, marker); n != want {
-			t.Fatalf("index.html has %d of %q, want %d", n, marker, want)
-		}
-	}
-	mustContain(t, body, `<div class="notice">取り扱える件数の上限に達しました。</div>`)
+	return opts
 }
 
 // TestRunIntegrationThreadProgressCountsFetchedThreadsOnly: the thread replies
@@ -606,6 +618,31 @@ func TestRunIntegrationThreadProgressCountsFetchedThreadsOnly(t *testing.T) {
 func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T) {
 	t.Parallel()
 
+	got := runExportScenario(t, laterPageExclusionScenario(), laterPageExclusionOptions(t))
+
+	assertEndpointCounts(t, got.Server, map[string]int{
+		"/api/conversations.history": 3,
+		"/api/conversations.replies": 1,
+	})
+	assertMessagesPhaseLine(t, got.Logs, "OK: messages: 3 fetched ",
+		" (threads 0, replies 0, excluded by reaction emoji: 4)")
+	assertDoneSummary(t, got.Logs, "  messages: 3 (threads: 0, replies: 0)", "    excluded by reaction emoji: 4")
+	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 4, nil, []string{"speak_no_evil"})
+
+	body := readIndexHTML(t, got.OutputDir)
+	for _, excluded := range []string{"hidden parent", "hidden broadcast", "race parent", "race broadcast", "race reply"} {
+		mustNotContain(t, body, excluded)
+	}
+	for _, retained := range []string{"kept five", "kept four", "kept one"} {
+		mustContain(t, body, retained)
+	}
+	mustNotContain(t, body, `<div class="thread">`)
+}
+
+// laterPageExclusionScenario is the fixture of
+// TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread, run with
+// laterPageExclusionOptions.
+func laterPageExclusionScenario() exportScenario {
 	const (
 		hiddenTS = "1700000006.000000" // parent excluded on page 1
 		raceTS   = "1700000003.000000" // parent excluded on page 2
@@ -635,28 +672,15 @@ func TestRunIntegrationParentExcludedOnLaterPageDropsFetchedThread(t *testing.T)
 		{Type: "message", TS: "1700000003.200000", ThreadTS: raceTS, User: "U02", Text: "race reply the filter excludes", Reactions: speakNoEvil},
 		raceBroadcast,
 	}
+	return sc
+}
+
+// laterPageExclusionOptions: --max-posts 3 and the reaction emoji filter that
+// the laterPageExclusionScenario parents match.
+func laterPageExclusionOptions(t *testing.T) Options {
 	opts := integrationOptions(t, 3)
 	opts.ExcludeReactionEmoji = []string{"speak_no_evil"}
-
-	got := runExportScenario(t, sc, opts)
-
-	assertEndpointCounts(t, got.Server, map[string]int{
-		"/api/conversations.history": 3,
-		"/api/conversations.replies": 1,
-	})
-	assertMessagesPhaseLine(t, got.Logs, "OK: messages: 3 fetched ",
-		" (threads 0, replies 0, excluded by reaction emoji: 4)")
-	assertDoneSummary(t, got.Logs, "  messages: 3 (threads: 0, replies: 0)", "    excluded by reaction emoji: 4")
-	assertExcludedMetadata(t, got.OutputDir, 3, 0, 0, 4, nil, []string{"speak_no_evil"})
-
-	body := readIndexHTML(t, got.OutputDir)
-	for _, excluded := range []string{"hidden parent", "hidden broadcast", "race parent", "race broadcast", "race reply"} {
-		mustNotContain(t, body, excluded)
-	}
-	for _, retained := range []string{"kept five", "kept four", "kept one"} {
-		mustContain(t, body, retained)
-	}
-	mustNotContain(t, body, `<div class="thread">`)
+	return opts
 }
 
 // TestRunIntegrationBroadcastParentOffTimeline: a thread_broadcast on the

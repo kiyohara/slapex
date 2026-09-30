@@ -21,13 +21,18 @@ type resolvedUsers struct {
 }
 
 // resolveUsers runs the Users phase for the users and bots the fetched
-// messages need (collectUserIDs / collectBotIDs).
-func resolveUsers(ctx context.Context, client *slack.Client, fetched fetchedMessages, reuse *reusableCache, p *ui.Printer) resolvedUsers {
+// messages need (collectUserIDs / collectBotIDs). With the Messages phase
+// over, all of them are certain: the users.info and bots.info that the
+// Messages phase did not send ahead go out ahead now, so that bots.info runs
+// alongside users.info.
+func resolveUsers(ctx context.Context, f *prefetcher, fetched fetchedMessages, reuse *reusableCache, p *ui.Printer) resolvedUsers {
 	userIDs := collectUserIDs(fetched.timeline, fetched.replies)
 	botIDs := collectBotIDs(fetched.timeline, fetched.replies)
+	f.prefetchUsers(userIDs)
+	f.prefetchBots(botIDs)
 	p.StartPhase("Users", fmt.Sprintf("resolving %s ...", resolveTargetsLabel(len(userIDs), len(botIDs))))
-	users, reusedUsers := lookupUsers(ctx, client, userIDs, reuse, p)
-	bots, reusedBots := lookupBots(ctx, client, botIDs, reuse, p)
+	users, reusedUsers := lookupUsers(ctx, f, userIDs, reuse, p)
+	bots, reusedBots := lookupBots(ctx, f, botIDs, reuse, p)
 	p.EndPhase(ui.StatusSuccess, "Users", resolvedTargetsLabel(len(users), len(bots)),
 		reusedTargetsMeta(reusedUsers, reusedBots))
 	return resolvedUsers{users: users, bots: bots}
@@ -36,7 +41,7 @@ func resolveUsers(ctx context.Context, client *slack.Client, fetched fetchedMess
 // lookupUsers resolves each user ID through users.info, or from the reuse
 // cache when it holds the user. It returns the users found and how many of
 // them came from the cache. A failed lookup is warned about and skipped.
-func lookupUsers(ctx context.Context, client *slack.Client, ids []string, reuse *reusableCache, p *ui.Printer) (map[string]*slack.User, int) {
+func lookupUsers(ctx context.Context, f *prefetcher, ids []string, reuse *reusableCache, p *ui.Printer) (map[string]*slack.User, int) {
 	users := map[string]*slack.User{}
 	reused := 0
 	for _, id := range ids {
@@ -47,7 +52,7 @@ func lookupUsers(ctx context.Context, client *slack.Client, ids []string, reuse 
 				continue
 			}
 		}
-		u, err := client.UserInfo(ctx, id)
+		u, err := f.userInfo(ctx, id)
 		if err != nil {
 			p.Warnf("could not resolve user %s: %s", id, err)
 			continue
@@ -62,7 +67,7 @@ func lookupUsers(ctx context.Context, client *slack.Client, ids []string, reuse 
 // the app name and icon instead (decision log 0054). A failure is warned about
 // and skipped, like an unresolvable user, so the export still completes with
 // the bot_id and the initial fallback.
-func lookupBots(ctx context.Context, client *slack.Client, ids []string, reuse *reusableCache, p *ui.Printer) (map[string]*slack.Bot, int) {
+func lookupBots(ctx context.Context, f *prefetcher, ids []string, reuse *reusableCache, p *ui.Printer) (map[string]*slack.Bot, int) {
 	bots := map[string]*slack.Bot{}
 	reused := 0
 	for _, id := range ids {
@@ -73,7 +78,7 @@ func lookupBots(ctx context.Context, client *slack.Client, ids []string, reuse *
 				continue
 			}
 		}
-		bot, err := client.BotInfo(ctx, id)
+		bot, err := f.botInfo(ctx, id)
 		if err != nil {
 			p.Warnf("could not resolve bot %s: %s", id, err)
 			continue
