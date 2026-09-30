@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-22
-- 最終更新日: 2026-07-13
+- 最終更新日: 2026-10-01
 - 関連: `doc/design/architecture.md`, `doc/design/decision-log/0034-distribution-method.md`, `doc/design/decision-log/0031-supported-platforms.md`
 
 ## 背景
@@ -57,8 +57,48 @@
 - 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
 - decision log: `index.md` の未決事項から「Homebrew tap」を移し、本ログを現在有効な主要方針に追加。0034 に関連を追記。
 
+## 追記(2026-10-01): `postflight` の非推奨化への対応
+
+2026-09-25、Homebrew 7.0.6 で同じ tap の別の Formula を install したとき、slapex の cask の `postflight` について「Calling `postflight` is deprecated! Use `postflight_steps` instead.」の警告が出た(Issue #239)。slapex の cask を操作していない場面でも出ており、Homebrew は tap への報告を求めていた。
+
+- Homebrew は 6.0.16(2026-08-10)から、cask の `preflight` / `postflight` / `uninstall_preflight` / `uninstall_postflight` を非推奨にしている。代わりの `*_steps` は、リテラル引数の step(`run`、`remove`、`on_macos` など)だけを並べる宣言的な DSL で、sandbox の中で実行される。
+- Homebrew の方針(Deprecating, Disabling and Removing)は、非推奨にした public API を次の minor または major release で disabled(全利用者に error)にするとしている。7.0.0 では disabled にならなかったが、時期は公表されていない。disabled になると、`brew install --cask slapex` と `brew upgrade --cask slapex` が失敗する。
+- GoReleaser は最新の v2.18.2(2026-09-17)でも `homebrew_casks.hooks` を `postflight do ... end` として出力し、`*_steps` を出力する設定を持たない。対応する PR(goreleaser/goreleaser#6873)は 2026-10-01 時点で merge されていない。
+
+候補:
+
+- 案1: hook を残し、GoReleaser の対応を待つ(Issue #239 の仮決め)。
+- 案2: GoReleaser の `custom_block` で `postflight_steps` を出力し、`hooks.post.install` をやめる。
+- 案3: hook を外し、Homebrew の利用者に手動の `xattr` を案内する。
+- 案4: Developer ID の署名と notarization を行う。
+
+決定: 案2 を採る。`.goreleaser.yaml` の `homebrew_casks` から `hooks.post.install` を外し、`custom_block` に次を置く。
+
+```ruby
+postflight_steps do
+  on_macos do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "."], chdir: "."
+  end
+end
+```
+
+理由:
+
+- 案1 は、GoReleaser の対応より先に Homebrew が disabled にすると install と upgrade が壊れ、その時期を slapex の側で制御できない。
+- 案2 は、今の GoReleaser のまま次の release で警告を無くせ、quarantine 属性を外す処理も残る。
+- 案3 は、Homebrew の利用者の初回実行で Gatekeeper の警告を出す。案4 は Apple Developer Program の維持コストを伴い、本ログの決定(必要になった時点で別途判断する)を変える理由にならない。
+
+実装上の注意:
+
+- `custom_block` は cask の先頭(`version` の前)に出力される。Homebrew の stanza の順序の規約から外れるが、規約を強制するのは公式 tap の audit と style であり、第三者 tap の install には影響しない。
+- 旧 hook は `Dir["#{staged_path}/slapex_darwin_*"]` で binary を探していたが、`run` は glob も shell も展開しない。staged_path には download した binary だけが置かれるため、`chdir: "."`(staged_path が基準になる)で staged_path の全体から属性を再帰的に外す。Homebrew の `{{staged_path}}` の token は、GoReleaser の template と区切りが衝突するため使わない。
+- 旧 hook の `system_command` は、失敗すると install を止めていた(`must_succeed: true`)。`run` の既定も同じため、`must_succeed` は指定しない。`xattr -dr` は、属性が無い場合も終了コード 0 を返す。
+- 確認: GoReleaser v2.18.2 の snapshot build で生成した cask は、`postflight do` を含まず `postflight_steps` を含む。Homebrew 7.0.6 に読み込ませると、旧 cask は非推奨の error(`HOMEBREW_DEVELOPER=1` の下)になり、新 cask は `PostflightSteps` の artifact として読み込まれる。Homebrew の sandbox の下で `run` が属性を実際に外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないことと合わせて本ログに残す。
+
 ## 後から見直す条件
 
 - install script の保守コストや利用実態から、`curl | sh` 経路を縮小・変更する必要が出た場合。
 - Homebrew cask の未署名 binary 体験や upgrade 経路に問題が出た場合。
 - Windows 対応（0031）など配布 target が増えた場合の install script 拡張。
+- GoReleaser が `*_steps` を出力する設定を提供した場合(`custom_block` からその設定へ移す)。
+- `postflight_steps` の `run` が quarantine 属性を外せない(install が失敗する、または Gatekeeper の警告が出る)場合。
