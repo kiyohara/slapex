@@ -244,7 +244,9 @@ type noticesKey struct{}
 // WithNotices sends the progress notices of the requests made with ctx — the
 // retries and the rate limit waits — to logf instead of Client.Logf. The
 // parallel asset fetch holds each download's notices with it, to pass them on
-// in plan order (output.Assets.Fetch, Issue #275).
+// in plan order (output.Assets.Fetch, Issue #275), and the export holds those
+// of a Web API call it sends ahead until a stage takes the call's result
+// (internal/export, Issue #278).
 func WithNotices(ctx context.Context, logf func(format string, args ...any)) context.Context {
 	return context.WithValue(ctx, noticesKey{}, logf)
 }
