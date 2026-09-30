@@ -13,7 +13,7 @@ Issue #279(PF-07)。PF-05(#277、decision log 0069)で決めた export 全体の
 ## 現在の状況
 
 - 依存の #276(PF-04)、#277(PF-05)、#278(PF-06、PR #294)は merge 済み。main `417d253`(PR #294 の merge)から作業している。
-- 実装、test、文書の更新、Docker Compose での全体の検証まで済んだ。次は draft PR の作成。
+- 実装、test、文書の更新、Docker Compose での全体の検証まで済み、draft PR #295 を作った。note を採番し、`progress.md` の PR 欄を反映した。次は P2 の review。
 
 ## 決定事項
 
@@ -54,8 +54,7 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 
 ## 次にやること
 
-- draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。
-- P2 の review を subagent に委譲する。
+- CI の check runs の完了を確かめ、P2 の review を subagent に委譲する。
 
 ## 検証
 
@@ -74,6 +73,15 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 - 変異 test: 次の 11 の変異を 1 つずつ入れ、それぞれ対応する test が落ちることを確かめた(変異は戻した)。asset を先に download しない、小さい上限で止まった先の結果を取り直さない、計画の上限を超える先の結果を保存する、先の download の通知を保たずに出す、filter ありでも page の全 message を確定とする、`Close` で一時ファイルを消さない、`--reuse-cache` の copy で済む URL も先に download する、サイズの skip の entry も先に download する、Messages 工程の終わりに asset を渡さない、`users.info` の後に avatar を先に download しない、`emoji.list` の後に描画し直さない。
 - 既存の `TestTraceTimeoutClass`(`internal/slack`)の不安定さ(負荷の下の `-race` で約 1/300、main でも起きる。PR #294 の follow-up 候補)は、この PR の範囲外のため直していない。
 
+## P1 の記録(drive-issue-to-reviewed-pr)
+
+- PR: #295(draft)。検証結果は「検証」、出力生成系 skill の判断は「出力生成系 skill の判断」のとおり。
+- `run-issue-task` の手順で使った skill の報告から引き上げた項目:
+  - `number-working-branch-note`(commit `0b19f71`、`draft_claude-pf-07-issue-279-wuweof.md` → `295_claude-pf-07-issue-279-wuweof.md`、push 成功。情報統制チェックで直した箇所は無い)。
+    - 書き換えた行の一覧: note の `- PR: 未作成` → `- PR: #295`(`PR:` 欄の記入)。PR description の `working-branch-notes/draft_claude-pf-07-issue-279-wuweof.md` → `working-branch-notes/295_claude-pf-07-issue-279-wuweof.md`(ファイル名参照の置換)。title は無し。
+    - 触らずに残した行の一覧: note の「現在の状況」の「実装、test、文書の更新、Docker Compose での全体の検証まで済んだ。次は draft PR の作成。」(定型に当てはまらない)、note の「次にやること」の「draft PR を作り、note を採番し、`progress.md` の PR 欄を反映する。」(複合行。`progress.md` は同 skill の対象外)、PR description の note 参照の後の「(採番後に rename する)」(置換後の文脈が不自然)、PR description の「(PR 欄は採番後に反映する)」(定型に当てはまらない)。これらは skill の後に、`progress.md` の PR 欄の反映と合わせて orchestrator が更新した。
+  - 出力生成系 3 skill: 呼ばなかった(`update-sample-exports` と `update-readme-preview-screenshots` は「いつ使うか」に当たらない。`update-readme-demo-gif` は cloud session で実行できないため、ローカルで要再生成として未検証事項に残した)。
+
 ## リスク・ブロッカー
 
 - なし。
@@ -83,3 +91,4 @@ Issue の関数名は main `417d253` でも同じだった。`lane.Run` は 1 �
 - 2026-09-30: 着手。Issue #279、handoff(`issue-278-pr-294-report.md`)、decision log 0069、`slack-api-usage.md` の「取得の並行化」を確認した。
 - 2026-09-30: `internal/lane` の `Scheduler`、`output.Assets.Prefetch` と `Close`、`internal/export` の `assetPrefetcher` と、その test を実装した。
 - 2026-09-30: 先行取得あり / なしを比べる結合 test、所要時間の比較、文書と decision log 0069 の追記を足し、Docker Compose で全体を検証した。
+- 2026-09-30: P1 を終えた。draft PR #295 を作り、note を採番し(`0b19f71`)、`progress.md` の PR 欄を反映した。

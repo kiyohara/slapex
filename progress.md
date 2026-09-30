@@ -85,7 +85,7 @@ PF-01 / PF-02 → PF-03 → PF-04 → PF-05 → PF-06 → PF-07
 | PF-04 | [#276](https://github.com/kiyohara/slapex/issues/276) 429 を受けた origin 全体の待機 | done(PR merge後) | #275, #192 | merge後は対応なし | [#292](https://github.com/kiyohara/slapex/pull/292) |
 | PF-05 | [#277](https://github.com/kiyohara/slapex/issues/277) method lane と先行取得の設計 | done(PR merge後) | #273, #275 | merge後は対応なし | [#293](https://github.com/kiyohara/slapex/pull/293) |
 | PF-06 | [#278](https://github.com/kiyohara/slapex/issues/278) Web API の method lane | done(PR merge後) | #277 | merge後は対応なし | [#294](https://github.com/kiyohara/slapex/pull/294) |
-| PF-07 | [#279](https://github.com/kiyohara/slapex/issues/279) API 待ちの裏での asset 取得 | done(PR merge後) | #276, #277, #278 | merge 後にユーザーが手元で trace を取り直して PF-03 の後との比較を #272 にコメントし、demo GIF を再録画 | - |
+| PF-07 | [#279](https://github.com/kiyohara/slapex/issues/279) API 待ちの裏での asset 取得 | done(PR merge後) | #276, #277, #278 | merge 後にユーザーが手元で trace を取り直して PF-03 の後との比較を #272 にコメントし、demo GIF を再録画 | [#295](https://github.com/kiyohara/slapex/pull/295) |
 
 ## リリース履歴
 
