@@ -70,8 +70,7 @@ type fetchedThread struct {
 //
 // conversations.history goes out page by page, as the driver gets to it. The
 // requests each page makes certain go out ahead through f
-// (prefetchHistoryPage), and so do the users.info and bots.info of a fetched
-// thread's replies when no emoji filter is on, since they are all shown then.
+// (prefetchHistoryPage).
 func fetchMessages(ctx context.Context, f *prefetcher, channelID string, fetchRange messageFetchRange, opts Options, p *ui.Printer) (fetchedMessages, error) {
 	filter := newMessageFilter(opts.ExcludeBodyEmoji, opts.ExcludeReactionEmoji)
 	p.StartPhase("Messages", fmt.Sprintf("fetching %s (--max-posts %d) ...", fetchRange.progressLabel(), opts.MaxPosts))
@@ -106,11 +105,6 @@ func fetchMessages(ctx context.Context, f *prefetcher, channelID string, fetchRa
 			}
 			if included {
 				threads[threadTS] = thread
-				if !filter.Enabled() {
-					// Without a filter, a thread fetched is that of a parent on
-					// the timeline, and all its replies are shown.
-					f.prefetchPeople(nil, map[string][]slack.Message{threadTS: thread.kept})
-				}
 			}
 		}
 		timeline = dropExcludedThreads(timeline, threads, filter)
@@ -147,7 +141,9 @@ func fetchMessages(ctx context.Context, f *prefetcher, channelID string, fetchRa
 // unless a filter drops them from the timeline later: without a filter, it
 // drops none, and with one, only the messages of threads
 // (dropExcludedThreads), which stay uncertain until the Messages phase ends.
-// The page callback runs on the driver, before History returns.
+// Without a filter, the Users stage also resolves who the replies of those
+// threads show, since it shows them all. The page callback runs on the
+// driver, before History returns.
 func prefetchHistoryPage(f *prefetcher, channelID string, page []slack.Message, filter *messageFilter) {
 	certain := page
 	if filter.Enabled() {
@@ -160,7 +156,7 @@ func prefetchHistoryPage(f *prefetcher, channelID string, page []slack.Message, 
 	}
 	for i := range page {
 		if threadTS := messageThreadTS(&page[i]); page[i].IsThreadParent() && !filter.ThreadExcluded(threadTS) {
-			f.prefetchThread(channelID, threadTS)
+			f.prefetchThread(channelID, threadTS, !filter.Enabled())
 		}
 	}
 	f.prefetchPeople(certain, nil)

@@ -467,87 +467,116 @@ func TestRunIntegrationPrefetchCanceledAsSerial(t *testing.T) {
 	assertPrefetchFailsAsSerial(t, serial, prefetched, complete, "slack api conversations.history: context canceled", "/api/emoji.list")
 }
 
-// TestRunIntegrationPrefetchTiming times the export of timingScenario on the
-// clock of a synctest bubble, where each request takes delay at the server
-// and nothing else takes time, the pacing waits included. Without the
-// prefetch, the export makes one request at a time: auth.test, team.info,
-// conversations.list, conversations.history, each conversations.replies at
-// least 1s after the previous one started, then each users.info, then
-// emoji.list, then the downloads. With it, emoji.list runs alongside
-// conversations.history, and once the history page is in, the replies and
-// the users.info run alongside each other: the Web API requests end with the
-// last users.info, (users - 1) seconds and a delay after the history page.
-// The downloads take the same time in both runs.
+// TestRunIntegrationPrefetchTiming times exports on the clock of a synctest
+// bubble, where each request takes delay at the server and nothing else takes
+// time, the pacing waits included. Without the prefetch, an export makes one
+// request at a time: auth.test, team.info, conversations.list,
+// conversations.history, each conversations.replies at least 1s after the
+// previous one started, then each users.info, then emoji.list, then the
+// downloads. With it, emoji.list runs alongside conversations.history, and
+// the replies and the users.info run alongside each other from the history
+// page on, the users.info of a user who shows only in a reply once the reply
+// has come. The users.info, one second apart, take longest, so the Web API
+// requests end with the last of them: the time to the end of the history page
+// (4 delays), then a second for each users.info but the last, which takes a
+// delay (the shape of decision log 0069's estimate). The downloads take the
+// same time in both exports.
 func TestRunIntegrationPrefetchTiming(t *testing.T) {
 	t.Parallel()
 
-	const (
-		delay   = 100 * time.Millisecond
-		threads = 3
-		users   = 5
-	)
+	const delay = 100 * time.Millisecond
 	type timing struct {
 		api   time.Duration // until the last Web API request ended
 		total time.Duration // until Run returned
 	}
-	run := func(prefetched bool) timing {
-		var got timing
-		synctest.Test(t, func(t *testing.T) {
-			sc := timingScenario(users, threads)
-			fake := newFakeSlackHandler(t, &sc)
-			h := &timedHandler{next: fake.mux, delay: delay}
-			srv := startPipeServer(h)
-			tr := srv.transport()
-			defer func() {
-				tr.CloseIdleConnections()
-				srv.stop()
-			}()
-			fake.base, fake.transport = "http://slack.test", tr
-			sc.replaceBaseURL(fake.base)
+	for _, tc := range []struct {
+		name        string
+		authors     int  // users who post on the page
+		threads     int  // thread parents on the page
+		newRepliers bool // whether the replies are by users who show nowhere else
+	}{
+		{name: "users on the page", authors: 5, threads: 3},
+		{name: "users only in replies", authors: 1, threads: 3, newRepliers: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-			start := time.Now()
-			res := runWithPrefetchOn(t, context.Background(), prefetched, fake, integrationOptions(t, 10), nil, slack.WithSleeper(sleepFor))
-			got.total = time.Since(start)
-			if res.err != nil {
-				t.Fatalf("Run() error = %v\nlogs:\n%s", res.err, strings.Join(res.Logs, "\n"))
+			users := tc.authors
+			if tc.newRepliers {
+				users += tc.threads
 			}
-			got.api = h.lastAPIEnd().Sub(start)
-		})
-		return got
-	}
-	serial, prefetched := run(false), run(true)
-	t.Logf("serial: Web API %s, run %s; prefetched: Web API %s, run %s", serial.api, serial.total, prefetched.api, prefetched.total)
+			run := func(prefetched bool) timing {
+				var got timing
+				synctest.Test(t, func(t *testing.T) {
+					sc := timingScenario(tc.authors, tc.threads, tc.newRepliers)
+					fake := newFakeSlackHandler(t, &sc)
+					h := &timedHandler{next: fake.mux, delay: delay}
+					srv := startPipeServer(h)
+					tr := srv.transport()
+					defer func() {
+						tr.CloseIdleConnections()
+						srv.stop()
+					}()
+					fake.base, fake.transport = "http://slack.test", tr
+					sc.replaceBaseURL(fake.base)
 
-	if want := 7*delay + time.Duration(threads-1+users-1)*time.Second; serial.api != want {
-		t.Errorf("serial Web API time = %s, want %s", serial.api, want)
-	}
-	if want := 5*delay + time.Duration(max(threads, users)-1)*time.Second; prefetched.api != want {
-		t.Errorf("prefetched Web API time = %s, want %s", prefetched.api, want)
-	}
-	downloads := serial.total - serial.api
-	if downloads <= 0 || prefetched.total-prefetched.api != downloads {
-		t.Errorf("download time = %s serial, %s prefetched, want the same, over 0", downloads, prefetched.total-prefetched.api)
+					start := time.Now()
+					res := runWithPrefetchOn(t, context.Background(), prefetched, fake, integrationOptions(t, 10), nil, slack.WithSleeper(sleepFor))
+					got.total = time.Since(start)
+					if res.err != nil {
+						t.Fatalf("Run() error = %v\nlogs:\n%s", res.err, strings.Join(res.Logs, "\n"))
+					}
+					if n := countPrefix(res.requests, "/api/users.info"); n != users {
+						t.Fatalf("users.info requests = %d, want %d", n, users)
+					}
+					got.api = h.lastAPIEnd().Sub(start)
+				})
+				return got
+			}
+			serial, prefetched := run(false), run(true)
+			t.Logf("serial: Web API %s, run %s; prefetched: Web API %s, run %s", serial.api, serial.total, prefetched.api, prefetched.total)
+
+			usersInfo := time.Duration(users-1)*time.Second + delay
+			if want := 4*delay + time.Duration(tc.threads-1)*time.Second + delay + usersInfo + delay; serial.api != want {
+				t.Errorf("serial Web API time = %s, want %s", serial.api, want)
+			}
+			if want := 4*delay + usersInfo; prefetched.api != want {
+				t.Errorf("prefetched Web API time = %s, want %s", prefetched.api, want)
+			}
+			downloads := serial.total - serial.api
+			if downloads <= 0 || prefetched.total-prefetched.api != downloads {
+				t.Errorf("download time = %s serial, %s prefetched, want the same, over 0", downloads, prefetched.total-prefetched.api)
+			}
+		})
 	}
 }
 
-// timingScenario is a page of one message by each of users users, with an
-// avatar each; the oldest threads of them are thread parents, each with a
-// reply by a user of the page.
-func timingScenario(users, threads int) exportScenario {
+// timingScenario is a page of messages by the first authors users in turn,
+// one each or, with fewer authors than threads, one per thread. The oldest
+// threads of them are thread parents, each with a reply: by a user of the
+// page or, with newRepliers, by a user who shows nowhere else. Every user
+// has an avatar.
+func timingScenario(authors, threads int, newRepliers bool) exportScenario {
 	sc := baseScenario()
 	sc.Users = map[string]slack.User{}
-	for i := users; i >= 1; i-- { // newest first, as conversations.history returns them
-		id := fmt.Sprintf("U%02d", i)
+	user := func(n int) string {
+		id := fmt.Sprintf("U%02d", n)
 		avatar := "/files/avatar-" + id + ".png"
 		sc.Users[id] = testUser(id, "user"+id, "User "+id, "User "+id, "{{base}}"+avatar)
 		sc.Assets[avatar] = pngAsset("avatar " + id)
+		return id
+	}
+	for i := max(authors, threads); i >= 1; i-- { // newest first, as conversations.history returns them
 		ts := fmt.Sprintf("17000000%02d.000000", i)
-		m := slack.Message{Type: "message", TS: ts, User: id, Text: "message by " + id}
+		m := slack.Message{Type: "message", TS: ts, User: user((i-1)%authors + 1), Text: fmt.Sprintf("message %d", i)}
 		if i <= threads {
 			m.ThreadTS, m.ReplyCount = ts, 1
+			replier := user(i%authors + 1)
+			if newRepliers {
+				replier = user(authors + i)
+			}
 			sc.Replies[ts] = []slack.Message{m, {
-				Type: "message", TS: fmt.Sprintf("17000000%02d.100000", i), ThreadTS: ts,
-				User: fmt.Sprintf("U%02d", users+1-i), Text: "reply in the thread of " + id,
+				Type: "message", TS: fmt.Sprintf("17000000%02d.100000", i), ThreadTS: ts, User: replier, Text: fmt.Sprintf("reply %d", i),
 			}}
 		}
 		sc.Messages = append(sc.Messages, m)

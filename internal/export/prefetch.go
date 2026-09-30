@@ -197,9 +197,19 @@ func (f *prefetcher) thread(ctx context.Context, channelID, threadTS string) (th
 	return take(ctx, f, threadKey(channelID, threadTS), f.fetchThread(channelID, threadTS))
 }
 
-// prefetchThread sends the thread's conversations.replies ahead.
-func (f *prefetcher) prefetchThread(channelID, threadTS string) {
-	prefetch(f, threadKey(channelID, threadTS), f.fetchThread(channelID, threadTS))
+// prefetchThread sends the thread's conversations.replies ahead. With shown,
+// every reply it returns is shown (no emoji filter is on), so the users.info
+// and bots.info of the people the replies show go ahead as soon as the
+// replies have come.
+func (f *prefetcher) prefetchThread(channelID, threadTS string, shown bool) {
+	fetch := f.fetchThread(channelID, threadTS)
+	prefetch(f, threadKey(channelID, threadTS), func(ctx context.Context) (threadResult, error) {
+		result, err := fetch(ctx)
+		if err == nil && shown {
+			f.prefetchPeople(nil, map[string][]slack.Message{threadTS: result.replies})
+		}
+		return result, err
+	})
 }
 
 func (f *prefetcher) userInfo(ctx context.Context, id string) (*slack.User, error) {

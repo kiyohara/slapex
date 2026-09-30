@@ -253,7 +253,7 @@ func TestPrefetcherOff(t *testing.T) {
 
 	f.prefetchUsers([]string{"U01", "U02"})
 	f.prefetchEmojiList()
-	f.prefetchThread("C123", "1700000001.000000")
+	f.prefetchThread("C123", "1700000001.000000", true)
 	if len(f.requests) != 0 {
 		t.Fatalf("requests went ahead with the prefetch off: %v", slices.Collect(maps.Keys(f.requests)))
 	}
