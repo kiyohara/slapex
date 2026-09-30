@@ -132,6 +132,19 @@ func TestRunIntegrationPrefetchMatchesSerial(t *testing.T) {
 	maxPosts := func(n int) func(*testing.T) Options {
 		return func(t *testing.T) Options { return integrationOptions(t, n) }
 	}
+	// A broadcast whose parent never reaches the timeline and carries an
+	// excluded emoji (TestRunIntegrationBroadcastParentOffTimeline).
+	offTimelineParent := func(parentTS string, replyTS [2]string) func() exportScenario {
+		return func() exportScenario {
+			return offTimelineParentScenario(parentTS, replyTS, "root of the broadcast thread :shushing_face:")
+		}
+	}
+	offTimelineOptions := func(t *testing.T) Options {
+		opts := integrationOptions(t, 3)
+		opts.Days = 1
+		opts.ExcludeBodyEmoji = []string{"shushing_face"}
+		return opts
+	}
 	for _, tc := range []struct {
 		name         string
 		scenario     func() exportScenario
@@ -145,15 +158,12 @@ func TestRunIntegrationPrefetchMatchesSerial(t *testing.T) {
 		{name: "threads across history pages", scenario: threadsAcrossPagesScenario, options: threadsAcrossPagesOptions, repliesAhead: 1},
 		{name: "thread messages the filter drops later", scenario: droppedThreadsScenario, options: droppedThreadsOptions, repliesAhead: 2},
 		{name: "parent excluded on a later page", scenario: laterPageExclusionScenario, options: laterPageExclusionOptions},
-		{name: "broadcast whose excluded parent is beyond --max-posts", scenario: func() exportScenario {
-			return offTimelineParentScenario("1700000001.000000", [2]string{"1700000001.100000", "1700000001.200000"},
-				"root of the broadcast thread :shushing_face:")
-		}, options: func(t *testing.T) Options {
-			opts := integrationOptions(t, 3)
-			opts.Days = 1
-			opts.ExcludeBodyEmoji = []string{"shushing_face"}
-			return opts
-		}},
+		{name: "broadcast whose excluded parent is before the range",
+			scenario: offTimelineParent("1699800000.000000", [2]string{"1699800000.100000", "1699800000.200000"}),
+			options:  offTimelineOptions},
+		{name: "broadcast whose excluded parent is beyond --max-posts",
+			scenario: offTimelineParent("1700000001.000000", [2]string{"1700000001.100000", "1700000001.200000"}),
+			options:  offTimelineOptions},
 		{name: "replies over the cap", scenario: repliesOverCapScenario, options: renderingOptions, repliesAhead: 1},
 		{name: "users and bots resolved late or never", scenario: peopleScenario, options: renderingOptions, repliesAhead: 1},
 	} {
