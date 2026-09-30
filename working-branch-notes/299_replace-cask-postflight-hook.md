@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `replace-cask-postflight-hook`
-- PR: (未採番)
+- PR: #299
 - 最終更新: 2026-10-01
 
 ## 目的
@@ -36,7 +36,7 @@ Issue #239。Homebrew が cask の `postflight` を非推奨にし、tap の `Ca
 
 ## 次にやること
 
-- PR を作り、note を採番する。
+- PR を作り、note を採番する。(完了)
 - 次の release の後に、`brew update && brew upgrade --cask slapex` で非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことを確かめ、decision log 0041 に残す(release の作業で行う)。
 
 ## 検証
