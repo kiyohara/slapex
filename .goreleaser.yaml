@@ -66,14 +66,17 @@ homebrew_casks:
     homepage: "https://github.com/kiyohara/slapex"
     description: "Export Slack channel posts and assets as local static HTML"
     skip_upload: auto
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            Dir["#{staged_path}/slapex_darwin_*"].each do |binary|
-              system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", binary]
-            end
-          end
+    # Homebrew deprecated the Ruby `postflight` block in favour of
+    # `postflight_steps`, but GoReleaser's `hooks` still emit `postflight`
+    # (Issue #239, decision log 0041). Emit the steps stanza here until
+    # GoReleaser can write it. `chdir: "."` runs in staged_path, whose only
+    # file is the downloaded binary, so no `{{...}}` token is needed.
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "."], chdir: "."
+        end
+      end
 
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot"
