@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-22
-- 最終更新日: 2026-10-01
+- 最終更新日: 2026-10-17
 - 関連: `doc/design/architecture.md`, `doc/design/decision-log/0034-distribution-method.md`, `doc/design/decision-log/0031-supported-platforms.md`
 
 ## 背景
@@ -42,6 +42,8 @@
 
 2026-09-03 に v1.2.1 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.2.1"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.2.1` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `slapex --version` が upgrade 前に `slapex 1.2.0`、`brew update && brew upgrade --cask slapex && slapex --version` 後に `slapex 1.2.1` を返すことを確認した。
 
+2026-10-17 に v1.3.0 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.3.0"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.3.0` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `brew upgrade slapex`(auto-update を含む)が `1.2.1 -> 1.3.0` の upgrade に成功し、`slapex --version` が `slapex 1.3.0` を返すことを確認した。
+
 ## 理由
 
 - 案B は最小コストで「1 コマンド導入」を即時に届けられ、外部依存もない。
@@ -54,7 +56,7 @@
 
 - 実装: `scripts/install.sh`（POSIX sh、OS / arch 判定・checksum 検証・install 先指定・`--version` / `--bin-dir` / `--dry-run` / `--help`）と `scripts/install_test.sh`（検出マッピングのテスト）を追加（案B）。
 - ドキュメント: `README.md` のインストール節にクイックインストール（案B）を追加し、手動手順を詳細版として残す。`doc/design/architecture.md` の配布方式に install script を追記。
-- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
+- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 / v1.3.0 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
 - decision log: `index.md` の未決事項から「Homebrew tap」を移し、本ログを現在有効な主要方針に追加。0034 に関連を追記。
 
 ## 追記(2026-10-01): `postflight` の非推奨化への対応
@@ -97,6 +99,7 @@ end
 - 旧 hook の `system_command` は、失敗すると install を止めていた(`must_succeed: true`)。`run` の既定も同じため、`must_succeed` は指定しない。`xattr -dr` は、属性が無い場合も終了コード 0 を返す。
 - 新しい cask を読み込めるのは、Homebrew 6.0.13(2026-07-27)以降である。`postflight_steps` は 5.1.14、steps の `on_macos` は 6.0.12、`run`(`chdir:` を含む)は 6.0.13 で入った。それより前の Homebrew では cask の評価が失敗し、Homebrew を上げるまで install と upgrade ができない。旧 cask にはこの制約が無かった。`brew update` は Homebrew と tap を一緒に上げるため影響は小さいが、`HOMEBREW_NO_AUTO_UPDATE=1` のまま新しく tap を入れる場合などに起こりうる。
 - 確認: GoReleaser v2.18.2 の snapshot build で生成した cask は、`postflight do` を含まず `postflight_steps` を含む。Homebrew 7.0.6 に読み込ませると、旧 cask は非推奨の error(`HOMEBREW_DEVELOPER=1` の下)になり、新 cask は `PostflightSteps` の artifact として読み込まれる。Homebrew の sandbox の下で `run` が属性を実際に外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないことと合わせて本ログに残す。
+- 確認(2026-10-17、v1.3.0): tap の `Casks/slapex.rb` は `postflight do` を含まず、`postflight_steps` を含む。ユーザー手元の Homebrew 7.0.9 で `brew upgrade slapex` が成功し、出力に `postflight` の非推奨の警告は出なかった。upgrade 後の `Caskroom/slapex/1.3.0/slapex_darwin_arm64` に `com.apple.quarantine` の属性は残っておらず、Homebrew の sandbox の下でも `run` が属性を外せている。upgrade 後の `slapex --version` は Gatekeeper に止められずに実行でき、`slapex 1.3.0` を返した。2026-10-01 に挙げた確認項目(非推奨の警告と Gatekeeper の警告)は、どちらも出ないことを確認した。
 
 ## 後から見直す条件
 
