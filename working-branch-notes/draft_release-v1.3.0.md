@@ -17,7 +17,7 @@ v1.3.0 release 前の doc bump を 1 PR にまとめる。install 例の version
 
 ## 決定事項
 
-- `v1.3.0` として準備する。v1.2.1 からの差分は 59 件の merge で、breaking change と CLI option の削除は無い。次の振る舞いの追加を含むため minor bump とする。
+- `v1.3.0` として準備する。v1.2.1 からの差分は 57 件の merge で、breaking change と CLI option の削除は無い。次の振る舞いの追加を含むため minor bump とする。
   - export の所要時間の最小化(#272 / PF-01〜PF-07、PR #281 / #286 / #291 / #292 / #293 / #294 / #295)。asset を origin ごとの lane で並列に取得し、Web API を method ごとの lane で呼ぶ。
   - 秒未満を含む `--from` / `--to` の取得境界(PR #288)。
   - HTTP request の時間の内訳を記録する trace(`SLAPEX_HTTP_TRACE`、PR #281)。
