@@ -47,3 +47,4 @@ v1.3.0 公開後の release 検証結果を `progress.md` と decision log 0041 
 ## セッションログ
 
 - 2026-10-17: `release` skill に従い、tag push 後の workflow 監視と公開物検証を実施。ユーザー手元の Homebrew upgrade 確認結果を受け取り、decision log 0041 / index / `progress.md` に記録。
+- 2026-10-17: セルフレビュー(review cycle `claude-code-8834fcd-20261017042552`)の指摘 2 件([imo] Gatekeeper の警告の確認との対応の明示、[nits] 案A の行の確認済み release の列挙)をいずれも採用し、0041 を修正(`1fdb138`)。
