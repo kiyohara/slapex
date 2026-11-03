@@ -25,6 +25,7 @@ GitHub 上の公開 Issue / PR の報告では、Slack の hosted MCP server が
 ## 検討内容
 
 - (A) は実データの形をそのまま判別でき、0026 の `text` を正とする方針を変えない。label は Slack が locale ごとに翻訳するため、既知の label 以外は判別できない。人が本文の末尾に同じ形を書いた場合も footer として表示されるが、内容は失われず表示の強弱が変わるだけである。
+- (A) の切り出しは mrkdwn の変換の前に行う。label を含む inline code や 1 行の code block で `text` が終わる場合に切り出すと、code が本文と footer に分かれ、backtick がそのまま表示される。app 名に backtick を含めないことでこの場合を判別から外す。また Slack が付ける footer は 1 つのため、最後の行に label が複数ある場合は最後の label から切り出す(PR #304 の review の指摘)。
 - (B) は locale に依存しない判別ができる可能性がある。ただし該当投稿の `blocks` を確かめる手段が無く(公開アーカイブは HTML だけで、raw の API response は残っていない)、block の構造を推測で実装することになる。ユーザーは `text` で判別できない場合に `blocks` を読むことを許可したが、今回は `text` で判別できた。
 - (C) は誤判別を減らせるが、user token で app が投稿したメッセージに `app_id` などが付くかを実データで確かめられない。条件にすると、付かない場合に footer を判別できなくなる。
 - (D) は Issue の求める改善にならない。
@@ -33,7 +34,7 @@ GitHub 上の公開 Issue / PR の報告では、Slack の hosted MCP server が
 
 (A) を採用する。
 
-- `text` の最後の行が `*<label>* <app 名>` で終わり、`*<label>*` の直前が `text` の先頭または空白の場合に、`*<label>*` から末尾までを footer とする。`<label>` は `使用して送信されました` と `Sent using` に限る。`<app 名>` は改行を含まない空でない文字列とする。
+- `text` の最後の行が `*<label>* <app 名>` で終わり、`*<label>*` の直前が `text` の先頭または空白の場合に、`*<label>*` から末尾までを footer とする。最後の行に `*<label>*` が複数ある場合は最後のものから切り出す。`<label>` は `使用して送信されました` と `Sent using` に限る。`<app 名>` は改行と backtick を含まない空でない文字列とする。
 - footer は本文の直下に、本文より小さい muted color の 1 行として表示する。footer も本文と同じ mrkdwn 変換を通し、footer 内の mention はハイライトを付けない。
 - 仕様は `html-rendering.md` の「app 経由の投稿の footer」に置く。
 

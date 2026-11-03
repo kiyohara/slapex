@@ -54,6 +54,30 @@ func TestSplitSentUsingFooter(t *testing.T) {
 			wantFooter: "*Sent using* Cursor",
 		},
 		{
+			// Slack appends one footer, so the last label starts it.
+			name:       "several labels on the last line",
+			text:       "a *Sent using* b *Sent using* Cursor",
+			wantBody:   "a *Sent using* b",
+			wantFooter: "*Sent using* Cursor",
+		},
+		{
+			name:       "label inside inline code before the footer",
+			text:       "see `x *Sent using* y` *使用して送信されました* Cursor",
+			wantBody:   "see `x *Sent using* y`",
+			wantFooter: "*使用して送信されました* Cursor",
+		},
+		{
+			// Splitting here would break the code span.
+			name:     "label inside inline code ending the text",
+			text:     "see `x *Sent using* y`",
+			wantBody: "see `x *Sent using* y`",
+		},
+		{
+			name:     "label inside a one-line code block",
+			text:     "```x *Sent using* Cursor```",
+			wantBody: "```x *Sent using* Cursor```",
+		},
+		{
 			name:     "no footer",
 			text:     "plain *bold* message",
 			wantBody: "plain *bold* message",

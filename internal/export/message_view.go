@@ -160,8 +160,10 @@ func (b *messageViewBuilder) messageView(m *slack.Message) *render.MessageView {
 // " *使用して送信されました* Cursor" or "\n*Sent using* <@U0123>": the bold
 // label, a space and the app, ending the text. The label is localized by
 // Slack; only the Japanese and English ones are known (html-rendering.md
-// 「app 経由の投稿の footer」, decision log 0070).
-var reSentUsingFooter = regexp.MustCompile(`(?:^|\s)(\*(?:使用して送信されました|Sent using)\* +[^\n]*\S)\s*$`)
+// 「app 経由の投稿の footer」, decision log 0070). The greedy prefix picks the
+// last label, as Slack appends only one footer, and the app excludes
+// backticks so a body ending in inline code with a label keeps its code span.
+var reSentUsingFooter = regexp.MustCompile("(?s)^(?:.*\\s)?(\\*(?:使用して送信されました|Sent using)\\* +[^\\n`]*[^\\s`])\\s*$")
 
 // splitSentUsingFooter splits a trailing "Sent using <app>" footer off a
 // message text, so the body and the footer render apart. Without such a
