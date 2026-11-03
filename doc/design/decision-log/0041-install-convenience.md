@@ -108,7 +108,7 @@ GoReleaser v2.19.0(2026-10-22)が、`homebrew_casks` の `hooks.{pre,post}.{inst
 候補:
 
 - 案A: `custom_block` の step(`chdir: "."` で staged_path を基準にする)を、そのまま `hooks.post.install_steps` に移す。
-- 案B: `hooks.post.install_steps` に移し、staged_path を `{{ .StagedPath }}` で引数に渡す。GoReleaser の文書の例と同じ書き方である。
+- 案B: `hooks.post.install_steps` に移し、staged_path を `{{ .StagedPath }}` で引数に渡す。GoReleaser の文書の例と同じく `{{ .StagedPath }}` を使う。ただし文書の例は binary 1 つの path(`{{ .StagedPath }}/foo`)を渡すのに対し、案B は staged_path の全体を渡す(実装上の注意)。
 
 決定: 案B を採る。`.goreleaser.yaml` の `homebrew_casks` から `custom_block` を外し、次を置く。
 
@@ -134,12 +134,13 @@ end
 理由:
 
 - 公式の設定に移すと、`custom_block` の不利(stanza の位置が先頭になる、token の区切りの衝突を避ける回避が要る、GoReleaser 側で cask の生成が変わっても追随しない)が無くなる。
-- 案A は v1.3.0 で実際に属性を外せた形をそのまま残せるが、`chdir: "."` は token を避けるための回避であり、`.StagedPath` の field がある今は要らない。案B は token の回避をやめ、GoReleaser の文書どおりの構成に戻る。
+- 案A は v1.3.0 で実際に属性を外せた形をそのまま残せるが、`chdir: "."` は token を避けるための回避であり、`.StagedPath` の field がある今は要らない。案B は token の回避をやめ、GoReleaser の文書と同じく `.StagedPath` で path を渡す構成に戻る。
 - 処理は変わらない。macOS だけで、staged_path の全体から `com.apple.quarantine` を再帰的に外し、失敗したら install を止める。案A と案B で、`xattr` に渡す対象は同じ directory である。
 - Homebrew は 6.0.13 から、`run` の引数の `{{staged_path}}` を staged_path の絶対 path に展開する(`Library/Homebrew/install_steps.rb` の `expand_template_tokens`)。新しい cask を読み込める Homebrew の下限(6.0.13)は変わらない。
 
 実装上の注意:
 
+- 引数は staged_path の全体とし、GoReleaser の文書の例のような binary の path(`{{ .StagedPath }}/slapex` など)にしない。staged_path に置かれる file の名前は arch ごとに変わり(`slapex_darwin_arm64` / `slapex_darwin_amd64`。`binary` の `target:` の `slapex` は link の名前である)、`run` は glob を展開しないためである。存在しない path を渡すと `xattr` は失敗し得て、その場合は `run` の既定(`must_succeed`)により install が止まる。
 - GoReleaser は `install_steps` に field ごとの template を適用せず、生成した cask の全体に 1 回だけ template を適用する(v2.19.0 の `internal/pipe/cask/cask.go`)。`.StagedPath` / `.AppDir` 以外の Homebrew の token(`{{version}}` など)を書く場合は、`{{ "{{version}}" }}` のように quote する。
 - 確認(2026-11-03): GoReleaser v2.19.0 の `check` が通る。`release --snapshot --clean` で生成した cask は、`postflight do` も先頭の `postflight_steps` も含まず、上記の `postflight_steps` を `depends_on :macos` の後に含む。非推奨の通知は出ない。Homebrew 7.0.12(使い捨ての Linux の container。install と tap の変更はしない)に、移行前と移行後の生成物の内容を読み込ませると、どちらも `PostflightSteps` の artifact として読み込まれ、`HOMEBREW_DEVELOPER=1` の下でも error にならない。macOS を模して step を実行させる(command を記録するだけで実行しない)と、移行前は `chdir` が staged_path で引数が `.`、移行後は引数が staged_path の絶対 path の `/usr/bin/xattr -dr com.apple.quarantine` になり、どちらも失敗したら install を止める(`must_succeed` が true)。Linux を模すと実行されない。
 - 案B の形が Homebrew の sandbox の下で属性を外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことと合わせて本ログに残す。

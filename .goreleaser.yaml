@@ -70,6 +70,9 @@ homebrew_casks:
     # Gatekeeper does not block it (decision log 0041). `install_steps` emits
     # Homebrew's `postflight_steps` (GoReleaser v2.19+, Issue #300), and
     # `{{ .StagedPath }}` renders as Homebrew's `{{staged_path}}` token.
+    # Pass the whole staged_path, not a binary path as in GoReleaser's docs:
+    # the staged file is named per arch (`slapex_darwin_<arch>`) and `run`
+    # expands no globs.
     hooks:
       post:
         install_steps: |

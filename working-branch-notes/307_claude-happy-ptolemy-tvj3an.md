@@ -13,7 +13,7 @@ Claude Code on the web の cloud session で、`drive-issue-to-reviewed-pr` の 
 ## 現在の状況
 
 - main `c41d10f` から作業している。
-- `.goreleaser.yaml` の変更と decision log 0041(追記、見直す条件、index の行)の更新を済ませ、検証した。PR #307 を作り、note を採番した。次は P2 の review(subagent)。
+- `.goreleaser.yaml` の変更と decision log 0041(追記、見直す条件、index の行)の更新を済ませ、検証した。PR #307 を作り、note を採番した。P2 の review(指摘 1 件)に P4 で対応した。次は P5 の再確認(subagent)。
 
 ## 決定事項
 
@@ -26,7 +26,7 @@ Claude Code on the web の cloud session で、`drive-issue-to-reviewed-pr` の 
   - 名前と書式: `homebrew_casks[].hooks.post.install_steps` に steps の DSL を文字列で書く。`postflight_steps do ... end` として出力され、cask の stanza の順序どおりの位置(`service` の後、completions の前)に出る。生の Ruby の `install` / `uninstall` は非推奨(`deprecate.Notice`)。両方を書くと `_steps` が優先される。
   - template: `install_steps` は field ごとの template の適用を受けず、生成した cask の全体に 1 回だけ template が適用される(`cask.go` の `WithExtraFields(caskTokens)`)。`.StagedPath` / `.AppDir` は `{{staged_path}}` / `{{appdir}}` に展開される。それ以外の Homebrew の token は `{{ "{{version}}" }}` のように quote する。
   - Homebrew の token の扱い: Homebrew は 6.0.13 から、`run` の引数の `{{staged_path}}` を staged_path の絶対 path に展開する(6.0.13 と 7.0.12 の `Library/Homebrew/install_steps.rb` の `expand_template_tokens` と `template_token_value`、`CONTENT_PATH_TOKENS` に `staged_path` を含む)。cask を読み込める Homebrew の下限(6.0.13)は変わらない。
-- 書き方: GoReleaser の文書の例と同じく、staged_path を `{{ .StagedPath }}` で引数に渡す(decision log 0041 の 2026-11-03 の追記の案B)。`chdir: "."` の形をそのまま移す案A も比べた。案A は v1.3.0 で実機確認済みの形を残せるが、`chdir: "."` は token の衝突を避ける回避であり、Issue の評価(公式の設定に移すと token の回避が要らなくなり、GoReleaser の文書どおりの構成に戻る)に合わせて案B にした。`xattr` に渡す対象は同じ directory で、macOS だけ、再帰的、失敗したら install を止める点も変わらない。
+- 書き方: GoReleaser の文書の例と同じく `{{ .StagedPath }}` を使い、staged_path を引数に渡す(decision log 0041 の 2026-11-03 の追記の案B)。文書の例は binary 1 つの path(`{{ .StagedPath }}/foo`)を渡すが、staged の file 名は arch ごとに変わり(`slapex_darwin_<arch>`)、`run` は glob を展開しないため、staged_path の全体を渡す(P2 の `[imo]` を受けて明記した)。`chdir: "."` の形をそのまま移す案A も比べた。案A は v1.3.0 で実機確認済みの形を残せるが、`chdir: "."` は token の衝突を避ける回避であり、Issue の評価(公式の設定に移すと token の回避が要らなくなり、GoReleaser の文書どおりの構成に戻る)に合わせて案B にした。`xattr` に渡す対象は同じ directory で、macOS だけ、再帰的、失敗したら install を止める点も変わらない。
 - `progress.md` は変えない(#300 は索引に無い単発 Issue)。
 
 ### 出力生成系 skill の判断
@@ -72,6 +72,23 @@ cloud session で実行した。GoReleaser は Docker Compose の `dev` service(
     - 触らずに残した行の一覧: note の「現在の状況」の「PR の作成前。」(状況を説明する stale 表現だが、定型の `PR 未作成` に当てはまらない)。PR description と title は無し。skill の外で、orchestrator が P1 の記録と同じ commit で今の状態へ直した。
   - 出力生成系 3 skill: 呼ばなかった(「出力生成系 skill の判断」)。
 
+## P2 / P3 の記録
+
+- review cycle: `claude-code-ecb83cf-20261103064758`。Reviewed head: `ecb83cf8ddee6fb2cc0899e4343362cd9d7d6d7b`。完了要約は review body(pullrequestreview-5748255391)。
+- 指摘 1 件(inline 1、top-level 0)。prefix ごとでは `[must]` 0、`[ask]` 0、`[imo]` 1、`[nits]` 0、`[fyi]` 0。
+  - `[imo]` decision log 0041 の追記(111 行目): 案B を「GoReleaser の文書の例と同じ書き方」としているが、文書の例は binary 1 つの path(`{{ .StagedPath }}/foo`)を渡しており、本 PR は staged_path の全体を渡す。違いと理由を残さないと、後で `{{ .StagedPath }}/slapex` に直されて install が止まる余地がある。
+- review は、head と base を scratch へ clone して GoReleaser v2.19.0 の `check` と snapshot build を実行し、Homebrew 7.0.12(Linux の container)で両方の cask を読み込ませて step を模した実行もした。
+- P3: 指摘が 1 件のため P4 へ進んだ。
+
+## P4 の記録
+
+- 処置: 採用し修正した 1 件。スコープ外とした指摘は無い。v2.19.0 の `www/content/customization/publish/homebrew_casks.md` の quarantine の節の例が `"{{ .StagedPath }}/foo"`(「replace foo with the actual binary name」)であること、生成した cask で staged される file が `slapex_darwin_<arch>`(`binary "slapex_darwin_arm64", target: "slapex"`)であることを確かめた。
+  - decision log 0041 の 2026-11-03 の追記: 案B の説明、理由の 1 項目を直し、実装上の注意に「引数は staged_path の全体とし、binary の path にしない」項目と理由を足した。`xattr` が存在しない path で失敗するかは、macOS が無いため確かめていない(「失敗し得て」と書いた)。
+  - `.goreleaser.yaml` のコメントに同じ趣旨の 1 文を足した(コメントだけの変更。`check` と snapshot build を再実行し、生成される `postflight_steps` が変わらないことを確かめた)。
+  - 本 note の「書き方」と PR description の「レビューしてほしい点」の 1 項目目にも同じ趣旨を足した。
+- 修正 commit: 本 note の更新と同じ commit(返信に SHA を書く)。PR description の編集は push を伴わない。
+- 出力生成系 skill の再判断: decision log、`.goreleaser.yaml` のコメント、note、PR description だけの変更のため、P1 の判断を変えない。
+
 ## リスク・ブロッカー
 
 - 次の release の後の確認で `run` が失敗した場合は、案A(`chdir: "."`)へ戻すか、decision log 0041 の見直す条件に従って判断する。
@@ -81,3 +98,4 @@ cloud session で実行した。GoReleaser は Docker Compose の `dev` service(
 
 - 2026-11-03: Issue #300 の前提(goreleaser/goreleaser#6873 の merge と v2.19.0 への収録、PR #299 の release 後の確認)を確かめ、着手できると判定した。GoReleaser v2.19.0 と Homebrew 6.0.13 / 7.0.12 の source と文書で設定と token の扱いを確かめ、`.goreleaser.yaml` を `hooks.post.install_steps` に移した。decision log 0041(追記、見直す条件)と index の行を更新し、snapshot build と container の Homebrew での読み込みで確かめた。
 - 2026-11-03: PR #307 を作り、`number-working-branch-note` で note を採番した(`6cc1416`)。P1 の記録を残した。
+- 2026-11-03: P2 の review(`claude-code-ecb83cf-20261103064758`、指摘 1 件)を受け、P4 で採用して decision log 0041、`.goreleaser.yaml` のコメント、note、PR description を直した。
