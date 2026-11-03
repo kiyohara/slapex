@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/bold-bohr-d24cw8`(cloud session が指定。Issue に推奨ブランチ名の記載は無い)
-- PR: (未採番)
+- PR: #304
 - 最終更新: 2026-11-03
 
 ## 目的
@@ -45,8 +45,8 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 
 ## 次にやること
 
-- PR を作る。
-- note を採番する。
+- PR を作る。(完了)
+- note を採番する。(完了)
 - P1 の記録を note に残して push し、CI の完了を確かめる。
 - review(P2)を subagent に委譲する。
 
