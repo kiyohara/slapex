@@ -12,7 +12,7 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 
 ## 現在の状況
 
-- P1(実装と PR 作成)を進めている。
+- P1(実装と PR 作成)を終えた。PR #304 を draft で作り、note を採番した。次は CI の完了を確かめ、review(P2)を subagent に委譲する。
 
 ## 決定事項
 
@@ -47,7 +47,7 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 
 - PR を作る。(完了)
 - note を採番する。(完了)
-- P1 の記録を note に残して push し、CI の完了を確かめる。
+- P1 の記録を note に残して push し、CI の完了を確かめる。(push は完了。CI はこの push の head で確かめる)
 - review(P2)を subagent に委譲する。
 
 ## 検証
@@ -73,3 +73,10 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 ## セッションログ
 
 - 2026-11-03: Issue #303 を読み、スクリーンショットが取得できないためユーザーに実データを確認した。公開アーカイブで footer の形を確かめ、判別と表示の方針を決めた。
+- 2026-11-03: P1 の記録。PR #304(draft)。検証は「検証」の表のとおりすべて pass(cloud session、Docker Compose 経由)。出力生成系 skill は `update-sample-exports` だけ適用し、`style.css` を commit した(`index.html` は日時だけの差分のため戻した)。`update-readme-preview-screenshots` と `update-readme-demo-gif` は適用しない(理由は「決定事項」)。`run-issue-task` の報告から引き上げた項目:
+  - `number-working-branch-note`(1. 確認経路の項目「書き換えた行の一覧」): note の `- PR: (未採番)` → `- PR: #304`(PR 欄の記入)。note の完了タスク行 `- PR を作る。` → `- PR を作る。(完了)`、`- note を採番する。` → `- note を採番する。(完了)`。状況を説明する stale 表現の書き換えは無し。PR description のファイル名参照 `working-branch-notes/draft_claude-bold-bohr-d24cw8.md` → `working-branch-notes/304_claude-bold-bohr-d24cw8.md`。title の書き換えは無し。
+  - `number-working-branch-note`(2. 残された事項「触らずに残した行の一覧」): 0 件。途中の停止も無し。rename は `draft_claude-bold-bohr-d24cw8.md` → `304_claude-bold-bohr-d24cw8.md`、commit は `Number working branch note for PR #304`、push は成功。
+  - PR description の更新に付随して、PR 作成時に server が書き換えていた末尾の trailer が、この session の指示どおりの trailer(`Generated with Claude Code` と session URL)に戻った。採番の定型置換ではない。
+  - `update-sample-exports`(1. 確認経路の項目): なし。(2. 残された事項「未確認事項」): 0 件。途中の停止も無し。
+  - `update-readme-preview-screenshots`、`update-readme-demo-gif`: 呼ばなかった(「いつ使うか」に当たらない)。
+  - `progress.md`: #303 は索引に無いため更新しない。
