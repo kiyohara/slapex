@@ -2,7 +2,7 @@
 
 - 状態: decided
 - 作成日: 2026-06-22
-- 最終更新日: 2026-10-17
+- 最終更新日: 2026-11-03
 - 関連: `doc/design/architecture.md`, `doc/design/decision-log/0034-distribution-method.md`, `doc/design/decision-log/0031-supported-platforms.md`
 
 ## 背景
@@ -101,10 +101,53 @@ end
 - 確認: GoReleaser v2.18.2 の snapshot build で生成した cask は、`postflight do` を含まず `postflight_steps` を含む。Homebrew 7.0.6 に読み込ませると、旧 cask は非推奨の error(`HOMEBREW_DEVELOPER=1` の下)になり、新 cask は `PostflightSteps` の artifact として読み込まれる。Homebrew の sandbox の下で `run` が属性を実際に外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないことと合わせて本ログに残す。
 - 確認(2026-10-17、v1.3.0): tap の `Casks/slapex.rb` は `postflight do` を含まず、`postflight_steps` を含む。ユーザー手元の Homebrew 7.0.9 で `brew upgrade slapex` が成功し、出力に `postflight` の非推奨の警告は出なかった。upgrade 後の `Caskroom/slapex/1.3.0/slapex_darwin_arm64` に `com.apple.quarantine` の属性は残っておらず、Homebrew の sandbox の下でも `run` が属性を外せている。upgrade 後の `slapex --version` は Gatekeeper に止められずに実行でき、`slapex 1.3.0` を返した。2026-10-01 に挙げた確認項目(非推奨の警告と Gatekeeper の警告)は、どちらも出ないことを確認した。
 
+## 追記(2026-11-03): GoReleaser の `install_steps` への移行
+
+GoReleaser v2.19.0(2026-10-22)が、`homebrew_casks` の `hooks.{pre,post}.{install,uninstall}_steps` を足した(goreleaser/goreleaser#6873。2026-10-12 に merge され、issue goreleaser/goreleaser#6870 も close された)。`hooks.post.install_steps` は `postflight_steps` を出力し、生の Ruby の `install` / `uninstall` は非推奨になった。template の field の `.StagedPath` / `.AppDir` は、Homebrew の `{{staged_path}}` / `{{appdir}}` の token に展開される。2026-10-01 の追記で見直す条件に挙げた「GoReleaser が `*_steps` を出力する設定を提供した場合」に当たる(Issue #300)。release workflow は `~> v2` で最新の v2 を使うため、v2.19.0 で動き、workflow の変更は要らない。
+
+候補:
+
+- 案A: `custom_block` の step(`chdir: "."` で staged_path を基準にする)を、そのまま `hooks.post.install_steps` に移す。
+- 案B: `hooks.post.install_steps` に移し、staged_path を `{{ .StagedPath }}` で引数に渡す。GoReleaser の文書の例と同じ書き方である。
+
+決定: 案B を採る。`.goreleaser.yaml` の `homebrew_casks` から `custom_block` を外し、次を置く。
+
+```yaml
+hooks:
+  post:
+    install_steps: |
+      on_macos do
+        run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}"]
+      end
+```
+
+生成される cask では、`depends_on` の後に次が出る。
+
+```ruby
+postflight_steps do
+  on_macos do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{staged_path}}"]
+  end
+end
+```
+
+理由:
+
+- 公式の設定に移すと、`custom_block` の不利(stanza の位置が先頭になる、token の区切りの衝突を避ける回避が要る、GoReleaser 側で cask の生成が変わっても追随しない)が無くなる。
+- 案A は v1.3.0 で実際に属性を外せた形をそのまま残せるが、`chdir: "."` は token を避けるための回避であり、`.StagedPath` の field がある今は要らない。案B は token の回避をやめ、GoReleaser の文書どおりの構成に戻る。
+- 処理は変わらない。macOS だけで、staged_path の全体から `com.apple.quarantine` を再帰的に外し、失敗したら install を止める。案A と案B で、`xattr` に渡す対象は同じ directory である。
+- Homebrew は 6.0.13 から、`run` の引数の `{{staged_path}}` を staged_path の絶対 path に展開する(`Library/Homebrew/install_steps.rb` の `expand_template_tokens`)。新しい cask を読み込める Homebrew の下限(6.0.13)は変わらない。
+
+実装上の注意:
+
+- GoReleaser は `install_steps` に field ごとの template を適用せず、生成した cask の全体に 1 回だけ template を適用する(v2.19.0 の `internal/pipe/cask/cask.go`)。`.StagedPath` / `.AppDir` 以外の Homebrew の token(`{{version}}` など)を書く場合は、`{{ "{{version}}" }}` のように quote する。
+- 確認(2026-11-03): GoReleaser v2.19.0 の `check` が通る。`release --snapshot --clean` で生成した cask は、`postflight do` も先頭の `postflight_steps` も含まず、上記の `postflight_steps` を `depends_on :macos` の後に含む。非推奨の通知は出ない。Homebrew 7.0.12(使い捨ての Linux の container。install と tap の変更はしない)に、移行前と移行後の生成物の内容を読み込ませると、どちらも `PostflightSteps` の artifact として読み込まれ、`HOMEBREW_DEVELOPER=1` の下でも error にならない。macOS を模して step を実行させる(command を記録するだけで実行しない)と、移行前は `chdir` が staged_path で引数が `.`、移行後は引数が staged_path の絶対 path の `/usr/bin/xattr -dr com.apple.quarantine` になり、どちらも失敗したら install を止める(`must_succeed` が true)。Linux を模すと実行されない。
+- 案B の形が Homebrew の sandbox の下で属性を外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことと合わせて本ログに残す。
+
 ## 後から見直す条件
 
 - install script の保守コストや利用実態から、`curl | sh` 経路を縮小・変更する必要が出た場合。
 - Homebrew cask の未署名 binary 体験や upgrade 経路に問題が出た場合。
 - Windows 対応（0031）など配布 target が増えた場合の install script 拡張。
-- GoReleaser が `*_steps` を出力する設定を提供した場合(`custom_block` からその設定へ移す。Issue #300)。
+- GoReleaser が `*_steps` を出力する設定を提供した場合(`custom_block` からその設定へ移す。Issue #300)。扱い済み: 2026-11-03 に v2.19.0 の `hooks.post.install_steps` へ移した(2026-11-03 の追記)。
 - `postflight_steps` の `run` が quarantine 属性を外せない(install が失敗する、または Gatekeeper の警告が出る)場合。
