@@ -1,7 +1,7 @@
 # 作業ブランチメモ
 
 - ブランチ: `claude/happy-ptolemy-tvj3an`(Issue の推奨ブランチ名は `use-goreleaser-cask-steps-hooks`。cloud session のため platform のブランチを使う)
-- PR: (未採番)
+- PR: #307
 - 最終更新: 2026-11-03
 
 ## 目的
@@ -37,7 +37,7 @@ Claude Code on the web の cloud session で、`drive-issue-to-reviewed-pr` の 
 
 ## 次にやること
 
-- PR を作り、note を採番する。
+- PR を作り、note を採番する。(完了)
 - 次の release の後に、`brew update && brew upgrade --cask slapex` で非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことを確かめ、decision log 0041 に残す(release の作業で行う)。
 
 ## 検証
