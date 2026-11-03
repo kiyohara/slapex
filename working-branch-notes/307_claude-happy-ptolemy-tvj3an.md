@@ -13,7 +13,7 @@ Claude Code on the web の cloud session で、`drive-issue-to-reviewed-pr` の 
 ## 現在の状況
 
 - main `c41d10f` から作業している。
-- `.goreleaser.yaml` の変更と decision log 0041(追記、見直す条件、index の行)の更新を済ませ、検証した。PR の作成前。
+- `.goreleaser.yaml` の変更と decision log 0041(追記、見直す条件、index の行)の更新を済ませ、検証した。PR #307 を作り、note を採番した。次は P2 の review(subagent)。
 
 ## 決定事項
 
@@ -62,6 +62,16 @@ cloud session で実行した。GoReleaser は Docker Compose の `dev` service(
 - 移行後の形(`{{staged_path}}` を引数に渡す)が、実際の macOS の Homebrew の sandbox の下で属性を外せるか。v1.3.0 で確かめたのは移行前の形(`chdir: "."`)である。次の release の後の確認で分かる。
 - 実際の macOS の Homebrew での読み込み(cloud session には無い。Linux の container の Homebrew 7.0.12 で代えた)。
 
+## P1 の記録(drive-issue-to-reviewed-pr)
+
+- PR: #307。検証結果は「検証」、出力生成系 skill の判断は「出力生成系 skill の判断」のとおり。
+- `progress.md`: 更新しない(#300 は索引に無い単発 Issue)。
+- `run-issue-task` の手順で使った skill の報告から引き上げた項目:
+  - `number-working-branch-note`(commit `6cc1416`、`draft_claude-happy-ptolemy-tvj3an.md` → `307_claude-happy-ptolemy-tvj3an.md`、push 成功。情報統制チェックで直した箇所は無い)。
+    - 書き換えた行の一覧: note の `- PR: (未採番)` → `- PR: #307`(`PR:` 欄の記入)。note の「次にやること」の「PR を作り、note を採番する。」の行末に `(完了)`(完了タスク行)。PR description の `working-branch-notes/draft_claude-happy-ptolemy-tvj3an.md` → `working-branch-notes/307_claude-happy-ptolemy-tvj3an.md`(ファイル名参照の置換)。title は無し。
+    - 触らずに残した行の一覧: note の「現在の状況」の「PR の作成前。」(状況を説明する stale 表現だが、定型の `PR 未作成` に当てはまらない)。PR description と title は無し。skill の外で、orchestrator が P1 の記録と同じ commit で今の状態へ直した。
+  - 出力生成系 3 skill: 呼ばなかった(「出力生成系 skill の判断」)。
+
 ## リスク・ブロッカー
 
 - 次の release の後の確認で `run` が失敗した場合は、案A(`chdir: "."`)へ戻すか、decision log 0041 の見直す条件に従って判断する。
@@ -70,3 +80,4 @@ cloud session で実行した。GoReleaser は Docker Compose の `dev` service(
 ## セッションログ
 
 - 2026-11-03: Issue #300 の前提(goreleaser/goreleaser#6873 の merge と v2.19.0 への収録、PR #299 の release 後の確認)を確かめ、着手できると判定した。GoReleaser v2.19.0 と Homebrew 6.0.13 / 7.0.12 の source と文書で設定と token の扱いを確かめ、`.goreleaser.yaml` を `hooks.post.install_steps` に移した。decision log 0041(追記、見直す条件)と index の行を更新し、snapshot build と container の Homebrew での読み込みで確かめた。
+- 2026-11-03: PR #307 を作り、`number-working-branch-note` で note を採番した(`6cc1416`)。P1 の記録を残した。
