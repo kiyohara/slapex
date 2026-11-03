@@ -629,6 +629,68 @@ func TestRunIntegrationEditedMessage(t *testing.T) {
 	}
 }
 
+// --- case 6b: "Sent using <app>" footer renders under the body (Issue #303) --
+
+func TestRunIntegrationSentUsingFooter(t *testing.T) {
+	t.Parallel()
+
+	sc := baseScenario()
+	sc.Messages = []slack.Message{
+		{
+			// The shape seen in a real export: an app posted on the user's
+			// behalf, and Slack appended the Japanese footer to the text.
+			Type: "message",
+			TS:   "1700000651.000000",
+			User: "U01",
+			Text: "まとめを作りました。 *使用して送信されました* Cursor",
+		},
+		{
+			Type:   "message",
+			TS:     "1700000652.000000",
+			User:   "U02",
+			Text:   "status update\n*Sent using* <@U01>",
+			Edited: editedAt("1700000653.000000"),
+			Attachments: []slack.Attachment{
+				{ServiceName: "Example", Title: "Preview after footer"},
+			},
+		},
+		{
+			Type: "message",
+			TS:   "1700000654.000000",
+			User: "U01",
+			Text: "*Sent using* Cursor",
+		},
+		{
+			Type: "message",
+			TS:   "1700000655.000000",
+			User: "U02",
+			Text: "*Sent using* Cursor\nis not a footer here",
+		},
+	}
+
+	got := runExportScenario(t, sc, renderingOptions(t))
+	body := readIndexHTML(t, got.OutputDir)
+
+	mustContain(t, body, `<div class="message-body">まとめを作りました。</div>`)
+	mustContain(t, body, `<div class="message-footer"><strong>使用して送信されました</strong> Cursor</div>`)
+	// The footer goes under the body and before attachments; (edited) stays
+	// with the body, and a mention in the footer is resolved.
+	assertOrder(t, body,
+		`<div class="message-body">status update <span class="edited">(edited)</span></div>`,
+		`<div class="message-footer"><strong>Sent using</strong> <span class="mention">@Alice</span></div>`,
+		`Preview after footer`)
+	// A text that is only the footer renders no empty body.
+	assertOrder(t, body,
+		`<span class="time" title="2023-11-14T22:24:14Z">`,
+		`<div class="message-footer"><strong>Sent using</strong> Cursor</div>`)
+	mustNotContain(t, body, `<div class="message-body"></div>`)
+	// A label that does not end the text stays in the body.
+	mustContain(t, body, `<div class="message-body"><strong>Sent using</strong> Cursor<br>is not a footer here</div>`)
+	if n := strings.Count(body, `<div class="message-footer">`); n != 3 {
+		t.Fatalf("message-footer count = %d, want 3", n)
+	}
+}
+
 // --- case 7: thread_broadcast appears in timeline and inside the thread ------
 
 func TestRunIntegrationThreadBroadcast(t *testing.T) {
