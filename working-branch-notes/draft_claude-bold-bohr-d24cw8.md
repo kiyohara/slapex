@@ -45,7 +45,10 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 
 ## 次にやること
 
-- PR 作成、note の採番、P1 の記録の push、CI の確認。
+- PR を作る。
+- note を採番する。
+- P1 の記録を note に残して push し、CI の完了を確かめる。
+- review(P2)を subagent に委譲する。
 
 ## 検証
 
