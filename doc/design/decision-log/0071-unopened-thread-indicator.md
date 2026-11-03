@@ -63,7 +63,7 @@ thread があることに気づきやすくするという Issue の目的に対
 - test: `internal/render/html_test.go` で token と規則を確かめる。
 - spec: `../html-rendering.md` の thread の段落に丸印の表示を書く。
 - sample export: `doc/samples/{ja,en}/style.css` が変わる。sample の `index.html` は変わらない。
-- README の preview screenshot: thread の screenshot は thread を開いた状態で撮るため丸印は出ず、timeline の screenshot は thread を含まない範囲を切り出すため、見た目は変わらない見込みである。再生成で確かめる。
+- README の preview screenshot: 見た目は変わらない。thread の screenshot は、`tools/genscreenshot` が全 thread に `open` を付けた HTML を読み込んで撮るため、丸印は最初の値から `visibility: hidden` になり、transition も掛からない。隠れた丸印は場所を占めるが、caret は右端に寄せてあるため chip の見た目は変わらない。timeline の screenshot は 2 つ目の日付区切りの手前で切り出し、ja / en とも sample の thread はその後にあるため映らない。本ログを書いた PR(#306)は cloud session で作業したため、`screenshot` service での再生成はしておらず、ローカルでの再生成の確認は同 PR の未検証事項に残した。
 - 印刷すると、閉じた thread の丸印も印刷される。
 
 ## 後から見直す条件
