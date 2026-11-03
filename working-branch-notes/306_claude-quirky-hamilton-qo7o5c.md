@@ -10,7 +10,8 @@ Issue #305。thread chip(展開リンク)に、一度も開いていない threa
 
 ## 現在の状況
 
-- 実装、test、spec / decision log の更新、sample export の再生成、検証を終えた。PR 作成へ進む。
+- P1(実装と PR 作成)を終えた。PR #306 を作成し、note を採番した。
+- 作業中に PR #304 が main に merge されたため、main を取り込み、decision log index の衝突(0070 と 0071 の行)を両方残す形で解消した(`3fffc59`)。merge 後のツリーで Compose の検証をやり直し、すべて pass した。
 
 ## 主な変更
 
@@ -26,12 +27,15 @@ Issue #305。thread chip(展開リンク)に、一度も開いていない threa
 - 「一度開いたら、リロードするまで表示しない」を JavaScript なしで実現する。閉じたときに丸印を戻す変化に、極端に長い `transition-delay` を付ける(CSS の transition の latch)。開いたときは遅延 0 で消す。出力の方針「JavaScript は一切使わない」(`doc/design/html-rendering.md` の表示方針 10)を保つ。
 - disclosure caret(`▸` / `▾`)は常に表示したままにする。Slack は hover 時だけ `>` を出すが、slapex の thread はその場で開閉する disclosure で、caret が開閉できることを示している。
 - Slack の hover 時の最終返信日時の表示は取り入れない。Issue が取り入れる点として挙げたのは赤い丸印だけである。
-- 経緯は decision log 0071 に残す。0070 は open の PR #304 が使っているため避けた。
+- 経緯は decision log 0071 に残す。着手時点で 0070 は open の PR #304 が使っていたため避けた(#304 はその後 merge された)。
 - 推奨ブランチ名は Issue に無い。cloud session が指定したブランチで作業する。
 
 ## 次にやること
 
-- 実装、test、spec / decision log の更新、sample export の再生成、検証、PR 作成。
+- [x] 実装、test、spec / decision log の更新、sample export の再生成、検証、PR 作成。
+- [ ] 最新 head の CI を確かめ、P2(review)を subagent へ委譲する。
+- [ ] review の指摘への対応(P4)と再確認(P5)。
+- [ ] 人間の手番: review thread の resolve と PR の merge。
 
 ## 検証
 
@@ -42,6 +46,7 @@ cloud session で実行。開発コマンドはすべて Docker Compose(`docker 
 - `go build ./...`: pass
 - `go test -count=1 ./...`: pass
 - `git diff --check`: 出力なし
+- main(#304 の merge 後)を取り込んだ後も、上の 5 件をやり直してすべて pass した。sample の `style.css` は template の `style.css` と一致している。
 - 新しい test が旧コードで失敗すること: `style.css` を HEAD に戻すと `TestWriteStyleCSSMarksUnopenedThreads` が失敗した。
 - `update-sample-exports`(`go run ./tools/gensample`、`TZ=Asia/Tokyo`): `style.css` だけを commit した。`index.html` の差分は ja / en とも日時(Range の時刻を含む)だけのため commit していない。`index.html` が参照する `assets/` はすべて存在する。
 - 目視(参考、sandbox に入っている Chromium): sample の ja で、閉じた thread の chip の件数の右に赤い丸印が出ること、開くと消え、閉じても消えたままで、再読み込みで再び出ることを確かめた。
@@ -57,8 +62,9 @@ cloud session で実行。開発コマンドはすべて Docker Compose(`docker 
 
 - Issue のスクリーンショット 2 枚は cloud session の network policy(403)で取得できず、Slack 上の見た目は見ていない。目標の見た目は Issue 本文から読み取った。
 - transition の latch は Chromium だけで確かめた。Firefox と Safari は未検証。
-- decision log の index.md は PR #304 も末尾に行を足しており、後から merge する方で衝突する。
+- decision log の index.md の #304 との衝突は、main の取り込みで解消済み。
 
 ## セッションログ
 
 - 2026-11-03: `drive-issue-to-reviewed-pr` の P1 として着手。Chromium で transition の latch が動くことを試作で確かめた(参考)。
+- 2026-11-03: P1 終了。PR #306。検証は Compose で gofmt / vet / build / test / `git diff --check` が pass(cloud session、main の取り込み後もやり直して pass)。出力生成系 skill は `update-sample-exports` を適用(差分は `style.css` だけ)、`update-readme-preview-screenshots` は適用しない見込み(cloud session で実行できず、ローカルでの再生成の確認を未検証事項に残す)、`update-readme-demo-gif` は適用しない。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note`(`74421f1`)の確認経路の項目(書き換えた行の一覧)は、note の `- PR: (採番前)` → `- PR: #306` と、PR description の note 参照 `working-branch-notes/draft_claude-quirky-hamilton-qo7o5c.md` → `working-branch-notes/306_claude-quirky-hamilton-qo7o5c.md` の 2 行(stale 表現と完了タスク行の書き換えは 0 件、title は変更なし)。残された事項(触らずに残した行の一覧)は、note の「現在の状況」の「…検証を終えた。PR 作成へ進む。」(定型に当てはまらない)と「次にやること」の「実装、…、検証、PR 作成。」(複合行)の 2 行。PR description と title は 0 件。途中停止は無し。触らずに残した 2 行は、採番の後に orchestrator が P1 の記録として書き直した。`update-sample-exports` の未確認事項は 0 件(途中停止なし)。`update-readme-preview-screenshots` と `update-readme-demo-gif` は呼んでいない。
