@@ -133,6 +133,44 @@ func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {
 	assertCSSDeclaration(t, threadNodeBlock, "border", "2px solid var(--thread-line)")
 }
 
+func TestWriteStyleCSSMarksUnopenedThreads(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := WriteStyleCSS(dir); err != nil {
+		t.Fatalf("WriteStyleCSS: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "style.css"))
+	if err != nil {
+		t.Fatalf("read style.css: %v", err)
+	}
+	css := string(data)
+
+	rootBlock := cssBlock(t, css, ":root")
+	assertCSSDeclaration(t, rootBlock, "--thread-unopened-dot", "#e01e5a")
+
+	// The dot sits after the reply count so that the participant avatars
+	// and the count keep their positions whether the dot is shown or not.
+	dotBlock := cssBlock(t, css, ".thread-label-count::after")
+	assertCSSDeclaration(t, dotBlock, "content", `""`)
+	assertCSSDeclaration(t, dotBlock, "display", "inline-block")
+	assertCSSDeclaration(t, dotBlock, "width", "8px")
+	assertCSSDeclaration(t, dotBlock, "height", "8px")
+	assertCSSDeclaration(t, dotBlock, "border-radius", "50%")
+	assertCSSDeclaration(t, dotBlock, "background", "var(--thread-unopened-dot)")
+	// Returning to visible after the thread is closed waits for a delay
+	// longer than a page is kept open, so the dot stays hidden until reload.
+	assertCSSDeclaration(t, dotBlock, "transition", "visibility 0s 1000000s")
+	hiddenByDefault := regexp.MustCompile(`(^|;)\s*(visibility\s*:|opacity\s*:|display\s*:\s*none)`)
+	if hiddenByDefault.MatchString(strings.TrimSpace(dotBlock)) {
+		t.Fatalf("unopened thread dot must be visible by default: %s", dotBlock)
+	}
+
+	openDotBlock := cssBlock(t, css, ".thread-group[open] .thread-label-count::after")
+	assertCSSDeclaration(t, openDotBlock, "visibility", "hidden")
+	assertCSSDeclaration(t, openDotBlock, "transition-delay", "0s")
+}
+
 func TestWriteStyleCSSStylesNativeDisclosureControls(t *testing.T) {
 	t.Parallel()
 
