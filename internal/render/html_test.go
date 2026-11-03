@@ -35,6 +35,15 @@ func TestWriteStyleCSSKeepsTimestampsFromWrapping(t *testing.T) {
 
 	editedBlock := cssBlock(t, css, ".edited")
 	assertCSSDeclaration(t, editedBlock, "font-style", "normal")
+
+	// The "Sent using <app>" footer reads as quiet context under the body,
+	// mentions included (Issue #303).
+	footerBlock := cssBlock(t, css, ".message-footer")
+	assertCSSDeclaration(t, footerBlock, "color", "var(--muted)")
+	assertCSSDeclaration(t, footerBlock, "font-size", "12px")
+	footerMentionBlock := cssBlock(t, css, ".message-footer .mention")
+	assertCSSDeclaration(t, footerMentionBlock, "color", "inherit")
+	assertCSSDeclaration(t, footerMentionBlock, "background", "none")
 }
 
 func TestWriteStyleCSSDistinguishesThreadFromUnfurl(t *testing.T) {

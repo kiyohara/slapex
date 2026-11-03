@@ -56,6 +56,7 @@ type MessageView struct {
 	Edited                  bool
 	Italic                  bool
 	Body                    template.HTML
+	Footer                  template.HTML // "Sent using <app>" line split off the body (html-rendering.md)
 	Images                  []ImageView
 	FilesList               []FileView
 	Unfurls                 []UnfurlView

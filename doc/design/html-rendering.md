@@ -98,6 +98,18 @@ Slack message の本文は mrkdwn 形式の `text` フィールドを正とし�
 - rich text(`blocks` の `rich_text`)の構造を直接レンダリングすることは初期対象外とし、`text` フィールド(Slack が生成する fallback テキストを含む)を表示の正とする。`blocks` の完全レンダリングは将来検討とする。
 - legacy attachment(URL unfurl など)は、service 名、service icon、URL preview 画像(`output-format.md`)とタイトル・本文テキストの範囲で表示し、色付き枠やフィールド構造の完全模倣は初期対象外とする。service icon は Slack API の attachment / unfurl 情報に URL が含まれる場合だけ表示し、ツール自身による favicon / Open Graph fetch は行わない。
 
+### app 経由の投稿の footer
+
+Slack の MCP server を通じて app(Cursor など)が user の代わりに投稿したメッセージには、Slack が `text` の末尾に `*使用して送信されました* Cursor`(英語 locale では `*Sent using* <app 名>`)の footer を付ける。Slack はこれを本文の下に控えめに表示するため、slapex も本文から切り離して表示する。
+
+- `text` の最後の行が `*<label>* <app 名>` で終わり、`*<label>*` の直前が `text` の先頭または空白(改行を含む)の場合に、`*<label>*` から末尾までを footer とみなす。`<label>` は `使用して送信されました` と `Sent using` だけとし、他の locale の文言は判別しない(本文として表示する)。
+- `<app 名>` は改行を含まない空でない文字列とする。素の名前のほか、mention(`<@U0123456789>`)などの mrkdwn も受ける。
+- footer は本文の直下(画像、添付ファイル、URL preview より前)に、本文より小さい muted color の 1 行として表示する。footer も本文と同じ規則で mrkdwn から変換する(label は太字になる)。footer 内の mention はハイライトを付けず、周囲の文字と同じ色で表示する。
+- footer を除いた本文は、footer の前の空白を除いて表示する。本文が空になる場合は本文を表示せず、footer だけを表示する。編集済みの「(edited)」は本文の末尾に付ける(本文が空の場合は「メッセージ種別(subtype)の表示」の fallback に従う)。
+- 判別は `text` だけで行い、`blocks` は読まない。mention の表示名解決は footer を含む `text` 全体を対象とする。
+
+決定経緯は `decision-log/0070-sent-using-footer.md` を参照する。
+
 ## エスケープとサニタイズ
 
 - Slack 由来のすべてのテキストは HTML エスケープしたうえで、本ツールが生成するマークアップだけを組み立てる。Slack 本文に HTML 断片が含まれていても、そのまま出力しない。

@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kiyohara/slapex/internal/emoji"
 	"github.com/kiyohara/slapex/internal/output"
@@ -133,8 +135,14 @@ func (b *messageViewBuilder) messageView(m *slack.Message) *render.MessageView {
 	v.AvatarInitial = initialOf(v.Author)
 	v.IsBot = isBotMessage(m, b.users[m.User])
 	v.Italic = m.Subtype == "me_message"
-	if m.Text != "" {
-		v.Body = render.Mrkdwn(m.Text, b)
+	text, footer := splitSentUsingFooter(m.Text)
+	if text != "" {
+		v.Body = render.Mrkdwn(text, b)
+	}
+	if footer != "" {
+		// collectUserIDs scans the whole m.Text, footer included, so a
+		// mention in the footer is resolved like one in the body.
+		v.Footer = render.Mrkdwn(footer, b)
 	}
 	b.addFiles(v, m)
 	b.addUnfurls(v, m)
@@ -145,6 +153,27 @@ func (b *messageViewBuilder) messageView(m *slack.Message) *render.MessageView {
 		})
 	}
 	return v
+}
+
+// reSentUsingFooter matches the attribution Slack appends to a message an app
+// posted on the user's behalf through Slack's MCP server, such as
+// " *使用して送信されました* Cursor" or "\n*Sent using* <@U0123>": the bold
+// label, a space and the app, ending the text. The label is localized by
+// Slack; only the Japanese and English ones are known (html-rendering.md
+// 「app 経由の投稿の footer」, decision log 0070).
+var reSentUsingFooter = regexp.MustCompile(`(?:^|\s)(\*(?:使用して送信されました|Sent using)\* +[^\n]*\S)\s*$`)
+
+// splitSentUsingFooter splits a trailing "Sent using <app>" footer off a
+// message text, so the body and the footer render apart. Without such a
+// footer it returns the text unchanged and an empty footer. The body loses
+// the whitespace before the footer and is empty when the text was only the
+// footer.
+func splitSentUsingFooter(text string) (body, footer string) {
+	loc := reSentUsingFooter.FindStringSubmatchIndex(text)
+	if loc == nil {
+		return text, ""
+	}
+	return strings.TrimRightFunc(text[:loc[2]], unicode.IsSpace), text[loc[2]:loc[3]]
 }
 
 func (b *messageViewBuilder) systemBody(m *slack.Message) template.HTML {

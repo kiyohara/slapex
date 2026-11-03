@@ -55,6 +55,9 @@
       {{- if .Body}}
       <div class="message-body{{if .Italic}} me-message{{end}}">{{.Body}}{{if .Edited}} <span class="edited">(edited)</span>{{end}}</div>
       {{- end}}
+      {{- if .Footer}}
+      <div class="message-footer">{{.Footer}}</div>
+      {{- end}}
       {{- range .Images}}
       <div class="image-block">
         {{- if .OriginalPath}}

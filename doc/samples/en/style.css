@@ -197,6 +197,18 @@ body {
   border-radius: 3px;
   padding: 0 2px;
 }
+/* "Sent using <app>" footer: a quiet line under the body, like Slack's context text */
+.message-footer {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.message-footer .mention {
+  color: inherit;
+  background: none;
+  padding: 0;
+}
 
 code {
   font-family: Monaco, Menlo, Consolas, "Courier New", monospace;

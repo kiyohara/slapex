@@ -6,6 +6,101 @@ import (
 	"github.com/kiyohara/slapex/internal/render"
 )
 
+func TestSplitSentUsingFooter(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		text       string
+		wantBody   string
+		wantFooter string
+	}{
+		{
+			// The shape seen in a real export (Issue #303): the Japanese
+			// footer follows the body on the same line after a space.
+			name:       "japanese on the same line",
+			text:       "まとめを作りました。 *使用して送信されました* Cursor",
+			wantBody:   "まとめを作りました。",
+			wantFooter: "*使用して送信されました* Cursor",
+		},
+		{
+			name:       "english on its own line",
+			text:       "status update\n*Sent using* Cursor",
+			wantBody:   "status update",
+			wantFooter: "*Sent using* Cursor",
+		},
+		{
+			name:       "app as a mention",
+			text:       "done *Sent using* <@U02>",
+			wantBody:   "done",
+			wantFooter: "*Sent using* <@U02>",
+		},
+		{
+			name:       "app name with spaces and trailing newline",
+			text:       "reply *Sent using* Dimension (as you)\n",
+			wantBody:   "reply",
+			wantFooter: "*Sent using* Dimension (as you)",
+		},
+		{
+			name:       "multi-line body keeps its lines",
+			text:       "line 1\n\nline 2 *使用して送信されました* Cursor",
+			wantBody:   "line 1\n\nline 2",
+			wantFooter: "*使用して送信されました* Cursor",
+		},
+		{
+			name:       "footer only",
+			text:       "*Sent using* Cursor",
+			wantBody:   "",
+			wantFooter: "*Sent using* Cursor",
+		},
+		{
+			name:     "no footer",
+			text:     "plain *bold* message",
+			wantBody: "plain *bold* message",
+		},
+		{
+			name:     "footer not at the end",
+			text:     "*Sent using* Cursor\nmore text",
+			wantBody: "*Sent using* Cursor\nmore text",
+		},
+		{
+			name:     "label glued to the previous word",
+			text:     "foo*Sent using* Cursor",
+			wantBody: "foo*Sent using* Cursor",
+		},
+		{
+			name:     "label without an app",
+			text:     "body *Sent using*",
+			wantBody: "body *Sent using*",
+		},
+		{
+			name:     "app on the next line",
+			text:     "body *Sent using*\nCursor",
+			wantBody: "body *Sent using*\nCursor",
+		},
+		{
+			name:     "unknown label",
+			text:     "corps *Envoyé avec* Cursor",
+			wantBody: "corps *Envoyé avec* Cursor",
+		},
+		{
+			name:     "label not bold",
+			text:     "body Sent using Cursor",
+			wantBody: "body Sent using Cursor",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			body, footer := splitSentUsingFooter(tc.text)
+			if body != tc.wantBody || footer != tc.wantFooter {
+				t.Fatalf("splitSentUsingFooter(%q) = (%q, %q), want (%q, %q)",
+					tc.text, body, footer, tc.wantBody, tc.wantFooter)
+			}
+		})
+	}
+}
+
 func TestThreadParticipants(t *testing.T) {
 	t.Parallel()
 
