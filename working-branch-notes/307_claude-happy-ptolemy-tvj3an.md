@@ -13,7 +13,7 @@ Claude Code on the web の cloud session で、`drive-issue-to-reviewed-pr` の 
 ## 現在の状況
 
 - main `c41d10f` から作業している。
-- `.goreleaser.yaml` の変更と decision log 0041(追記、見直す条件、index の行)の更新を済ませ、検証した。PR #307 を作り、note を採番した。P2 の review(指摘 1 件)に P4 で対応した。次は P5 の再確認(subagent)。
+- `.goreleaser.yaml` の変更と decision log 0041(追記、見直す条件、index の行)の更新を済ませ、検証した。PR #307 を作り、note を採番した。P2 の review(指摘 1 件)に P4 で対応し、P5 の再確認で未対応 0 件になった。残りは人間の手番である。
 
 ## 決定事項
 
@@ -38,6 +38,7 @@ Claude Code on the web の cloud session で、`drive-issue-to-reviewed-pr` の 
 ## 次にやること
 
 - PR を作り、note を採番する。(完了)
+- 人間の手番: 1 thread(`[imo]`。修正確認済み)の resolve、PR #307 の merge。
 - 次の release の後に、`brew update && brew upgrade --cask slapex` で非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことを確かめ、decision log 0041 に残す(release の作業で行う)。
 
 ## 検証
@@ -88,6 +89,19 @@ cloud session で実行した。GoReleaser は Docker Compose の `dev` service(
   - 本 note の「書き方」と PR description の「レビューしてほしい点」の 1 項目目にも同じ趣旨を足した。
 - 修正 commit: 本 note の更新と同じ commit(返信に SHA を書く)。PR description の編集は push を伴わない。
 - 出力生成系 skill の再判断: decision log、`.goreleaser.yaml` のコメント、note、PR description だけの変更のため、P1 の判断を変えない。
+- 修正 commit は `4325d01`。最新 head の check runs は 5 件 success。
+
+## P5 の記録
+
+- verify-comments(P2 と同じ subagent を再開して委譲)。Reviewed head: `4325d0180a0122f256c81695e29e0d4afd1d881c`。完了要約は PR conversation comment(issuecomment-6597533454)。
+- 区分ごとの確認済み件数: 修正確認済み 1(1 thread を resolve 可)、スコープ外として確認済み 0、対応不要として確認済み 0。未対応 0(top-level の指摘は無い)。
+- 再確認は、修正の所在 2 種(commit `4325d01` と PR description)を確かめ、`4325d01` の clone で GoReleaser v2.19.0 の `check` と snapshot build を再実行して、生成される cask が sha256 を除いて変わらないことも確かめた。
+
+## P6 の記録
+
+- 終了時の状態: PR #307 は open。review cycle `claude-code-ecb83cf-20261103064758` は未対応 0 件で完了。P5 が確かめた head は `4325d01`(check runs 5 件 success)。本 note の P5 / P6 の記録は、その後の note だけの commit である。
+- 人間に残る作業: 1 thread の resolve、merge。metadata の誤りを訂正できなかった投稿は無い。
+- 次の release の後の確認(移行後の形が macOS の sandbox の下で属性を外せるか、非推奨の警告と Gatekeeper の警告が出ないか)は、release の作業で行う。
 
 ## リスク・ブロッカー
 
@@ -99,3 +113,4 @@ cloud session で実行した。GoReleaser は Docker Compose の `dev` service(
 - 2026-11-03: Issue #300 の前提(goreleaser/goreleaser#6873 の merge と v2.19.0 への収録、PR #299 の release 後の確認)を確かめ、着手できると判定した。GoReleaser v2.19.0 と Homebrew 6.0.13 / 7.0.12 の source と文書で設定と token の扱いを確かめ、`.goreleaser.yaml` を `hooks.post.install_steps` に移した。decision log 0041(追記、見直す条件)と index の行を更新し、snapshot build と container の Homebrew での読み込みで確かめた。
 - 2026-11-03: PR #307 を作り、`number-working-branch-note` で note を採番した(`6cc1416`)。P1 の記録を残した。
 - 2026-11-03: P2 の review(`claude-code-ecb83cf-20261103064758`、指摘 1 件)を受け、P4 で採用して decision log 0041、`.goreleaser.yaml` のコメント、note、PR description を直した。
+- 2026-11-03: P5 の再確認で修正確認済み(未対応 0 件)。P6 の終了の状態を残した。
