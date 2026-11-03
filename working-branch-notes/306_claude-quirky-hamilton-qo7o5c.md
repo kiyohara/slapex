@@ -10,6 +10,7 @@ Issue #305。thread chip(展開リンク)に、一度も開いていない threa
 
 ## 現在の状況
 
+- `drive-issue-to-reviewed-pr` のフローを終えた。PR #306 は open で、review cycle `claude-code-b20481e-20261103020709` は未対応 0 件で完了した。残りは人間の手番だけである。
 - P1(実装と PR 作成)を終えた。PR #306 を作成し、note を採番した。
 - 作業中に PR #304 が main に merge されたため、main を取り込み、decision log index の衝突(0070 と 0071 の行)を両方残す形で解消した(`3fffc59`)。merge 後のツリーで Compose の検証をやり直し、すべて pass した。
 
@@ -35,8 +36,10 @@ Issue #305。thread chip(展開リンク)に、一度も開いていない threa
 - [x] 実装、test、spec / decision log の更新、sample export の再生成、検証、PR 作成。
 - [x] 最新 head の CI を確かめ、P2(review)を subagent へ委譲する。
 - [x] review の指摘への対応(P4)。
-- [ ] 再確認(P5)。
-- [ ] 人間の手番: review thread の resolve と PR の merge。
+- [x] 再確認(P5)。
+- [ ] 人間の手番: resolve 可とした review thread(https://github.com/kiyohara/slapex/pull/306#discussion_r4450193609)を確かめて resolve する。
+- [ ] 人間の手番: ローカルで `docker compose run --rm screenshot` を実行し、README の preview screenshot に差分が無いことを確かめる(任意。未検証事項)。
+- [ ] 人間の手番: PR の merge。
 
 ## 検証
 
@@ -71,3 +74,5 @@ cloud session で実行。開発コマンドはすべて Docker Compose(`docker 
 - 2026-11-03: P1 終了。PR #306。検証は Compose で gofmt / vet / build / test / `git diff --check` が pass(cloud session、main の取り込み後もやり直して pass)。出力生成系 skill は `update-sample-exports` を適用(差分は `style.css` だけ)、`update-readme-preview-screenshots` は適用しない見込み(cloud session で実行できず、ローカルでの再生成の確認を未検証事項に残す)、`update-readme-demo-gif` は適用しない。`run-issue-task` の報告から引き上げた項目: `number-working-branch-note`(`74421f1`)の確認経路の項目(書き換えた行の一覧)は、note の `- PR: (採番前)` → `- PR: #306` と、PR description の note 参照 `working-branch-notes/draft_claude-quirky-hamilton-qo7o5c.md` → `working-branch-notes/306_claude-quirky-hamilton-qo7o5c.md` の 2 行(stale 表現と完了タスク行の書き換えは 0 件、title は変更なし)。残された事項(触らずに残した行の一覧)は、note の「現在の状況」の「…検証を終えた。PR 作成へ進む。」(定型に当てはまらない)と「次にやること」の「実装、…、検証、PR 作成。」(複合行)の 2 行。PR description と title は 0 件。途中停止は無し。触らずに残した 2 行は、採番の後に orchestrator が P1 の記録として書き直した。`update-sample-exports` の未確認事項は 0 件(途中停止なし)。`update-readme-preview-screenshots` と `update-readme-demo-gif` は呼んでいない。
 - 2026-11-03: P2 / P3。review cycle `claude-code-b20481e-20261103020709`、Reviewed head `b20481e`。指摘は計 1 件(inline 1、top-level 0)。prefix の内訳は `[must]` 0、`[ask]` 0、`[imo]` 0、`[nits]` 1、`[fyi]` 0。1 件以上のため P4 へ進む。
 - 2026-11-03: P4。処置の内訳は「採用し修正した」1 件(0071 の「影響」の README screenshot の行が「再生成で確かめる」で終わり、PR が再生成しない判断と食い違う `[nits]`。`tools/genscreenshot` の `openThreads` と timeline の切り出し位置、sample の thread の位置を確かめ、見た目が変わらない根拠と、cloud session で再生成していない旨に置き換えた。修正 commit は `a6ba676`)。スコープ外とした指摘は無く、follow-up 候補は無い。修正は decision log だけで、出力生成系 skill の再判断の結果はいずれも適用しない(出力の HTML / CSS、fixture、CLI 出力は変わらない)。
+- 2026-11-03: P5。再確認の結果は、修正確認済み 1 件(resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件。Reviewed head `0fa279b`(check runs 5 件 success)。
+- 2026-11-03: P6。PR #306 は open。review cycle は完了。人間の手番は thread の resolve と PR の merge。この記録は P5 が確かめた head(`0fa279b`)より後の note だけの commit である。
