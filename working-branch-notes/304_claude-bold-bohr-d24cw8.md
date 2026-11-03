@@ -12,7 +12,7 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 
 ## 現在の状況
 
-- P4(1 周目の対応)。review cycle `claude-code-aa1c1a8-20261103010839` の指摘 2 件をどちらも採用し、判別の規則を直した。次は返信と CI の確認の後、再確認(P5)を subagent に委譲する。
+- P6(終了)。review cycle `claude-code-aa1c1a8-20261103010839` は 1 周で収束した。指摘 2 件はどちらも採用し、未対応は 0 件である。PR は draft のままで、人間の手番だけが残る。
 
 ## 決定事項
 
@@ -49,8 +49,10 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
 - note を採番する。(完了)
 - P1 の記録を note に残して push し、CI の完了を確かめる。(完了。`aa1c1a8` で 5 件すべて success)
 - review(P2)を subagent に委譲する。(完了)
-- P4: 指摘 2 件へ処置を返信し、CI の完了を確かめる。
-- 再確認(P5)を subagent に委譲する。
+- P4: 指摘 2 件へ処置を返信し、CI の完了を確かめる。(完了。`dc950c9` で 5 件すべて success)
+- 再確認(P5)を subagent に委譲する。(完了)
+- (人間)resolve 可の 2 thread を、resolve 可マーカーを確かめて GitHub UI で resolve する。
+- (人間)PR を ready for review にし、merge する。
 
 ## 検証
 
@@ -90,3 +92,5 @@ Issue #303。Slack の MCP connector(Cursor など)経由で user が投稿し�
   - `[fyi]`(0070、label を含む inline code で本文が終わると code span が分かれる): 事実を旧い正規表現で再現して確かめた。記述に但し書きを足すだけでなく、app 名から backtick を除き、この場合を判別から外した。0070 の「表示の強弱が変わるだけ」が成り立つようにするためである。table case 2 件(inline code、1 行の code block)を足し、`html-rendering.md` と 0070 に理由とともに書いた。
   - スコープ外とした指摘と follow-up 候補: なし。
   - 出力生成系 skill の再判断: `update-sample-exports` は `internal/export/**` の表示変換の変更に当たるため再実行し、`index.html` は日時だけの差分、`style.css` は変化なしで commit しない。`update-readme-preview-screenshots` と `update-readme-demo-gif` は適用しない(sample と CLI 出力が変わらない)。
+- 2026-11-03: P5。review cycle `claude-code-aa1c1a8-20261103010839`、Reviewed head `dc950c9fab3bc535826ec606541c59cb05095888`。修正確認済み 2 件(2 thread とも resolve 可)、スコープ外として確認済み 0 件、対応不要として確認済み 0 件、未対応 0 件、新しい指摘 0 件。完了要約で、app 名の無い label で終わる行(例: `a *Sent using* b *Sent using*`)が手前の label から切り出される挙動は、修正前と同じで表示の強弱だけが変わるため対応を求めないとされた。
+- 2026-11-03: P6。PR #304 は open / draft。P5 が確かめた head は `dc950c9`(check runs 5 件すべて success)。この追記は note だけの commit で、その head の check runs は終了時の報告に書く。`gh` への fallback は P2 / P4 / P5 とも無し(P4 では PR description と note の read-back に `gh api` の read を使った)。metadata の誤りで訂正できなかった投稿は無い。follow-up Issue の候補は無い。
