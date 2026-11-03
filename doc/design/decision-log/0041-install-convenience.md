@@ -44,6 +44,8 @@
 
 2026-10-17 に v1.3.0 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.3.0"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合と `slapex --version` が `slapex 1.3.0` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `brew upgrade slapex`(auto-update を含む)が `1.2.1 -> 1.3.0` の upgrade に成功し、`slapex --version` が `slapex 1.3.0` を返すことを確認した。
 
+2026-11-03 に v1.4.0 release workflow でも GoReleaser から `kiyohara/homebrew-tap` の `Casks/slapex.rb` が `version "1.4.0"` へ自動更新されることを確認した。GitHub Release は公開済みで、darwin / linux × amd64 / arm64 の 4 binary と `slapex_checksums.txt` が添付されている。Linux asset は dev コンテナ上で checksum 照合(amd64 / arm64)と `slapex --version` が `slapex 1.4.0` を返すことを確認した。さらに、ユーザー手元の Homebrew 環境で `brew upgrade slapex` が `1.3.0 -> 1.4.0` の upgrade に成功し、`slapex --version` が `slapex 1.4.0` を返すことを確認した。
+
 ## 理由
 
 - 案B は最小コストで「1 コマンド導入」を即時に届けられ、外部依存もない。
@@ -56,7 +58,7 @@
 
 - 実装: `scripts/install.sh`（POSIX sh、OS / arch 判定・checksum 検証・install 先指定・`--version` / `--bin-dir` / `--dry-run` / `--help`）と `scripts/install_test.sh`（検出マッピングのテスト）を追加（案B）。
 - ドキュメント: `README.md` のインストール節にクイックインストール（案B）を追加し、手動手順を詳細版として残す。`doc/design/architecture.md` の配布方式に install script を追記。
-- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 / v1.3.0 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
+- 案A: 専用 tap repo の作成と write token の Actions secret 追加（ユーザー作業）、goreleaser 設定（`homebrew_casks`）、未署名 binary の Gatekeeper warning 対策として cask install 後に quarantine 属性を外す hook を入れる構成で実装済み。v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 / v1.3.0 / v1.4.0 release で release workflow から tap repo への cask 自動更新と、Homebrew 経由の upgrade を確認済み。
 - decision log: `index.md` の未決事項から「Homebrew tap」を移し、本ログを現在有効な主要方針に追加。0034 に関連を追記。
 
 ## 追記(2026-10-01): `postflight` の非推奨化への対応
@@ -144,6 +146,7 @@ end
 - GoReleaser は `install_steps` に field ごとの template を適用せず、生成した cask の全体に 1 回だけ template を適用する(v2.19.0 の `internal/pipe/cask/cask.go`)。`.StagedPath` / `.AppDir` 以外の Homebrew の token(`{{version}}` など)を書く場合は、`{{ "{{version}}" }}` のように quote する。
 - 確認(2026-11-03): GoReleaser v2.19.0 の `check` が通る。`release --snapshot --clean` で生成した cask は、`postflight do` も先頭の `postflight_steps` も含まず、上記の `postflight_steps` を `depends_on :macos` の後に含む。非推奨の通知は出ない。Homebrew 7.0.12(使い捨ての Linux の container。install と tap の変更はしない)に、移行前と移行後の生成物の内容を読み込ませると、どちらも `PostflightSteps` の artifact として読み込まれ、`HOMEBREW_DEVELOPER=1` の下でも error にならない。macOS を模して step を実行させる(command を記録するだけで実行しない)と、移行前は `chdir` が staged_path で引数が `.`、移行後は引数が staged_path の絶対 path の `/usr/bin/xattr -dr com.apple.quarantine` になり、どちらも失敗したら install を止める(`must_succeed` が true)。Linux を模すと実行されない。
 - 案B の形が Homebrew の sandbox の下で属性を外せるかは、次の release の後に `brew update && brew upgrade --cask slapex` で確かめ、非推奨の警告と Gatekeeper の警告が出ないこと、`slapex --version` が新しい version を返すことと合わせて本ログに残す。
+- 確認(2026-11-03、v1.4.0): tap の `Casks/slapex.rb` は `custom_block` 由来の先頭の `postflight_steps` を含まず、`depends_on :macos` の後に `run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{staged_path}}"]` の `postflight_steps` を含む。ユーザー手元の Homebrew 7.0.12 で `brew upgrade slapex` が成功し、出力に非推奨の警告は出なかった。upgrade 後の `Caskroom/slapex/1.4.0/slapex_darwin_arm64` に `com.apple.quarantine` の属性は残っておらず、案B の形でも Homebrew の sandbox の下で `run` が属性を外せている。upgrade 後の `slapex --version` は Gatekeeper に止められずに実行でき、`slapex 1.4.0` を返した。上に挙げた確認項目(非推奨の警告、Gatekeeper の警告、新しい version)は、いずれも問題が無いことを確認した。
 
 ## 後から見直す条件
 
