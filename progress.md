@@ -16,7 +16,7 @@
 
 ## 現況
 
-v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 / v1.3.0 を GitHub Releases で公開済み。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
+v1.0.0 / v1.0.1 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0 / v1.2.1 / v1.3.0 を GitHub Releases で公開済み。v1.4.0 は release 準備中。配布経路は単一バイナリ(GitHub Releases)、install script(`scripts/install.sh`)、Homebrew cask(`kiyohara/homebrew-tap`)の 3 つ。
 
 リファクタリングの調査・評価(#188)で採用した8施策のうち、未完了の施策を追跡する。実施方針は [decision log 0056](doc/design/decision-log/0056-incremental-refactoring-plan.md)、詳細な作業条件は各Issueを参照する。
 
@@ -99,6 +99,7 @@ PF-01 / PF-02 → PF-03 → PF-04 → PF-05 → PF-06 → PF-07
 | v1.2.0 | released | 取得範囲指定(`--date` / `--from` / `--to`)、emoji 除外(`--exclude-body-emoji` / `--exclude-reaction-emoji`)、footer timezone 改善、README / help 再構成を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.2.1 | released | bot 投稿の投稿者名 / avatar を `bots.info` で解決し `APP` 表示を追加、asset の保存拡張子を download 内容から決定、PNG logo asset 追加を含む patch release。Release assets / checksum / Linux `--version` / Homebrew cask 更新 / Homebrew 経由 upgrade を確認済み |
 | v1.3.0 | released | export の所要時間の最小化(#272、asset の origin ごとの並列取得と Web API の method ごとの lane)、秒未満を含む `--from` / `--to`、HTTP request の trace(`SLAPEX_HTTP_TRACE`)、`--reuse-cache` の自己コピーで asset が 0 byte になる問題(FU-01)ほか既存挙動の修正、Homebrew cask の `postflight_steps` への移行(decision log 0041)を含む minor release。Release assets / checksum / Linux `--version` / Homebrew cask 更新(`postflight_steps`)/ Homebrew 経由 upgrade と quarantine 属性の除去を確認済み |
+| v1.4.0 | preparing | app 経由の投稿の footer(`Sent using` / `使用して送信されました`)を本文の下に控えめに表示(#303、decision log 0070)、一度も開いていない thread の chip に赤い丸印を表示(#305、decision log 0071)、Homebrew cask の `postflight_steps` を GoReleaser の `install_steps` で出力(#300、decision log 0041)を含む minor release 準備中 |
 
 ## 完了済みフェーズ(参考)
 
